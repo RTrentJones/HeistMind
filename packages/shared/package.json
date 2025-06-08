@@ -1,0 +1,9 @@
+{
+  "name": "@heist-mind/shared",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "dependencies": {
+    "@heist-mind/database": "workspace:*"
+  }
+}
