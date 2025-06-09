@@ -38,7 +38,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -107,7 +107,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -123,10 +123,22 @@ jobs:
         run: |
           echo "🚀 Deploying migrations to Supabase..."
 
-          # Push migrations to remote database
+          # Set schema based on branch
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            export SCHEMA="production"
+            echo "📦 Deploying to PRODUCTION schema"
+          else
+            export SCHEMA="development"
+            echo "📦 Deploying to DEVELOPMENT schema"
+          fi
+
+          # Set environment variable for schema targeting
+          export PGOPTIONS="-c heistmind.target_schema=$SCHEMA"
+
+          # Push migrations to remote database with schema targeting
           supabase db push
 
-          echo "✅ Migrations deployed successfully"
+          echo "✅ Migrations deployed successfully to $SCHEMA schema"
 
       - name: Generate production types
         run: |
