@@ -135,6 +135,24 @@ jobs:
           }
           echo "✅ Successfully linked to Supabase project: ${{ secrets.SUPABASE_PROJECT_ID }}"
 
+      - name: Sync with remote database
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "📥 Pulling remote migrations..."
+
+          # Pull remote schema to ensure we're in sync
+          supabase db pull --password "$SUPABASE_DB_PASSWORD" || {
+            echo "⚠️ Could not pull remote migrations, continuing anyway..."
+          }
+
+          # List current migrations
+          echo "📋 Current local migrations:"
+          ls -la supabase/migrations/
+
+          echo "✅ Ready to push new migrations"
+
       - name: Deploy database migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
