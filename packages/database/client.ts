@@ -1,5 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import type { Database } from './types'
+import type { Database } from './supabase-types'
 
 export function createClient(
   url: string = process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,302 +1,202 @@
 # HeistMind Database Package
 
-Database abstraction layer for HeistMind, providing clean domain types and repository interfaces that enable easy database provider swapping.
+This package provides a clean abstraction layer for database operations with proper separation between domain types and database-specific types.
 
-## Architecture
+## Architecture Overview
 
-This package uses a **database-agnostic approach** with clean separation between:
+The database package follows a layered architecture with clear separation of concerns:
 
-- **Domain Types** - Application-facing interfaces (`domain-types.ts`)
-- **Repository Contracts** - Data access interfaces (`repositories.ts`)
-- **Supabase Implementation** - Current database provider (internal)
+```
+packages/database/
+├── domain-types.ts          # Clean, database-agnostic domain types
+├── supabase-types.ts        # Auto-generated Supabase schema types
+├── repositories.ts          # Repository interface definitions
+├── client.ts               # Database client configuration
+├── adapters/               # Type transformation layer
+│   └── profile-adapter.ts  # Transforms between Supabase and domain types
+└── implementations/        # Repository implementations
+    └── supabase-profile-repository.ts
+```
 
-This design allows swapping Supabase for PostgreSQL, MySQL, or other databases in the future without changing application code.
+## Type Separation
+
+### Domain Types (`domain-types.ts`)
+- **Purpose**: Clean, database-agnostic types for application use
+- **Exports**: Business entities like `Profile`, `Game`, `Character`, etc.
+- **Maintenance**: Hand-crafted and version-controlled
+- **Usage**: Used throughout the application for business logic
+
+### Supabase Types (`supabase-types.ts`)
+- **Purpose**: Auto-generated types from Supabase database schema
+- **Exports**: `Database`, `Tables`, `TablesInsert`, `TablesUpdate`, etc.
+- **Maintenance**: Auto-generated via CI/CD when schema changes
+- **Usage**: Only used within adapters and implementations
+
+### Key Principles
+1. **Domain types are never overwritten** by type generation
+2. **Supabase types are kept internal** to this package
+3. **Adapters bridge the gap** between the two type systems
+4. **External packages only see domain types**
+
+## Type Generation
+
+### Automatic Generation
+Types are automatically generated when database migrations change:
+
+```bash
+# Triggers GitHub Action that:
+# 1. Generates new Supabase types
+# 2. Commits them to supabase-types.ts
+# 3. Validates type separation
+```
+
+### Manual Generation
+For local development:
+
+```bash
+# Generate from remote Supabase project
+pnpm run db:types
+
+# Generate from local Supabase instance
+pnpm run db:types-local
+```
+
+## Repository Pattern
+
+### Interface Definition
+All repository interfaces are defined in `repositories.ts` using domain types:
+
+```typescript
+export interface ProfileRepository {
+    create(data: CreateProfileData): Promise<Result<Profile>>
+    findById(id: string): Promise<Result<Profile | null>>
+    // ... other methods
+}
+```
+
+### Implementation
+Implementations use adapters to transform between type systems:
+
+```typescript
+export class SupabaseProfileRepository implements ProfileRepository {
+    async create(data: CreateProfileData): Promise<Result<Profile>> {
+        const insertData = toSupabaseProfileInsert(data, userId)
+        const { data: row } = await this.supabase.from('profiles').insert(insertData)
+        return { success: true, data: fromSupabaseProfile(row) }
+    }
+}
+```
+
+### Adapters
+Adapters handle type transformation:
+
+```typescript
+// From Supabase row to domain entity
+export function fromSupabaseProfile(row: Tables<'profiles'>): Profile {
+    return {
+        id: row.id,
+        username: row.username,
+        // ... transform fields
+    }
+}
+
+// From domain data to Supabase insert
+export function toSupabaseProfileInsert(data: CreateProfileData): TablesInsert<'profiles'> {
+    return {
+        username: data.username,
+        // ... transform fields
+    }
+}
+```
 
 ## Usage
 
-### Import Clean Types
-
+### In Application Code
 ```typescript
-import { Game, Character, CreateGameData, GameRepository } from '@heist-mind/database'
+import { ProfileRepository, Profile } from '@heist-mind/database'
 
-// Use clean domain types in your application
-function createGame(data: CreateGameData): Promise<Game> {
-  // Implementation uses repository interfaces
-}
+// Only domain types are visible
+const profile: Profile = await profileRepo.findById('123')
 ```
 
-### Database Operations
-
+### In Database Package
 ```typescript
-import { DatabaseRepositories } from '@heist-mind/database'
-
-// Repository interfaces provide clean data access
-async function getGameWithDetails(gameId: string, repositories: DatabaseRepositories) {
-  const result = await repositories.games.findWithDetails(gameId)
-
-  if (!result.success) {
-    throw new Error(result.error.message)
-  }
-
-  return result.data
-}
+// Implementations can use both type systems
+import type { Database } from './supabase-types'
+import type { Profile } from './domain-types'
 ```
 
-## Key Features
+## CI/CD Integration
 
-### Multi-Tenant Architecture
-- **Row Level Security** enforced at database level
-- **Context-aware permissions** based on game roles
-- **Automatic tenant isolation** for Game Master content
+### Database Types Workflow
+- **Trigger**: Changes to `supabase/migrations/**`
+- **Action**: Generates fresh Supabase types
+- **Result**: Auto-commits `supabase-types.ts`
 
-### Dynamic Role System
-- **Game-specific roles** (not global user roles)
-- **Flexible permissions** per game context
-- **Automatic GM assignment** when creating games
+### Validation Workflow
+- **Trigger**: All PRs and pushes
+- **Checks**:
+  - Type separation is maintained
+  - Domain types are not corrupted
+  - All types compile correctly
 
-### Complex Data Support
-- **JSONB storage** for flexible FitD ruleset content
-- **Character portability** between compatible games
-- **Game-specific rule overrides** and house rules
+## Best Practices
+
+### Adding New Entities
+1. **Define domain types** in `domain-types.ts`
+2. **Create repository interface** in `repositories.ts`
+3. **Build adapter** in `adapters/` directory
+4. **Implement repository** in `implementations/`
+5. **Update exports** in `index.ts` (domain types only)
 
 ### Type Safety
-- **End-to-end TypeScript** from database to UI
-- **Generated types** from actual database schema
-- **Domain-specific interfaces** for business logic
+- Always use adapters to transform between type systems
+- Never expose Supabase types outside this package
+- Use `Result<T>` type for error handling
+- Validate data at adapter boundaries
 
-## Database Schema
+### Database Schema Changes
+1. **Create migration** in `supabase/migrations/`
+2. **Push to repository** - triggers type generation
+3. **Update adapters** if field mappings change
+4. **Update domain types** if business logic changes
 
-### Core Tables
+## Error Handling
 
-#### `profiles`
-User profiles with preferences and metadata
-```sql
-CREATE TABLE profiles (
-  id UUID PRIMARY KEY,
-  username TEXT,
-  avatar_url TEXT,
-  preferences JSONB DEFAULT '{}'
-);
-```
+All repository methods return `Result<T>` for consistent error handling:
 
-#### `rulesets`
-GM-uploaded FitD game rules with complex content
-```sql
-CREATE TABLE rulesets (
-  id UUID PRIMARY KEY,
-  created_by UUID REFERENCES profiles(id),
-  name TEXT NOT NULL,
-  content JSONB NOT NULL, -- Complex FitD ruleset
-  status TEXT DEFAULT 'draft',
-  is_public BOOLEAN DEFAULT false
-);
-```
-
-#### `games`
-Game instances with specific rulesets
-```sql
-CREATE TABLE games (
-  id UUID PRIMARY KEY,
-  created_by UUID REFERENCES profiles(id),
-  ruleset_id UUID REFERENCES rulesets(id),
-  name TEXT NOT NULL,
-  state TEXT DEFAULT 'draft',
-  max_players INTEGER DEFAULT 6
-);
-```
-
-#### `game_players`
-Many-to-many with context-specific roles
-```sql
-CREATE TABLE game_players (
-  id UUID PRIMARY KEY,
-  game_id UUID REFERENCES games(id),
-  player_id UUID REFERENCES profiles(id),
-  role TEXT DEFAULT 'player', -- game_master, player, co_gm, spectator
-  status TEXT DEFAULT 'invited'
-);
-```
-
-#### `characters`
-Player characters within specific games
-```sql
-CREATE TABLE characters (
-  id UUID PRIMARY KEY,
-  created_by UUID REFERENCES profiles(id),
-  game_id UUID REFERENCES games(id),
-  name TEXT NOT NULL,
-  character_data JSONB NOT NULL, -- Flexible character content
-  playbook_type TEXT NOT NULL
-);
-```
-
-#### `invitations`
-Game invitation management
-```sql
-CREATE TABLE invitations (
-  id UUID PRIMARY KEY,
-  game_id UUID REFERENCES games(id),
-  invited_by UUID REFERENCES profiles(id),
-  invited_player UUID REFERENCES profiles(id), -- OR
-  invite_code TEXT UNIQUE, -- Public invitation codes
-  status TEXT DEFAULT 'pending'
-);
-```
-
-### Security Features
-
-#### Row Level Security (RLS)
-All tables have RLS policies that automatically enforce:
-- **Tenant isolation** - GMs only see their content
-- **Game access control** - Players only access their games
-- **Character permissions** - Players manage own characters, GMs manage all
-
-#### Helper Functions
-```sql
--- Check if user is GM of specific game
-SELECT is_game_master(user_id, game_id);
-
--- Get user's role in specific game
-SELECT get_user_game_role(user_id, game_id);
-```
-
-## Development Scripts
-
-### Database Operations
-```bash
-# Push migrations to remote Supabase
-pnpm db:push
-
-# Reset local database
-pnpm db:reset
-
-# Generate types from remote database
-pnpm db:types
-
-# Generate types from local database
-pnpm db:types-local
-
-# Check schema differences
-pnpm db:diff
-```
-
-### Local Development
-```bash
-# Start local Supabase
-supabase start
-
-# Apply migrations locally
-supabase db reset
-
-# Generate types locally
-pnpm db:types-local
-```
-
-## GitHub Actions CI/CD
-
-The included workflow (`.github/workflows/supabase-ci.yml`) provides:
-
-### Validation Stage
-- **Migration syntax checking** using Supabase CLI
-- **Schema validation** against local instance
-- **Type generation verification** ensures types compile
-- **Diff checking** catches unexpected schema changes
-
-### Deployment Stage
-- **Automatic deployment** on push to main/development
-- **Type generation** from production schema
-- **Auto-commit** updated types back to repository
-- **Health verification** ensures successful deployment
-
-### Required GitHub Secrets
-```
-SUPABASE_ACCESS_TOKEN  # Supabase API access token
-SUPABASE_PROJECT_ID    # Your Supabase project ID
-SUPABASE_DB_PASSWORD   # Database password (if needed)
-```
-
-## Future Database Providers
-
-The repository interface design supports easy migration to other databases:
-
-### Adding PostgreSQL Support
-1. Implement `DatabaseProvider` interface for PostgreSQL
-2. Create PostgreSQL-specific repository implementations
-3. Update dependency injection to use new provider
-4. Application code remains unchanged
-
-### Adding MySQL Support
-1. Implement repository interfaces using MySQL client
-2. Map domain types to MySQL schema
-3. Implement transaction support
-4. Swap provider in configuration
-
-## Complex Data Examples
-
-### Ruleset Content Structure
 ```typescript
-const rulesetContent: RulesetContent = {
-  metadata: {
-    name: "Blades in the Dark",
-    version: "2.0",
-    author: "John Harper",
-    description: "Industrial fantasy heist RPG",
-    system: "blades-in-the-dark"
-  },
-  playbooks: [
-    {
-      id: "cutter",
-      name: "The Cutter",
-      description: "A dangerous and intimidating fighter",
-      startingAbilities: ["battleborn"],
-      specialAbilities: ["ghost-fighter", "leader", "not-to-be-trifled-with"],
-      attributes: { insight: 1, prowess: 3, resolve: 2 },
-      skills: { skirmish: 2, command: 1 }
-    }
-  ],
-  attributes: [
-    {
-      id: "prowess",
-      name: "Prowess",
-      description: "Physical and martial abilities",
-      skills: ["finesse", "prowl", "skirmish", "study", "survey", "wreck"]
-    }
-  ]
-  // ... more complex structure
+const result = await profileRepo.findById('123')
+
+if (result.success) {
+    const profile = result.data // Type: Profile
+} else {
+    const error = result.error // Type: DatabaseError
 }
 ```
 
-### Character Data Structure
-```typescript
-const characterData: CharacterData = {
-  playbook: "cutter",
-  heritage: "akorosi",
-  background: "military",
-  vice: "gambling",
-  attributes: { insight: 2, prowess: 3, resolve: 1 },
-  skills: { skirmish: 2, command: 1, intimidate: 1 },
-  specialAbilities: ["battleborn", "ghost-fighter"],
-  stress: 3,
-  trauma: ["reckless"],
-  coins: 4,
-  items: [
-    {
-      id: "fine-sword",
-      name: "Fine Sword",
-      description: "Masterwork blade",
-      load: 2,
-      quality: 2,
-      equipped: true
-    }
-  ],
-  contacts: [
-    {
-      name: "Marlane",
-      description: "A pugilist who fought beside you",
-      relationship: "friend"
-    }
-  ]
-}
+## Development
+
+### Local Setup
+```bash
+# Install dependencies
+pnpm install
+
+# Generate types from local Supabase
+pnpm run db:types-local
+
+# Type check
+pnpm run type-check
 ```
 
-This database package provides a solid foundation for HeistMind's multi-tenant, role-based game management system while maintaining flexibility for future growth and database provider changes.
+### Testing Type Separation
+```bash
+# Run CI validation locally
+pnpm run type-check
+pnpm run lint
+
+# Validate type separation
+npm test # (when tests are added)
+```
+
+This architecture ensures clean separation of concerns while maintaining type safety and enabling future database migrations without breaking application code.

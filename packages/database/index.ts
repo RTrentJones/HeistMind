@@ -8,7 +8,7 @@ export * from './domain-types'
 export * from './repositories'
 
 // Supabase implementation (internal use)
-export { createSupabaseClient } from './client'
+export { createClient } from './client'
 
-// Type utilities for Supabase integration (internal use)
-export type { Database } from './types'
+// NOTE: Supabase types are kept internal to this package
+// They are only used within adapters and not exported to maintain clean domain boundaries

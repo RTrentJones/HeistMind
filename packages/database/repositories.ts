@@ -25,6 +25,7 @@ import {
     PaginatedResult,
     Result,
     DatabaseError,
+    ValidationError,
     GameRole,
     PlayerStatus,
     GameState,
@@ -167,11 +168,6 @@ export interface ValidationResult {
     warnings: ValidationWarning[]
 }
 
-export interface ValidationError {
-    field: string
-    message: string
-    severity: 'error' | 'warning'
-}
 
 export interface ValidationWarning {
     field: string
