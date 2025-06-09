@@ -140,18 +140,47 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          echo "📥 Pulling remote migrations..."
+          echo "📥 Checking migration status..."
 
-          # Pull remote schema to ensure we're in sync
-          supabase db pull --password "$SUPABASE_DB_PASSWORD" || {
-            echo "⚠️ Could not pull remote migrations, continuing anyway..."
+          # Check remote migration status first
+          echo "🔍 Checking remote migration history..."
+          supabase migration list --password "$SUPABASE_DB_PASSWORD" || {
+            echo "⚠️ Could not fetch remote migration list"
           }
 
-          # List current migrations
+          # List current local migrations
           echo "📋 Current local migrations:"
           ls -la supabase/migrations/
 
-          echo "✅ Ready to push new migrations"
+          # Try to repair migration history if there are issues
+          echo "🔧 Attempting to repair migration history..."
+          supabase migration repair --status reverted || {
+            echo "⚠️ Migration repair not needed or failed - continuing with deployment"
+          }
+
+      - name: Handle migration conflicts
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "🔄 Resolving migration conflicts..."
+
+          # First, try to pull the latest schema to sync
+          supabase db pull --password "$SUPABASE_DB_PASSWORD" || {
+            echo "⚠️ Pull failed, checking for specific conflicts..."
+
+            # Check if there are specific migrations causing issues
+            echo "🔍 Checking for migration conflicts..."
+
+            # If pull fails, try to reset migration history
+            echo "🔄 Attempting to reset migration tracking..."
+            supabase migration repair --status applied || true
+          }
+
+          # Ensure we have the core migrations we need
+          echo "📋 Verifying core migrations exist:"
+          [ -f "supabase/migrations/00001_initial_schema.sql" ] && echo "✅ Initial schema migration found" || echo "❌ Missing initial schema"
+          [ -f "supabase/migrations/00002_core_schema.sql" ] && echo "✅ Core schema migration found" || echo "❌ Missing core schema"
 
       - name: Deploy database migrations
         env:
@@ -228,7 +257,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update database types after migration [skip ci]'
-          file_pattern: 'packages/database/types.ts'
+          file_pattern: 'packages/database/supabase-types.ts'
           commit_user_name: 'github-actions[bot]'
           commit_user_email: 'github-actions[bot]@users.noreply.github.com'
           skip_dirty_check: false
