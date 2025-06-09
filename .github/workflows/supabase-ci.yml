@@ -1,0 +1,188 @@
+name: Supabase CI/CD
+
+on:
+  push:
+    branches: [main, development]
+    paths:
+      - 'supabase/**'
+      - 'packages/database/**'
+      - '.github/workflows/supabase-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'packages/database/**'
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+jobs:
+  validate:
+    name: Validate Database Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase local instance
+        run: supabase start
+
+      - name: Validate migration syntax
+        run: supabase db diff --schema public
+
+      - name: Run database tests
+        run: |
+          # Apply all migrations to local instance
+          supabase db reset
+
+          # Verify schema is valid
+          supabase db diff --schema public | tee diff-output.txt
+
+          # Check if there are unexpected differences
+          if [ -s diff-output.txt ]; then
+            echo "❌ Schema differences detected!"
+            cat diff-output.txt
+            exit 1
+          else
+            echo "✅ Schema validation passed"
+          fi
+
+      - name: Generate and validate types
+        run: |
+          # Generate TypeScript types from local schema
+          pnpm --filter @heist-mind/database db:types-local
+
+          # Check if generated types compile
+          pnpm --filter @heist-mind/database tsc --noEmit || {
+            echo "❌ Generated types do not compile!"
+            exit 1
+          }
+
+          echo "✅ Type generation successful"
+
+      - name: Stop Supabase
+        run: supabase stop
+
+  deploy:
+    name: Deploy to Supabase
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+          echo "✅ Linked to Supabase project: $SUPABASE_PROJECT_ID"
+
+      - name: Deploy database migrations
+        run: |
+          echo "🚀 Deploying migrations to Supabase..."
+
+          # Push migrations to remote database
+          supabase db push
+
+          echo "✅ Migrations deployed successfully"
+
+      - name: Generate production types
+        run: |
+          echo "📝 Generating TypeScript types from production schema..."
+
+          # Generate types from remote database
+          pnpm --filter @heist-mind/database db:types
+
+          echo "✅ Types generated from production schema"
+
+      - name: Commit updated types
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update database types after migration [skip ci]'
+          file_pattern: 'packages/database/types.ts'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+        if: github.ref == 'refs/heads/main'
+
+      - name: Verify deployment health
+        run: |
+          echo "🔍 Verifying deployment health..."
+
+          # Basic connectivity test
+          supabase projects list | grep $SUPABASE_PROJECT_ID || {
+            echo "❌ Cannot connect to Supabase project!"
+            exit 1
+          }
+
+          echo "✅ Deployment health check passed"
+
+      - name: Deployment summary
+        run: |
+          echo "## 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project ID**: $SUPABASE_PROJECT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Successfully deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Database migrations have been applied and TypeScript types updated." >> $GITHUB_STEP_SUMMARY
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    if: failure()
+    steps:
+      - name: Failure summary
+        run: |
+          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The database deployment has failed. Please check the logs and resolve any issues before retrying." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the error logs above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Fix any migration issues locally" >> $GITHUB_STEP_SUMMARY
+          echo "3. Test with \`supabase db diff\` before pushing" >> $GITHUB_STEP_SUMMARY
+          echo "4. Push the fix to trigger a new deployment" >> $GITHUB_STEP_SUMMARY

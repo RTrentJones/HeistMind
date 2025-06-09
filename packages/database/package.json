@@ -5,6 +5,15 @@
   "types": "index.ts",
   "scripts": {
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types.ts"
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff",
+    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types.ts",
+    "db:types-local": "supabase gen types typescript --local > types.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0"
+  },
+  "devDependencies": {
+    "typescript": "^5"
   }
 }
