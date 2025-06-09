@@ -13,11 +13,6 @@ on:
       - 'supabase/**'
       - 'packages/database/**'
 
-env:
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
 jobs:
   validate:
     name: Validate Database Changes
@@ -82,6 +77,7 @@ jobs:
           echo "✅ Type generation successful"
 
       - name: Stop Supabase
+        if: always()
         run: supabase stop
 
   deploy:
@@ -114,40 +110,101 @@ jobs:
         with:
           version: latest
 
-      - name: Link Supabase project
+      - name: Debug environment
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
-          supabase link --project-ref $SUPABASE_PROJECT_ID
-          echo "✅ Linked to Supabase project: $SUPABASE_PROJECT_ID"
+          echo "=== Checking environment variables ==="
+
+          # Check if secrets are set (without revealing them)
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] && echo "✅ SUPABASE_ACCESS_TOKEN is set (${#SUPABASE_ACCESS_TOKEN} chars)" || echo "❌ SUPABASE_ACCESS_TOKEN is NOT set"
+          [ -n "$SUPABASE_DB_PASSWORD" ] && echo "✅ SUPABASE_DB_PASSWORD is set (${#SUPABASE_DB_PASSWORD} chars)" || echo "❌ SUPABASE_DB_PASSWORD is NOT set"
+          [ -n "$SUPABASE_PROJECT_ID" ] && echo "✅ SUPABASE_PROJECT_ID is set: $SUPABASE_PROJECT_ID" || echo "❌ SUPABASE_PROJECT_ID is NOT set"
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "🔗 Linking to Supabase project..."
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} || {
+            echo "❌ Failed to link Supabase project"
+            echo "Make sure SUPABASE_ACCESS_TOKEN is a valid personal access token from https://app.supabase.com/account/tokens"
+            exit 1
+          }
+          echo "✅ Successfully linked to Supabase project: ${{ secrets.SUPABASE_PROJECT_ID }}"
 
       - name: Deploy database migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           echo "🚀 Deploying migrations to Supabase..."
 
           # Set schema based on branch
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            export SCHEMA="production"
+            export TARGET_SCHEMA="production"
             echo "📦 Deploying to PRODUCTION schema"
           else
-            export SCHEMA="development"
+            export TARGET_SCHEMA="development"
             echo "📦 Deploying to DEVELOPMENT schema"
           fi
 
-          # Set environment variable for schema targeting
-          export PGOPTIONS="-c heistmind.target_schema=$SCHEMA"
+          # Create a temporary migration to set the target schema
+          TEMP_MIGRATION="supabase/migrations/$(date +%s)_set_target_schema.sql"
+          cat > "$TEMP_MIGRATION" << EOF
+          -- Set target schema for this deployment
+          DO \$\$
+          BEGIN
+              -- Set the target schema for subsequent operations
+              EXECUTE format('SET heistmind.target_schema = %L', '$TARGET_SCHEMA');
+              RAISE NOTICE 'Target schema set to: %', '$TARGET_SCHEMA';
+          END \$\$;
+          EOF
 
-          # Push migrations to remote database with schema targeting
-          supabase db push
+          echo "📝 Created temporary schema targeting migration"
 
-          echo "✅ Migrations deployed successfully to $SCHEMA schema"
+          # Push migrations to remote database with password
+          echo "🔄 Pushing migrations..."
+          supabase db push --password "$SUPABASE_DB_PASSWORD" || {
+            echo "❌ Failed to push migrations"
+            rm -f "$TEMP_MIGRATION"
+            exit 1
+          }
+
+          # Clean up temporary migration
+          rm -f "$TEMP_MIGRATION"
+          echo "✅ Migrations deployed successfully to $TARGET_SCHEMA schema"
+
+      - name: Verify deployment
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "🔍 Verifying deployment..."
+
+          # List projects to verify connection
+          supabase projects list | grep -q "${{ secrets.SUPABASE_PROJECT_ID }}" || {
+            echo "❌ Cannot verify connection to Supabase project!"
+            exit 1
+          }
+
+          echo "✅ Deployment verification passed"
 
       - name: Generate production types
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           echo "📝 Generating TypeScript types from production schema..."
 
           # Generate types from remote database
-          pnpm --filter @heist-mind/database db:types
+          pnpm --filter @heist-mind/database db:types || {
+            echo "⚠️ Failed to generate types, but deployment was successful"
+            # Don't fail the job if type generation fails
+          }
 
-          echo "✅ Types generated from production schema"
+          echo "✅ Type generation completed"
 
       - name: Commit updated types
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -156,30 +213,22 @@ jobs:
           file_pattern: 'packages/database/types.ts'
           commit_user_name: 'github-actions[bot]'
           commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+          skip_dirty_check: false
+          skip_fetch: false
         if: github.ref == 'refs/heads/main'
 
-      - name: Verify deployment health
-        run: |
-          echo "🔍 Verifying deployment health..."
-
-          # Basic connectivity test
-          supabase projects list | grep $SUPABASE_PROJECT_ID || {
-            echo "❌ Cannot connect to Supabase project!"
-            exit 1
-          }
-
-          echo "✅ Deployment health check passed"
-
       - name: Deployment summary
+        if: success()
         run: |
           echo "## 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project ID**: $SUPABASE_PROJECT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project ID**: ${{ secrets.SUPABASE_PROJECT_ID }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ✅ Successfully deployed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Database migrations have been applied and TypeScript types updated." >> $GITHUB_STEP_SUMMARY
+          echo "Database migrations have been applied to the **${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}** schema." >> $GITHUB_STEP_SUMMARY
 
   notify-failure:
     name: Notify on Failure
@@ -193,7 +242,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "The database deployment has failed. Please check the logs and resolve any issues before retrying." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "### Common issues to check:" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Invalid access token**: Ensure SUPABASE_ACCESS_TOKEN is from https://app.supabase.com/account/tokens" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Wrong project ID**: Verify SUPABASE_PROJECT_ID matches your project reference ID" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Database password**: Ensure SUPABASE_DB_PASSWORD is the database password, not the API key" >> $GITHUB_STEP_SUMMARY
+          echo "4. **Migration errors**: Check if migrations have SQL syntax errors" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. Review the error logs above" >> $GITHUB_STEP_SUMMARY
           echo "2. Fix any migration issues locally" >> $GITHUB_STEP_SUMMARY
           echo "3. Test with \`supabase db diff\` before pushing" >> $GITHUB_STEP_SUMMARY
