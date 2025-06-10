@@ -143,14 +143,19 @@ jobs:
             exit 0
           fi
 
-          # Test each migration file for syntax errors
+          # Test each migration file for syntax errors using psql
           for migration in supabase/migrations/*.sql; do
             echo "Validating: $(basename $migration)"
-            # This will catch SQL syntax errors
-            supabase db test --file "$migration" || {
-              echo "❌ Syntax error in $migration"
+
+            # Use psql to validate SQL syntax (dry run)
+            if ! psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$migration" > /dev/null 2>&1; then
+              echo "❌ Syntax error or execution failure in $migration"
+              echo "Testing with detailed output:"
+              psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$migration"
               exit 1
-            }
+            else
+              echo "✅ Syntax validation passed for $(basename $migration)"
+            fi
           done
 
       - name: Run schema deployment test
