@@ -8,12 +8,16 @@
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > supabase-types.ts",
-    "db:types-local": "supabase gen types typescript --local > supabase-types.ts"
+    "db:types-local": "supabase gen types typescript --local > supabase-types.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate-types": "vitest run tests/type-validation.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0"
   },
   "devDependencies": {
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.0.0"
   }
 }

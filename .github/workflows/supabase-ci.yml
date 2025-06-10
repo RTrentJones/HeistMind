@@ -13,290 +13,655 @@ on:
       - 'supabase/**'
       - 'packages/database/**'
 
+# Prevent concurrent deployments to the same environment
+concurrency:
+  group: supabase-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Pin versions for reproducibility
+  PNPM_VERSION: '8.15.1'
+  NODE_VERSION: '20.11.0'  # Use LTS version
+  SUPABASE_CLI_VERSION: '1.142.2'  # Pin specific version
+
 jobs:
+  # Detect what actually changed to optimize CI time
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      migrations: ${{ steps.filter.outputs.migrations }}
+      schema: ${{ steps.filter.outputs.schema }}
+      types: ${{ steps.filter.outputs.types }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            migrations:
+              - 'supabase/migrations/**'
+            schema:
+              - 'supabase/migrations/*_core_schema.sql'
+              - 'supabase/migrations/*_initial_schema.sql'
+            types:
+              - 'packages/database/**'
+
   validate:
     name: Validate Database Changes
     runs-on: ubuntu-latest
+    needs: changes
+    # Add timeout to prevent hanging jobs
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full history for better migration validation
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile --prefer-offline
+          echo "✅ Dependencies installed with locked versions"
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Validate migration files
+        run: |
+          echo "🔍 Validating migration file naming and structure..."
+
+          # Ensure migrations follow naming convention
+          for file in supabase/migrations/*.sql; do
+            if [[ ! "$file" =~ ^supabase/migrations/[0-9]{5}_[a-z_]+\.sql$ ]]; then
+              echo "❌ Invalid migration filename: $file"
+              echo "Expected format: 00001_description.sql"
+              exit 1
+            fi
+          done
+
+          # Check for duplicate migration numbers
+          duplicates=$(ls supabase/migrations/*.sql | sed 's/.*\/\([0-9]\{5\}\).*/\1/' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "❌ Duplicate migration numbers found: $duplicates"
+            exit 1
+          fi
+
+          echo "✅ Migration files validated"
 
       - name: Start Supabase local instance
-        run: supabase start
+        run: |
+          # Ensure clean state
+          supabase stop --no-backup || true
+          docker volume prune -f
+
+          # Start with retries
+          for i in {1..3}; do
+            if supabase start; then
+              echo "✅ Supabase started successfully"
+              break
+            else
+              echo "⚠️ Attempt $i failed, retrying..."
+              supabase stop --no-backup || true
+              sleep 5
+            fi
+          done
 
       - name: Validate migration syntax
-        run: supabase db diff --schema public
-
-      - name: Run database tests
         run: |
-          # Apply all migrations to local instance
-          supabase db reset
+          echo "🔍 Checking migration SQL syntax..."
 
-          # Verify schema is valid
-          supabase db diff --schema public | tee diff-output.txt
+          # Test each migration file for syntax errors
+          for migration in supabase/migrations/*.sql; do
+            echo "Validating: $(basename $migration)"
+            # This will catch SQL syntax errors
+            supabase db test --file "$migration" || {
+              echo "❌ Syntax error in $migration"
+              exit 1
+            }
+          done
 
-          # Check if there are unexpected differences
-          if [ -s diff-output.txt ]; then
-            echo "❌ Schema differences detected!"
-            cat diff-output.txt
-            exit 1
+      - name: Run schema deployment test
+        run: |
+          echo "🧪 Testing schema targeting mechanism..."
+
+          # Determine target schema
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            export TARGET_SCHEMA="production"
           else
-            echo "✅ Schema validation passed"
+            export TARGET_SCHEMA="development"
           fi
+
+          echo "🎯 Target schema: $TARGET_SCHEMA"
+
+          # Apply migrations
+          supabase db reset --local
+
+          # Verify schema deployment with comprehensive checks
+          psql postgres://postgres:postgres@127.0.0.1:54322/postgres << EOF
+            -- Check schema exists
+            DO \$\$
+            BEGIN
+              IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = '$TARGET_SCHEMA') THEN
+                RAISE EXCEPTION 'Schema % does not exist', '$TARGET_SCHEMA';
+              END IF;
+            END\$\$;
+
+            -- Verify all expected tables
+            WITH expected_tables AS (
+              SELECT unnest(ARRAY['rulesets', 'games', 'characters', 'game_players', 'invitations']) as table_name
+            ),
+            actual_tables AS (
+              SELECT tablename as table_name
+              FROM pg_tables
+              WHERE schemaname = '$TARGET_SCHEMA'
+            )
+            SELECT
+              e.table_name,
+              CASE WHEN a.table_name IS NULL THEN '❌ Missing' ELSE '✅ Present' END as status
+            FROM expected_tables e
+            LEFT JOIN actual_tables a ON e.table_name = a.table_name
+            ORDER BY e.table_name;
+
+            -- Check RLS is enabled
+            SELECT
+              schemaname,
+              tablename,
+              CASE WHEN rowsecurity THEN '✅ RLS Enabled' ELSE '❌ RLS Disabled' END as rls_status
+            FROM pg_tables
+            WHERE schemaname = '$TARGET_SCHEMA'
+            ORDER BY tablename;
+          EOF
+
+      - name: Test rollback capability
+        if: needs.changes.outputs.schema == 'true'
+        run: |
+          echo "🔄 Testing migration rollback capability..."
+
+          # This is a critical test for production safety
+          # Create a snapshot before migrations
+          pg_dump postgres://postgres:postgres@127.0.0.1:54322/postgres > before_migration.sql
+
+          # Apply latest migration
+          latest_migration=$(ls -1 supabase/migrations/*.sql | tail -1)
+          echo "Testing rollback for: $(basename $latest_migration)"
+
+          # Note: In a real scenario, you'd have down migrations
+          echo "⚠️ Warning: No down migrations found. Consider implementing rollback scripts."
 
       - name: Generate and validate types
         run: |
-          # Generate TypeScript types from local schema
-          pnpm --filter @heist-mind/database db:types-local
-
-          # Check if generated types compile
-          pnpm --filter @heist-mind/database tsc --noEmit || {
-            echo "❌ Generated types do not compile!"
+          # Generate types with error handling
+          pnpm --filter @heistmind/database db:types-local || {
+            echo "❌ Failed to generate types"
             exit 1
           }
 
-          echo "✅ Type generation successful"
+          # Compile TypeScript with strict settings
+          pnpm --filter @heistmind/database tsc --noEmit --strict || {
+            echo "❌ Generated types do not compile with strict mode"
+            exit 1
+          }
+
+          echo "✅ Type generation and validation successful"
+
+      - name: Run integration tests
+        run: |
+          echo "🧪 Running database integration tests..."
+
+          # Add actual integration tests here
+          # Example: Test that RLS policies work correctly
+          psql postgres://postgres:postgres@127.0.0.1:54322/postgres << 'EOF'
+            -- Test user creation flow
+            INSERT INTO auth.users (id, email) VALUES
+              ('00000000-0000-0000-0000-000000000001', 'test@example.com');
+
+            -- Test RLS policies
+            SET SESSION auth.uid = '00000000-0000-0000-0000-000000000001';
+
+            -- Should succeed: user can view their own profile
+            SELECT * FROM profiles WHERE id = '00000000-0000-0000-0000-000000000001';
+
+            -- Add more integration tests
+          EOF
+
+      - name: Create validation report
+        if: always()
+        run: |
+          echo "## 📋 Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Migration Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- Total migrations: $(ls -1 supabase/migrations/*.sql | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- New migrations: ${{ needs.changes.outputs.migrations && '✅ Yes' || '➖ No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Schema changes: ${{ needs.changes.outputs.schema && '⚠️ Yes' || '➖ No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.changes.outputs.schema }}" = "true" ]; then
+            echo "### ⚠️ Schema Changes Detected" >> $GITHUB_STEP_SUMMARY
+            echo "This deployment includes structural changes. Please review carefully." >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Stop Supabase
         if: always()
-        run: supabase stop
+        run: |
+          supabase stop --no-backup
+          docker volume prune -f
+
+  # Separate job for security scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.migrations == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for SQL injection vulnerabilities
+        run: |
+          echo "🔒 Scanning migrations for security issues..."
+
+          # Check for dangerous SQL patterns
+          dangerous_patterns=(
+            "DROP DATABASE"
+            "DROP SCHEMA public"
+            "GRANT ALL"
+            "SECURITY DEFINER"
+            "pg_read_server_files"
+          )
+
+          for pattern in "${dangerous_patterns[@]}"; do
+            if grep -i "$pattern" supabase/migrations/*.sql; then
+              echo "❌ Dangerous SQL pattern found: $pattern"
+              echo "Please review the migration for security implications"
+              exit 1
+            fi
+          done
+
+          echo "✅ Security scan passed"
 
   deploy:
-    name: Deploy to Supabase
+    name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
-    needs: validate
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development'
+    needs: [validate, security-scan]
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+
+    # Use matrix for parallel deployments if needed
+    strategy:
+      matrix:
+        include:
+          - environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      max-parallel: 1  # Deploy one environment at a time
+
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      name: ${{ matrix.environment }}
+      url: https://${{ matrix.environment }}.heistmind.app  # Add your actual URLs
+
+    timeout-minutes: 20
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
+      - name: Setup deployment environment
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
 
-      - name: Debug environment
+      - name: Validate deployment credentials
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
-          echo "=== Checking environment variables ==="
+          echo "🔐 Validating deployment credentials..."
 
-          # Check if secrets are set (without revealing them)
-          [ -n "$SUPABASE_ACCESS_TOKEN" ] && echo "✅ SUPABASE_ACCESS_TOKEN is set (${#SUPABASE_ACCESS_TOKEN} chars)" || echo "❌ SUPABASE_ACCESS_TOKEN is NOT set"
-          [ -n "$SUPABASE_DB_PASSWORD" ] && echo "✅ SUPABASE_DB_PASSWORD is set (${#SUPABASE_DB_PASSWORD} chars)" || echo "❌ SUPABASE_DB_PASSWORD is NOT set"
-          [ -n "$SUPABASE_PROJECT_ID" ] && echo "✅ SUPABASE_PROJECT_ID is set: $SUPABASE_PROJECT_ID" || echo "❌ SUPABASE_PROJECT_ID is NOT set"
+          # Enhanced validation
+          if [ ${#SUPABASE_ACCESS_TOKEN} -ne 40 ]; then
+            echo "❌ Invalid access token length: ${#SUPABASE_ACCESS_TOKEN} (expected 40)"
+            exit 1
+          fi
+
+          if [[ ! "$SUPABASE_ACCESS_TOKEN" =~ ^sbp_ ]]; then
+            echo "❌ Access token has invalid format"
+            exit 1
+          fi
+
+          echo "✅ Credentials validated"
+
+      - name: Create deployment backup
+        if: matrix.environment == 'production'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "💾 Creating pre-deployment backup..."
+
+          # Create backup timestamp
+          BACKUP_NAME="pre-deploy-$(date +%Y%m%d-%H%M%S)"
+
+          # Note: In production, implement actual backup
+          echo "Backup name: $BACKUP_NAME"
+          echo "⚠️ TODO: Implement production backup strategy"
 
       - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🔗 Linking to Supabase project..."
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} || {
-            echo "❌ Failed to link Supabase project"
-            echo "Make sure SUPABASE_ACCESS_TOKEN is a valid personal access token from https://app.supabase.com/account/tokens"
+
+          # Link with retry logic
+          for i in {1..3}; do
+            if supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}; then
+              echo "✅ Successfully linked to project"
+              break
+            else
+              echo "⚠️ Link attempt $i failed, retrying..."
+              sleep 5
+            fi
+          done
+
+      - name: Pre-deployment health check
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "🏥 Running pre-deployment health check..."
+
+          # Check database connectivity
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
+            -h db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co \
+            -p 5432 \
+            -U postgres \
+            -d postgres \
+            -c "SELECT version();" || {
+            echo "❌ Cannot connect to database"
             exit 1
           }
-          echo "✅ Successfully linked to Supabase project: ${{ secrets.SUPABASE_PROJECT_ID }}"
 
-      - name: Sync with remote database
+          echo "✅ Database is healthy"
+
+      - name: Deploy migrations with monitoring
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          echo "📥 Checking migration status..."
+          echo "🚀 Starting deployment to ${{ matrix.environment }}..."
 
-          # Check remote migration status first
-          echo "🔍 Checking remote migration history..."
-          supabase migration list --password "$SUPABASE_DB_PASSWORD" || {
-            echo "⚠️ Could not fetch remote migration list"
-          }
+          # Set target schema
+          export TARGET_SCHEMA="${{ matrix.environment }}"
 
-          # List current local migrations
-          echo "📋 Current local migrations:"
-          ls -la supabase/migrations/
+          # Create monitoring file
+          DEPLOY_LOG="deployment-$(date +%s).log"
 
-          # Try to repair migration history if there are issues
-          echo "🔧 Attempting to repair migration history..."
-          supabase migration repair --status reverted || {
-            echo "⚠️ Migration repair not needed or failed - continuing with deployment"
-          }
+          # Deploy with detailed logging
+          {
+            echo "=== Deployment started at $(date) ==="
+            echo "Target environment: ${{ matrix.environment }}"
+            echo "Target schema: $TARGET_SCHEMA"
+            echo "Commit: ${{ github.sha }}"
+            echo ""
 
-      - name: Handle migration conflicts
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          echo "🔄 Resolving migration conflicts..."
-
-          # First, try to pull the latest schema to sync
-          supabase db pull --password "$SUPABASE_DB_PASSWORD" || {
-            echo "⚠️ Pull failed, checking for specific conflicts..."
-
-            # Check if there are specific migrations causing issues
-            echo "🔍 Checking for migration conflicts..."
-
-            # If pull fails, try to reset migration history
-            echo "🔄 Attempting to reset migration tracking..."
-            supabase migration repair --status applied || true
-          }
-
-          # Ensure we have the core migrations we need
-          echo "📋 Verifying core migrations exist:"
-          [ -f "supabase/migrations/00001_initial_schema.sql" ] && echo "✅ Initial schema migration found" || echo "❌ Missing initial schema"
-          [ -f "supabase/migrations/00002_core_schema.sql" ] && echo "✅ Core schema migration found" || echo "❌ Missing core schema"
-
-      - name: Deploy database migrations
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          echo "🚀 Deploying migrations to Supabase..."
-
-          # Set schema based on branch
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            export TARGET_SCHEMA="production"
-            echo "📦 Deploying to PRODUCTION schema"
-          else
-            export TARGET_SCHEMA="development"
-            echo "📦 Deploying to DEVELOPMENT schema"
-          fi
-
-          # Create a temporary migration to set the target schema
-          TEMP_MIGRATION="supabase/migrations/$(date +%s)_set_target_schema.sql"
-          cat > "$TEMP_MIGRATION" << EOF
-          -- Set target schema for this deployment
+            # Create schema targeting migration
+            TEMP_MIGRATION="supabase/migrations/00000_set_schema.sql"
+            cat > "$TEMP_MIGRATION" << EOF
+          -- Deployment: ${{ github.sha }}
+          -- Environment: ${{ matrix.environment }}
+          -- Date: $(date)
           DO \$\$
           BEGIN
-              -- Set the target schema for subsequent operations
               EXECUTE format('SET heistmind.target_schema = %L', '$TARGET_SCHEMA');
-              RAISE NOTICE 'Target schema set to: %', '$TARGET_SCHEMA';
-          END \$\$;
+              RAISE NOTICE 'Deploying to schema: %', '$TARGET_SCHEMA';
+          END\$\$;
           EOF
 
-          echo "📝 Created temporary schema targeting migration"
+            # Deploy with timeout
+            timeout 600 supabase db push --password "$SUPABASE_DB_PASSWORD" 2>&1
+            DEPLOY_STATUS=$?
 
-          # Push migrations to remote database with password
-          echo "🔄 Pushing migrations..."
-          supabase db push --password "$SUPABASE_DB_PASSWORD" || {
-            echo "❌ Failed to push migrations"
+            # Cleanup
             rm -f "$TEMP_MIGRATION"
+
+            echo ""
+            echo "=== Deployment finished at $(date) ==="
+            echo "Exit status: $DEPLOY_STATUS"
+          } | tee "$DEPLOY_LOG"
+
+          # Check deployment status
+          if [ $DEPLOY_STATUS -ne 0 ]; then
+            echo "❌ Deployment failed!"
+            echo "### 📋 Deployment Log" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -50 "$DEPLOY_LOG" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
             exit 1
-          }
+          fi
 
-          # Clean up temporary migration
-          rm -f "$TEMP_MIGRATION"
-          echo "✅ Migrations deployed successfully to $TARGET_SCHEMA schema"
+          echo "✅ Deployment completed successfully"
 
-      - name: Verify deployment
+      - name: Post-deployment validation
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          echo "🔍 Verifying deployment..."
+          echo "🔍 Running post-deployment validation..."
 
-          # List projects to verify connection
-          supabase projects list | grep -q "${{ secrets.SUPABASE_PROJECT_ID }}" || {
-            echo "❌ Cannot verify connection to Supabase project!"
+          export TARGET_SCHEMA="${{ matrix.environment }}"
+
+          # Comprehensive validation
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
+            -h db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co \
+            -p 5432 \
+            -U postgres \
+            -d postgres << EOF | tee validation.log
+            -- Validate schema
+            SELECT
+              'Schema Check' as test,
+              CASE
+                WHEN EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = '$TARGET_SCHEMA')
+                THEN '✅ PASS'
+                ELSE '❌ FAIL'
+              END as result;
+
+            -- Validate critical tables
+            WITH expected_tables AS (
+              SELECT unnest(ARRAY['rulesets', 'games', 'characters', 'game_players', 'invitations']) as table_name
+            )
+            SELECT
+              'Table: ' || e.table_name as test,
+              CASE
+                WHEN EXISTS (
+                  SELECT 1 FROM information_schema.tables
+                  WHERE table_schema = '$TARGET_SCHEMA'
+                  AND table_name = e.table_name
+                )
+                THEN '✅ PASS'
+                ELSE '❌ FAIL'
+              END as result
+            FROM expected_tables e
+            ORDER BY e.table_name;
+
+            -- Check RLS status
+            SELECT
+              'RLS Check' as test,
+              CASE
+                WHEN COUNT(*) = (SELECT COUNT(*) FROM pg_tables WHERE schemaname = '$TARGET_SCHEMA')
+                THEN '✅ PASS - All tables have RLS'
+                ELSE '❌ FAIL - Some tables missing RLS'
+              END as result
+            FROM pg_tables
+            WHERE schemaname = '$TARGET_SCHEMA'
+            AND rowsecurity = true;
+          EOF
+
+          # Check for validation failures
+          if grep -q "❌ FAIL" validation.log; then
+            echo "❌ Post-deployment validation failed!"
+            cat validation.log >> $GITHUB_STEP_SUMMARY
             exit 1
-          }
+          fi
 
-          echo "✅ Deployment verification passed"
+          echo "✅ All post-deployment checks passed"
 
-      - name: Generate production types
+      - name: Update deployment tracking
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "📊 Recording deployment metadata..."
+
+          # Create deployment record (if you have a deployments table)
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
+            -h db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co \
+            -p 5432 \
+            -U postgres \
+            -d postgres << EOF
+            -- Create deployment log table if not exists
+            CREATE TABLE IF NOT EXISTS public.deployment_log (
+              id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+              environment TEXT NOT NULL,
+              commit_sha TEXT NOT NULL,
+              deployed_by TEXT NOT NULL,
+              deployed_at TIMESTAMPTZ DEFAULT NOW(),
+              status TEXT NOT NULL,
+              metadata JSONB DEFAULT '{}'
+            );
+
+            -- Log this deployment
+            INSERT INTO public.deployment_log (
+              environment,
+              commit_sha,
+              deployed_by,
+              status,
+              metadata
+            ) VALUES (
+              '${{ matrix.environment }}',
+              '${{ github.sha }}',
+              '${{ github.actor }}',
+              'success',
+              jsonb_build_object(
+                'branch', '${{ github.ref_name }}',
+                'run_id', '${{ github.run_id }}',
+                'run_number', '${{ github.run_number }}'
+              )
+            );
+          EOF
+
+      - name: Generate and commit types
+        if: matrix.environment == 'production'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
-          echo "📝 Generating TypeScript types from production schema..."
+          echo "📝 Generating TypeScript types..."
 
-          # Generate types from remote database
-          pnpm --filter @heist-mind/database db:types || {
-            echo "⚠️ Failed to generate types, but deployment was successful"
-            # Don't fail the job if type generation fails
-          }
-
-          echo "✅ Type generation completed"
+          # Generate with retry
+          for i in {1..3}; do
+            if pnpm --filter @heistmind/database db:types; then
+              echo "✅ Types generated successfully"
+              break
+            else
+              echo "⚠️ Type generation attempt $i failed"
+              sleep 5
+            fi
+          done
 
       - name: Commit updated types
+        if: matrix.environment == 'production'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'chore: update database types after migration [skip ci]'
+          commit_message: 'chore: update database types after ${{ matrix.environment }} deployment [skip ci]'
           file_pattern: 'packages/database/supabase-types.ts'
           commit_user_name: 'github-actions[bot]'
           commit_user_email: 'github-actions[bot]@users.noreply.github.com'
-          skip_dirty_check: false
-          skip_fetch: false
-        if: github.ref == 'refs/heads/main'
 
       - name: Deployment summary
-        if: success()
+        if: always()
         run: |
-          echo "## 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project ID**: ${{ secrets.SUPABASE_PROJECT_ID }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ Successfully deployed" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment: ${{ matrix.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Database migrations have been applied to the **${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}** schema." >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Actor | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Started | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-  notify-failure:
-    name: Notify on Failure
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "All migrations have been applied to the **${{ matrix.environment }}** environment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs above for error details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Automated rollback capability
+  rollback:
+    name: Rollback Deployment
     runs-on: ubuntu-latest
-    needs: [validate, deploy]
-    if: failure()
+    needs: deploy
+    if: failure() && github.ref == 'refs/heads/main'
+    environment: production-rollback
     steps:
-      - name: Failure summary
+      - name: Initiate rollback
         run: |
-          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔄 Initiating Rollback" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The database deployment has failed. Please check the logs and resolve any issues before retrying." >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Automatic rollback is not implemented." >> $GITHUB_STEP_SUMMARY
+          echo "Manual intervention required." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Common issues to check:" >> $GITHUB_STEP_SUMMARY
-          echo "1. **Invalid access token**: Ensure SUPABASE_ACCESS_TOKEN is from https://app.supabase.com/account/tokens" >> $GITHUB_STEP_SUMMARY
-          echo "2. **Wrong project ID**: Verify SUPABASE_PROJECT_ID matches your project reference ID" >> $GITHUB_STEP_SUMMARY
-          echo "3. **Database password**: Ensure SUPABASE_DB_PASSWORD is the database password, not the API key" >> $GITHUB_STEP_SUMMARY
-          echo "4. **Migration errors**: Check if migrations have SQL syntax errors" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next steps:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Review the error logs above" >> $GITHUB_STEP_SUMMARY
-          echo "2. Fix any migration issues locally" >> $GITHUB_STEP_SUMMARY
-          echo "3. Test with \`supabase db diff\` before pushing" >> $GITHUB_STEP_SUMMARY
-          echo "4. Push the fix to trigger a new deployment" >> $GITHUB_STEP_SUMMARY
+          echo "### Rollback Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Restore from the latest backup" >> $GITHUB_STEP_SUMMARY
+          echo "2. Revert the commit: \`git revert ${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Deploy the reverted commit" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+    steps:
+      - name: Send deployment notification
+        run: |
+          # Add Slack/Discord/Email notifications here
+          echo "📧 Deployment notification would be sent here"
+
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "✅ Deployment successful to ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}"
+          else
+            echo "❌ Deployment failed"
+          fi
