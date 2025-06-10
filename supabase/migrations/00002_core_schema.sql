@@ -76,14 +76,26 @@ CREATE TABLE IF NOT EXISTS rulesets (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add constraints with schema-specific names
+-- Add constraints with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('ALTER TABLE rulesets ADD CONSTRAINT %I CHECK (status IN (''draft'', ''published'', ''archived''))',
-                   get_constraint_name('rulesets_status_check'));
+    -- Add status check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('rulesets_status_check')
+                   AND table_name = 'rulesets'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE rulesets ADD CONSTRAINT %I CHECK (status IN (''draft'', ''published'', ''archived''))',
+                       get_constraint_name('rulesets_status_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE rulesets ADD CONSTRAINT %I UNIQUE (name, created_by)',
-                   get_constraint_name('rulesets_name_creator_unique'));
+    -- Add unique constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('rulesets_name_creator_unique')
+                   AND table_name = 'rulesets'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE rulesets ADD CONSTRAINT %I UNIQUE (name, created_by)',
+                       get_constraint_name('rulesets_name_creator_unique'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -119,23 +131,53 @@ CREATE TABLE IF NOT EXISTS games (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add constraints with schema-specific names
+-- Add constraints with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (state IN (''draft'', ''recruiting'', ''active'', ''paused'', ''completed''))',
-                   get_constraint_name('games_state_check'));
+    -- Add state check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('games_state_check')
+                   AND table_name = 'games'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (state IN (''draft'', ''recruiting'', ''active'', ''paused'', ''completed''))',
+                       get_constraint_name('games_state_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (max_players > 0 AND max_players <= 20)',
-                   get_constraint_name('games_max_players_check'));
+    -- Add max players check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('games_max_players_check')
+                   AND table_name = 'games'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (max_players > 0 AND max_players <= 20)',
+                       get_constraint_name('games_max_players_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (current_players >= 0)',
-                   get_constraint_name('games_current_players_positive_check'));
+    -- Add current players positive check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('games_current_players_positive_check')
+                   AND table_name = 'games'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (current_players >= 0)',
+                       get_constraint_name('games_current_players_positive_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (current_players <= max_players)',
-                   get_constraint_name('games_current_players_check'));
+    -- Add current players bounds check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('games_current_players_check')
+                   AND table_name = 'games'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I CHECK (current_players <= max_players)',
+                       get_constraint_name('games_current_players_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I UNIQUE (name, created_by)',
-                   get_constraint_name('games_name_creator_unique'));
+    -- Add unique constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('games_name_creator_unique')
+                   AND table_name = 'games'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE games ADD CONSTRAINT %I UNIQUE (name, created_by)',
+                       get_constraint_name('games_name_creator_unique'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -160,17 +202,35 @@ CREATE TABLE IF NOT EXISTS game_players (
   left_at TIMESTAMPTZ
 );
 
--- Add constraints with schema-specific names
+-- Add constraints with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('ALTER TABLE game_players ADD CONSTRAINT %I CHECK (role IN (''game_master'', ''player'', ''co_gm'', ''spectator''))',
-                   get_constraint_name('game_players_role_check'));
+    -- Add role check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('game_players_role_check')
+                   AND table_name = 'game_players'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE game_players ADD CONSTRAINT %I CHECK (role IN (''game_master'', ''player'', ''co_gm'', ''spectator''))',
+                       get_constraint_name('game_players_role_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE game_players ADD CONSTRAINT %I CHECK (status IN (''invited'', ''active'', ''inactive'', ''removed''))',
-                   get_constraint_name('game_players_status_check'));
+    -- Add status check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('game_players_status_check')
+                   AND table_name = 'game_players'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE game_players ADD CONSTRAINT %I CHECK (status IN (''invited'', ''active'', ''inactive'', ''removed''))',
+                       get_constraint_name('game_players_status_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE game_players ADD CONSTRAINT %I UNIQUE (game_id, player_id)',
-                   get_constraint_name('game_players_unique'));
+    -- Add unique constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('game_players_unique')
+                   AND table_name = 'game_players'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE game_players ADD CONSTRAINT %I UNIQUE (game_id, player_id)',
+                       get_constraint_name('game_players_unique'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -208,17 +268,35 @@ CREATE TABLE IF NOT EXISTS characters (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add constraints with schema-specific names
+-- Add constraints with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('ALTER TABLE characters ADD CONSTRAINT %I CHECK (experience_points >= 0)',
-                   get_constraint_name('characters_xp_check'));
+    -- Add experience points check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('characters_xp_check')
+                   AND table_name = 'characters'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE characters ADD CONSTRAINT %I CHECK (experience_points >= 0)',
+                       get_constraint_name('characters_xp_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE characters ADD CONSTRAINT %I CHECK (status IN (''active'', ''inactive'', ''retired'', ''dead''))',
-                   get_constraint_name('characters_status_check'));
+    -- Add status check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('characters_status_check')
+                   AND table_name = 'characters'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE characters ADD CONSTRAINT %I CHECK (status IN (''active'', ''inactive'', ''retired'', ''dead''))',
+                       get_constraint_name('characters_status_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE characters ADD CONSTRAINT %I UNIQUE (game_id, created_by, name)',
-                   get_constraint_name('characters_name_unique'));
+    -- Add unique constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('characters_name_unique')
+                   AND table_name = 'characters'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE characters ADD CONSTRAINT %I UNIQUE (game_id, created_by, name)',
+                       get_constraint_name('characters_name_unique'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -247,23 +325,53 @@ CREATE TABLE IF NOT EXISTS invitations (
   responded_at TIMESTAMPTZ
 );
 
--- Add constraints with schema-specific names
+-- Add constraints with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (max_uses > 0)',
-                   get_constraint_name('invitations_max_uses_check'));
+    -- Add max uses check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('invitations_max_uses_check')
+                   AND table_name = 'invitations'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (max_uses > 0)',
+                       get_constraint_name('invitations_max_uses_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (used_count >= 0)',
-                   get_constraint_name('invitations_used_count_check'));
+    -- Add used count check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('invitations_used_count_check')
+                   AND table_name = 'invitations'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (used_count >= 0)',
+                       get_constraint_name('invitations_used_count_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (status IN (''pending'', ''accepted'', ''declined'', ''expired'', ''revoked''))',
-                   get_constraint_name('invitations_status_check'));
+    -- Add status check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('invitations_status_check')
+                   AND table_name = 'invitations'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (status IN (''pending'', ''accepted'', ''declined'', ''expired'', ''revoked''))',
+                       get_constraint_name('invitations_status_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK ((invited_player IS NOT NULL AND invite_code IS NULL) OR (invited_player IS NULL AND invite_code IS NOT NULL))',
-                   get_constraint_name('invitations_target_check'));
+    -- Add target check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('invitations_target_check')
+                   AND table_name = 'invitations'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK ((invited_player IS NOT NULL AND invite_code IS NULL) OR (invited_player IS NULL AND invite_code IS NOT NULL))',
+                       get_constraint_name('invitations_target_check'));
+    END IF;
 
-    EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (used_count <= max_uses)',
-                   get_constraint_name('invitations_uses_check'));
+    -- Add uses bounds check constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                   WHERE constraint_name = get_constraint_name('invitations_uses_check')
+                   AND table_name = 'invitations'
+                   AND table_schema = current_schema()) THEN
+        EXECUTE format('ALTER TABLE invitations ADD CONSTRAINT %I CHECK (used_count <= max_uses)',
+                       get_constraint_name('invitations_uses_check'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -335,23 +443,48 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers with schema-specific names
+-- Create triggers with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('CREATE TRIGGER %I AFTER INSERT ON games FOR EACH ROW EXECUTE FUNCTION auto_assign_game_master()',
-                   get_constraint_name('assign_gm_on_game_creation'));
+    -- Create game master assignment trigger if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.triggers
+                   WHERE trigger_name = get_constraint_name('assign_gm_on_game_creation')
+                   AND trigger_schema = current_schema()) THEN
+        EXECUTE format('CREATE TRIGGER %I AFTER INSERT ON games FOR EACH ROW EXECUTE FUNCTION auto_assign_game_master()',
+                       get_constraint_name('assign_gm_on_game_creation'));
+    END IF;
 
-    EXECUTE format('CREATE TRIGGER %I AFTER INSERT OR UPDATE OR DELETE ON game_players FOR EACH ROW EXECUTE FUNCTION update_game_player_count()',
-                   get_constraint_name('update_game_player_count_trigger'));
+    -- Create player count update trigger if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.triggers
+                   WHERE trigger_name = get_constraint_name('update_game_player_count_trigger')
+                   AND trigger_schema = current_schema()) THEN
+        EXECUTE format('CREATE TRIGGER %I AFTER INSERT OR UPDATE OR DELETE ON game_players FOR EACH ROW EXECUTE FUNCTION update_game_player_count()',
+                       get_constraint_name('update_game_player_count_trigger'));
+    END IF;
 
-    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON rulesets FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()',
-                   get_constraint_name('update_rulesets_updated_at'));
+    -- Create rulesets updated_at trigger if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.triggers
+                   WHERE trigger_name = get_constraint_name('update_rulesets_updated_at')
+                   AND trigger_schema = current_schema()) THEN
+        EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON rulesets FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()',
+                       get_constraint_name('update_rulesets_updated_at'));
+    END IF;
 
-    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON games FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()',
-                   get_constraint_name('update_games_updated_at'));
+    -- Create games updated_at trigger if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.triggers
+                   WHERE trigger_name = get_constraint_name('update_games_updated_at')
+                   AND trigger_schema = current_schema()) THEN
+        EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON games FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()',
+                       get_constraint_name('update_games_updated_at'));
+    END IF;
 
-    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON characters FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()',
-                   get_constraint_name('update_characters_updated_at'));
+    -- Create characters updated_at trigger if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.triggers
+                   WHERE trigger_name = get_constraint_name('update_characters_updated_at')
+                   AND trigger_schema = current_schema()) THEN
+        EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON characters FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column()',
+                       get_constraint_name('update_characters_updated_at'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -468,35 +601,35 @@ END $$;
 -- All indexes are automatically schema-specific since they're created on tables within the schema
 
 -- Rulesets indexes
-CREATE INDEX idx_rulesets_created_by ON rulesets(created_by);
-CREATE INDEX idx_rulesets_status_public ON rulesets(status, is_public);
-CREATE INDEX idx_rulesets_content_gin ON rulesets USING gin(content);
-CREATE INDEX idx_rulesets_tags_gin ON rulesets USING gin(tags);
+CREATE INDEX IF NOT EXISTS idx_rulesets_created_by ON rulesets(created_by);
+CREATE INDEX IF NOT EXISTS idx_rulesets_status_public ON rulesets(status, is_public);
+CREATE INDEX IF NOT EXISTS idx_rulesets_content_gin ON rulesets USING gin(content);
+CREATE INDEX IF NOT EXISTS idx_rulesets_tags_gin ON rulesets USING gin(tags);
 
 -- Games indexes
-CREATE INDEX idx_games_created_by ON games(created_by);
-CREATE INDEX idx_games_ruleset_id ON games(ruleset_id);
-CREATE INDEX idx_games_state ON games(state);
-CREATE INDEX idx_games_public_listing ON games(public_listing) WHERE public_listing = true;
+CREATE INDEX IF NOT EXISTS idx_games_created_by ON games(created_by);
+CREATE INDEX IF NOT EXISTS idx_games_ruleset_id ON games(ruleset_id);
+CREATE INDEX IF NOT EXISTS idx_games_state ON games(state);
+CREATE INDEX IF NOT EXISTS idx_games_public_listing ON games(public_listing) WHERE public_listing = true;
 
 -- Game players indexes
-CREATE INDEX idx_game_players_game_id ON game_players(game_id);
-CREATE INDEX idx_game_players_player_id ON game_players(player_id);
-CREATE INDEX idx_game_players_status ON game_players(status);
-CREATE INDEX idx_game_players_role ON game_players(role);
+CREATE INDEX IF NOT EXISTS idx_game_players_game_id ON game_players(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_players_player_id ON game_players(player_id);
+CREATE INDEX IF NOT EXISTS idx_game_players_status ON game_players(status);
+CREATE INDEX IF NOT EXISTS idx_game_players_role ON game_players(role);
 
 -- Characters indexes
-CREATE INDEX idx_characters_created_by ON characters(created_by);
-CREATE INDEX idx_characters_game_id ON characters(game_id);
-CREATE INDEX idx_characters_status ON characters(status);
-CREATE INDEX idx_characters_data_gin ON characters USING gin(character_data);
+CREATE INDEX IF NOT EXISTS idx_characters_created_by ON characters(created_by);
+CREATE INDEX IF NOT EXISTS idx_characters_game_id ON characters(game_id);
+CREATE INDEX IF NOT EXISTS idx_characters_status ON characters(status);
+CREATE INDEX IF NOT EXISTS idx_characters_data_gin ON characters USING gin(character_data);
 
 -- Invitations indexes
-CREATE INDEX idx_invitations_game_id ON invitations(game_id);
-CREATE INDEX idx_invitations_invited_player ON invitations(invited_player);
-CREATE INDEX idx_invitations_invited_by ON invitations(invited_by);
-CREATE INDEX idx_invitations_status ON invitations(status);
-CREATE INDEX idx_invitations_expires_at ON invitations(expires_at) WHERE expires_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_invitations_game_id ON invitations(game_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_invited_player ON invitations(invited_player);
+CREATE INDEX IF NOT EXISTS idx_invitations_invited_by ON invitations(invited_by);
+CREATE INDEX IF NOT EXISTS idx_invitations_status ON invitations(status);
+CREATE INDEX IF NOT EXISTS idx_invitations_expires_at ON invitations(expires_at) WHERE expires_at IS NOT NULL;
 
 -- ===========================
 -- COMMENTS FOR DOCUMENTATION
