@@ -1,8 +1,7 @@
 {
     "$schema": "https://openapi.vercel.sh/vercel.json",
-    "buildCommand": "/vercel/.npm/bin/pnpm --filter @heist-mind/web build",
+    "buildCommand": "pnpm --filter @heist-mind/web build",
     "devCommand": "pnpm --filter @heist-mind/web dev",
-    "installCommand": "npm install -g pnpm@9 && /vercel/.npm/bin/pnpm install --frozen-lockfile",
-    "outputDirectory": "apps/web/.next",
-    "framework": null
+    "installCommand": "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --frozen-lockfile",
+    "outputDirectory": "apps/web/.next"
 }
