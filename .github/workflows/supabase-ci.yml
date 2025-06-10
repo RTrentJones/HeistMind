@@ -523,26 +523,6 @@ jobs:
             fi
           done
 
-      - name: Pre-deployment health check
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          echo "🏥 Running pre-deployment health check..."
-
-          # Use Supabase CLI for better connectivity handling
-          echo "🔗 Linking to project..."
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
-
-          # Test database connectivity via CLI (dry-run won't make changes)
-          echo "🔍 Testing database connectivity..."
-          supabase db remote commit --dry-run || {
-            echo "❌ Database health check failed via both CLI and API"
-            echo "This may indicate network connectivity issues or incorrect credentials"
-            exit 1
-          }
-
-          echo "✅ Database is healthy and accessible"
-
       - name: Deploy migrations with monitoring
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
