@@ -46,7 +46,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '
 -- 2. RULESETS TABLE
 -- ===========================
 
-CREATE TABLE rulesets (
+CREATE TABLE IF NOT EXISTS rulesets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_by UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
 
@@ -90,7 +90,7 @@ END $$;
 -- 3. GAMES TABLE
 -- ===========================
 
-CREATE TABLE games (
+CREATE TABLE IF NOT EXISTS games (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_by UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   ruleset_id UUID REFERENCES rulesets(id) ON DELETE RESTRICT NOT NULL,
@@ -142,7 +142,7 @@ END $$;
 -- 4. GAME PLAYERS TABLE
 -- ===========================
 
-CREATE TABLE game_players (
+CREATE TABLE IF NOT EXISTS game_players (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id UUID REFERENCES games(id) ON DELETE CASCADE NOT NULL,
   player_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -177,7 +177,7 @@ END $$;
 -- 5. CHARACTERS TABLE
 -- ===========================
 
-CREATE TABLE characters (
+CREATE TABLE IF NOT EXISTS characters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_by UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   game_id UUID REFERENCES games(id) ON DELETE CASCADE NOT NULL,
@@ -225,7 +225,7 @@ END $$;
 -- 6. INVITATIONS TABLE
 -- ===========================
 
-CREATE TABLE invitations (
+CREATE TABLE IF NOT EXISTS invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id UUID REFERENCES games(id) ON DELETE CASCADE NOT NULL,
   invited_by UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
