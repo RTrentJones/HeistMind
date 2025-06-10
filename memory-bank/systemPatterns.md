@@ -436,3 +436,505 @@ class GameFlowTestSuite {
 ```
 
 This system pattern foundation ensures HeistMind can scale securely while maintaining the flexibility needed for diverse FitD rulesets and community requirements.
+
+## UI/UX Design Patterns
+
+### Gaming-Focused Design Language
+
+#### TTRPG Aesthetic Principles
+```typescript
+// Design system philosophy for tabletop gaming
+const designPhilosophy = {
+  // Dark theme optimized for long gaming sessions
+  colorPalette: {
+    primary: 'Deep dark backgrounds reduce eye strain',
+    accent: 'TTRPG-themed colors (crimson for stress, gold for XP)',
+    semantic: 'Game-specific colors for different mechanics'
+  },
+
+  // Typography reflecting tabletop tradition
+  typography: {
+    character: 'Bold, readable fonts for character names',
+    mechanical: 'Monospace fonts for game mechanics',
+    narrative: 'Clean sans-serif for descriptions'
+  },
+
+  // Spacing based on character sheet layouts
+  spacing: {
+    sheet: 'Character sheet section spacing',
+    component: 'Individual component spacing',
+    tight: 'Dense information display'
+  }
+}
+```
+
+#### Accessibility-First Component Design
+```typescript
+// Radix UI primitives with WCAG 2.1 compliance
+interface AccessibleComponentProps {
+  // Keyboard navigation support
+  onKeyDown?: (event: KeyboardEvent) => void
+  tabIndex?: number
+
+  // Screen reader support
+  'aria-label'?: string
+  'aria-describedby'?: string
+  'aria-expanded'?: boolean
+
+  // Focus management
+  autoFocus?: boolean
+  focusRing?: boolean
+}
+
+// Example: Accessible character sheet tab system
+const CharacterTabs = () => (
+  <Tabs.Root defaultValue="attributes">
+    <Tabs.List
+      className="flex border-b border-border"
+      aria-label="Character sheet sections"
+    >
+      <Tabs.Trigger
+        value="attributes"
+        className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-accent"
+      >
+        Attributes
+      </Tabs.Trigger>
+      <Tabs.Trigger value="skills">Skills</Tabs.Trigger>
+      <Tabs.Trigger value="abilities">Special Abilities</Tabs.Trigger>
+    </Tabs.List>
+
+    <Tabs.Content value="attributes" className="mt-4">
+      <AttributeGrid />
+    </Tabs.Content>
+  </Tabs.Root>
+)
+```
+
+### Component Architecture Patterns
+
+#### Compound Component Strategy
+```typescript
+// Flexible character sheet composition
+interface CharacterSheetComponents {
+  Container: React.ComponentType<ContainerProps>
+  Header: React.ComponentType<HeaderProps>
+  Section: React.ComponentType<SectionProps>
+  Body: React.ComponentType<BodyProps>
+}
+
+// Usage pattern allows flexible layouts
+const CustomCharacterSheet = () => (
+  <CharacterSheet.Container>
+    <CharacterSheet.Header>
+      <CharacterName />
+      <PlaybookBadge />
+      <StressTracker />
+    </CharacterSheet.Header>
+
+    <CharacterSheet.Body>
+      <CharacterSheet.Section title="Core">
+        <AttributeGrid />
+        <SkillList />
+      </CharacterSheet.Section>
+
+      <CharacterSheet.Section title="Advancement">
+        <XPTracker />
+        <AdvancementOptions />
+      </CharacterSheet.Section>
+    </CharacterSheet.Body>
+  </CharacterSheet.Container>
+)
+```
+
+#### Wizard Pattern for Complex Workflows
+```typescript
+// Multi-step character creation with validation
+interface WizardState {
+  currentStep: number
+  completedSteps: number[]
+  stepData: Record<string, any>
+  isValid: boolean
+}
+
+class CharacterCreationWizard {
+  private steps: WizardStep[]
+  private state: WizardState
+
+  constructor(ruleset: RulesetDefinition) {
+    this.steps = this.generateStepsFromRuleset(ruleset)
+    this.state = {
+      currentStep: 0,
+      completedSteps: [],
+      stepData: {},
+      isValid: false
+    }
+  }
+
+  validateCurrentStep(): ValidationResult {
+    const currentStep = this.steps[this.state.currentStep]
+    return currentStep.validation(this.state.stepData)
+  }
+
+  canProceed(): boolean {
+    return this.validateCurrentStep().isValid
+  }
+
+  nextStep(): void {
+    if (this.canProceed()) {
+      this.state.completedSteps.push(this.state.currentStep)
+      this.state.currentStep++
+    }
+  }
+}
+```
+
+### State Management Patterns
+
+#### Domain-Driven State Organization
+```typescript
+// Separate stores for different domains
+interface AppState {
+  // Authentication state
+  auth: {
+    user: User | null
+    session: Session | null
+    isLoading: boolean
+  }
+
+  // Character management state
+  characters: {
+    byId: Record<string, Character>
+    byGameId: Record<string, string[]>
+    currentCharacter: string | null
+    creationWizard: WizardState | null
+  }
+
+  // Game management state
+  games: {
+    byId: Record<string, Game>
+    userGames: string[]
+    currentGame: string | null
+  }
+
+  // UI state
+  ui: {
+    theme: 'dark' | 'light'
+    sidebarOpen: boolean
+    activeModal: string | null
+    notifications: Notification[]
+  }
+}
+```
+
+#### Optimistic Updates with Rollback
+```typescript
+// Character update with optimistic UI
+const useOptimisticCharacterUpdate = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateCharacter,
+
+    // Optimistic update
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries(['characters', variables.gameId])
+
+      const previousCharacters = queryClient.getQueryData(['characters', variables.gameId])
+
+      queryClient.setQueryData(['characters', variables.gameId], (old: Character[]) =>
+        old.map(char =>
+          char.id === variables.characterId
+            ? { ...char, ...variables.updates }
+            : char
+        )
+      )
+
+      return { previousCharacters }
+    },
+
+    // Rollback on error
+    onError: (error, variables, context) => {
+      if (context?.previousCharacters) {
+        queryClient.setQueryData(['characters', variables.gameId], context.previousCharacters)
+      }
+    },
+
+    // Always refetch after success or error
+    onSettled: (data, error, variables) => {
+      queryClient.invalidateQueries(['characters', variables.gameId])
+    }
+  })
+}
+```
+
+### Form Validation Patterns
+
+#### Rule-Driven Validation
+```typescript
+// Dynamic validation based on ruleset
+interface ValidationRule {
+  field: string
+  type: 'required' | 'min' | 'max' | 'pattern' | 'custom'
+  value?: any
+  message: string
+  validator?: (value: any, context: any) => boolean
+}
+
+class RulesetValidator {
+  constructor(private ruleset: RulesetDefinition) {}
+
+  generateValidationRules(step: string): ValidationRule[] {
+    switch (step) {
+      case 'attributes':
+        return this.ruleset.characterCreation.attributes.map(attr => ({
+          field: attr.id,
+          type: 'min',
+          value: attr.minValue,
+          message: `${attr.name} must be at least ${attr.minValue}`
+        }))
+
+      case 'skills':
+        return [{
+          field: 'skillPoints',
+          type: 'custom',
+          message: 'Must spend all skill points',
+          validator: (value, context) => {
+            const spent = Object.values(context.skills).reduce((sum, val) => sum + val, 0)
+            return spent === this.ruleset.characterCreation.skillPoints
+          }
+        }]
+
+      default:
+        return []
+    }
+  }
+}
+```
+
+#### Progressive Validation with User Feedback
+```typescript
+// Real-time validation with helpful guidance
+const CharacterCreationStep = ({ stepData, ruleset, onUpdate }) => {
+  const [validation, setValidation] = useState<ValidationResult>()
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+
+  useEffect(() => {
+    const validator = new RulesetValidator(ruleset)
+    const result = validator.validateStep(stepData)
+    setValidation(result)
+
+    if (!result.isValid) {
+      const suggestions = validator.getSuggestions(stepData)
+      setSuggestions(suggestions)
+    }
+  }, [stepData, ruleset])
+
+  return (
+    <div className="space-y-4">
+      <StepContent data={stepData} onChange={onUpdate} />
+
+      {validation && !validation.isValid && (
+        <ValidationFeedback
+          errors={validation.errors}
+          suggestions={suggestions}
+        />
+      )}
+
+      <ProgressIndicator
+        completion={validation?.completionPercentage || 0}
+      />
+    </div>
+  )
+}
+```
+
+### Responsive Design Patterns
+
+#### Adaptive Component Layouts
+```typescript
+// Components that adapt to screen size
+const ResponsiveCharacterSheet = ({ character }) => {
+  const { isDesktop, isMobile } = useResponsiveBreakpoints()
+
+  if (isMobile) {
+    return (
+      <MobileCharacterSheet character={character}>
+        <CollapsibleSection title="Attributes">
+          <AttributeGrid layout="compact" />
+        </CollapsibleSection>
+        <CollapsibleSection title="Skills">
+          <SkillList layout="list" />
+        </CollapsibleSection>
+      </MobileCharacterSheet>
+    )
+  }
+
+  return (
+    <DesktopCharacterSheet character={character}>
+      <div className="grid grid-cols-3 gap-6">
+        <AttributeGrid layout="grid" />
+        <SkillList layout="columns" />
+        <AbilityTracker layout="sidebar" />
+      </div>
+    </DesktopCharacterSheet>
+  )
+}
+```
+
+#### Progressive Enhancement Strategy
+```typescript
+// Core functionality works without JavaScript
+const GameInvitation = ({ inviteCode }: { inviteCode: string }) => {
+  const [isEnhanced, setIsEnhanced] = useState(false)
+
+  useEffect(() => {
+    // Enable enhanced features after hydration
+    setIsEnhanced(true)
+  }, [])
+
+  return (
+    <div className="invitation-card">
+      {/* Core functionality: plain form submission */}
+      <form action="/api/invitations/accept" method="POST">
+        <input type="hidden" name="code" value={inviteCode} />
+        <button type="submit" className="btn-primary">
+          Accept Invitation
+        </button>
+      </form>
+
+      {/* Enhanced functionality: JavaScript-powered UX */}
+      {isEnhanced && (
+        <EnhancedInvitationFlow inviteCode={inviteCode} />
+      )}
+    </div>
+  )
+}
+```
+
+### Real-Time Collaboration Patterns
+
+#### Live Character Updates
+```typescript
+// Real-time character synchronization
+const useRealtimeCharacter = (characterId: string) => {
+  const [character, setCharacter] = useState<Character>()
+  const supabase = useSupabaseClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`character:${characterId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'characters',
+        filter: `id=eq.${characterId}`
+      }, (payload) => {
+        setCharacter(payload.new as Character)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [characterId, supabase])
+
+  return character
+}
+```
+
+#### Conflict Resolution Strategy
+```typescript
+// Handle concurrent character edits
+interface CharacterEdit {
+  field: string
+  value: any
+  timestamp: number
+  userId: string
+}
+
+class CharacterConflictResolver {
+  resolveConflicts(localEdits: CharacterEdit[], remoteEdits: CharacterEdit[]): Character {
+    const allEdits = [...localEdits, ...remoteEdits].sort((a, b) => a.timestamp - b.timestamp)
+
+    return allEdits.reduce((character, edit) => {
+      // Last-write-wins for most fields
+      if (edit.field !== 'xp' && edit.field !== 'stress') {
+        character[edit.field] = edit.value
+      }
+
+      // Additive for XP and stress
+      if (edit.field === 'xp' || edit.field === 'stress') {
+        character[edit.field] = Math.max(character[edit.field] || 0, edit.value)
+      }
+
+      return character
+    }, {} as Character)
+  }
+}
+```
+
+### Performance Optimization Patterns
+
+#### Lazy Loading with Suspense
+```typescript
+// Component-level code splitting
+const LazyCharacterSheet = lazy(() =>
+  import('./CharacterSheet').then(module => ({
+    default: module.CharacterSheet
+  }))
+)
+
+const LazyRulesetEditor = lazy(() => import('./RulesetEditor'))
+
+// Suspense boundaries with game-themed loading
+const GameSuspense = ({ children, fallback }: SuspenseProps) => (
+  <Suspense fallback={fallback || <DiceLoadingSpinner />}>
+    {children}
+  </Suspense>
+)
+```
+
+#### Virtualization for Large Lists
+```typescript
+// Virtual scrolling for character/game lists
+const VirtualizedCharacterList = ({ characters }: { characters: Character[] }) => {
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const virtualizer = useVirtualizer({
+    count: characters.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 120, // Character card height
+    overscan: 5
+  })
+
+  return (
+    <div ref={parentRef} className="h-96 overflow-auto">
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative'
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => (
+          <div
+            key={virtualItem.key}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`
+            }}
+          >
+            <CharacterCard character={characters[virtualItem.index]} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+This comprehensive UI/UX pattern library ensures HeistMind provides an optimal gaming experience while maintaining accessibility, performance, and scalability standards.

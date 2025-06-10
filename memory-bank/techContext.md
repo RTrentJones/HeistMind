@@ -9,20 +9,28 @@
 - **React 19**: Latest React with concurrent features, improved performance, and enhanced developer experience
 - **TypeScript 5**: Static typing for enhanced reliability and developer productivity
 
-#### Styling & UI
-- **Tailwind CSS 4**: Utility-first CSS framework with improved performance and developer experience
+#### UI Framework & Design System
+- **Tailwind CSS 4**: Utility-first CSS framework with improved performance and developer experience (already configured)
+- **Radix UI**: Headless component library providing accessible, unstyled primitives for custom design systems
 - **PostCSS**: CSS processing and optimization with modern plugin ecosystem
+- **Custom Design System**: Gaming-focused TTRPG aesthetic with dark theme and specialized components
+
+#### Component Architecture
+- **Headless Components**: Radix UI primitives for accessibility without design constraints
+- **Design Tokens**: Systematic color palette, typography, and spacing for TTRPG interfaces
+- **Compound Components**: Complex UI patterns for character sheets and wizard flows
 - **Responsive Design**: Mobile-first approach with component-based responsive patterns
 
 #### State Management
 - **Zustand 5**: Lightweight, scalable state management for client-side application state
 - **TanStack Query 5**: Advanced server state management with intelligent caching, background updates, and optimistic mutations
-- **React Context**: Built-in state management for component tree context sharing
+- **React Context**: Built-in state management for component tree context sharing and theme management
 
 #### Authentication & Security
-- **Supabase Auth**: Comprehensive authentication with email/password, magic links, and OAuth providers
-- **Supabase Auth UI React**: Pre-built, customizable authentication components
+- **Supabase Auth**: Comprehensive authentication system with JWT token management
+- **Discord OAuth**: Primary authentication provider through Supabase OAuth integration
 - **Supabase SSR**: Server-side authentication support with secure session handling
+- **Automatic Profile Creation**: Database triggers for seamless user onboarding
 
 ### Backend Technologies
 
@@ -213,6 +221,400 @@ CREATE POLICY "tenant_isolation" ON user_content
 - **SQL Injection Prevention**: Parameterized queries through Supabase SDK
 - **XSS Protection**: Automatic escaping in React components and CSP headers
 - **File Upload Security**: Type validation, size limits, and virus scanning
+
+## UI Framework Architecture
+
+### Design System Strategy
+
+#### Gaming-Focused Aesthetic
+```typescript
+// Design tokens for TTRPG interfaces
+const designTokens = {
+  colors: {
+    // Dark theme optimized for long gaming sessions
+    background: {
+      primary: 'hsl(222.2 84% 4.9%)',      // Deep dark background
+      secondary: 'hsl(217.2 32.6% 17.5%)', // Card backgrounds
+      tertiary: 'hsl(215.4 16.3% 46.9%)',  // Subtle backgrounds
+    },
+    foreground: {
+      primary: 'hsl(210 40% 98%)',         // High contrast text
+      secondary: 'hsl(215.4 16.3% 56.9%)', // Secondary text
+      muted: 'hsl(215.4 16.3% 46.9%)',     // Muted text
+    },
+    // TTRPG-themed accent colors
+    accent: {
+      crimson: 'hsl(0 84.2% 60.2%)',       // Stress/danger indicators
+      gold: 'hsl(47.9 95.8% 53.1%)',       // XP/advancement
+      silver: 'hsl(215.4 16.3% 46.9%)',    // Secondary actions
+      emerald: 'hsl(142.1 76.2% 36.3%)',   // Success states
+    },
+    // Game-specific semantic colors
+    game: {
+      playbook: 'hsl(262.1 83.3% 57.8%)',  // Playbook selection
+      attribute: 'hsl(142.1 70.6% 45.3%)', // Attribute scores
+      skill: 'hsl(221.2 83.2% 53.3%)',     // Skill ratings
+      stress: 'hsl(0 72.2% 50.6%)',        // Stress tracking
+    }
+  },
+  typography: {
+    // Gaming-appropriate font hierarchy
+    character: {
+      fontFamily: '"Inter", system-ui, sans-serif',
+      fontSize: '2.5rem',
+      lineHeight: '1.2',
+      fontWeight: '700'
+    },
+    playbook: {
+      fontFamily: '"Inter", system-ui, sans-serif',
+      fontSize: '1.25rem',
+      lineHeight: '1.4',
+      fontWeight: '600'
+    },
+    attribute: {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '1rem',
+      lineHeight: '1.5',
+      fontWeight: '500'
+    }
+  },
+  spacing: {
+    // Character sheet specific spacing
+    sheet: '1.5rem',
+    section: '2rem',
+    component: '1rem',
+    tight: '0.5rem'
+  }
+}
+```
+
+#### Accessibility-First Component Design
+```typescript
+// Radix UI integration with custom styling
+import * as Dialog from '@radix-ui/react-dialog'
+import * as Form from '@radix-ui/react-form'
+import * as Tabs from '@radix-ui/react-tabs'
+
+// Example: Character creation modal with accessibility
+const CharacterCreationDialog = () => (
+  <Dialog.Root>
+    <Dialog.Trigger className="btn-primary">
+      Create Character
+    </Dialog.Trigger>
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+      <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background border border-border rounded-lg p-6 max-w-2xl w-full">
+        <Dialog.Title className="text-2xl font-bold mb-4">
+          Create New Character
+        </Dialog.Title>
+        <CharacterWizard />
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
+)
+```
+
+### Component Architecture Patterns
+
+#### Compound Component Strategy
+```typescript
+// Character sheet with compound components
+interface CharacterSheetProps {
+  character: Character
+  ruleset: RulesetDefinition
+  editable?: boolean
+}
+
+const CharacterSheet = ({ character, ruleset, editable }: CharacterSheetProps) => (
+  <CharacterSheet.Container>
+    <CharacterSheet.Header>
+      <CharacterSheet.Name>{character.name}</CharacterSheet.Name>
+      <CharacterSheet.Playbook>{character.playbook}</CharacterSheet.Playbook>
+    </CharacterSheet.Header>
+
+    <CharacterSheet.Body>
+      <CharacterSheet.Section title="Attributes">
+        <AttributeGrid attributes={character.attributes} ruleset={ruleset} />
+      </CharacterSheet.Section>
+
+      <CharacterSheet.Section title="Skills">
+        <SkillList skills={character.skills} ruleset={ruleset} />
+      </CharacterSheet.Section>
+
+      <CharacterSheet.Section title="Special Abilities">
+        <AbilityTracker abilities={character.abilities} />
+      </CharacterSheet.Section>
+    </CharacterSheet.Body>
+  </CharacterSheet.Container>
+)
+```
+
+#### Wizard Pattern for Complex Forms
+```typescript
+// Multi-step character creation wizard
+interface WizardStep {
+  id: string
+  title: string
+  component: React.ComponentType<StepProps>
+  validation: (data: any) => ValidationResult
+}
+
+const characterCreationSteps: WizardStep[] = [
+  {
+    id: 'playbook',
+    title: 'Choose Playbook',
+    component: PlaybookSelection,
+    validation: validatePlaybookSelection
+  },
+  {
+    id: 'attributes',
+    title: 'Assign Attributes',
+    component: AttributeAssignment,
+    validation: validateAttributeAssignment
+  },
+  {
+    id: 'skills',
+    title: 'Select Skills',
+    component: SkillSelection,
+    validation: validateSkillSelection
+  },
+  {
+    id: 'abilities',
+    title: 'Special Abilities',
+    component: AbilitySelection,
+    validation: validateAbilitySelection
+  }
+]
+
+const CharacterCreationWizard = ({ gameId, ruleset }: WizardProps) => {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [characterData, setCharacterData] = useState<PartialCharacter>({})
+
+  return (
+    <Wizard steps={characterCreationSteps} currentStep={currentStep}>
+      <Wizard.Navigation />
+      <Wizard.Content />
+      <Wizard.Actions />
+    </Wizard>
+  )
+}
+```
+
+### Discord Authentication Integration
+
+#### Supabase + Discord OAuth Flow
+```typescript
+// Discord authentication with profile creation
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const supabase = createClientComponentClient()
+
+  const signInWithDiscord = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: 'identify email'
+      }
+    })
+
+    if (error) {
+      console.error('Discord authentication error:', error)
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ signInWithDiscord }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+```
+
+#### Profile Creation & Onboarding
+```typescript
+// Automatic profile creation after Discord OAuth
+const AuthCallback = () => {
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession()
+
+      if (session?.user) {
+        // Check if profile exists, create if needed
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        if (!profile) {
+          // Profile will be created by database trigger
+          // Redirect to onboarding for role selection
+          router.push('/onboarding')
+        } else {
+          // Existing user, redirect to dashboard
+          router.push('/dashboard')
+        }
+      }
+    }
+
+    handleAuthCallback()
+  }, [router, supabase])
+
+  return <LoadingSpinner />
+}
+```
+
+### State Management Architecture
+
+#### Zustand Store Structure
+```typescript
+// Character management store
+interface CharacterStore {
+  characters: Character[]
+  currentCharacter: Character | null
+  isCreating: boolean
+
+  // Actions
+  setCurrentCharacter: (character: Character) => void
+  createCharacter: (gameId: string, characterData: CreateCharacterData) => Promise<void>
+  updateCharacter: (characterId: string, updates: Partial<Character>) => Promise<void>
+  deleteCharacter: (characterId: string) => Promise<void>
+}
+
+const useCharacterStore = create<CharacterStore>((set, get) => ({
+  characters: [],
+  currentCharacter: null,
+  isCreating: false,
+
+  setCurrentCharacter: (character) => set({ currentCharacter: character }),
+
+  createCharacter: async (gameId, characterData) => {
+    set({ isCreating: true })
+    try {
+      const newCharacter = await createCharacterMutation(gameId, characterData)
+      set(state => ({
+        characters: [...state.characters, newCharacter],
+        currentCharacter: newCharacter,
+        isCreating: false
+      }))
+    } catch (error) {
+      set({ isCreating: false })
+      throw error
+    }
+  }
+}))
+```
+
+#### TanStack Query Integration
+```typescript
+// Server state management for characters
+const useCharacters = (gameId: string) => {
+  return useQuery({
+    queryKey: ['characters', gameId],
+    queryFn: () => getCharactersByGame(gameId),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30,   // 30 minutes
+  })
+}
+
+const useCreateCharacter = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createCharacter,
+    onSuccess: (newCharacter) => {
+      // Optimistic update
+      queryClient.setQueryData(
+        ['characters', newCharacter.gameId],
+        (old: Character[] = []) => [...old, newCharacter]
+      )
+    },
+    onError: (error) => {
+      // Rollback on error
+      queryClient.invalidateQueries({ queryKey: ['characters'] })
+    }
+  })
+}
+```
+
+### Responsive Design Strategy
+
+#### Mobile-First Character Sheets
+```typescript
+// Responsive character sheet layout
+const CharacterSheet = ({ character }: { character: Character }) => (
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {/* Mobile: Full width sections */}
+    <div className="lg:col-span-2">
+      <CharacterHeader character={character} />
+      <AttributeSection attributes={character.attributes} />
+    </div>
+
+    <div className="lg:col-span-1">
+      <SkillSection skills={character.skills} />
+      <StressTracker stress={character.stress} />
+    </div>
+  </div>
+)
+```
+
+#### Progressive Enhancement
+```typescript
+// Enhanced features for larger screens
+const useResponsiveFeatures = () => {
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024)
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    return () => window.removeEventListener('resize', checkDesktop)
+  }, [])
+
+  return {
+    isDesktop,
+    enableAdvancedFeatures: isDesktop,
+    showSidebar: isDesktop,
+    useCompactLayout: !isDesktop
+  }
+}
+```
+
+### Performance Optimization
+
+#### Component Lazy Loading
+```typescript
+// Lazy load heavy character sheet components
+const CharacterSheet = lazy(() => import('./CharacterSheet'))
+const RulesetEditor = lazy(() => import('./RulesetEditor'))
+const GameDashboard = lazy(() => import('./GameDashboard'))
+
+// Loading boundary with game-themed spinner
+const ComponentSuspense = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<GameLoadingSpinner />}>
+    {children}
+  </Suspense>
+)
+```
+
+#### Bundle Optimization
+```typescript
+// Tree-shaking friendly imports
+import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import { Form } from '@/components/ui/form'
+
+// Avoid importing entire libraries
+import { debounce } from 'lodash/debounce'  // ❌ Imports entire lodash
+import debounce from 'lodash.debounce'     // ✅ Imports only debounce
+```
+
+This UI framework architecture provides a solid foundation for building the HeistMind interface with gaming-focused aesthetics, accessibility compliance, and optimal performance for TTRPG character management workflows.
 
 ## Performance Optimization
 
