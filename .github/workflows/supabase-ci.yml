@@ -21,7 +21,7 @@ concurrency:
 env:
   # Pin versions for reproducibility
   PNPM_VERSION: '9.15.0'
-  NODE_VERSION: '20.11.0'  # Use LTS version
+  NODE_VERSION: '20.18.0'  # Use latest LTS version
   SUPABASE_CLI_VERSION: '1.142.2'  # Pin specific version
 
 jobs:

@@ -14,7 +14,7 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '9'
+  PNPM_VERSION: '9.15.0'
 
 jobs:
   validate:
