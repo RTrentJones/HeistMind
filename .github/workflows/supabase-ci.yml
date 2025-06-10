@@ -143,19 +143,29 @@ jobs:
             exit 0
           fi
 
-          # Test each migration file for syntax errors using psql
+          # Test each migration file for syntax errors using psql in transaction
           for migration in supabase/migrations/*.sql; do
             echo "Validating: $(basename $migration)"
 
-            # Use psql to validate SQL syntax (dry run)
-            if ! psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$migration" > /dev/null 2>&1; then
+            # Create a test script that runs in a transaction and rolls back
+            temp_test_file="/tmp/test_$(basename "$migration")"
+            echo "BEGIN;" > "$temp_test_file"
+            cat "$migration" >> "$temp_test_file"
+            echo "ROLLBACK;" >> "$temp_test_file"
+
+            # Use psql to validate SQL syntax (rolls back so no permanent changes)
+            if ! psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$temp_test_file" > /dev/null 2>&1; then
               echo "❌ Syntax error or execution failure in $migration"
               echo "Testing with detailed output:"
-              psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$migration"
+              psql postgres://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f "$temp_test_file"
+              rm -f "$temp_test_file"
               exit 1
             else
               echo "✅ Syntax validation passed for $(basename $migration)"
             fi
+
+            # Clean up temp file
+            rm -f "$temp_test_file"
           done
 
       - name: Run schema deployment test
