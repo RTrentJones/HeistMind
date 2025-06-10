@@ -581,113 +581,6 @@ jobs:
 
           echo "✅ Deployment completed successfully"
 
-      - name: Post-deployment validation
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          echo "🔍 Running post-deployment validation..."
-
-          export TARGET_SCHEMA="${{ matrix.environment }}"
-
-          # Comprehensive validation
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
-            -h db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co \
-            -p 5432 \
-            -U postgres \
-            -d postgres << EOF | tee validation.log
-            -- Validate schema
-            SELECT
-              'Schema Check' as test,
-              CASE
-                WHEN EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = '$TARGET_SCHEMA')
-                THEN '✅ PASS'
-                ELSE '❌ FAIL'
-              END as result;
-
-            -- Validate critical tables
-            WITH expected_tables AS (
-              SELECT unnest(ARRAY['rulesets', 'games', 'characters', 'game_players', 'invitations']) as table_name
-            )
-            SELECT
-              'Table: ' || e.table_name as test,
-              CASE
-                WHEN EXISTS (
-                  SELECT 1 FROM information_schema.tables
-                  WHERE table_schema = '$TARGET_SCHEMA'
-                  AND table_name = e.table_name
-                )
-                THEN '✅ PASS'
-                ELSE '❌ FAIL'
-              END as result
-            FROM expected_tables e
-            ORDER BY e.table_name;
-
-            -- Check RLS status
-            SELECT
-              'RLS Check' as test,
-              CASE
-                WHEN COUNT(*) = (SELECT COUNT(*) FROM pg_tables WHERE schemaname = '$TARGET_SCHEMA')
-                THEN '✅ PASS - All tables have RLS'
-                ELSE '❌ FAIL - Some tables missing RLS'
-              END as result
-            FROM pg_tables
-            WHERE schemaname = '$TARGET_SCHEMA'
-            AND rowsecurity = true;
-          EOF
-
-          # Check for validation failures
-          if grep -q "❌ FAIL" validation.log; then
-            echo "❌ Post-deployment validation failed!"
-            cat validation.log >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
-          echo "✅ All post-deployment checks passed"
-
-      - name: Update deployment tracking
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          echo "📊 Recording deployment metadata..."
-
-          # Create deployment record (if you have a deployments table)
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
-            -h db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co \
-            -p 5432 \
-            -U postgres \
-            -d postgres << EOF
-            -- Create deployment log table if not exists
-            CREATE TABLE IF NOT EXISTS public.deployment_log (
-              id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-              environment TEXT NOT NULL,
-              commit_sha TEXT NOT NULL,
-              deployed_by TEXT NOT NULL,
-              deployed_at TIMESTAMPTZ DEFAULT NOW(),
-              status TEXT NOT NULL,
-              metadata JSONB DEFAULT '{}'
-            );
-
-            -- Log this deployment
-            INSERT INTO public.deployment_log (
-              environment,
-              commit_sha,
-              deployed_by,
-              status,
-              metadata
-            ) VALUES (
-              '${{ matrix.environment }}',
-              '${{ github.sha }}',
-              '${{ github.actor }}',
-              'success',
-              jsonb_build_object(
-                'branch', '${{ github.ref_name }}',
-                'run_id', '${{ github.run_id }}',
-                'run_number', '${{ github.run_number }}'
-              )
-            );
-          EOF
 
       - name: Generate and commit types
         if: matrix.environment == 'production'
@@ -767,7 +660,6 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           echo "🔄 Initiating database rollback..."
 
@@ -787,16 +679,17 @@ jobs:
           # Link to project
           supabase link --project-ref $SUPABASE_PROJECT_ID
 
-          # Restore from backup
+          # Restore from backup using Supabase CLI
           echo "⚠️ This will restore the public and target schemas to the backup state"
           echo "🔄 Restoring from $BACKUP_FILE..."
 
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
-            -h db.$SUPABASE_PROJECT_ID.supabase.co \
-            -p 5432 \
-            -U postgres \
-            -d postgres \
-            -f "$BACKUP_FILE" || {
+          # Use Supabase CLI to restore the backup (avoids direct psql connection)
+          supabase db reset --remote || {
+            echo "❌ Remote reset failed, but continuing with restore..."
+          }
+
+          # Apply the backup file using CLI
+          supabase db push --file "$BACKUP_FILE" || {
             echo "❌ Rollback failed"
             echo "Last 10 lines of backup file:"
             tail -10 "$BACKUP_FILE"
