@@ -164,22 +164,53 @@ jobs:
           supabase stop --no-backup 2>/dev/null || true
           docker volume prune -f 2>/dev/null || true
 
-  backup:
-    name: Create Backup
+  deploy:
+    name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
     needs: validate
-    if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'rollback'
-    timeout-minutes: 10
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      github.event.inputs.action != 'rollback' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+
+    # Use matrix strategy to deploy one environment at a time based on branch
+    strategy:
+      matrix:
+        include:
+          - environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      max-parallel: 1  # Deploy one environment at a time
+
+    environment:
+      name: ${{ matrix.environment }}
+
+    timeout-minutes: 20
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
-      - name: Create production backup
+      - name: Create pre-deployment backup
+        if: matrix.environment == 'production'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -187,8 +218,7 @@ jobs:
           echo "💾 Creating pre-deployment backup..."
 
           BACKUP_NAME="pre-deploy-$(date +%Y%m%d-%H%M%S)"
-          TARGET_SCHEMA=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
-          echo "🎯 Validating schema: $TARGET_SCHEMA"
+          TARGET_SCHEMA="${{ matrix.environment }}"
 
           # Link to project
           supabase link --project-ref $SUPABASE_PROJECT_ID
@@ -210,119 +240,72 @@ jobs:
           echo "📊 Backup size: $(du -h ${BACKUP_NAME}.sql | cut -f1)"
 
       - name: Upload backup artifact
+        if: matrix.environment == 'production'
         uses: actions/upload-artifact@v4
         with:
           name: database-backup-${{ github.run_number }}
           path: "*.sql"
           retention-days: 30
 
-  deploy-development:
-    name: Deploy to Development
-    runs-on: ubuntu-latest
-    needs: validate
-    if: github.ref == 'refs/heads/development' && github.event.inputs.action != 'rollback'
-    environment: development
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: ${{ env.SUPABASE_CLI_VERSION }}
-
-      - name: Deploy to development
+      - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          echo "🔗 Linking to Supabase project..."
+
+          # Link with retry logic
+          for i in {1..3}; do
+            if supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}; then
+              echo "✅ Successfully linked to project"
+              break
+            else
+              echo "⚠️ Link attempt $i failed, retrying..."
+              sleep 5
+            fi
+          done
+
+      - name: Deploy migrations with schema targeting
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          echo "🚀 Deploying to development environment..."
+          echo "🚀 Starting deployment to ${{ matrix.environment }}..."
 
-          # Link to project
-          supabase link --project-ref $SUPABASE_PROJECT_ID
+          # Set target schema based on environment
+          export TARGET_SCHEMA="${{ matrix.environment }}"
+          echo "🎯 Target schema: $TARGET_SCHEMA"
 
-          # Deploy migrations
-          supabase db push --password "$SUPABASE_DB_PASSWORD"
+          # Create schema targeting migration (temporary)
+          TEMP_MIGRATION="supabase/migrations/00000_set_schema.sql"
+          cat > "$TEMP_MIGRATION" << EOF
+          -- Deployment: ${{ github.sha }}
+          -- Environment: ${{ matrix.environment }}
+          -- Date: $(date)
+          DO \$\$
+          BEGIN
+              EXECUTE format('SET heistmind.target_schema = %L', '$TARGET_SCHEMA');
+              RAISE NOTICE 'Deploying to schema: %', '$TARGET_SCHEMA';
+          END\$\$;
+          EOF
 
-          echo "✅ Development deployment completed"
+          echo "📋 Created temporary schema targeting migration"
 
-      - name: Generate and commit types
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        run: |
-          echo "📝 Generating TypeScript types..."
-          pnpm --filter @heistmind/database db:types
-
-      - name: Commit updated types
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'chore: update database types after development deployment [skip ci]'
-          file_pattern: 'packages/database/supabase-types.ts'
-          commit_user_name: 'github-actions[bot]'
-          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [validate, backup]
-    if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'rollback'
-    environment: production  # This creates the manual approval gate
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: ${{ env.SUPABASE_CLI_VERSION }}
-
-      - name: Deploy to production
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          echo "🚀 Deploying to production environment..."
-
-          # Link to project
-          supabase link --project-ref $SUPABASE_PROJECT_ID
-
-          # Deploy migrations with timeout
+          # Deploy with timeout
+          echo "⏳ Deploying migrations..."
           timeout 600 supabase db push --password "$SUPABASE_DB_PASSWORD"
+          DEPLOY_STATUS=$?
 
-          echo "✅ Production deployment completed"
+          # Cleanup temporary migration
+          rm -f "$TEMP_MIGRATION"
+          echo "🧹 Cleaned up temporary migration"
+
+          # Check deployment status
+          if [ $DEPLOY_STATUS -ne 0 ]; then
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
+
+          echo "✅ Deployment completed successfully"
 
       - name: Generate and commit types
         env:
@@ -345,7 +328,7 @@ jobs:
       - name: Commit updated types
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'chore: update database types after production deployment [skip ci]'
+          commit_message: 'chore: update database types after ${{ matrix.environment }} deployment [skip ci]'
           file_pattern: 'packages/database/supabase-types.ts'
           commit_user_name: 'github-actions[bot]'
           commit_user_email: 'github-actions[bot]@users.noreply.github.com'
