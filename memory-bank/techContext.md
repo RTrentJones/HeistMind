@@ -57,8 +57,8 @@
 ## Development Environment Setup
 
 ### Prerequisites
-- **Node.js 18+**: JavaScript runtime with modern ES module support
-- **pnpm 8+**: Package manager for efficient dependency management
+- **Node.js 20.18.0+**: JavaScript runtime with modern ES module support (LTS)
+- **pnpm 9.15.0+**: Package manager for efficient dependency management
 - **Git**: Version control with modern workflow support
 
 ### Environment Configuration
@@ -299,6 +299,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.15.0'
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -306,13 +310,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
       - run: pnpm lint
       - run: pnpm type-check
       - run: pnpm build
