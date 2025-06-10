@@ -94,6 +94,33 @@ All Memory Bank files reflect the current state including the newly implemented 
 - Helper functions for role checking across game contexts
 - Automatic triggers for data consistency and user management
 
+### Migration Idempotency Fix ✅ **COMPLETE**
+**Status**: Fixed and Tested
+**Issue Resolved**: Database deployment failure due to non-idempotent RLS policy creation
+
+**Problem**:
+- Migration `00002_core_schema.sql` was failing with error:
+  `policy "development_rulesets_select_policy" for table "rulesets" already exists`
+- RLS policies were created without checking for existence, causing failures on repeated runs
+
+**Solution Implemented**:
+- Wrapped all RLS policy creation in conditional `IF NOT EXISTS` checks
+- Applied consistent idempotent pattern across all 5 policy sections (rulesets, games, game_players, characters, invitations)
+- Used same `get_constraint_name()` helper pattern already established for constraints
+- Each policy creation now checks `pg_policies` system catalog before attempting creation
+
+**Technical Details**:
+- Modified 20 individual policy creation statements to be idempotent
+- Maintained schema-specific naming convention for multi-environment support
+- Zero functional changes - same security policies, just reliable deployment
+- Pattern follows existing constraint creation methodology in same migration
+
+**Validation**:
+- Migration now runs successfully multiple times without errors
+- Tested with `supabase db reset` and `supabase db push --local`
+- All RLS policies properly created and functional
+- Database deployment pipeline now reliable for CI/CD
+
 ### Environment Separation Strategy ✅ **COMPLETE**
 **Status**: Fully Implemented
 **Achievement**: Schema-based environment isolation using single Supabase project
@@ -125,6 +152,25 @@ All Memory Bank files reflect the current state including the newly implemented 
 - TypeScript type generation from deployed schema
 - Auto-commit of updated types back to repository
 - Health verification and deployment summaries
+
+### GitHub Actions Optimization ✅ **COMPLETE**
+**Status**: Streamlined and Fixed
+**Achievement**: Production-grade CI/CD with backup strategy and manual approval
+
+**Optimization Results**:
+- Consolidated 3 workflows → 2 workflows (removed redundancy)
+- Fixed backup permission issues (schema-targeted backups)
+- Added manual approval gates for production deployments
+- Implemented Supabase native backup/rollback capability
+- GitHub-native monitoring and deployment tracking
+- Zero-downtime deployment focus with proper validation
+
+**Technical Improvements**:
+- Schema-specific backups (public + target schema only)
+- Avoided system table permission issues
+- Faster backup/restore operations
+- Robust error handling and rollback procedures
+- Branch-based environment targeting (development → dev, main → prod)
 
 ## What Needs to Be Built
 

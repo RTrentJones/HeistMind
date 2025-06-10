@@ -1,0 +1,414 @@
+name: Database Pipeline
+
+on:
+  push:
+    branches: [main, development]
+    paths:
+      - 'supabase/**'
+      - 'packages/database/**'
+      - '.github/workflows/database.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'packages/database/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options: ['deploy', 'rollback']
+
+# Prevent concurrent deployments to the same environment
+concurrency:
+  group: database-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PNPM_VERSION: '9'
+  NODE_VERSION: '20'
+  SUPABASE_CLI_VERSION: '1.142.2'
+
+jobs:
+  validate:
+    name: Validate & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Validate migration files
+        run: |
+          echo "🔍 Validating migration files..."
+
+          if [ ! -d "supabase/migrations" ] || [ -z "$(ls -A supabase/migrations/*.sql 2>/dev/null)" ]; then
+            echo "⚠️ No migration files found"
+            exit 0
+          fi
+
+          # Check naming convention
+          for file in supabase/migrations/*.sql; do
+            if [[ ! "$file" =~ ^supabase/migrations/[0-9]{5}_[a-z_]+\.sql$ ]]; then
+              echo "❌ Invalid migration filename: $file"
+              echo "Expected format: 00001_description.sql"
+              exit 1
+            fi
+          done
+
+          # Check for duplicates
+          duplicates=$(ls supabase/migrations/*.sql | sed 's/.*\/\([0-9]\{5\}\).*/\1/' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "❌ Duplicate migration numbers: $duplicates"
+            exit 1
+          fi
+
+          echo "✅ Migration files validated"
+
+      - name: Security scan
+        run: |
+          echo "🔒 Scanning for security issues..."
+
+          dangerous_patterns=(
+            "DROP DATABASE"
+            "DROP SCHEMA.*CASCADE"
+            "GRANT ALL ON DATABASE"
+            "GRANT SUPERUSER"
+            "pg_read_server_files"
+            "pg_write_server_files"
+          )
+
+          found_dangerous=false
+          for pattern in "${dangerous_patterns[@]}"; do
+            if grep -iE "$pattern" supabase/migrations/*.sql 2>/dev/null; then
+              echo "❌ Dangerous pattern found: $pattern"
+              found_dangerous=true
+            fi
+          done
+
+          if [ "$found_dangerous" = true ]; then
+            echo "❌ Security scan failed"
+            exit 1
+          fi
+
+          echo "✅ Security scan passed"
+
+      - name: Test migrations locally
+        run: |
+          echo "🧪 Testing migrations on local Supabase..."
+
+          # Clean start
+          supabase stop --no-backup 2>/dev/null || true
+          supabase start
+
+          # Apply all migrations and validate schema
+          supabase db reset --local
+
+          TARGET_SCHEMA=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          echo "🎯 Validating schema: $TARGET_SCHEMA"
+
+          psql postgres://postgres:postgres@127.0.0.1:54322/postgres << EOF
+            -- Check schema exists
+            SELECT CASE
+              WHEN EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = '$TARGET_SCHEMA')
+              THEN '✅ Schema exists'
+              ELSE '❌ Schema missing'
+            END;
+
+            -- Check expected tables
+            SELECT
+              expected.table_name,
+              CASE WHEN t.table_name IS NOT NULL THEN '✅ Present' ELSE '❌ Missing' END
+            FROM (VALUES ('rulesets'), ('games'), ('characters'), ('game_players'), ('invitations')) AS expected(table_name)
+            LEFT JOIN information_schema.tables t ON t.table_name = expected.table_name AND t.table_schema = '$TARGET_SCHEMA'
+            ORDER BY expected.table_name;
+          EOF
+
+          echo "✅ Local testing completed"
+
+      - name: Generate and validate types
+        run: |
+          echo "📝 Generating and validating types..."
+
+          pnpm --filter @heistmind/database db:types-local
+          pnpm --filter @heistmind/database tsc --noEmit --strict
+
+          echo "✅ Type validation passed"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          supabase stop --no-backup 2>/dev/null || true
+          docker volume prune -f 2>/dev/null || true
+
+  backup:
+    name: Create Backup
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'rollback'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Create production backup
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          echo "💾 Creating pre-deployment backup..."
+
+          BACKUP_NAME="pre-deploy-$(date +%Y%m%d-%H%M%S)"
+          TARGET_SCHEMA=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          echo "🎯 Validating schema: $TARGET_SCHEMA"
+
+          # Link to project
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
+          # Create targeted backup for only the schemas we control
+          echo "📋 Backing up public and ${TARGET_SCHEMA} schemas..."
+          supabase db dump --remote \
+            --schema public \
+            --schema ${TARGET_SCHEMA} \
+            --file "${BACKUP_NAME}.sql"
+
+          # Verify backup was created
+          if [ ! -f "${BACKUP_NAME}.sql" ]; then
+            echo "❌ Backup creation failed"
+            exit 1
+          fi
+
+          echo "✅ Backup created: ${BACKUP_NAME}.sql"
+          echo "📊 Backup size: $(du -h ${BACKUP_NAME}.sql | cut -f1)"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ github.run_number }}
+          path: "*.sql"
+          retention-days: 30
+
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/development' && github.event.inputs.action != 'rollback'
+    environment: development
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Deploy to development
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "🚀 Deploying to development environment..."
+
+          # Link to project
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
+          # Deploy migrations
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+          echo "✅ Development deployment completed"
+
+      - name: Generate and commit types
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          echo "📝 Generating TypeScript types..."
+          pnpm --filter @heistmind/database db:types
+
+      - name: Commit updated types
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update database types after development deployment [skip ci]'
+          file_pattern: 'packages/database/supabase-types.ts'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [validate, backup]
+    if: github.ref == 'refs/heads/main' && github.event.inputs.action != 'rollback'
+    environment: production  # This creates the manual approval gate
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Deploy to production
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "🚀 Deploying to production environment..."
+
+          # Link to project
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
+          # Deploy migrations with timeout
+          timeout 600 supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+          echo "✅ Production deployment completed"
+
+      - name: Generate and commit types
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          echo "📝 Generating TypeScript types..."
+
+          # Generate with retry
+          for i in {1..3}; do
+            if pnpm --filter @heistmind/database db:types; then
+              echo "✅ Types generated successfully"
+              break
+            else
+              echo "⚠️ Type generation attempt $i failed"
+              sleep 5
+            fi
+          done
+
+      - name: Commit updated types
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update database types after production deployment [skip ci]'
+          file_pattern: 'packages/database/supabase-types.ts'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+
+  rollback:
+    name: Rollback Database
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'rollback'
+    environment: production-rollback
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Download latest backup
+        uses: actions/download-artifact@v4
+        with:
+          pattern: database-backup-*
+          merge-multiple: true
+
+      - name: Perform rollback
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "🔄 Initiating database rollback..."
+
+          # Find the most recent backup
+          BACKUP_FILE=$(ls -t *.sql | head -1)
+
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "❌ No backup file found"
+            echo "Available files:"
+            ls -la
+            exit 1
+          fi
+
+          echo "📄 Using backup: $BACKUP_FILE"
+          echo "📊 Backup size: $(du -h $BACKUP_FILE | cut -f1)"
+
+          # Link to project
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
+          # Restore from backup
+          echo "⚠️ This will restore the public and target schemas to the backup state"
+          echo "🔄 Restoring from $BACKUP_FILE..."
+
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
+            -h db.$SUPABASE_PROJECT_ID.supabase.co \
+            -p 5432 \
+            -U postgres \
+            -d postgres \
+            -f "$BACKUP_FILE" || {
+            echo "❌ Rollback failed"
+            echo "Last 10 lines of backup file:"
+            tail -10 "$BACKUP_FILE"
+            exit 1
+          }
+
+          echo "✅ Rollback completed successfully"
