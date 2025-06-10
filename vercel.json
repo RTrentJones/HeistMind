@@ -1,8 +1,8 @@
 {
     "$schema": "https://openapi.vercel.sh/vercel.json",
-    "buildCommand": "pnpm build --filter=@heist-mind/web",
-    "devCommand": "pnpm dev --filter=@heist-mind/web",
-    "installCommand": "npm install -g pnpm@9 && pnpm install",
+    "buildCommand": "npx pnpm@9 build --filter=@heist-mind/web",
+    "devCommand": "npx pnpm@9 dev --filter=@heist-mind/web",
+    "installCommand": "npx pnpm@9 install",
     "outputDirectory": "apps/web/.next",
     "framework": null
 }
