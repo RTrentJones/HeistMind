@@ -502,20 +502,44 @@ ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 -- RULESETS POLICIES
 -- ===========================
 
--- Create policies with schema-specific names
+-- Create policies with schema-specific names (idempotent)
 DO $$
 BEGIN
-    EXECUTE format('CREATE POLICY %I ON rulesets FOR SELECT USING (created_by = auth.uid() OR is_public = true)',
-                   get_constraint_name('rulesets_select_policy'));
+    -- Create select policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('rulesets_select_policy')
+                   AND tablename = 'rulesets'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON rulesets FOR SELECT USING (created_by = auth.uid() OR is_public = true)',
+                       get_constraint_name('rulesets_select_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON rulesets FOR INSERT WITH CHECK (created_by = auth.uid())',
-                   get_constraint_name('rulesets_insert_policy'));
+    -- Create insert policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('rulesets_insert_policy')
+                   AND tablename = 'rulesets'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON rulesets FOR INSERT WITH CHECK (created_by = auth.uid())',
+                       get_constraint_name('rulesets_insert_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON rulesets FOR UPDATE USING (created_by = auth.uid())',
-                   get_constraint_name('rulesets_update_policy'));
+    -- Create update policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('rulesets_update_policy')
+                   AND tablename = 'rulesets'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON rulesets FOR UPDATE USING (created_by = auth.uid())',
+                       get_constraint_name('rulesets_update_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON rulesets FOR DELETE USING (created_by = auth.uid())',
-                   get_constraint_name('rulesets_delete_policy'));
+    -- Create delete policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('rulesets_delete_policy')
+                   AND tablename = 'rulesets'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON rulesets FOR DELETE USING (created_by = auth.uid())',
+                       get_constraint_name('rulesets_delete_policy'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -524,17 +548,41 @@ END $$;
 
 DO $$
 BEGIN
-    EXECUTE format('CREATE POLICY %I ON games FOR SELECT USING (public_listing = true OR created_by = auth.uid() OR EXISTS (SELECT 1 FROM game_players WHERE game_id = games.id AND player_id = auth.uid() AND status = ''active''))',
-                   get_constraint_name('games_select_policy'));
+    -- Create select policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('games_select_policy')
+                   AND tablename = 'games'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON games FOR SELECT USING (public_listing = true OR created_by = auth.uid() OR EXISTS (SELECT 1 FROM game_players WHERE game_id = games.id AND player_id = auth.uid() AND status = ''active''))',
+                       get_constraint_name('games_select_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON games FOR INSERT WITH CHECK (created_by = auth.uid())',
-                   get_constraint_name('games_insert_policy'));
+    -- Create insert policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('games_insert_policy')
+                   AND tablename = 'games'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON games FOR INSERT WITH CHECK (created_by = auth.uid())',
+                       get_constraint_name('games_insert_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON games FOR UPDATE USING (created_by = auth.uid())',
-                   get_constraint_name('games_update_policy'));
+    -- Create update policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('games_update_policy')
+                   AND tablename = 'games'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON games FOR UPDATE USING (created_by = auth.uid())',
+                       get_constraint_name('games_update_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON games FOR DELETE USING (created_by = auth.uid())',
-                   get_constraint_name('games_delete_policy'));
+    -- Create delete policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('games_delete_policy')
+                   AND tablename = 'games'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON games FOR DELETE USING (created_by = auth.uid())',
+                       get_constraint_name('games_delete_policy'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -543,17 +591,41 @@ END $$;
 
 DO $$
 BEGIN
-    EXECUTE format('CREATE POLICY %I ON game_players FOR SELECT USING (player_id = auth.uid() OR EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = game_players.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
-                   get_constraint_name('game_players_select_policy'));
+    -- Create select policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('game_players_select_policy')
+                   AND tablename = 'game_players'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON game_players FOR SELECT USING (player_id = auth.uid() OR EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = game_players.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
+                       get_constraint_name('game_players_select_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON game_players FOR INSERT WITH CHECK (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
-                   get_constraint_name('game_players_insert_policy'));
+    -- Create insert policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('game_players_insert_policy')
+                   AND tablename = 'game_players'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON game_players FOR INSERT WITH CHECK (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
+                       get_constraint_name('game_players_insert_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON game_players FOR UPDATE USING (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
-                   get_constraint_name('game_players_update_policy'));
+    -- Create update policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('game_players_update_policy')
+                   AND tablename = 'game_players'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON game_players FOR UPDATE USING (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
+                       get_constraint_name('game_players_update_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON game_players FOR DELETE USING (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
-                   get_constraint_name('game_players_delete_policy'));
+    -- Create delete policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('game_players_delete_policy')
+                   AND tablename = 'game_players'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON game_players FOR DELETE USING (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
+                       get_constraint_name('game_players_delete_policy'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -562,17 +634,41 @@ END $$;
 
 DO $$
 BEGIN
-    EXECUTE format('CREATE POLICY %I ON characters FOR SELECT USING (created_by = auth.uid() OR EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = characters.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
-                   get_constraint_name('characters_select_policy'));
+    -- Create select policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('characters_select_policy')
+                   AND tablename = 'characters'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON characters FOR SELECT USING (created_by = auth.uid() OR EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = characters.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
+                       get_constraint_name('characters_select_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON characters FOR INSERT WITH CHECK (created_by = auth.uid() AND EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = characters.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
-                   get_constraint_name('characters_insert_policy'));
+    -- Create insert policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('characters_insert_policy')
+                   AND tablename = 'characters'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON characters FOR INSERT WITH CHECK (created_by = auth.uid() AND EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = characters.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
+                       get_constraint_name('characters_insert_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON characters FOR UPDATE USING (created_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
-                   get_constraint_name('characters_update_policy'));
+    -- Create update policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('characters_update_policy')
+                   AND tablename = 'characters'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON characters FOR UPDATE USING (created_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
+                       get_constraint_name('characters_update_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON characters FOR DELETE USING (created_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
-                   get_constraint_name('characters_delete_policy'));
+    -- Create delete policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('characters_delete_policy')
+                   AND tablename = 'characters'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON characters FOR DELETE USING (created_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
+                       get_constraint_name('characters_delete_policy'));
+    END IF;
 END $$;
 
 -- ===========================
@@ -581,17 +677,41 @@ END $$;
 
 DO $$
 BEGIN
-    EXECUTE format('CREATE POLICY %I ON invitations FOR SELECT USING (invited_player = auth.uid() OR invited_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
-                   get_constraint_name('invitations_select_policy'));
+    -- Create select policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('invitations_select_policy')
+                   AND tablename = 'invitations'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON invitations FOR SELECT USING (invited_player = auth.uid() OR invited_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
+                       get_constraint_name('invitations_select_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON invitations FOR INSERT WITH CHECK (invited_by = auth.uid() AND is_game_master(auth.uid(), game_id))',
-                   get_constraint_name('invitations_insert_policy'));
+    -- Create insert policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('invitations_insert_policy')
+                   AND tablename = 'invitations'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON invitations FOR INSERT WITH CHECK (invited_by = auth.uid() AND is_game_master(auth.uid(), game_id))',
+                       get_constraint_name('invitations_insert_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON invitations FOR UPDATE USING (invited_by = auth.uid() OR invited_player = auth.uid() OR is_game_master(auth.uid(), game_id))',
-                   get_constraint_name('invitations_update_policy'));
+    -- Create update policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('invitations_update_policy')
+                   AND tablename = 'invitations'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON invitations FOR UPDATE USING (invited_by = auth.uid() OR invited_player = auth.uid() OR is_game_master(auth.uid(), game_id))',
+                       get_constraint_name('invitations_update_policy'));
+    END IF;
 
-    EXECUTE format('CREATE POLICY %I ON invitations FOR DELETE USING (invited_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
-                   get_constraint_name('invitations_delete_policy'));
+    -- Create delete policy if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_policies
+                   WHERE policyname = get_constraint_name('invitations_delete_policy')
+                   AND tablename = 'invitations'
+                   AND schemaname = current_schema()) THEN
+        EXECUTE format('CREATE POLICY %I ON invitations FOR DELETE USING (invited_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
+                       get_constraint_name('invitations_delete_policy'));
+    END IF;
 END $$;
 
 -- ===========================
