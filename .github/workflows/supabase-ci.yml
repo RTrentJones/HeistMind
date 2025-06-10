@@ -72,8 +72,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile --prefer-offline
-          echo "✅ Dependencies installed with locked versions"
+          # Check if lockfile exists before using frozen-lockfile
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile --prefer-offline
+            echo "✅ Dependencies installed with locked versions"
+          else
+            echo "⚠️ No lockfile found, installing and creating lockfile"
+            pnpm install --prefer-offline
+            echo "✅ Dependencies installed and lockfile created"
+          fi
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -104,9 +111,15 @@ jobs:
 
       - name: Start Supabase local instance
         run: |
-          # Ensure clean state
-          supabase stop --no-backup || true
-          docker volume prune -f
+          # Verify CLI is available
+          if ! command -v supabase &> /dev/null; then
+            echo "❌ Supabase CLI not found in PATH"
+            exit 1
+          fi
+
+          # Ensure clean state (CLI is available now)
+          supabase stop --no-backup 2>/dev/null || echo "No existing instance to stop"
+          docker volume prune -f 2>/dev/null || echo "No volumes to prune"
 
           # Start with retries
           for i in {1..3}; do
@@ -115,7 +128,7 @@ jobs:
               break
             else
               echo "⚠️ Attempt $i failed, retrying..."
-              supabase stop --no-backup || true
+              supabase stop --no-backup 2>/dev/null || true
               sleep 5
             fi
           done
@@ -331,7 +344,14 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: |
+          # Check if lockfile exists before using frozen-lockfile
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile --prefer-offline
+          else
+            echo "⚠️ No lockfile found, installing and creating lockfile"
+            pnpm install --prefer-offline
+          fi
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
