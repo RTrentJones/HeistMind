@@ -20,7 +20,7 @@ concurrency:
 
 env:
   # Pin versions for reproducibility
-  PNPM_VERSION: '8.15.1'
+  PNPM_VERSION: '9.15.0'
   NODE_VERSION: '20.11.0'  # Use LTS version
   SUPABASE_CLI_VERSION: '1.142.2'  # Pin specific version
 
