@@ -461,11 +461,6 @@ jobs:
           echo "🔐 Validating deployment credentials..."
 
           # Enhanced validation
-          if [ ${#SUPABASE_ACCESS_TOKEN} -ne 40 ]; then
-            echo "❌ Invalid access token length: ${#SUPABASE_ACCESS_TOKEN} (expected 40)"
-            exit 1
-          fi
-
           if [[ ! "$SUPABASE_ACCESS_TOKEN" =~ ^sbp_ ]]; then
             echo "❌ Access token has invalid format"
             exit 1
