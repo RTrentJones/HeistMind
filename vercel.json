@@ -2,6 +2,6 @@
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "buildCommand": "corepack pnpm --filter @heist-mind/web build",
     "devCommand": "corepack pnpm --filter @heist-mind/web dev",
-    "installCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && corepack pnpm install --no-frozen-lockfile --store-dir=node_modules/.pnpm-store",
+    "installCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && corepack pnpm install --no-frozen-lockfile --config.node-linker=hoisted",
     "outputDirectory": ".next"
 }
