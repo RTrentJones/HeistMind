@@ -206,6 +206,36 @@
             "title": "HeistMind - Forged in the Dark Platform",
             "description": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
         },
+        "about": {
+            "title": "About HeistMind",
+            "subtitle": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows.",
+            "sections": {
+                "gameMasters": {
+                    "title": "For Game Masters",
+                    "description": "Upload custom rulesets, create immersive games, and guide your players through the shadows of your imagination.",
+                    "features": {
+                        "uploadRulesets": "Upload and manage custom FitD rulesets",
+                        "createGames": "Create and manage game sessions",
+                        "invitePlayers": "Invite and organize players",
+                        "trackProgress": "Track campaign progress"
+                    }
+                },
+                "players": {
+                    "title": "For Players",
+                    "description": "Join exciting crews, create memorable characters, and leave your mark on the underworld.",
+                    "features": {
+                        "joinGames": "Join games and crews",
+                        "createCharacters": "Create rich, detailed characters",
+                        "trackProgression": "Track character progression",
+                        "collaborate": "Collaborate with your crew"
+                    }
+                },
+                "philosophy": {
+                    "title": "Built for the Shadows",
+                    "description": "HeistMind is designed specifically for Forged in the Dark systems, with deep understanding of the mechanics that make these games special. From stress and trauma to crew advancement and faction clocks, we've got you covered."
+                }
+            }
+        },
         "dashboard": {
             "welcome": "Welcome back, {{name}}",
             "subtitle": "Ready to forge your legend in the shadows?",

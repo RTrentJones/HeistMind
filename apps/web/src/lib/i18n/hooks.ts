@@ -26,6 +26,19 @@ export function useTranslation(): {
     const { t: i18nT, ready, i18n } = useI18nTranslation()
 
     const t: TranslationFunction = (key: TranslationKey, params?: InterpolationParams) => {
+        // Handle namespace-prefixed keys by extracting namespace and key
+        if (key.includes('.')) {
+            const [namespace, ...keyParts] = key.split('.')
+            const actualKey = keyParts.join('.')
+
+            // Check if this is a valid namespace
+            const validNamespaces = ['common', 'navigation', 'components', 'auth', 'pages', 'forms', 'errors']
+            if (validNamespaces.includes(namespace)) {
+                return i18nT(actualKey, { ...params, ns: namespace })
+            }
+        }
+
+        // Fallback to default behavior
         return i18nT(key, params)
     }
 

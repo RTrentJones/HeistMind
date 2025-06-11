@@ -18,10 +18,25 @@ export function OAuthButtons({ redirectTo = '/dashboard' }: OAuthButtonsProps) {
         try {
             setLoading(provider)
 
+            // Get current origin dynamically to work with preview deployments
+            const getRedirectURL = () => {
+                if (typeof window === 'undefined') return ''
+
+                // Use environment variable if available, fallback to current origin
+                if (process.env.NEXT_PUBLIC_SITE_URL) {
+                    return process.env.NEXT_PUBLIC_SITE_URL
+                }
+
+                // For Vercel preview deployments, use the current origin
+                return window.location.origin
+            }
+
+            const redirectURL = `${getRedirectURL()}/auth/callback?redirect_to=${encodeURIComponent(redirectTo)}`
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?redirect_to=${encodeURIComponent(redirectTo)}`
+                    redirectTo: redirectURL
                 }
             })
 

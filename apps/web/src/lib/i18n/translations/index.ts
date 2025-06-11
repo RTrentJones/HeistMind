@@ -1,6 +1,6 @@
 import en from './en.json'
 
-// Export all translations
+// Export all translations with proper namespace structure
 export const translations = {
     en: {
         common: en.common,

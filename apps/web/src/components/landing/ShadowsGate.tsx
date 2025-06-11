@@ -1,10 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { useComponentTranslation } from "@/lib/i18n/hooks"
+import { useTranslation } from "@/lib/i18n/hooks"
 
 export function ShadowsGate() {
-    const { t } = useComponentTranslation()
+    const { t } = useTranslation()
 
     return (
         <section className="atmospheric-bg min-h-screen flex items-center justify-center relative overflow-hidden">
@@ -20,17 +20,17 @@ export function ShadowsGate() {
                 <div className="max-w-4xl mx-auto">
                     {/* Main Title */}
                     <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-fg-primary mb-6 fade-in-up">
-                        {t('shadowsGate.title')}
+                        {t('components.shadowsGate.title')}
                     </h1>
 
                     {/* Subtitle */}
                     <p className="text-xl md:text-2xl text-fg-secondary mb-8 max-w-3xl mx-auto leading-relaxed fade-in-up animation-delay-200">
-                        {t('shadowsGate.subtitle')}
+                        {t('components.shadowsGate.subtitle')}
                     </p>
 
                     {/* Description */}
                     <p className="text-lg text-fg-muted mb-12 max-w-2xl mx-auto fade-in-up animation-delay-400">
-                        {t('shadowsGate.description')}
+                        {t('components.shadowsGate.description')}
                     </p>
 
                     {/* Dual Path CTAs */}
@@ -46,15 +46,15 @@ export function ShadowsGate() {
                                 </div>
                                 <div>
                                     <h3 className="font-display text-xl font-bold text-fg-primary group-hover:text-mastermind transition-colors duration-300">
-                                        {t('shadowsGate.paths.mastermind.title')}
+                                        {t('components.shadowsGate.paths.mastermind.title')}
                                     </h3>
                                     <p className="text-sm text-fg-muted">
-                                        {t('shadowsGate.paths.mastermind.subtitle')}
+                                        {t('components.shadowsGate.paths.mastermind.subtitle')}
                                     </p>
                                 </div>
                             </div>
                             <p className="text-fg-secondary group-hover:text-fg-primary transition-colors duration-300">
-                                {t('shadowsGate.paths.mastermind.description')}
+                                {t('components.shadowsGate.paths.mastermind.description')}
                             </p>
                         </Link>
 
@@ -69,15 +69,15 @@ export function ShadowsGate() {
                                 </div>
                                 <div>
                                     <h3 className="font-display text-xl font-bold text-fg-primary group-hover:text-scoundrel transition-colors duration-300">
-                                        {t('shadowsGate.paths.scoundrel.title')}
+                                        {t('components.shadowsGate.paths.scoundrel.title')}
                                     </h3>
                                     <p className="text-sm text-fg-muted">
-                                        {t('shadowsGate.paths.scoundrel.subtitle')}
+                                        {t('components.shadowsGate.paths.scoundrel.subtitle')}
                                     </p>
                                 </div>
                             </div>
                             <p className="text-fg-secondary group-hover:text-fg-primary transition-colors duration-300">
-                                {t('shadowsGate.paths.scoundrel.description')}
+                                {t('components.shadowsGate.paths.scoundrel.description')}
                             </p>
                         </Link>
                     </div>
@@ -88,13 +88,13 @@ export function ShadowsGate() {
                             href="/features"
                             className="btn btn-outline mr-4 mb-4"
                         >
-                            Learn More
+                            {t('common.actions.learnMore')}
                         </Link>
                         <Link
                             href="/community"
                             className="text-fg-secondary hover:text-ember transition-colors duration-300 font-medium"
                         >
-                            Join the Community →
+                            {t('navigation.community')} →
                         </Link>
                     </div>
                 </div>
