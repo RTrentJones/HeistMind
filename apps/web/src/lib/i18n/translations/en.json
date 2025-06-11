@@ -8,6 +8,7 @@
         "actions": {
             "signIn": "Sign In",
             "signUp": "Join the Shadows",
+            "signOut": "Sign Out",
             "dashboard": "Dashboard",
             "getStarted": "Get Started",
             "learnMore": "Learn More",
@@ -148,7 +149,7 @@
             "subtitle": "Choose your path into the underworld",
             "providers": {
                 "discord": {
-                    "label": "Continue with Discord",
+                    "label": "Continue with {{provider}}",
                     "subtitle": "Join your gaming community"
                 },
                 "email": {
@@ -156,7 +157,7 @@
                     "subtitle": "For the independent operative"
                 },
                 "google": {
-                    "label": "Continue with Google",
+                    "label": "Continue with {{provider}}",
                     "subtitle": "Swift and secure access"
                 }
             },
@@ -167,7 +168,11 @@
             "title": "Join the Underworld",
             "subtitle": "Create your legend in the shadows",
             "existingUser": "Already have an account?",
-            "signIn": "Sign In"
+            "signIn": "Sign In",
+            "success": {
+                "title": "Account Created!",
+                "message": "Check your email for a confirmation link to complete your registration."
+            }
         },
         "roleSelection": {
             "title": "Choose Your Role in the Underworld",
@@ -203,10 +208,18 @@
         },
         "dashboard": {
             "welcome": "Welcome back, {{name}}",
+            "subtitle": "Ready to forge your legend in the shadows?",
             "quickActions": "Quick Actions",
             "recentActivity": "Recent Activity",
+            "noActivity": "No recent activity",
             "activeGames": "Active Games",
-            "characters": "Your Characters"
+            "characters": "Characters",
+            "rulesets": "Rulesets",
+            "actions": {
+                "createGame": "Create New Game",
+                "joinGame": "Join a Game",
+                "uploadRuleset": "Upload Ruleset"
+            }
         }
     },
     "forms": {
@@ -223,7 +236,9 @@
         "placeholders": {
             "email": "Enter your email",
             "password": "Enter your password",
+            "confirmPassword": "Confirm your password",
             "username": "Choose a username",
+            "displayName": "Enter your display name",
             "characterName": "Enter character name",
             "searchGames": "Search games...",
             "searchCharacters": "Search characters..."

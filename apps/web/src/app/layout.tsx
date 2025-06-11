@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/provider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { getUser } from "@/lib/auth/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,18 +20,22 @@ export const metadata: Metadata = {
   description: "The definitive platform for Forged in the Dark campaigns. Create characters, run games, forge your legacy in the shadows or whatever world you care to imagine.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialUser = await getUser()
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <I18nProvider>
-          {children}
+          <AuthProvider initialUser={initialUser}>
+            {children}
+          </AuthProvider>
         </I18nProvider>
       </body>
     </html>
