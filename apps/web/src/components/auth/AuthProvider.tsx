@@ -64,10 +64,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
             )
 
-            const { data: profile, error: profileError } = await Promise.race([
-                profilePromise,
-                timeoutPromise
-            ]) as any
+            let profile = null
+            let profileError = null
+
+            try {
+                const result = await Promise.race([
+                    profilePromise,
+                    timeoutPromise
+                ])
+
+                // If we get here, profilePromise won (not timeout)
+                const response = result as Awaited<typeof profilePromise>
+                profile = response.data
+                profileError = response.error
+            } catch (timeoutError) {
+                // Timeout or other error occurred
+                profileError = timeoutError
+            }
 
             if (profileError) {
                 console.log('AuthProvider: Profile fetch error:', profileError)
