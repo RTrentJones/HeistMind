@@ -37,31 +37,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const supabase = createClient()
 
     const updateUser = useCallback(async (authUser: User) => {
+        console.log('AuthProvider: updateUser called for:', authUser.email)
         try {
             // Get profile data (always in public schema)
-            const { data: profile } = await supabase
+            console.log('AuthProvider: Fetching profile for user ID:', authUser.id)
+            const { data: profile, error: profileError } = await supabase
                 .schema('public')
                 .from('profiles')
                 .select('username, avatar_url')
                 .eq('id', authUser.id)
                 .single()
 
-            setUser({
+            if (profileError) {
+                console.log('AuthProvider: Profile fetch error:', profileError)
+            } else {
+                console.log('AuthProvider: Profile fetched:', profile)
+            }
+
+            const userData: AuthUser = {
                 id: authUser.id,
                 email: authUser.email!,
                 name: profile?.username || authUser.user_metadata?.full_name || authUser.email!.split('@')[0],
                 avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url,
-                role: 'player' // Default role for now
-            })
+                role: 'player' as const // Default role for now
+            }
+
+            console.log('AuthProvider: Setting user state:', userData)
+            setUser(userData)
         } catch (error) {
-            console.error('Error updating user:', error)
-            setUser({
+            console.error('AuthProvider: Error updating user:', error)
+            const fallbackUserData: AuthUser = {
                 id: authUser.id,
                 email: authUser.email!,
                 name: authUser.user_metadata?.full_name || authUser.email!.split('@')[0],
                 avatar: authUser.user_metadata?.avatar_url,
-                role: 'player'
-            })
+                role: 'player' as const
+            }
+            console.log('AuthProvider: Setting fallback user state:', fallbackUserData)
+            setUser(fallbackUserData)
         }
     }, [supabase])
 
