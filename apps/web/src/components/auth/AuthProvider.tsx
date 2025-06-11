@@ -125,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 } else {
                     setUser(null)
                 }
-                setLoading(false)
+                // Don't manage loading here - let refreshUser handle it
             }
         )
 
