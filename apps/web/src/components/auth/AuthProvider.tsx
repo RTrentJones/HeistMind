@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useOAuthCallbackHandler } from '@/lib/auth/oauth-callback-handler'
 import type { User } from '@supabase/supabase-js'
 import type { AuthUser } from '@/lib/auth/client'
 
@@ -30,12 +29,11 @@ export function useAuth() {
 
 interface AuthProviderProps {
     children: React.ReactNode
-    initialUser?: AuthUser | null
 }
 
-export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
-    const [user, setUser] = useState<AuthUser | null>(initialUser)
-    const [loading, setLoading] = useState(!initialUser)
+export function AuthProvider({ children }: AuthProviderProps) {
+    const [user, setUser] = useState<AuthUser | null>(null)
+    const [loading, setLoading] = useState(true)
     const supabase = createClient()
 
     const updateUser = useCallback(async (authUser: User) => {
@@ -97,8 +95,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     }, [supabase.auth, updateUser])
 
     useEffect(() => {
-        // Always check for current session, even if initialUser is provided
-        // This handles OAuth callback scenarios where server state might be stale
+        // Get the current session on mount and set up auth state listener
         const getInitialSession = async () => {
             await refreshUser()
         }
@@ -126,9 +123,6 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
         await supabase.auth.signOut()
         setUser(null)
     }
-
-    // Handle OAuth callback scenarios
-    useOAuthCallbackHandler(refreshUser)
 
     return (
         <AuthContext.Provider value={{ user, loading, signOut, refreshUser }}>
