@@ -68,14 +68,32 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     }, [supabase])
 
     const refreshUser = useCallback(async () => {
-        const { data: { session } } = await supabase.auth.getSession()
+        console.log('AuthProvider: Refreshing user session...')
+        setLoading(true)
 
-        if (session?.user) {
-            await updateUser(session.user)
-        } else {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession()
+
+            if (error) {
+                console.error('AuthProvider: Error getting session:', error)
+                setUser(null)
+                setLoading(false)
+                return
+            }
+
+            if (session?.user) {
+                console.log('AuthProvider: Found session for user:', session.user.email)
+                await updateUser(session.user)
+            } else {
+                console.log('AuthProvider: No session found')
+                setUser(null)
+            }
+        } catch (error) {
+            console.error('AuthProvider: Refresh user error:', error)
             setUser(null)
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }, [supabase.auth, updateUser])
 
     useEffect(() => {

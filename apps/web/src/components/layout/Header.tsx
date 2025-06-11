@@ -25,6 +25,18 @@ export function Header({ isAuthenticated: propIsAuthenticated, user: propUser }:
     const isAuthenticated = authUser ? true : (propIsAuthenticated || false)
     const user = authUser ? { name: authUser.name, avatar: authUser.avatar } : propUser
 
+    // Debug logging for auth state
+    useEffect(() => {
+        console.log('Header auth state:', {
+            authUser,
+            authLoading,
+            isAuthenticated,
+            user,
+            propIsAuthenticated,
+            propUser
+        })
+    }, [authUser, authLoading, isAuthenticated, user, propIsAuthenticated, propUser])
+
     const handleSignOut = async () => {
         await signOut()
         setShowUserMenu(false)

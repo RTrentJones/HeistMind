@@ -12,29 +12,64 @@ export function useOAuthCallbackHandler(refreshUser: () => Promise<void>) {
     const hasHandledCallback = useRef(false)
 
     useEffect(() => {
-        // Check if we're on a page that might have been redirected from OAuth
-        const isFromOAuth =
-            // Direct callback URL
-            window.location.pathname === '/auth/callback' ||
-            // Or if we have auth success indicator in URL or headers
-            searchParams.get('code') !== null ||
-            // Or if we detect we're on a protected page after potential OAuth
-            (window.location.pathname === '/dashboard' && !hasHandledCallback.current)
+        const handleOAuthCallback = async () => {
+            // Check if we have OAuth parameters in the URL
+            const hasOAuthCode = searchParams.get('code') !== null
+            const hasOAuthState = searchParams.get('state') !== null
+            const isOnDashboard = window.location.pathname === '/dashboard'
 
-        if (isFromOAuth && !hasHandledCallback.current) {
-            hasHandledCallback.current = true
-
-            // Force a refresh of the user state to pick up the new session
-            refreshUser().then(() => {
-                // Clean up URL if we have OAuth parameters
-                const currentUrl = new URL(window.location.href)
-                if (currentUrl.searchParams.has('code') || currentUrl.searchParams.has('state')) {
-                    const cleanUrl = new URL(window.location.href)
-                    cleanUrl.searchParams.delete('code')
-                    cleanUrl.searchParams.delete('state')
-                    router.replace(cleanUrl.pathname + cleanUrl.search)
-                }
+            console.log('OAuth callback check:', {
+                hasOAuthCode,
+                hasOAuthState,
+                isOnDashboard,
+                hasHandledCallback: hasHandledCallback.current,
+                pathname: window.location.pathname
             })
+
+            // Only trigger if we have OAuth parameters or are on dashboard with unhandled callback
+            const shouldHandle = (hasOAuthCode || (isOnDashboard && !hasHandledCallback.current))
+
+            if (shouldHandle && !hasHandledCallback.current) {
+                hasHandledCallback.current = true
+
+                console.log('Handling OAuth callback - refreshing user state...')
+
+                try {
+                    // Wait for user state to be fully refreshed
+                    await refreshUser()
+
+                    console.log('User state refreshed, cleaning up URL...')
+
+                    // Clean up URL after successful auth state update
+                    if (hasOAuthCode || hasOAuthState) {
+                        const currentUrl = new URL(window.location.href)
+                        const cleanUrl = new URL(window.location.pathname, window.location.origin)
+
+                        // Preserve any non-OAuth search params
+                        currentUrl.searchParams.forEach((value, key) => {
+                            if (key !== 'code' && key !== 'state') {
+                                cleanUrl.searchParams.set(key, value)
+                            }
+                        })
+
+                        console.log('Replacing URL:', {
+                            from: window.location.href,
+                            to: cleanUrl.toString()
+                        })
+
+                        router.replace(cleanUrl.pathname + cleanUrl.search)
+                    }
+                } catch (error) {
+                    console.error('OAuth callback handler error:', error)
+                    // Reset the flag so we can try again
+                    hasHandledCallback.current = false
+                }
+            }
         }
+
+        // Add a small delay to ensure DOM is ready
+        const timeoutId = setTimeout(handleOAuthCallback, 100)
+
+        return () => clearTimeout(timeoutId)
     }, [searchParams, refreshUser, router])
 }
