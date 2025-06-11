@@ -1,7 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useOAuthCallbackHandler } from '@/lib/auth/oauth-callback-handler'
 import type { User } from '@supabase/supabase-js'
 import type { AuthUser } from '@/lib/auth/client'
 
@@ -9,12 +10,14 @@ interface AuthContextType {
     user: AuthUser | null
     loading: boolean
     signOut: () => Promise<void>
+    refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
-    signOut: async () => { }
+    signOut: async () => { },
+    refreshUser: async () => { }
 })
 
 export function useAuth() {
@@ -35,7 +38,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     const [loading, setLoading] = useState(!initialUser)
     const supabase = createClient()
 
-    const updateUser = async (authUser: User) => {
+    const updateUser = useCallback(async (authUser: User) => {
         try {
             // Get profile data (always in public schema)
             const { data: profile } = await supabase
@@ -62,28 +65,33 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
                 role: 'player'
             })
         }
-    }
+    }, [supabase])
+
+    const refreshUser = useCallback(async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session?.user) {
+            await updateUser(session.user)
+        } else {
+            setUser(null)
+        }
+        setLoading(false)
+    }, [supabase.auth, updateUser])
 
     useEffect(() => {
-        // Get initial session
+        // Always check for current session, even if initialUser is provided
+        // This handles OAuth callback scenarios where server state might be stale
         const getInitialSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-
-            if (session?.user) {
-                await updateUser(session.user)
-            } else {
-                setUser(null)
-            }
-            setLoading(false)
+            await refreshUser()
         }
 
-        if (!initialUser) {
-            getInitialSession()
-        }
+        getInitialSession()
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                console.log('Auth state change:', event, session?.user?.email)
+
                 if (session?.user) {
                     await updateUser(session.user)
                 } else {
@@ -94,15 +102,18 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
         )
 
         return () => subscription.unsubscribe()
-    }, [supabase.auth, initialUser, updateUser])
+    }, [supabase.auth, updateUser, refreshUser])
 
     const signOut = async () => {
         await supabase.auth.signOut()
         setUser(null)
     }
 
+    // Handle OAuth callback scenarios
+    useOAuthCallbackHandler(refreshUser)
+
     return (
-        <AuthContext.Provider value={{ user, loading, signOut }}>
+        <AuthContext.Provider value={{ user, loading, signOut, refreshUser }}>
             {children}
         </AuthContext.Provider>
     )

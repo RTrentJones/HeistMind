@@ -18,7 +18,7 @@ export function Header({ isAuthenticated: propIsAuthenticated, user: propUser }:
     const [showUserMenu, setShowUserMenu] = useState(false)
     const { t } = useTranslation()
     const { t: nav } = useNavigationTranslation()
-    const { user: authUser, signOut } = useAuth()
+    const { user: authUser, loading: authLoading, signOut } = useAuth()
     const userMenuRef = useRef<HTMLDivElement>(null)
 
     // Use auth context user if available, fallback to props
@@ -93,7 +93,12 @@ export function Header({ isAuthenticated: propIsAuthenticated, user: propUser }:
 
                     {/* Authentication Section */}
                     <div className="flex items-center space-x-4">
-                        {isAuthenticated && user ? (
+                        {authLoading ? (
+                            <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-bg-secondary rounded-full animate-pulse"></div>
+                                <div className="h-4 w-20 bg-bg-secondary rounded animate-pulse hidden sm:block"></div>
+                            </div>
+                        ) : isAuthenticated && user ? (
                             <div className="flex items-center space-x-3">
                                 <div className="relative" ref={userMenuRef}>
                                     <button
