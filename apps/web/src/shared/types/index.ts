@@ -4,7 +4,7 @@ import { ValidationError } from '@heist-mind/database'
 export * from '@heist-mind/database'
 
 // API Response types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
     data: T
     success: boolean
     message?: string
@@ -19,7 +19,7 @@ export interface PaginationMeta {
     hasPrev: boolean
 }
 
-export interface PaginatedApiResponse<T = any> extends ApiResponse<T> {
+export interface PaginatedApiResponse<T = unknown> extends ApiResponse<T> {
     meta: PaginationMeta
 }
 
@@ -30,7 +30,7 @@ export interface LoadingState {
     lastUpdated?: Date
 }
 
-export interface FormState<T = any> extends LoadingState {
+export interface FormState<T = Record<string, unknown>> extends LoadingState {
     data: T
     isDirty: boolean
     isValid: boolean

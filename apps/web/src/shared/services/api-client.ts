@@ -29,7 +29,7 @@ export class ApiClient {
     private async request<T>(
         method: string,
         endpoint: string,
-        data?: any,
+        data?: Record<string, unknown>,
         options?: RequestOptions
     ): Promise<ApiResponse<T>> {
         const url = `${this.baseUrl}${endpoint}`
@@ -66,15 +66,15 @@ export class ApiClient {
         return this.request<T>('GET', endpoint, undefined, options)
     }
 
-    async post<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<ApiResponse<T>> {
+    async post<T>(endpoint: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<ApiResponse<T>> {
         return this.request<T>('POST', endpoint, data, options)
     }
 
-    async put<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<ApiResponse<T>> {
+    async put<T>(endpoint: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<ApiResponse<T>> {
         return this.request<T>('PUT', endpoint, data, options)
     }
 
-    async patch<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<ApiResponse<T>> {
+    async patch<T>(endpoint: string, data?: Record<string, unknown>, options?: RequestOptions): Promise<ApiResponse<T>> {
         return this.request<T>('PATCH', endpoint, data, options)
     }
 
@@ -84,7 +84,7 @@ export class ApiClient {
 
     async getPaginated<T>(
         endpoint: string,
-        params?: Record<string, any>,
+        params?: Record<string, unknown>,
         options?: RequestOptions
     ): Promise<PaginatedApiResponse<T[]>> {
         const searchParams = new URLSearchParams()

@@ -6,6 +6,7 @@ import {
     CreateCharacterData,
     UpdateCharacterData,
     CharacterStatus,
+    CharacterAdvancement,
 } from '@heist-mind/database'
 import { LoadingState } from '../../../shared/types'
 import { getRepositories } from '../../../lib/auth'
@@ -37,7 +38,7 @@ interface CharactersState extends LoadingState {
 
     // Actions - Character Management
     addExperience: (characterId: string, amount: number, reason: string) => Promise<Character>
-    advanceCharacter: (characterId: string, advancement: any) => Promise<Character>
+    advanceCharacter: (characterId: string, advancement: CharacterAdvancement) => Promise<Character>
     transferCharacter: (characterId: string, targetGameId: string) => Promise<Character>
     cloneCharacter: (characterId: string, targetGameId: string) => Promise<Character>
 
@@ -350,7 +351,7 @@ export const useCharactersStore = create<CharactersState>()(
                     }
                 },
 
-                advanceCharacter: async (characterId: string, advancement: any) => {
+                advanceCharacter: async (characterId: string, advancement: CharacterAdvancement) => {
                     set({ isLoading: true, error: null })
                     try {
                         // This would use the character management repository

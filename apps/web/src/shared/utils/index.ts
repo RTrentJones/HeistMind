@@ -61,7 +61,7 @@ export const capitalize = (str: string) => {
 // Array utilities
 export const unique = <T>(array: T[]): T[] => [...new Set(array)]
 
-export const groupBy = <T, K extends keyof any>(
+export const groupBy = <T, K extends keyof unknown>(
     array: T[],
     key: (item: T) => K
 ): Record<K, T[]> => {
@@ -76,7 +76,7 @@ export const groupBy = <T, K extends keyof any>(
 }
 
 // Object utilities
-export const omit = <T extends Record<string, any>, K extends keyof T>(
+export const omit = <T extends Record<string, unknown>, K extends keyof T>(
     obj: T,
     keys: K[]
 ): Omit<T, K> => {
@@ -85,7 +85,7 @@ export const omit = <T extends Record<string, any>, K extends keyof T>(
     return result
 }
 
-export const pick = <T extends Record<string, any>, K extends keyof T>(
+export const pick = <T extends Record<string, unknown>, K extends keyof T>(
     obj: T,
     keys: K[]
 ): Pick<T, K> => {
@@ -118,25 +118,25 @@ export const sleep = (ms: number): Promise<void> => {
     return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
     func: T,
     delay: number
 ): (...args: Parameters<T>) => void => {
     let timeoutId: NodeJS.Timeout
     return (...args: Parameters<T>) => {
         clearTimeout(timeoutId)
-        timeoutId = setTimeout(() => func.apply(null, args), delay)
+        timeoutId = setTimeout(() => func(...args), delay)
     }
 }
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
     func: T,
     limit: number
 ): (...args: Parameters<T>) => void => {
     let inThrottle: boolean
     return (...args: Parameters<T>) => {
         if (!inThrottle) {
-            func.apply(null, args)
+            func(...args)
             inThrottle = true
             setTimeout(() => (inThrottle = false), limit)
         }
@@ -153,7 +153,7 @@ export const storage = {
             return defaultValue ?? null
         }
     },
-    set: (key: string, value: any): void => {
+    set: (key: string, value: unknown): void => {
         try {
             localStorage.setItem(key, JSON.stringify(value))
         } catch {
@@ -170,7 +170,7 @@ export const storage = {
 }
 
 // Form data utilities
-export const createFormData = (data: Record<string, any>): FormData => {
+export const createFormData = (data: Record<string, unknown>): FormData => {
     const formData = new FormData()
     Object.entries(data).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {

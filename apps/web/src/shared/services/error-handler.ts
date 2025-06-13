@@ -1,19 +1,19 @@
 import { useNotificationStore } from '../stores/notification-store'
-import { ValidationError, DatabaseError } from '../types'
+import { ValidationError } from '../types'
 
 export interface ErrorDetails {
     message: string
     code?: string
     field?: string
-    context?: Record<string, any>
+    context?: Record<string, unknown>
 }
 
 export class AppError extends Error {
     public readonly code?: string
     public readonly field?: string
-    public readonly context?: Record<string, any>
+    public readonly context?: Record<string, unknown>
 
-    constructor(message: string, code?: string, field?: string, context?: Record<string, any>) {
+    constructor(message: string, code?: string, field?: string, context?: Record<string, unknown>) {
         super(message)
         this.name = 'AppError'
         this.code = code
@@ -43,7 +43,7 @@ export class ApiError extends AppError {
 }
 
 // Translation function type - will be injected from component context
-type TranslationFunction = (key: string, params?: Record<string, any>) => string
+type TranslationFunction = (key: string, params?: Record<string, unknown>) => string
 
 // Error handler class
 export class ErrorHandler {
@@ -71,7 +71,7 @@ export class ErrorHandler {
         }
     }
 
-    private handleValidationError(error: ValidationAppError, notificationStore: any): void {
+    private handleValidationError(error: ValidationAppError, notificationStore: ReturnType<typeof useNotificationStore.getState>): void {
         const firstError = error.errors[0]
         const title = this.translate?.('errors.validation.title') || 'Validation Error'
         const message = firstError?.message || this.translate?.('errors.validation.general') || error.message
@@ -79,7 +79,7 @@ export class ErrorHandler {
         notificationStore.error(title, message)
     }
 
-    private handleApiError(error: ApiError, notificationStore: any): void {
+    private handleApiError(error: ApiError, notificationStore: ReturnType<typeof useNotificationStore.getState>): void {
         let titleKey = 'errors.general'
         let messageKey = 'errors.general'
 
@@ -112,18 +112,18 @@ export class ErrorHandler {
         notificationStore.error(title, message)
     }
 
-    private handleAppError(error: AppError, notificationStore: any): void {
+    private handleAppError(error: AppError, notificationStore: ReturnType<typeof useNotificationStore.getState>): void {
         const title = this.translate?.('errors.general') || 'Application Error'
         notificationStore.error(title, error.message)
     }
 
-    private handleGenericError(error: Error, context: string | undefined, notificationStore: any): void {
+    private handleGenericError(error: Error, context: string | undefined, notificationStore: ReturnType<typeof useNotificationStore.getState>): void {
         const title = this.translate?.('errors.general') || 'Error'
         const message = error.message || this.translate?.('errors.general') || 'An error occurred'
         notificationStore.error(title, message)
     }
 
-    private handleUnknownError(error: unknown, context: string | undefined, notificationStore: any): void {
+    private handleUnknownError(error: unknown, context: string | undefined, notificationStore: ReturnType<typeof useNotificationStore.getState>): void {
         const title = this.translate?.('errors.general') || 'Unexpected Error'
         const message = this.translate?.('errors.general') || 'An unexpected error occurred'
         notificationStore.error(title, message)
@@ -172,12 +172,12 @@ export const createApiError = (message: string, status: number, code?: string): 
     return new ApiError(message, status, code)
 }
 
-export const createAppError = (message: string, code?: string, field?: string, context?: Record<string, any>): AppError => {
+export const createAppError = (message: string, code?: string, field?: string, context?: Record<string, unknown>): AppError => {
     return new AppError(message, code, field, context)
 }
 
 // Error boundary helper
-export const withErrorBoundary = <T extends (...args: any[]) => any>(
+export const withErrorBoundary = <T extends (...args: unknown[]) => unknown>(
     fn: T,
     fallback?: (...args: Parameters<T>) => ReturnType<T>
 ): T => {
@@ -192,7 +192,7 @@ export const withErrorBoundary = <T extends (...args: any[]) => any>(
 }
 
 // Promise error boundary
-export const withAsyncErrorBoundary = <T extends (...args: any[]) => Promise<any>>(
+export const withAsyncErrorBoundary = <T extends (...args: unknown[]) => Promise<unknown>>(
     fn: T,
     fallback?: (...args: Parameters<T>) => ReturnType<T>
 ): T => {

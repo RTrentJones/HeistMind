@@ -43,7 +43,7 @@ interface GamesState extends LoadingState {
     deleteGame: (gameId: string) => Promise<void>
 
     // Actions - Game Management
-    joinGame: (gameId: string, inviteCode?: string) => Promise<void>
+    joinGame: (gameId: string, _inviteCode?: string) => Promise<void>
     leaveGame: (gameId: string) => Promise<void>
     updateGameState: (gameId: string, state: GameState) => Promise<void>
 
@@ -87,7 +87,7 @@ export const useGamesStore = create<GamesState>()(
 
                 // Game CRUD operations
                 loadGames: async (refresh = false) => {
-                    const { pagination, filters } = get()
+                    const { pagination } = get()
 
                     if (refresh) {
                         set({ games: [], pagination: { ...pagination, page: 1 } })
@@ -287,7 +287,7 @@ export const useGamesStore = create<GamesState>()(
                 },
 
                 // Game management operations
-                joinGame: async (gameId: string, inviteCode?: string) => {
+                joinGame: async (gameId: string, _inviteCode?: string) => {
                     set({ isLoading: true, error: null })
                     try {
                         const repositories = getRepositories()

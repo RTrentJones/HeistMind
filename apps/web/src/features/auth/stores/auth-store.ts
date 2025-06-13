@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-import { User, Session, Profile, CreateProfileData } from '@heist-mind/database'
+import { User, Profile, CreateProfileData } from '@heist-mind/database'
 import { LoadingState } from '../../../shared/types'
 import { getAuthService, getRepositories } from '../../../lib/auth'
 

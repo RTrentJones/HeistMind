@@ -5,7 +5,7 @@ import { ThemeMode } from '../types'
 interface Modal {
     id: string
     component: string
-    props?: Record<string, any>
+    props?: Record<string, unknown>
     closable?: boolean
 }
 
@@ -21,7 +21,7 @@ interface UIStore {
 
     // Modals
     modals: Modal[]
-    openModal: (id: string, component: string, props?: Record<string, any>, closable?: boolean) => void
+    openModal: (id: string, component: string, props?: Record<string, unknown>, closable?: boolean) => void
     closeModal: (id: string) => void
     closeAllModals: () => void
 
@@ -45,7 +45,7 @@ interface UIStore {
 export const useUIStore = create<UIStore>()(
     devtools(
         persist(
-            (set, get) => ({
+            (set, _get) => ({
                 // Theme
                 theme: 'system',
                 setTheme: (theme) => set({ theme }),
