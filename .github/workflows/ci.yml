@@ -3,10 +3,10 @@ name: CI
 on:
   push:
     branches: [main, develop]
-    paths-ignore: ['*.md', 'docs/**', '.gitignore', '.clinerule/**', 'memory-bank/**']
+    paths-ignore: ['*.md', 'docs/**', '.gitignore', '.clinerule/**', '.memory-bank/**']
   pull_request:
     branches: [main, develop]
-    paths-ignore: ['*.md', 'docs/**', '.gitignore', '.clinerule/**', 'memory-bank/**']
+    paths-ignore: ['*.md', 'docs/**', '.gitignore', '.clinerule/**', '.memory-bank/**']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -1,0 +1,78 @@
+/* packages/ui/src/styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 10 10 10;
+        --foreground: 250 250 250;
+
+        --card: 23 23 23;
+        --card-foreground: 250 250 250;
+
+        --primary: 168 85 247;
+        --primary-foreground: 250 250 250;
+
+        --secondary: 38 38 38;
+        --secondary-foreground: 250 250 250;
+
+        --muted: 38 38 38;
+        --muted-foreground: 163 163 163;
+
+        --accent: 38 38 38;
+        --accent-foreground: 250 250 250;
+
+        --destructive: 239 68 68;
+        --destructive-foreground: 250 250 250;
+
+        --border: 64 64 64;
+        --input: 64 64 64;
+        --ring: 168 85 247;
+    }
+
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-feature-settings: "rlig" 1, "calt" 1;
+    }
+}
+
+@layer utilities {
+
+    /* Better focus states */
+    .focus-ring {
+        @apply focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 focus:ring-offset-neutral-950;
+    }
+
+    /* Improved text rendering */
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    /* Custom scrollbar */
+    .scrollbar-thin {
+        scrollbar-width: thin;
+        scrollbar-color: theme('colors.neutral.700') transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        @apply bg-neutral-700 rounded-full;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        @apply bg-neutral-600;
+    }
+}

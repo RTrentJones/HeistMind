@@ -49,7 +49,7 @@ heist-mind/
 │   ├── database/              # Supabase client and types
 │   └── shared/               # Common utilities and types
 ├── supabase/                  # Database schema and migrations
-└── memory-bank/              # Project documentation (updated)
+└── .memory-bank/              # Project documentation (updated)
 ```
 
 ### Technology Foundation (Implemented)

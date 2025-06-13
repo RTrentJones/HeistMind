@@ -19,7 +19,7 @@ Core files in hierarchical order (all required):
 - `techContext.md` - Technologies used, development setup, constraints, dependencies, tool patterns
 - `progress.md` - What works, what's left to build, current status, known issues, decision evolution
 
-Additional context files created within memory-bank/ when helpful for organization:
+Additional context files created within .memory-bank/ when helpful for organization:
 - Complex feature documentation
 - Integration specifications
 - API documentation

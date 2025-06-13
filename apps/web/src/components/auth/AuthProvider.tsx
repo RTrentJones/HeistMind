@@ -59,9 +59,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 .eq('id', authUser.id)
                 .single()
 
-            // Add 5 second timeout to prevent hanging in preview environments
+            // Add 2 second timeout to prevent hanging
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
             )
 
             let profile = null
@@ -79,6 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 profileError = response.error
             } catch (timeoutError) {
                 // Timeout or other error occurred
+                console.warn('AuthProvider: Database query timed out in preview environment. This may indicate a connectivity issue.')
                 profileError = timeoutError
             }
 
@@ -152,6 +153,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 console.log('Auth state change:', event, session?.user?.email)
+
+                // Skip INITIAL_SESSION events since refreshUser already handles the initial session
+                if (event === 'INITIAL_SESSION') {
+                    return
+                }
 
                 if (session?.user) {
                     await updateUser(session.user)

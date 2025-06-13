@@ -168,7 +168,7 @@ HeistMind/
 │   └── config.toml          # Supabase configuration
 ├── .github/
 │   └── workflows/           # CI/CD automation
-└── memory-bank/             # Project documentation
+└── .memory-bank/             # Project documentation
 ```
 
 ## 🗄️ Database Schema
@@ -272,7 +272,7 @@ pnpm --filter @heist-mind/web test
 
 ### Architecture Documents
 - [`packages/database/README.md`](packages/database/README.md) - Database architecture and usage
-- [`memory-bank/`](memory-bank/) - Complete project documentation
+- [`.memory-bank/`](memory-bank/) - Complete project documentation
 - [`.github/workflows/`](.github/workflows/) - CI/CD pipeline documentation
 
 ### API Documentation
@@ -313,7 +313,7 @@ export PGOPTIONS="-c heistmind.target_schema=development"
 ```
 
 ### Getting Help
-- Check the [Memory Bank](memory-bank/) for detailed documentation
+- Check the [Memory Bank](.memory-bank/) for detailed documentation
 - Review [Database README](packages/database/README.md) for data layer info
 - Check GitHub Issues for known problems
 - Review CI/CD logs for deployment issues

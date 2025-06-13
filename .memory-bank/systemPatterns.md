@@ -13,7 +13,7 @@ heist-mind/
 │   ├── database/          # Database client and types
 │   └── shared/            # Common utilities and types
 ├── supabase/              # Database schema and migrations
-└── memory-bank/           # Project documentation
+└── .memory-bank/           # Project documentation
 ```
 
 ### Core Domain Architecture
