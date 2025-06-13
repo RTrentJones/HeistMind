@@ -1,3 +1,6 @@
+// Internal client creation for Supabase implementation
+// This is used by the provider and should not be exported from the main package
+
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './supabase-types'
 

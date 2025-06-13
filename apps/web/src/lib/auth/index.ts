@@ -1,7 +1,55 @@
-// Re-export server-side functions (only for server components)
-export { getUser, requireAuth } from './server'
-export type { AuthUser } from './server'
+// Authentication library for HeistMind web app
+// Uses the abstracted database package for auth operations
 
-// Re-export client-side functions (only for client components)
-export { useSupabase, signOut, oauthProviders } from './client'
-export type { OAuthProvider } from './client'
+import {
+    createAuthService,
+    createRepositories,
+    type AuthService,
+    type DatabaseRepositories
+} from '@heist-mind/database'
+
+// Global instances
+let authService: AuthService | null = null
+let repositories: DatabaseRepositories | null = null
+
+// Initialize auth service and repositories
+export function initializeAuth() {
+    if (!authService) {
+        authService = createAuthService()
+    }
+    if (!repositories) {
+        repositories = createRepositories()
+    }
+    return { authService, repositories }
+}
+
+// Get auth service instance
+export function getAuthService(): AuthService {
+    if (!authService) {
+        ({ authService } = initializeAuth())
+    }
+    return authService!
+}
+
+// Get repositories instance
+export function getRepositories(): DatabaseRepositories {
+    if (!repositories) {
+        ({ repositories } = initializeAuth())
+    }
+    return repositories!
+}
+
+// Re-export types for convenience
+export type {
+    User,
+    Session,
+    AuthContext,
+    AuthService,
+    DatabaseRepositories,
+    SignUpData,
+    SignInData,
+    UpdateUserData,
+    ResetPasswordData,
+    AuthResponse,
+    AuthError
+} from '@heist-mind/database'

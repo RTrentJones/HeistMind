@@ -3,7 +3,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../supabase-types'
-import type { ProfileRepository, Profile, CreateProfileData, UpdateProfileData, Result } from '../domain-types'
+import type { Profile, CreateProfileData, UpdateProfileData, Result } from '../domain-types'
+import type { ProfileRepository } from '../repositories'
 import { fromSupabaseProfile, toSupabaseProfileInsert, toSupabaseProfileUpdate } from '../adapters/profile-adapter'
 
 export class SupabaseProfileRepository implements ProfileRepository {

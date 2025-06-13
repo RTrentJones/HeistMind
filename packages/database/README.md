@@ -111,15 +111,48 @@ export function toSupabaseProfileInsert(data: CreateProfileData): TablesInsert<'
 
 ## Usage
 
-### In Application Code
+### Basic Usage
 ```typescript
-import { ProfileRepository, Profile } from '@heist-mind/database'
+import { createRepositories, Profile } from '@heist-mind/database'
 
-// Only domain types are visible
-const profile: Profile = await profileRepo.findById('123')
+// Create repositories with default configuration
+const repositories = createRepositories()
+
+// Use repositories with clean domain types
+const result = await repositories.profiles.findById('123')
+if (result.success) {
+    const profile: Profile = result.data
+}
 ```
 
-### In Database Package
+### Advanced Configuration
+```typescript
+import { createDatabaseProvider, DatabaseConfig } from '@heist-mind/database'
+
+// Custom configuration
+const config: DatabaseConfig = {
+    provider: 'supabase',
+    supabase: {
+        url: 'https://custom-project.supabase.co',
+        key: 'custom-key'
+    }
+}
+
+const provider = createDatabaseProvider(config)
+const repositories = provider.createRepositories()
+```
+
+### Next.js Integration
+```typescript
+import { createRepositoriesWithClient } from '@heist-mind/database'
+import { createClient } from '@/lib/supabase/server'
+
+// Use with Next.js server-side client
+const supabaseClient = createClient()
+const repositories = createRepositoriesWithClient(supabaseClient)
+```
+
+### In Database Package Implementation
 ```typescript
 // Implementations can use both type systems
 import type { Database } from './supabase-types'

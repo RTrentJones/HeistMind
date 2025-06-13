@@ -262,5 +262,6 @@ export interface DatabaseProvider {
     seed(): Promise<void>
     isHealthy(): Promise<boolean>
     createRepositories(): DatabaseRepositories
+    createAuthService(): import('./auth-types').AuthService
     beginTransaction(): Promise<DatabaseTransaction>
 }

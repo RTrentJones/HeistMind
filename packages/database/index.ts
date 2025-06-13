@@ -7,12 +7,18 @@ export * from './domain-types'
 // Re-export repository interfaces (for dependency injection)
 export * from './repositories'
 
-// Supabase implementation (internal use)
-export { createClient } from './client'
+// Re-export authentication types and interfaces
+export * from './auth-types'
 
-// Export Supabase Database type for SSR clients
-// This is needed for Next.js createBrowserClient and createServerClient
-export type { Database } from './supabase-types'
+// Database provider factory (implementation-agnostic)
+export {
+    createDatabaseProvider,
+    createRepositories,
+    createAuthService,
+    createRepositoriesWithClient,
+    createAuthServiceWithClient,
+    type DatabaseConfig
+} from './provider'
 
-// NOTE: Most Supabase types are kept internal to this package
-// They are only used within adapters and not exported to maintain clean domain boundaries
+// NOTE: All implementation-specific types (Supabase, etc.) are kept internal
+// Only domain types, repository interfaces, and auth interfaces are exposed to maintain clean boundaries
