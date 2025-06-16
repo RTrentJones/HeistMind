@@ -22,6 +22,9 @@ export type { StressTrackerProps } from './components/game/StressTracker'
 export { Container } from './components/layout/Container'
 export type { ContainerProps } from './components/layout/Container'
 
+export { Header, HeaderBrand, HeaderNav, HeaderActions } from './components/layout/Header'
+export type { HeaderProps, HeaderBrandProps, HeaderNavProps, HeaderActionsProps } from './components/layout/Header'
+
 // Design Tokens
 export * from './tokens'
 

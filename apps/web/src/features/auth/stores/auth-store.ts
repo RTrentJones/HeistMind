@@ -330,6 +330,28 @@ export const useAuthStore = create<AuthState>()(
     )
 )
 
+// Auto-initialize session check on first access
+let initialized = false
+const originalCheckSession = useAuthStore.getState().checkSession
+
+useAuthStore.setState({
+    checkSession: async () => {
+        if (!initialized) {
+            initialized = true
+            await originalCheckSession()
+        } else {
+            await originalCheckSession()
+        }
+    }
+})
+
+// Check session on store creation
+if (typeof window !== 'undefined') {
+    setTimeout(() => {
+        useAuthStore.getState().checkSession()
+    }, 0)
+}
+
 // Convenience selectors
 export const useAuth = () => useAuthStore((state) => ({
     user: state.user,
