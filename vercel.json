@@ -3,5 +3,5 @@
     "buildCommand": "corepack pnpm turbo build --filter=@heist-mind/web",
     "devCommand": "corepack pnpm --filter @heist-mind/web dev",
     "installCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && corepack pnpm install --no-frozen-lockfile --config.node-linker=hoisted",
-    "outputDirectory": "apps/web/.next"
+    "outputDirectory": ".next"
 }
