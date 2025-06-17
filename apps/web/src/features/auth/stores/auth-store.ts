@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
+import { useShallow } from 'zustand/react/shallow'
 import { User, Profile, CreateProfileData } from '@heist-mind/database'
 import { LoadingState } from '../../../shared/types'
 import { getAuthService, getRepositories } from '../../../lib/auth'
@@ -352,21 +353,25 @@ if (typeof window !== 'undefined') {
     }, 0)
 }
 
-// Convenience selectors
-export const useAuth = () => useAuthStore((state) => ({
-    user: state.user,
-    profile: state.profile,
-    isAuthenticated: state.isAuthenticated,
-    isLoading: state.isLoading,
-    error: state.error,
-}))
+// Convenience selectors using useShallow to prevent infinite loops
+export const useAuth = () => useAuthStore(
+    useShallow((state) => ({
+        user: state.user,
+        profile: state.profile,
+        isAuthenticated: state.isAuthenticated,
+        isLoading: state.isLoading,
+        error: state.error,
+    }))
+)
 
-export const useAuthActions = () => useAuthStore((state) => ({
-    signIn: state.signIn,
-    signUp: state.signUp,
-    signOut: state.signOut,
-    signInWithProvider: state.signInWithProvider,
-    updateProfile: state.updateProfile,
-    refreshProfile: state.refreshProfile,
-    checkSession: state.checkSession,
-}))
+export const useAuthActions = () => useAuthStore(
+    useShallow((state) => ({
+        signIn: state.signIn,
+        signUp: state.signUp,
+        signOut: state.signOut,
+        signInWithProvider: state.signInWithProvider,
+        updateProfile: state.updateProfile,
+        refreshProfile: state.refreshProfile,
+        checkSession: state.checkSession,
+    }))
+)

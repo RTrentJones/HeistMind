@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
+import { useShallow } from 'zustand/react/shallow'
 import {
     Game,
     GameWithDetails,
@@ -430,34 +431,38 @@ export const useGamesStore = create<GamesState>()(
     )
 )
 
-// Convenience selectors
-export const useGames = () => useGamesStore((state) => ({
-    games: state.games,
-    userGames: state.userGames,
-    selectedGame: state.selectedGame,
-    isLoading: state.isLoading,
-    error: state.error,
-    pagination: state.pagination,
-    filters: state.filters,
-}))
+// Convenience selectors using useShallow to prevent infinite loops
+export const useGames = () => useGamesStore(
+    useShallow((state) => ({
+        games: state.games,
+        userGames: state.userGames,
+        selectedGame: state.selectedGame,
+        isLoading: state.isLoading,
+        error: state.error,
+        pagination: state.pagination,
+        filters: state.filters,
+    }))
+)
 
-export const useGameActions = () => useGamesStore((state) => ({
-    loadGames: state.loadGames,
-    loadUserGames: state.loadUserGames,
-    loadGameDetails: state.loadGameDetails,
-    createGame: state.createGame,
-    updateGame: state.updateGame,
-    deleteGame: state.deleteGame,
-    joinGame: state.joinGame,
-    leaveGame: state.leaveGame,
-    updateGameState: state.updateGameState,
-    selectGame: state.selectGame,
-    clearSelection: state.clearSelection,
-    setFilters: state.setFilters,
-    clearFilters: state.clearFilters,
-    loadMore: state.loadMore,
-    resetPagination: state.resetPagination,
-}))
+export const useGameActions = () => useGamesStore(
+    useShallow((state) => ({
+        loadGames: state.loadGames,
+        loadUserGames: state.loadUserGames,
+        loadGameDetails: state.loadGameDetails,
+        createGame: state.createGame,
+        updateGame: state.updateGame,
+        deleteGame: state.deleteGame,
+        joinGame: state.joinGame,
+        leaveGame: state.leaveGame,
+        updateGameState: state.updateGameState,
+        selectGame: state.selectGame,
+        clearSelection: state.clearSelection,
+        setFilters: state.setFilters,
+        clearFilters: state.clearFilters,
+        loadMore: state.loadMore,
+        resetPagination: state.resetPagination,
+    }))
+)
 
 // Computed selectors
 export const useActiveGames = () => useGamesStore((state) =>
