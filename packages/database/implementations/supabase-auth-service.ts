@@ -380,7 +380,18 @@ export class SupabaseAuthService implements AuthService {
     // ===========================
 
     getRedirectUrl(provider: OAuthProvider): string {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        // For browser environments, use the current origin
+        if (typeof window !== 'undefined') {
+            return `${window.location.origin}/auth/callback?provider=${provider}`
+        }
+
+        // For server environments, try multiple environment variables
+        const baseUrl =
+            process.env.NEXT_PUBLIC_APP_URL ||           // Production/custom env
+                process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : // Vercel deployment
+                process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : // Vercel client-side
+                    'http://localhost:3000'                       // Local development fallback
+
         return `${baseUrl}/auth/callback?provider=${provider}`
     }
 
