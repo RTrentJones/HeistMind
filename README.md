@@ -1,369 +1,151 @@
 # HeistMind
 
-A comprehensive platform for managing Forged in the Dark (FitD) tabletop RPG games. HeistMind enables Game Masters to upload custom rulesets and create games, while players can join games and create rule-driven characters with guided progression.
-
-## 🎯 Core Features
-
-### For Game Masters
-- **Upload & Manage Rulesets**: Upload JSON/YAML rulesets for any FitD system
-- **Create Games**: Set up games using your uploaded rulesets
-- **Invite Players**: Flexible invitation system with direct invites and public codes
-
-### For Players
-- **Join Games**: Accept invitations or join public games
-- **Create Characters**: Rule-driven character creation with validation
-- **Character Progression**: Guided advancement through wizard interface
-
-## 🏗️ Architecture
-
-### Multi-Tenant Database
-- **Row Level Security**: Context-aware permissions based on game roles
-- **Dynamic Roles**: Users can be GM in one game, player in another
-- **Character Portability**: Move characters between compatible games
-
-### Environment Separation
-- **Schema-Based**: `development` and `production` schemas in single Supabase project
-- **Branch Deployment**: Automatic environment targeting based on Git branch
-- **Free Tier Optimized**: Single project architecture for cost efficiency
-
-### Modern Tech Stack
-- **Frontend**: Next.js 15, React 19, TypeScript 5, Tailwind CSS 4
-- **Database**: Supabase (PostgreSQL) with generated TypeScript types
-- **Architecture**: Monorepo with pnpm workspaces
-- **CI/CD**: Automated deployment with GitHub Actions
+A comprehensive character management platform for Forged in the Dark tabletop RPGs.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+
-- pnpm 8+
-- Supabase account
-- GitHub account (for CI/CD)
-
-### 1. Clone and Install
 ```bash
-git clone https://github.com/yourusername/HeistMind.git
-cd HeistMind
+# Install dependencies
 pnpm install
-```
 
-### 2. Supabase Setup
-
-#### Create Supabase Project
-1. Go to https://supabase.com/dashboard
-2. Click "New Project"
-3. Choose organization and fill project details
-4. Wait for database to initialize
-
-#### Get Project Credentials
-1. In Supabase Dashboard → **Settings** → **API**
-2. Copy these values:
-   - **Project URL** (anon public)
-   - **anon public key** (for client-side)
-   - **service_role key** (for server/CI/CD)
-3. In **Settings** → **General**:
-   - Copy **Project ID** (reference ID)
-
-### 3. Environment Configuration
-
-#### Local Development
-```bash
-# Copy environment template
-cp apps/web/.env.example apps/web/.env.local
-
-# Edit with your Supabase credentials
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-```
-
-### 4. Database Setup
-
-#### Link to Supabase
-```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Link to your project
-supabase link --project-ref your_project_id
-```
-
-#### Deploy Database Schema
-```bash
-# Push migrations to development schema (default)
-supabase db push
-
-# Or deploy to specific schema
-export PGOPTIONS="-c heistmind.target_schema=development"
-supabase db push
-```
-
-#### Generate TypeScript Types
-```bash
-# Generate types from database
-pnpm --filter @heist-mind/database db:types
-
-# Or generate from local database
-pnpm --filter @heist-mind/database db:types-local
-```
-
-### 5. Start Development
-```bash
-# Start the web application
+# Start development servers
 pnpm dev
 
-# Or start specific app
-pnpm --filter @heist-mind/web dev
-```
+# Build all packages
+pnpm build
 
-Visit http://localhost:3000 to see the application.
-
-## 🔄 Development Workflow
-
-### Environment Management
-- **Development**: Work on `development` branch → deploys to `development` schema
-- **Production**: Push to `main` branch → deploys to `production` schema
-- **Feature Branches**: Work locally, test against `development` schema
-
-### Database Changes
-```bash
-# Create new migration
-supabase migration new your_migration_name
-
-# Test migration locally
-supabase db reset
-
-# Check schema differences
-supabase db diff
-
-# Deploy via Git (recommended)
-git add supabase/migrations/
-git commit -m "feat: add new migration"
-git push origin development  # Auto-deploys to dev schema
-```
-
-### Type Generation
-Types are automatically generated and committed by GitHub Actions after successful deployments.
-
-```bash
-# Manual type generation (if needed)
-pnpm --filter @heist-mind/database db:types
+# Build specific package
+pnpm build:ui
+pnpm build:web
 ```
 
 ## 📦 Project Structure
 
 ```
-HeistMind/
+heist-mind/
 ├── apps/
-│   ├── web/                 # Next.js web application
-│   └── bot/                 # Discord bot (future)
+│   ├── web/                    # Next.js web application
+│   └── discord-bot/            # Discord bot (future)
 ├── packages/
-│   ├── database/            # Database abstraction layer
-│   │   ├── domain-types.ts  # Clean domain interfaces
-│   │   ├── repositories.ts  # Data access contracts
-│   │   ├── client.ts        # Schema-aware Supabase client
-│   │   └── README.md        # Database documentation
-│   └── shared/              # Shared utilities and types
-├── supabase/
-│   ├── migrations/          # Database migrations
-│   └── config.toml          # Supabase configuration
-├── .github/
-│   └── workflows/           # CI/CD automation
-└── .memory-bank/             # Project documentation
+│   ├── database/               # Supabase client and types
+│   ├── shared/                 # Shared utilities and types
+│   └── ui/                     # Component library
+├── supabase/                   # Database schema and migrations
+└── .memory-bank/               # Project documentation
 ```
 
-## 🗄️ Database Schema
+## 🛠 Technology Stack
 
-### Core Tables
-- **`rulesets`** - GM-uploaded FitD rules with JSONB content
-- **`games`** - Game instances with player management
-- **`game_players`** - Many-to-many with context-specific roles
-- **`characters`** - Player characters within games
-- **`invitations`** - Flexible invitation system
+- **Frontend**: Next.js 15, React 19, TypeScript 5
+- **Styling**: Tailwind CSS 4
+- **State Management**: Zustand with domain separation
+- **Database**: Supabase with PostgreSQL
+- **Monorepo**: pnpm workspaces + Turborepo
+- **Deployment**: Vercel
 
-### Security Features
-- **Row Level Security** on all tables
-- **Context-aware permissions** based on game roles
-- **Helper functions** for role checking
-- **Automatic triggers** for data consistency
+## 🏗 Architecture
 
-### Environment Schemas
-- **`development`** - Safe testing environment
-- **`production`** - Live application data
-- **`public`** - Shared resources (user profiles, auth)
+HeistMind follows a **Domain-Driven Design** approach with:
 
-## 🚀 Deployment
+- **Multi-tenant database** with Row Level Security
+- **Domain-separated frontend** (auth, games, characters)
+- **Enterprise-grade state management** with Zustand
+- **Type-safe API integration** throughout the stack
 
-### Automated CI/CD
-The project includes automated deployment via GitHub Actions:
+## 📚 Development Scripts
 
-#### Validation Pipeline
-- Migration syntax checking
-- Schema validation against local Supabase
-- TypeScript type generation and compilation
-- Schema diff verification
-
-#### Deployment Pipeline
-- `development` branch → `development` schema
-- `main` branch → `production` schema
-- Automatic type generation from deployed schema
-- Health verification and deployment summaries
-
-### Manual Deployment
+### Root Commands (Turborepo)
 ```bash
-# Deploy to development
-export PGOPTIONS="-c heistmind.target_schema=development"
-supabase db push
-
-# Deploy to production
-export PGOPTIONS="-c heistmind.target_schema=production"
-supabase db push
+pnpm dev              # Start all development servers
+pnpm build            # Build all packages
+pnpm lint             # Lint all packages
+pnpm type-check       # Type check all packages
+pnpm clean            # Clean all build outputs
 ```
 
-## 🛠️ Available Scripts
-
-### Root Level
+### Package-Specific Commands
 ```bash
-pnpm dev          # Start all applications
-pnpm build        # Build all packages and apps
-pnpm lint         # Lint all packages
-pnpm type-check   # TypeScript checking
+pnpm build:ui         # Build UI package only
+pnpm build:web        # Build web app only
+pnpm dev:ui           # Start UI package in watch mode
+pnpm dev:web          # Start web app only
 ```
 
-### Database Package
+### Database Commands
 ```bash
-pnpm --filter @heist-mind/database db:push        # Deploy migrations
-pnpm --filter @heist-mind/database db:reset       # Reset local DB
-pnpm --filter @heist-mind/database db:types       # Generate types from remote
-pnpm --filter @heist-mind/database db:types-local # Generate types from local
-pnpm --filter @heist-mind/database db:diff        # Check schema differences
+pnpm db:push          # Push schema changes to Supabase
+pnpm db:types         # Generate TypeScript types from schema
 ```
 
-### Web Application
-```bash
-pnpm --filter @heist-mind/web dev    # Start development server
-pnpm --filter @heist-mind/web build  # Build for production
-pnpm --filter @heist-mind/web start  # Start production server
-```
+## 🔧 Turborepo Benefits
 
-## 🧪 Testing
+- **Smart Caching**: Only rebuilds changed packages
+- **Dependency-Aware**: Builds packages in correct order
+- **Parallel Execution**: Faster builds and development
+- **Selective Builds**: Build only what you need
 
-### Database Testing
-```bash
-# Start local Supabase for testing
-supabase start
+## 🌟 Key Features
 
-# Run migrations against local instance
-supabase db reset
+### For Game Masters
+- Upload and manage custom FitD rulesets
+- Create games with flexible rule configurations
+- Invite players via email or public codes
+- Monitor player activity and character progression
 
-# Test schema changes
-supabase db diff
-```
+### For Players
+- Join games and create rule-based characters
+- Manage multiple characters across different games
+- Track XP, advancement, and character relationships
+- Intuitive wizard-based progression system
 
-### Application Testing
-```bash
-# Run all tests
-pnpm test
+## 🚀 Getting Started
 
-# Test specific package
-pnpm --filter @heist-mind/web test
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/heist-mind.git
+   cd heist-mind
+   ```
 
-## 📚 Documentation
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-### Architecture Documents
-- [`packages/database/README.md`](packages/database/README.md) - Database architecture and usage
-- [`.memory-bank/`](memory-bank/) - Complete project documentation
-- [`.github/workflows/`](.github/workflows/) - CI/CD pipeline documentation
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your Supabase credentials
+   ```
 
-### API Documentation
-- Database types are auto-generated from schema
-- Repository interfaces provide clean data access patterns
-- Domain types enable database-agnostic application code
+4. **Start development**
+   ```bash
+   pnpm dev
+   ```
 
-## 🐛 Troubleshooting
+## 📖 Documentation
 
-### Common Issues
+Comprehensive project documentation is available in the `.memory-bank/` directory:
 
-#### Migration Failures
-```bash
-# Check local schema state
-supabase status
+- **Project Brief**: Core requirements and user stories
+- **Architecture**: Technical decisions and patterns
+- **Progress**: Current status and roadmap
+- **Sprint Planning**: Development phases and milestones
 
-# Reset and retry
-supabase db reset
-supabase db push
-```
+## 🔒 Security
 
-#### Type Generation Issues
-```bash
-# Regenerate types manually
-pnpm --filter @heist-mind/database db:types
-
-# Check type compilation
-pnpm --filter @heist-mind/database tsc --noEmit
-```
-
-#### Environment Schema Issues
-```bash
-# Verify current schema
-psql "your_supabase_connection_string" -c "SHOW search_path;"
-
-# Set schema explicitly
-export PGOPTIONS="-c heistmind.target_schema=development"
-```
-
-### Getting Help
-- Check the [Memory Bank](.memory-bank/) for detailed documentation
-- Review [Database README](packages/database/README.md) for data layer info
-- Check GitHub Issues for known problems
-- Review CI/CD logs for deployment issues
+- **Row Level Security**: Multi-tenant data isolation
+- **Type Safety**: End-to-end TypeScript coverage
+- **Authentication**: Secure OAuth with Supabase Auth
+- **Environment Separation**: Schema-based dev/prod isolation
 
 ## 🤝 Contributing
 
-### Development Setup
-1. Follow the Quick Start guide above
-2. Create feature branch from `development`
-3. Make changes and test locally
-4. Push to your branch (triggers validation)
-5. Open Pull Request to `development`
-
-### Database Changes
-1. Create migration: `supabase migration new feature_name`
-2. Test locally: `supabase db reset`
-3. Commit migration file
-4. Push to trigger automated deployment testing
-
-### Code Standards
-- TypeScript strict mode required
-- ESLint configuration enforced
-- Database abstraction layer must be provider-agnostic
-- All database access through repository interfaces
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and type checking
+5. Submit a pull request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🎯 Project Status
-
-### ✅ Completed
-- **Database Foundation**: Complete multi-tenant schema with RLS
-- **Environment Separation**: Schema-based dev/prod isolation
-- **CI/CD Pipeline**: Automated validation and deployment
-- **Database Abstraction**: Provider-agnostic architecture
-- **Type Safety**: End-to-end TypeScript with generated types
-
-### 🚧 In Development
-- **Authentication UI**: User registration and login forms
-- **GM Dashboard**: Ruleset and game management interface
-- **Player Interface**: Game discovery and character management
-- **Ruleset Engine**: JSON validation and form generation
-
-### 🔮 Planned
-- **Discord Bot**: Session support and character queries
-- **Mobile App**: Native character management
-- **Advanced Analytics**: Game insights and balance analysis
-- **Community Features**: Ruleset sharing and discovery
-
----
-
-**HeistMind** - Empowering the Forged in the Dark community with modern game management tools.

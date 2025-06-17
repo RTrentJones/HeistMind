@@ -3,14 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm run --parallel dev",
-    "build": "pnpm run -r build",
-    "lint": "pnpm run -r lint",
-    "type-check": "pnpm run -r type-check",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean",
+    "build:ui": "turbo build --filter=@heist-mind/ui",
+    "build:web": "turbo build --filter=@heist-mind/web",
+    "dev:ui": "pnpm --filter=@heist-mind/ui dev",
+    "dev:web": "pnpm --filter=@heist-mind/web dev",
     "db:push": "pnpm --filter database db:push",
     "db:types": "pnpm --filter database db:types"
   },
   "devDependencies": {
+    "turbo": "^2.5.4",
     "typescript": "^5.3.3"
   },
   "engines": {
