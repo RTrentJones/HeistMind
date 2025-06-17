@@ -181,6 +181,7 @@ export const useAuthStore = create<AuthState>()(
                     }
                 },
 
+
                 // Profile actions
                 updateProfile: async (data: Partial<Profile>) => {
                     const { profile } = get()
@@ -331,26 +332,67 @@ export const useAuthStore = create<AuthState>()(
     )
 )
 
-// Auto-initialize session check on first access
-let initialized = false
-const originalCheckSession = useAuthStore.getState().checkSession
-
-useAuthStore.setState({
-    checkSession: async () => {
-        if (!initialized) {
-            initialized = true
-            await originalCheckSession()
-        } else {
-            await originalCheckSession()
-        }
-    }
-})
-
-// Check session on store creation
+// Set up auth state change listener to handle OAuth automatically
 if (typeof window !== 'undefined') {
+    const authService = getAuthService()
+
+    // Listen for auth state changes and update store accordingly
+    authService.onAuthStateChange(async (event) => {
+        const { session, user } = event
+
+        if (session && user) {
+            // User signed in via OAuth or other means
+            const repositories = getRepositories()
+
+            try {
+                // Get user profile
+                const profileResult = await repositories.profiles.findById(user.id)
+                const profile = profileResult.success ? profileResult.data : null
+
+                useAuthStore.setState({
+                    user: { ...user, profile: profile || undefined },
+                    profile,
+                    isAuthenticated: true,
+                    sessionChecked: true,
+                    isLoading: false,
+                    error: null,
+                    lastUpdated: new Date(),
+                })
+            } catch (error) {
+                console.error('Error fetching profile after auth:', error)
+                useAuthStore.setState({
+                    user: { ...user },
+                    profile: null,
+                    isAuthenticated: true,
+                    sessionChecked: true,
+                    isLoading: false,
+                    lastUpdated: new Date(),
+                })
+            }
+        } else {
+            // User signed out or no session
+            useAuthStore.setState({
+                user: null,
+                profile: null,
+                isAuthenticated: false,
+                sessionChecked: true,
+                isLoading: false,
+                error: null,
+            })
+        }
+    })
+
+    // Only check session manually if we haven't done so yet and no OAuth is in progress
     setTimeout(() => {
-        useAuthStore.getState().checkSession()
-    }, 0)
+        const state = useAuthStore.getState()
+        const hasOAuthParams = window.location.href.includes('code=') ||
+            window.location.href.includes('access_token') ||
+            window.location.pathname === '/auth/callback'
+
+        if (!state.sessionChecked && !hasOAuthParams) {
+            state.checkSession()
+        }
+    }, 100)
 }
 
 // Convenience selectors using useShallow to prevent infinite loops

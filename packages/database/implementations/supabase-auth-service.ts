@@ -105,9 +105,14 @@ export class SupabaseAuthService implements AuthService {
     }
 
     async signInWithOAuth(data: SignInWithOAuthData): Promise<AuthResponse<never>> {
+        const redirectUrl = this.getRedirectUrl(data.provider)
+
         const { error } = await this.supabase.auth.signInWithOAuth({
             provider: data.provider,
-            options: data.options
+            options: {
+                redirectTo: redirectUrl,
+                ...data.options
+            }
         })
 
         if (error) {
@@ -174,6 +179,7 @@ export class SupabaseAuthService implements AuthService {
             error: null
         }
     }
+
 
     // ===========================
     // PASSWORD MANAGEMENT
