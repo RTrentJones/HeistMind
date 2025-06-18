@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import { User, Profile, CreateProfileData } from '@heist-mind/database'
-import { LoadingState } from '../../../shared/types'
-import { getAuthService, getRepositories } from '../../../lib/auth'
+import { LoadingState } from '@/shared/types'
+import { getAuthService, getRepositories } from '@/lib/auth'
 
 export interface AuthUser extends User {
     profile?: Profile

@@ -1,4 +1,4 @@
-import { translations } from './translations'
+import { translations } from '@/lib/i18n/translations'
 
 export function getServerTranslation(key: string, language: string = 'en'): string {
     const keys = key.split('.')

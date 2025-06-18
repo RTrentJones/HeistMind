@@ -8,8 +8,8 @@ import {
     CharacterStatus,
     CharacterAdvancement,
 } from '@heist-mind/database'
-import { LoadingState } from '../../../shared/types'
-import { getRepositories } from '../../../lib/auth'
+import { LoadingState } from '@/shared/types'
+import { getRepositories } from '@/lib/auth'
 
 interface CharactersState extends LoadingState {
     // Character collections

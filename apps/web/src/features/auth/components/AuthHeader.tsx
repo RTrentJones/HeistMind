@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth, useAuthActions } from '../stores/auth-store'
+import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store'
 import { Button, Header, HeaderBrand, HeaderActions } from '@heist-mind/ui'
 
 export function AuthHeader() {

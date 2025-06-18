@@ -9,8 +9,8 @@ import {
     GameState,
     PaginatedResult,
 } from '@heist-mind/database'
-import { LoadingState } from '../../../shared/types'
-import { getRepositories } from '../../../lib/auth'
+import { LoadingState } from '@/shared/types'
+import { getRepositories } from '@/lib/auth'
 
 interface GamesState extends LoadingState {
     // Game collections

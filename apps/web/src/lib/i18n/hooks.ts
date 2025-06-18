@@ -12,7 +12,7 @@ import type {
     PageKeys,
     FormKeys,
     ErrorKeys
-} from './translations'
+} from '@/lib/i18n/translations'
 
 /**
  * Main translation hook with full type safety

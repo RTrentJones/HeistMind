@@ -1,6 +1,6 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import { translations } from './translations'
+import { translations } from '@/lib/i18n/translations'
 
 // Define supported languages
 export const SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'de'] as const

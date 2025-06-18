@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Container, Card, CardContent } from '@heist-mind/ui'
-import { useAuth } from '../../../features/auth/stores/auth-store'
+import { useAuth } from '@/features/auth/stores/auth-store'
 
 export default function AuthCallback() {
     const router = useRouter()

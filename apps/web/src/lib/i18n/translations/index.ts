@@ -1,4 +1,4 @@
-import en from './en.json'
+import en from '@/lib/i18n/translations/en.json'
 
 // Export all translations with proper namespace structure
 export const translations = {

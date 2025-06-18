@@ -1,7 +1,7 @@
 'use client'
 
 import { Container, Card, CardHeader, CardTitle, CardContent } from '@heist-mind/ui'
-import { AuthHeader } from '../features/auth/components/AuthHeader'
+import { AuthHeader } from '@/features/auth/components/AuthHeader'
 
 export default function HomePage() {
   return (
