@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* HeistMind Atmospheric Design System */
 :root {
@@ -40,9 +40,9 @@
   --border-muted: hsl(215 20% 15%);
 
   /* Typography */
-  --font-display: "Cinzel", serif;
-  --font-body: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   /* Shadows & Effects */
   --shadow-glow: 0 0 20px hsla(25, 85%, 60%, 0.3);
@@ -120,7 +120,6 @@ p {
 
 /* Atmospheric Animations */
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0px);
@@ -319,7 +318,7 @@ p {
 }
 
 .atmospheric-bg::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -333,7 +332,7 @@ p {
   z-index: 0;
 }
 
-.atmospheric-bg>* {
+.atmospheric-bg > * {
   position: relative;
   z-index: 1;
 }
@@ -408,7 +407,6 @@ p {
 
 /* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {

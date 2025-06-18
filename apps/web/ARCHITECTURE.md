@@ -57,12 +57,14 @@ apps/web/src/
 ## Architecture Principles
 
 ### 1. Domain-Driven Design (DDD)
+
 - Each feature represents a business domain (auth, games, characters, rulesets)
 - Complete separation of concerns within each domain
 - Clear boundaries between domains
 - Domain-specific stores, services, and components
 
 ### 2. Layered Architecture per Feature
+
 - **Models**: Domain entities, validation schemas, business rules
 - **Services**: Business logic, API calls, data transformations
 - **Stores**: Zustand state management with domain-specific slices
@@ -70,6 +72,7 @@ apps/web/src/
 - **Hooks**: Custom React hooks for domain logic
 
 ### 3. State Management with Zustand
+
 - Domain-specific stores with clear separation
 - Persistent state for user preferences and selections
 - Optimistic updates with proper error handling
@@ -77,12 +80,14 @@ apps/web/src/
 - Actions grouped by functionality (CRUD, management, filters)
 
 ### 4. Service Layer Pattern
+
 - Abstracted business logic away from UI components
 - Proper error handling with localized messages
 - Integration with the database package repositories
 - Type-safe API communication
 
 ### 5. Component Organization
+
 - Use `@heist-mind/ui` for all base components
 - Feature-specific components in feature directories
 - Composition over inheritance
@@ -91,35 +96,37 @@ apps/web/src/
 ## Store Architecture
 
 ### Store Structure Example (Games Domain)
+
 ```typescript
 interface GamesState extends LoadingState {
-    // Collections
-    games: Game[]
-    userGames: Game[]
-    gameDetails: Record<string, GameWithDetails>
-    selectedGame: GameWithDetails | null
+  // Collections
+  games: Game[];
+  userGames: Game[];
+  gameDetails: Record<string, GameWithDetails>;
+  selectedGame: GameWithDetails | null;
 
-    // UI State
-    pagination: PaginationState
-    filters: FilterState
+  // UI State
+  pagination: PaginationState;
+  filters: FilterState;
 
-    // Actions - CRUD
-    loadGames: (refresh?: boolean) => Promise<void>
-    createGame: (data: CreateGameData) => Promise<Game>
-    updateGame: (gameId: string, data: UpdateGameData) => Promise<Game>
-    deleteGame: (gameId: string) => Promise<void>
+  // Actions - CRUD
+  loadGames: (refresh?: boolean) => Promise<void>;
+  createGame: (data: CreateGameData) => Promise<Game>;
+  updateGame: (gameId: string, data: UpdateGameData) => Promise<Game>;
+  deleteGame: (gameId: string) => Promise<void>;
 
-    // Actions - Domain-specific
-    joinGame: (gameId: string, inviteCode?: string) => Promise<void>
-    leaveGame: (gameId: string) => Promise<void>
+  // Actions - Domain-specific
+  joinGame: (gameId: string, inviteCode?: string) => Promise<void>;
+  leaveGame: (gameId: string) => Promise<void>;
 
-    // Actions - UI Management
-    selectGame: (gameId: string) => void
-    setFilters: (filters: Partial<FilterState>) => void
+  // Actions - UI Management
+  selectGame: (gameId: string) => void;
+  setFilters: (filters: Partial<FilterState>) => void;
 }
 ```
 
 ### Store Features
+
 - **Persistence**: Critical state persisted across sessions
 - **Optimistic Updates**: UI updates immediately, rollback on error
 - **Error Handling**: Localized error messages via i18n
@@ -129,18 +136,21 @@ interface GamesState extends LoadingState {
 ## Service Integration
 
 ### Database Integration
+
 - Uses the `@heist-mind/database` package repositories
 - Type-safe domain operations
 - Result pattern for error handling
 - Transaction support for complex operations
 
 ### Error Handling
+
 - Centralized error handler with i18n support
 - Graceful degradation for network issues
 - User-friendly error messages
 - Automatic retry for transient failures
 
 ### Internationalization
+
 - Full i18n support with typed translation keys
 - Domain-specific translation namespaces
 - Error messages localized
@@ -149,18 +159,21 @@ interface GamesState extends LoadingState {
 ## Implementation Examples
 
 ### 1. Authentication Store
+
 - Session management with persistence
 - Profile integration with user data
 - OAuth provider support (Google, Discord)
 - Automatic session refresh
 
 ### 2. Games Store
+
 - Game CRUD operations
 - Player management (join/leave)
 - Filtering and pagination
 - Game state management (draft → recruiting → active)
 
 ### 3. Characters Store
+
 - Character lifecycle management
 - Experience and advancement tracking
 - Character transfer between games
@@ -169,17 +182,20 @@ interface GamesState extends LoadingState {
 ## Shared Infrastructure
 
 ### Global Stores
+
 - **UI Store**: Theme, modals, navigation state
 - **Notification Store**: Toast notifications with actions
 - **App Store**: Global application state
 
 ### Utilities
+
 - **API Client**: Type-safe HTTP client with error handling
 - **Error Handler**: Centralized error processing with i18n
 - **Form Utilities**: Validation and form state management
 - **Date/String/Array Utilities**: Common data manipulation
 
 ### Services
+
 - **Authentication Service**: Wrapper around database auth
 - **WebSocket Service**: Real-time communication
 - **File Upload Service**: Asset management
@@ -187,24 +203,28 @@ interface GamesState extends LoadingState {
 ## Benefits of This Architecture
 
 ### Developer Experience
+
 - **Type Safety**: Full TypeScript coverage with strict types
 - **Developer Tools**: Zustand DevTools integration
 - **Hot Reload**: Fast development feedback
 - **Code Organization**: Clear file structure and naming conventions
 
 ### Maintainability
+
 - **Separation of Concerns**: Clear boundaries between layers
 - **Testability**: Pure functions and isolated components
 - **Scalability**: Easy to add new domains and features
 - **Documentation**: Self-documenting code with TypeScript
 
 ### Performance
+
 - **Optimistic Updates**: Immediate UI feedback
 - **Smart Caching**: Efficient data loading and caching
 - **Code Splitting**: Domain-based code splitting
 - **Tree Shaking**: Minimal bundle sizes
 
 ### User Experience
+
 - **Consistent UI**: `@heist-mind/ui` component library
 - **Accessibility**: ARIA compliant components
 - **Internationalization**: Full i18n support
@@ -213,12 +233,14 @@ interface GamesState extends LoadingState {
 ## Next Steps
 
 ### Immediate
+
 1. Complete remaining domain stores (rulesets, dashboard)
 2. Implement React components using the stores
 3. Add comprehensive error boundaries
 4. Set up component testing with domain isolation
 
 ### Future
+
 1. Add real-time WebSocket integration
 2. Implement offline-first capabilities with sync
 3. Add comprehensive analytics tracking

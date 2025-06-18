@@ -1,313 +1,313 @@
 {
-    "common": {
-        "welcome": {
-            "title": "Welcome to the Underworld",
-            "subtitle": "Forged in the Dark",
-            "tagline": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
-        },
-        "actions": {
-            "signIn": "Sign In",
-            "signUp": "Join the Shadows",
-            "signOut": "Sign Out",
-            "dashboard": "Dashboard",
-            "getStarted": "Get Started",
-            "learnMore": "Learn More",
-            "continue": "Continue",
-            "back": "Back",
-            "next": "Next",
-            "cancel": "Cancel",
-            "save": "Save",
-            "delete": "Delete",
-            "edit": "Edit",
-            "create": "Create",
-            "join": "Join",
-            "leave": "Leave"
-        },
-        "roles": {
-            "mastermind": "Mastermind",
-            "scoundrel": "Scoundrel",
-            "gameMaster": "Game Master",
-            "player": "Player"
-        },
-        "loading": {
-            "default": "Loading...",
-            "preparingHeist": "Preparing the heist...",
-            "gatheringCrew": "Gathering your crew...",
-            "consultingCharts": "Consulting the charts...",
-            "readingShadows": "Reading the shadows...",
-            "forgingDocuments": "Forging documents..."
-        }
+  "common": {
+    "welcome": {
+      "title": "Welcome to the Underworld",
+      "subtitle": "Forged in the Dark",
+      "tagline": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
     },
-    "navigation": {
-        "about": "About",
-        "features": "Features",
-        "community": "Community",
-        "documentation": "Documentation",
-        "home": "Home",
-        "games": "Games",
-        "characters": "Characters",
-        "rulesets": "Rulesets",
-        "profile": "Profile",
-        "settings": "Settings"
+    "actions": {
+      "signIn": "Sign In",
+      "signUp": "Join the Shadows",
+      "signOut": "Sign Out",
+      "dashboard": "Dashboard",
+      "getStarted": "Get Started",
+      "learnMore": "Learn More",
+      "continue": "Continue",
+      "back": "Back",
+      "next": "Next",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "join": "Join",
+      "leave": "Leave"
     },
-    "components": {
-        "header": {
-            "logoAlt": "HeistMind Logo",
-            "tagline": "Forged in the Dark",
-            "menuToggle": "Toggle menu",
-            "userMenu": "User menu"
-        },
-        "shadowsGate": {
-            "title": "Enter the Shadows",
-            "subtitle": "Where legends are forged in darkness",
-            "description": "Create characters, orchestrate heists, and forge your legacy in the underworld.",
-            "paths": {
-                "mastermind": {
-                    "title": "Lead the Operation",
-                    "subtitle": "Mastermind",
-                    "description": "Design heists, manage crews, and shape the narrative from the shadows."
-                },
-                "scoundrel": {
-                    "title": "Join the Crew",
-                    "subtitle": "Scoundrel",
-                    "description": "Execute daring schemes, develop your character, and leave your mark on the world."
-                }
-            }
-        },
-        "dualPath": {
-            "mastermind": {
-                "title": "For Game Masters",
-                "icon": "🎲",
-                "features": {
-                    "uploadRulesets": "Upload rulesets",
-                    "createGames": "Create games",
-                    "managePlayers": "Manage players",
-                    "trackProgress": "Track progress"
-                },
-                "cta": "Start as GM"
-            },
-            "scoundrel": {
-                "title": "For Players",
-                "icon": "⚔️",
-                "features": {
-                    "joinGames": "Join exciting games",
-                    "createCharacters": "Create characters",
-                    "trackProgression": "Track progression",
-                    "manageCrew": "Manage crew relationships"
-                },
-                "cta": "Find Games"
-            }
-        },
-        "features": {
-            "title": "Built for the Shadows, Designed for Legends",
-            "items": {
-                "dynamicRulesets": {
-                    "title": "Dynamic Rulesets",
-                    "icon": "⚡",
-                    "description": "Upload and customize any Forged in the Dark ruleset"
-                },
-                "characterDepth": {
-                    "title": "Character Depth",
-                    "icon": "🎭",
-                    "description": "Rich character creation with progression tracking"
-                },
-                "liveSessions": {
-                    "title": "Live Sessions",
-                    "icon": "🎲",
-                    "description": "Real-time collaboration during game sessions"
-                },
-                "crewManagement": {
-                    "title": "Crew Management",
-                    "icon": "⚔️",
-                    "description": "Organize players and manage game logistics"
-                },
-                "progressTracking": {
-                    "title": "Progress Tracking",
-                    "icon": "📊",
-                    "description": "Detailed advancement and campaign history"
-                },
-                "atmosphere": {
-                    "title": "Atmosphere",
-                    "icon": "🌃",
-                    "description": "Immersive dark theme optimized for gaming"
-                }
-            }
-        },
-        "liveStats": {
-            "title": "Active Community",
-            "stats": {
-                "activeCharacters": "Active Characters",
-                "runningCampaigns": "Running Campaigns",
-                "customRulesets": "Custom Rulesets",
-                "totalPlayers": "Total Players"
-            }
-        }
+    "roles": {
+      "mastermind": "Mastermind",
+      "scoundrel": "Scoundrel",
+      "gameMaster": "Game Master",
+      "player": "Player"
     },
-    "auth": {
-        "signIn": {
-            "title": "Enter the Shadows",
-            "subtitle": "Choose your path into the underworld",
-            "providers": {
-                "discord": {
-                    "label": "Continue with {{provider}}",
-                    "subtitle": "Join your gaming community"
-                },
-                "email": {
-                    "label": "Sign in with Email",
-                    "subtitle": "For the independent operative"
-                },
-                "google": {
-                    "label": "Continue with {{provider}}",
-                    "subtitle": "Swift and secure access"
-                }
-            },
-            "newUser": "First time in Doskvol?",
-            "createAccount": "Create Your Legend"
-        },
-        "signUp": {
-            "title": "Join the Underworld",
-            "subtitle": "Create your legend in the shadows",
-            "existingUser": "Already have an account?",
-            "signIn": "Sign In",
-            "success": {
-                "title": "Account Created!",
-                "message": "Check your email for a confirmation link to complete your registration."
-            }
-        },
-        "roleSelection": {
-            "title": "Choose Your Role in the Underworld",
-            "subtitle": "You can switch between roles anytime",
-            "mastermind": {
-                "title": "Mastermind",
-                "description": "Lead operations from the shadows",
-                "features": [
-                    "Design custom heist scenarios",
-                    "Manage your crew",
-                    "Shape the story",
-                    "Control the narrative"
-                ],
-                "cta": "Begin Planning"
-            },
-            "scoundrel": {
-                "title": "Scoundrel",
-                "description": "Execute daring heists with your crew",
-                "features": [
-                    "Join active crews",
-                    "Develop your character",
-                    "Master dangerous skills",
-                    "Leave your mark on Doskvol"
-                ],
-                "cta": "Find Your Crew"
-            }
-        }
-    },
-    "pages": {
-        "home": {
-            "title": "HeistMind - Forged in the Dark Platform",
-            "description": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
-        },
-        "about": {
-            "title": "About HeistMind",
-            "subtitle": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows.",
-            "sections": {
-                "gameMasters": {
-                    "title": "For Game Masters",
-                    "description": "Upload custom rulesets, create immersive games, and guide your players through the shadows of your imagination.",
-                    "features": {
-                        "uploadRulesets": "Upload and manage custom FitD rulesets",
-                        "createGames": "Create and manage game sessions",
-                        "invitePlayers": "Invite and organize players",
-                        "trackProgress": "Track campaign progress"
-                    }
-                },
-                "players": {
-                    "title": "For Players",
-                    "description": "Join exciting crews, create memorable characters, and leave your mark on the underworld.",
-                    "features": {
-                        "joinGames": "Join games and crews",
-                        "createCharacters": "Create rich, detailed characters",
-                        "trackProgression": "Track character progression",
-                        "collaborate": "Collaborate with your crew"
-                    }
-                },
-                "philosophy": {
-                    "title": "Built for the Shadows",
-                    "description": "HeistMind is designed specifically for Forged in the Dark systems, with deep understanding of the mechanics that make these games special. From stress and trauma to crew advancement and faction clocks, we've got you covered."
-                }
-            }
-        },
-        "dashboard": {
-            "welcome": "Welcome back, {{name}}",
-            "subtitle": "Ready to forge your legend in the shadows?",
-            "quickActions": "Quick Actions",
-            "recentActivity": "Recent Activity",
-            "noActivity": "No recent activity",
-            "activeGames": "Active Games",
-            "characters": "Characters",
-            "rulesets": "Rulesets",
-            "actions": {
-                "createGame": "Create New Game",
-                "joinGame": "Join a Game",
-                "uploadRuleset": "Upload Ruleset"
-            }
-        }
-    },
-    "forms": {
-        "labels": {
-            "email": "Email",
-            "password": "Password",
-            "confirmPassword": "Confirm Password",
-            "username": "Username",
-            "displayName": "Display Name",
-            "characterName": "Character Name",
-            "gameName": "Game Name",
-            "description": "Description"
-        },
-        "placeholders": {
-            "email": "Enter your email",
-            "password": "Enter your password",
-            "confirmPassword": "Confirm your password",
-            "username": "Choose a username",
-            "displayName": "Enter your display name",
-            "characterName": "Enter character name",
-            "searchGames": "Search games...",
-            "searchCharacters": "Search characters..."
-        },
-        "validation": {
-            "required": "This field is required",
-            "emailInvalid": "Please enter a valid email",
-            "passwordTooShort": "Password must be at least 8 characters",
-            "passwordsDoNotMatch": "Passwords do not match",
-            "usernameTooShort": "Username must be at least 3 characters",
-            "usernameInvalid": "Username can only contain letters, numbers, and underscores"
-        }
-    },
-    "errors": {
-        "general": "Something went wrong. Please try again.",
-        "network": "Network error. Please check your connection.",
-        "unauthorized": "You are not authorized to perform this action.",
-        "notFound": "The requested resource was not found.",
-        "serverError": "Server error. Please try again later.",
-        "auth": {
-            "invalidCredentials": "Invalid email or password",
-            "accountNotFound": "No account found with this email",
-            "emailAlreadyExists": "An account with this email already exists",
-            "weakPassword": "Password is too weak",
-            "tooManyAttempts": "Too many failed attempts. Please try again later."
-        },
-        "character": {
-            "createFailed": "Failed to create character",
-            "updateFailed": "Failed to update character",
-            "deleteFailed": "Failed to delete character",
-            "notFound": "Character not found"
-        },
-        "game": {
-            "createFailed": "Failed to create game",
-            "joinFailed": "Failed to join game",
-            "leaveFailed": "Failed to leave game",
-            "notFound": "Game not found",
-            "full": "Game is full",
-            "alreadyMember": "You are already a member of this game"
-        }
+    "loading": {
+      "default": "Loading...",
+      "preparingHeist": "Preparing the heist...",
+      "gatheringCrew": "Gathering your crew...",
+      "consultingCharts": "Consulting the charts...",
+      "readingShadows": "Reading the shadows...",
+      "forgingDocuments": "Forging documents..."
     }
+  },
+  "navigation": {
+    "about": "About",
+    "features": "Features",
+    "community": "Community",
+    "documentation": "Documentation",
+    "home": "Home",
+    "games": "Games",
+    "characters": "Characters",
+    "rulesets": "Rulesets",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "components": {
+    "header": {
+      "logoAlt": "HeistMind Logo",
+      "tagline": "Forged in the Dark",
+      "menuToggle": "Toggle menu",
+      "userMenu": "User menu"
+    },
+    "shadowsGate": {
+      "title": "Enter the Shadows",
+      "subtitle": "Where legends are forged in darkness",
+      "description": "Create characters, orchestrate heists, and forge your legacy in the underworld.",
+      "paths": {
+        "mastermind": {
+          "title": "Lead the Operation",
+          "subtitle": "Mastermind",
+          "description": "Design heists, manage crews, and shape the narrative from the shadows."
+        },
+        "scoundrel": {
+          "title": "Join the Crew",
+          "subtitle": "Scoundrel",
+          "description": "Execute daring schemes, develop your character, and leave your mark on the world."
+        }
+      }
+    },
+    "dualPath": {
+      "mastermind": {
+        "title": "For Game Masters",
+        "icon": "🎲",
+        "features": {
+          "uploadRulesets": "Upload rulesets",
+          "createGames": "Create games",
+          "managePlayers": "Manage players",
+          "trackProgress": "Track progress"
+        },
+        "cta": "Start as GM"
+      },
+      "scoundrel": {
+        "title": "For Players",
+        "icon": "⚔️",
+        "features": {
+          "joinGames": "Join exciting games",
+          "createCharacters": "Create characters",
+          "trackProgression": "Track progression",
+          "manageCrew": "Manage crew relationships"
+        },
+        "cta": "Find Games"
+      }
+    },
+    "features": {
+      "title": "Built for the Shadows, Designed for Legends",
+      "items": {
+        "dynamicRulesets": {
+          "title": "Dynamic Rulesets",
+          "icon": "⚡",
+          "description": "Upload and customize any Forged in the Dark ruleset"
+        },
+        "characterDepth": {
+          "title": "Character Depth",
+          "icon": "🎭",
+          "description": "Rich character creation with progression tracking"
+        },
+        "liveSessions": {
+          "title": "Live Sessions",
+          "icon": "🎲",
+          "description": "Real-time collaboration during game sessions"
+        },
+        "crewManagement": {
+          "title": "Crew Management",
+          "icon": "⚔️",
+          "description": "Organize players and manage game logistics"
+        },
+        "progressTracking": {
+          "title": "Progress Tracking",
+          "icon": "📊",
+          "description": "Detailed advancement and campaign history"
+        },
+        "atmosphere": {
+          "title": "Atmosphere",
+          "icon": "🌃",
+          "description": "Immersive dark theme optimized for gaming"
+        }
+      }
+    },
+    "liveStats": {
+      "title": "Active Community",
+      "stats": {
+        "activeCharacters": "Active Characters",
+        "runningCampaigns": "Running Campaigns",
+        "customRulesets": "Custom Rulesets",
+        "totalPlayers": "Total Players"
+      }
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "Enter the Shadows",
+      "subtitle": "Choose your path into the underworld",
+      "providers": {
+        "discord": {
+          "label": "Continue with {{provider}}",
+          "subtitle": "Join your gaming community"
+        },
+        "email": {
+          "label": "Sign in with Email",
+          "subtitle": "For the independent operative"
+        },
+        "google": {
+          "label": "Continue with {{provider}}",
+          "subtitle": "Swift and secure access"
+        }
+      },
+      "newUser": "First time in Doskvol?",
+      "createAccount": "Create Your Legend"
+    },
+    "signUp": {
+      "title": "Join the Underworld",
+      "subtitle": "Create your legend in the shadows",
+      "existingUser": "Already have an account?",
+      "signIn": "Sign In",
+      "success": {
+        "title": "Account Created!",
+        "message": "Check your email for a confirmation link to complete your registration."
+      }
+    },
+    "roleSelection": {
+      "title": "Choose Your Role in the Underworld",
+      "subtitle": "You can switch between roles anytime",
+      "mastermind": {
+        "title": "Mastermind",
+        "description": "Lead operations from the shadows",
+        "features": [
+          "Design custom heist scenarios",
+          "Manage your crew",
+          "Shape the story",
+          "Control the narrative"
+        ],
+        "cta": "Begin Planning"
+      },
+      "scoundrel": {
+        "title": "Scoundrel",
+        "description": "Execute daring heists with your crew",
+        "features": [
+          "Join active crews",
+          "Develop your character",
+          "Master dangerous skills",
+          "Leave your mark on Doskvol"
+        ],
+        "cta": "Find Your Crew"
+      }
+    }
+  },
+  "pages": {
+    "home": {
+      "title": "HeistMind - Forged in the Dark Platform",
+      "description": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
+    },
+    "about": {
+      "title": "About HeistMind",
+      "subtitle": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows.",
+      "sections": {
+        "gameMasters": {
+          "title": "For Game Masters",
+          "description": "Upload custom rulesets, create immersive games, and guide your players through the shadows of your imagination.",
+          "features": {
+            "uploadRulesets": "Upload and manage custom FitD rulesets",
+            "createGames": "Create and manage game sessions",
+            "invitePlayers": "Invite and organize players",
+            "trackProgress": "Track campaign progress"
+          }
+        },
+        "players": {
+          "title": "For Players",
+          "description": "Join exciting crews, create memorable characters, and leave your mark on the underworld.",
+          "features": {
+            "joinGames": "Join games and crews",
+            "createCharacters": "Create rich, detailed characters",
+            "trackProgression": "Track character progression",
+            "collaborate": "Collaborate with your crew"
+          }
+        },
+        "philosophy": {
+          "title": "Built for the Shadows",
+          "description": "HeistMind is designed specifically for Forged in the Dark systems, with deep understanding of the mechanics that make these games special. From stress and trauma to crew advancement and faction clocks, we've got you covered."
+        }
+      }
+    },
+    "dashboard": {
+      "welcome": "Welcome back, {{name}}",
+      "subtitle": "Ready to forge your legend in the shadows?",
+      "quickActions": "Quick Actions",
+      "recentActivity": "Recent Activity",
+      "noActivity": "No recent activity",
+      "activeGames": "Active Games",
+      "characters": "Characters",
+      "rulesets": "Rulesets",
+      "actions": {
+        "createGame": "Create New Game",
+        "joinGame": "Join a Game",
+        "uploadRuleset": "Upload Ruleset"
+      }
+    }
+  },
+  "forms": {
+    "labels": {
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "username": "Username",
+      "displayName": "Display Name",
+      "characterName": "Character Name",
+      "gameName": "Game Name",
+      "description": "Description"
+    },
+    "placeholders": {
+      "email": "Enter your email",
+      "password": "Enter your password",
+      "confirmPassword": "Confirm your password",
+      "username": "Choose a username",
+      "displayName": "Enter your display name",
+      "characterName": "Enter character name",
+      "searchGames": "Search games...",
+      "searchCharacters": "Search characters..."
+    },
+    "validation": {
+      "required": "This field is required",
+      "emailInvalid": "Please enter a valid email",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "usernameTooShort": "Username must be at least 3 characters",
+      "usernameInvalid": "Username can only contain letters, numbers, and underscores"
+    }
+  },
+  "errors": {
+    "general": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "notFound": "The requested resource was not found.",
+    "serverError": "Server error. Please try again later.",
+    "auth": {
+      "invalidCredentials": "Invalid email or password",
+      "accountNotFound": "No account found with this email",
+      "emailAlreadyExists": "An account with this email already exists",
+      "weakPassword": "Password is too weak",
+      "tooManyAttempts": "Too many failed attempts. Please try again later."
+    },
+    "character": {
+      "createFailed": "Failed to create character",
+      "updateFailed": "Failed to update character",
+      "deleteFailed": "Failed to delete character",
+      "notFound": "Character not found"
+    },
+    "game": {
+      "createFailed": "Failed to create game",
+      "joinFailed": "Failed to join game",
+      "leaveFailed": "Failed to leave game",
+      "notFound": "Game not found",
+      "full": "Game is full",
+      "alreadyMember": "You are already a member of this game"
+    }
+  }
 }
