@@ -4,14 +4,21 @@
   "main": "index.ts",
   "types": "index.ts",
   "scripts": {
-    "db:push": "supabase db push",
-    "db:reset": "supabase db reset",
-    "db:diff": "supabase db diff",
-    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > supabase-types.ts",
-    "db:types-local": "supabase gen types typescript --local > supabase-types.ts",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "validate-types": "vitest run tests/type-validation.test.ts"
+    "test:coverage": "vitest run --coverage",
+    "validate-types": "vitest run tests/type-validation.test.ts",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset", 
+    "db:diff": "supabase db diff",
+    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > supabase-types.ts",
+    "db:types-local": "supabase gen types typescript --local > supabase-types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0"

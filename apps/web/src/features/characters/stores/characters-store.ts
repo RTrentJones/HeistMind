@@ -216,7 +216,7 @@ export const useCharactersStore = create<CharactersState>()(
                             gameCharacters: {
                                 ...state.gameCharacters,
                                 [data.gameId]: state.gameCharacters[data.gameId]
-                                    ? [newCharacter, ...state.gameCharacters[data.gameId]]
+                                    ? [newCharacter, ...(state.gameCharacters[data.gameId] || [])]
                                     : [newCharacter],
                             },
                             isLoading: false,

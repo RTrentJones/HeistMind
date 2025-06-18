@@ -111,6 +111,10 @@ Thumbs.db
 # Turborepo
 .turbo
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+.tsbuildinfo
+
 # Database
 *.db
 *.sqlite

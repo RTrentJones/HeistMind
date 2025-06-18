@@ -33,7 +33,7 @@ export function useTranslation(): {
 
             // Check if this is a valid namespace
             const validNamespaces = ['common', 'navigation', 'components', 'auth', 'pages', 'forms', 'errors']
-            if (validNamespaces.includes(namespace)) {
+            if (namespace && validNamespaces.includes(namespace)) {
                 return i18nT(actualKey, { ...params, ns: namespace })
             }
         }
