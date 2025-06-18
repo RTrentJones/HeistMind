@@ -4,17 +4,18 @@ import { resolve } from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
+    setupFiles: ['./test/setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
+        'test/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/coverage/**',
-        '**/dist/**',
-        'supabase-types.ts',
+        '**/.next/**',
       ],
       thresholds: {
         global: {
@@ -29,6 +30,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      '@heist-mind/ui': resolve(__dirname, '../../packages/ui/src'),
+      '@heist-mind/database': resolve(__dirname, '../../packages/database/src'),
+      '@heist-mind/shared': resolve(__dirname, '../../packages/shared/src'),
     },
   },
 });

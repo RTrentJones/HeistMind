@@ -4,8 +4,9 @@
     "composite": true,
     "declaration": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "noEmit": false
   },
-  "include": ["**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "tests/**/*"]
 }

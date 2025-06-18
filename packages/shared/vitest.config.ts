@@ -8,20 +8,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
-      exclude: [
-        'node_modules/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/coverage/**',
-        '**/dist/**',
-        'supabase-types.ts',
-      ],
+      exclude: ['node_modules/', '**/*.d.ts', '**/*.config.*', '**/coverage/**', '**/dist/**'],
       thresholds: {
         global: {
-          branches: 70,
-          functions: 70,
-          lines: 70,
-          statements: 70,
+          branches: 85,
+          functions: 85,
+          lines: 85,
+          statements: 85,
         },
       },
     },
@@ -29,6 +22,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      '@heist-mind/database': resolve(__dirname, '../database/src'),
     },
   },
 });

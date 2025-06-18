@@ -14,11 +14,11 @@
     "paths": {
       "@/*": ["./src/*"],
       "@heist-mind/shared/*": ["../../packages/shared/src/*"],
-      "@heist-mind/database/*": ["../../packages/database/*"],
+      "@heist-mind/database/*": ["../../packages/database/src/*"],
       "@heist-mind/ui/*": ["../../packages/ui/src/*"]
     },
     "incremental": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next"]
+  "exclude": ["node_modules", ".next", "test", "**/*.test.*", "**/*.spec.*"]
 }

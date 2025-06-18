@@ -61,6 +61,22 @@ jobs:
       - name: Validate database types
         run: pnpm --filter database validate-types
 
+      - name: Run tests
+        run: pnpm test:coverage
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-${{ github.sha }}
+          path: |
+            apps/web/coverage/
+            packages/ui/coverage/
+            packages/shared/coverage/
+            packages/database/coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Audit dependencies
         run: pnpm audit --audit-level moderate
         continue-on-error: true
