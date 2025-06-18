@@ -21,8 +21,8 @@ concurrency:
 env:
   # Pin versions for reproducibility
   PNPM_VERSION: '9.15.0'
-  NODE_VERSION: '20.18.0'  # Use latest LTS version
-  SUPABASE_CLI_VERSION: '1.142.2'  # Pin specific version
+  NODE_VERSION: '20.18.0' # Use latest LTS version
+  SUPABASE_CLI_VERSION: '1.142.2' # Pin specific version
 
 jobs:
   # Detect what actually changed to optimize CI time
@@ -57,7 +57,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Get full history for better migration validation
+          fetch-depth: 0 # Get full history for better migration validation
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -419,11 +419,11 @@ jobs:
       matrix:
         include:
           - environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
-      max-parallel: 1  # Deploy one environment at a time
+      max-parallel: 1 # Deploy one environment at a time
 
     environment:
       name: ${{ matrix.environment }}
-      url: https://${{ matrix.environment }}.heistmind.app  # Add your actual URLs
+      url: https://${{ matrix.environment }}.heistmind.app # Add your actual URLs
 
     timeout-minutes: 20
 
@@ -503,7 +503,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: database-backup-${{ github.run_number }}
-          path: "*.sql"
+          path: '*.sql'
           retention-days: 30
 
       - name: Link Supabase project
@@ -580,7 +580,6 @@ jobs:
           fi
 
           echo "✅ Deployment completed successfully"
-
 
       - name: Generate and commit types
         if: matrix.environment == 'production'

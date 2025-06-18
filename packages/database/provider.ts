@@ -1,151 +1,150 @@
 // Database Provider Factory
 // Implementation-agnostic database provider that can be configured with different backends
 
-import type { DatabaseProvider, DatabaseRepositories, DatabaseTransaction } from './repositories'
-import type { AuthService, AuthConfig } from './auth-types'
-import { SupabaseProfileRepository } from './implementations/supabase-profile-repository'
-import { SupabaseAuthService } from './implementations/supabase-auth-service'
-import { createClient } from './client'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from './supabase-types'
+import type { DatabaseProvider, DatabaseRepositories, DatabaseTransaction } from './repositories';
+import type { AuthService, AuthConfig } from './auth-types';
+import { SupabaseProfileRepository } from './implementations/supabase-profile-repository';
+import { SupabaseAuthService } from './implementations/supabase-auth-service';
+import { createClient } from './client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from './supabase-types';
 
 // Configuration for database providers
 export interface DatabaseConfig {
-    provider: 'supabase'
-    supabase?: {
-        url?: string
-        key?: string
-        client?: SupabaseClient<Database>
-    }
+  provider: 'supabase';
+  supabase?: {
+    url?: string;
+    key?: string;
+    client?: SupabaseClient<Database>;
+  };
 }
 
 // Default configuration
 const DEFAULT_CONFIG: DatabaseConfig = {
-    provider: 'supabase',
-    supabase: {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    }
-}
+  provider: 'supabase',
+  supabase: {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  },
+};
 
 // Supabase implementation of DatabaseProvider
 class SupabaseDatabaseProvider implements DatabaseProvider {
-    private client: SupabaseClient<Database>
-    private connected = false
+  private client: SupabaseClient<Database>;
+  private connected = false;
 
-    constructor(config: DatabaseConfig['supabase'] = {}) {
-        if (config.client) {
-            this.client = config.client
-        } else {
-            const url = config.url || process.env.NEXT_PUBLIC_SUPABASE_URL
-            const key = config.key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  constructor(config: DatabaseConfig['supabase'] = {}) {
+    if (config.client) {
+      this.client = config.client;
+    } else {
+      const url = config.url || process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = config.key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-            if (!url || !key) {
-                throw new Error('Supabase URL and key are required')
-            }
+      if (!url || !key) {
+        throw new Error('Supabase URL and key are required');
+      }
 
-            this.client = createClient(url, key)
-        }
+      this.client = createClient(url, key);
     }
+  }
 
-    async connect(): Promise<void> {
-        // For Supabase, connection is handled automatically
-        // We could add a health check here if needed
-        this.connected = true
+  async connect(): Promise<void> {
+    // For Supabase, connection is handled automatically
+    // We could add a health check here if needed
+    this.connected = true;
+  }
+
+  async disconnect(): Promise<void> {
+    // Supabase doesn't require explicit disconnection
+    this.connected = false;
+  }
+
+  async migrate(): Promise<void> {
+    // Migrations are handled via Supabase CLI or SQL files
+    // This would typically run migration scripts
+    throw new Error('Migration should be handled via Supabase CLI');
+  }
+
+  async seed(): Promise<void> {
+    // Seeding would typically insert test/initial data
+    throw new Error('Seeding should be handled via Supabase CLI or separate scripts');
+  }
+
+  async isHealthy(): Promise<boolean> {
+    try {
+      // Simple health check - try to query the profiles table
+      const { error } = await this.client.from('profiles').select('id').limit(1);
+
+      return !error;
+    } catch {
+      return false;
     }
+  }
 
-    async disconnect(): Promise<void> {
-        // Supabase doesn't require explicit disconnection
-        this.connected = false
-    }
+  createRepositories(): DatabaseRepositories {
+    return {
+      profiles: new SupabaseProfileRepository(this.client),
+      // TODO: Add other repository implementations
+      rulesets: {} as any, // Placeholder
+      games: {} as any, // Placeholder
+      gamePlayers: {} as any, // Placeholder
+      characters: {} as any, // Placeholder
+      invitations: {} as any, // Placeholder
+      gameManagement: {} as any, // Placeholder
+      characterManagement: {} as any, // Placeholder
+    };
+  }
 
-    async migrate(): Promise<void> {
-        // Migrations are handled via Supabase CLI or SQL files
-        // This would typically run migration scripts
-        throw new Error('Migration should be handled via Supabase CLI')
-    }
+  createAuthService(): AuthService {
+    return new SupabaseAuthService(this.client);
+  }
 
-    async seed(): Promise<void> {
-        // Seeding would typically insert test/initial data
-        throw new Error('Seeding should be handled via Supabase CLI or separate scripts')
-    }
-
-    async isHealthy(): Promise<boolean> {
-        try {
-            // Simple health check - try to query the profiles table
-            const { error } = await this.client
-                .from('profiles')
-                .select('id')
-                .limit(1)
-
-            return !error
-        } catch {
-            return false
-        }
-    }
-
-    createRepositories(): DatabaseRepositories {
-        return {
-            profiles: new SupabaseProfileRepository(this.client),
-            // TODO: Add other repository implementations
-            rulesets: {} as any, // Placeholder
-            games: {} as any, // Placeholder
-            gamePlayers: {} as any, // Placeholder
-            characters: {} as any, // Placeholder
-            invitations: {} as any, // Placeholder
-            gameManagement: {} as any, // Placeholder
-            characterManagement: {} as any, // Placeholder
-        }
-    }
-
-    createAuthService(): AuthService {
-        return new SupabaseAuthService(this.client)
-    }
-
-    async beginTransaction(): Promise<DatabaseTransaction> {
-        // Supabase doesn't have explicit transactions in the JS client
-        // We would need to implement this using stored procedures or
-        // handle it at the application level
-        throw new Error('Transactions not yet implemented for Supabase provider')
-    }
+  async beginTransaction(): Promise<DatabaseTransaction> {
+    // Supabase doesn't have explicit transactions in the JS client
+    // We would need to implement this using stored procedures or
+    // handle it at the application level
+    throw new Error('Transactions not yet implemented for Supabase provider');
+  }
 }
 
 // Factory function to create database provider
 export function createDatabaseProvider(config: DatabaseConfig = DEFAULT_CONFIG): DatabaseProvider {
-    switch (config.provider) {
-        case 'supabase':
-            return new SupabaseDatabaseProvider(config.supabase)
-        default:
-            throw new Error(`Unsupported database provider: ${config.provider}`)
-    }
+  switch (config.provider) {
+    case 'supabase':
+      return new SupabaseDatabaseProvider(config.supabase);
+    default:
+      throw new Error(`Unsupported database provider: ${config.provider}`);
+  }
 }
 
 // Convenience function to create repositories directly
 export function createRepositories(config?: DatabaseConfig): DatabaseRepositories {
-    const provider = createDatabaseProvider(config)
-    return provider.createRepositories()
+  const provider = createDatabaseProvider(config);
+  return provider.createRepositories();
 }
 
 // Convenience function for Next.js applications that need to pass a specific client
-export function createRepositoriesWithClient(client: SupabaseClient<Database>): DatabaseRepositories {
-    const config: DatabaseConfig = {
-        provider: 'supabase',
-        supabase: { client }
-    }
-    return createRepositories(config)
+export function createRepositoriesWithClient(
+  client: SupabaseClient<Database>
+): DatabaseRepositories {
+  const config: DatabaseConfig = {
+    provider: 'supabase',
+    supabase: { client },
+  };
+  return createRepositories(config);
 }
 
 // Convenience function to create auth service directly
 export function createAuthService(config?: DatabaseConfig): AuthService {
-    const provider = createDatabaseProvider(config)
-    return provider.createAuthService()
+  const provider = createDatabaseProvider(config);
+  return provider.createAuthService();
 }
 
 // Convenience function to create auth service with specific client
 export function createAuthServiceWithClient(client: SupabaseClient<Database>): AuthService {
-    const config: DatabaseConfig = {
-        provider: 'supabase',
-        supabase: { client }
-    }
-    return createAuthService(config)
+  const config: DatabaseConfig = {
+    provider: 'supabase',
+    supabase: { client },
+  };
+  return createAuthService(config);
 }

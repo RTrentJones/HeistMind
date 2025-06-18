@@ -12,6 +12,7 @@ This rule establishes Cline's Memory Bank system - a comprehensive documentation
 ## Memory Bank file structure
 
 Core files in hierarchical order (all required):
+
 - `projectbrief.md` - Foundation document, created at project start if missing, defines core requirements and scope
 - `productContext.md` - Why project exists, problems solved, user experience goals
 - `activeContext.md` - Current work focus, recent changes, next steps, active decisions, patterns, insights
@@ -20,6 +21,7 @@ Core files in hierarchical order (all required):
 - `progress.md` - What works, what's left to build, current status, known issues, decision evolution
 
 Additional context files created within .memory-bank/ when helpful for organization:
+
 - Complex feature documentation
 - Integration specifications
 - API documentation
@@ -45,6 +47,7 @@ Additional context files created within .memory-bank/ when helpful for organizat
 ## Documentation update triggers
 
 Memory Bank updates occur when:
+
 - Discovering new project patterns or insights
 - After implementing significant changes
 - When user explicitly requests "update memory bank" (MUST review ALL files)
@@ -54,6 +57,7 @@ Memory Bank updates occur when:
 ## Memory Bank update process
 
 When triggered by "update memory bank" request:
+
 - MUST review every memory bank file, even if some don't require updates
 - Focus particularly on activeContext.md and progress.md as they track current state
 - Document current project state accurately
@@ -64,6 +68,7 @@ When triggered by "update memory bank" request:
 ## File relationship hierarchy
 
 Files build upon each other:
+
 - projectbrief.md shapes all other files
 - productContext.md, systemPatterns.md, and techContext.md extend the brief
 - activeContext.md synthesizes information from the above three

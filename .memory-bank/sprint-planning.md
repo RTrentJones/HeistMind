@@ -1,19 +1,23 @@
 # HeistMind Sprint Planning
 
 ## Current Status (December 16, 2025)
+
 **Sprint 1 Completed**: Authentication system fully implemented and production-ready
 **Rating**: 9/10 - Outstanding foundation with working Discord OAuth
 **Current State**: Complete authentication flow with modern Supabase v2 implementation, ready for Sprint 2
 
 ## Sprint 1: Core User Experience Foundation
+
 **Duration**: 2 weeks
 **Start Date**: Week of June 16, 2025
 **Focus**: Essential user flows and error handling
 
 ### Epic 1: Error Handling & Resilience
+
 **Priority**: High
 
 #### Story 1.1: Implement React Error Boundaries
+
 - **Description**: Add domain-level error boundaries for auth, games, characters features
 - **Tasks**:
   - Create `ErrorBoundary` component in `@heist-mind/ui`
@@ -24,6 +28,7 @@
 - **Estimated Effort**: 3 story points
 
 #### Story 1.2: Enhanced Loading States
+
 - **Description**: Create comprehensive loading UX patterns
 - **Tasks**:
   - Create skeleton loading components for character cards, game lists, profile sections
@@ -34,6 +39,7 @@
 - **Estimated Effort**: 5 story points
 
 #### Story 1.3: Comprehensive Error Logging
+
 - **Description**: Integrate production-ready error tracking
 - **Tasks**:
   - Integrate error tracking service (Sentry/LogRocket)
@@ -44,9 +50,11 @@
 - **Estimated Effort**: 2 story points
 
 ### Epic 2: Authentication & Profile Management
+
 **Priority**: High
 
 #### Story 2.1: Complete User Profile Flow
+
 - **Description**: Build comprehensive profile management
 - **Tasks**:
   - Build profile editing components using existing profile store
@@ -57,6 +65,7 @@
 - **Estimated Effort**: 5 story points
 
 #### Story 2.2: Enhanced Authentication UX
+
 - **Description**: Improve authentication user experience
 - **Tasks**:
   - Add remember me functionality
@@ -67,9 +76,11 @@
 - **Estimated Effort**: 3 story points
 
 ### Epic 3: Game Management MVP
+
 **Priority**: Medium
 
 #### Story 3.1: Game Creation Flow
+
 - **Description**: Build complete game creation experience
 - **Tasks**:
   - Build game creation form components
@@ -80,6 +91,7 @@
 - **Estimated Effort**: 8 story points
 
 #### Story 3.2: Game Discovery & Joining
+
 - **Description**: Enable users to find and join games
 - **Tasks**:
   - Build public game browser component
@@ -92,14 +104,17 @@
 **Sprint 1 Total**: 31 story points
 
 ## Sprint 2: Character Management & Advanced Features
+
 **Duration**: 2 weeks
 **Start Date**: Week of June 30, 2025
 **Focus**: Core character functionality and system integrations
 
 ### Epic 4: Character Management Core
+
 **Priority**: High
 
 #### Story 4.1: Character Creation Workshop
+
 - **Description**: Build comprehensive character creation system
 - **Tasks**:
   - Build comprehensive character creation flow
@@ -110,6 +125,7 @@
 - **Estimated Effort**: 13 story points
 
 #### Story 4.2: Character Dashboard
+
 - **Description**: Create central character management interface
 - **Tasks**:
   - Create character list/grid view with filtering
@@ -120,6 +136,7 @@
 - **Estimated Effort**: 8 story points
 
 #### Story 4.3: Character Advancement System
+
 - **Description**: Implement character progression mechanics
 - **Tasks**:
   - Build experience tracking UI
@@ -130,9 +147,11 @@
 - **Estimated Effort**: 8 story points
 
 ### Epic 5: Real-time Features Foundation
+
 **Priority**: Medium
 
 #### Story 5.1: WebSocket Infrastructure
+
 - **Description**: Set up real-time communication foundation
 - **Tasks**:
   - Set up WebSocket connection management
@@ -143,6 +162,7 @@
 - **Estimated Effort**: 5 story points
 
 #### Story 5.2: Notification System
+
 - **Description**: Build comprehensive notification system
 - **Tasks**:
   - Build in-app notification center
@@ -153,9 +173,11 @@
 - **Estimated Effort**: 5 story points
 
 ### Epic 6: Testing & Quality Assurance
+
 **Priority**: High
 
 #### Story 6.1: Testing Infrastructure
+
 - **Description**: Establish comprehensive testing framework
 - **Tasks**:
   - Set up Jest and React Testing Library
@@ -166,6 +188,7 @@
 - **Estimated Effort**: 5 story points
 
 #### Story 6.2: E2E Critical Paths
+
 - **Description**: Implement end-to-end testing for user journeys
 - **Tasks**:
   - Implement Playwright E2E tests for auth flow
@@ -180,19 +203,23 @@
 ## Cross-Sprint Technical Tasks
 
 ### Performance & Monitoring
+
 - Bundle analysis and optimization setup
 - Performance monitoring integration (Web Vitals)
 - Core metrics tracking and alerting
 - Database query optimization
 
 ### Developer Experience
+
 - Storybook setup for component documentation
 - VSCode workspace configuration optimization
 - Development environment documentation
 - Code review guidelines and templates
 
 ## Definition of Done
+
 Each story must meet:
+
 - [ ] Fully implemented with TypeScript
 - [ ] Unit tests with >80% coverage
 - [ ] Error boundaries and error handling
@@ -204,6 +231,7 @@ Each story must meet:
 - [ ] QA testing passed
 
 ## Risk Mitigation Strategies
+
 - **Technical Debt**: Regular refactoring sessions built into sprint planning
 - **Scope Creep**: Strict adherence to MVP for each feature
 - **Integration Issues**: Daily integration testing with database package
@@ -212,6 +240,7 @@ Each story must meet:
 ## Success Metrics
 
 ### Sprint 1 Success Metrics
+
 - Zero unhandled errors in production
 - <2s loading times for all major pages
 - 100% authentication flow success rate
@@ -219,18 +248,21 @@ Each story must meet:
 - Game creation and discovery working end-to-end
 
 ### Sprint 2 Success Metrics
+
 - Users can create and manage characters end-to-end
 - Real-time updates working for all shared game state
-- >95% test coverage for critical paths
+- > 95% test coverage for critical paths
 - Character advancement system fully functional
 - Notification system operational
 
 ## Architecture Assessment Summary
+
 **Current State**: Excellent FAANG-level foundation established
 **Strengths**: Domain-driven design, proper state management, type safety, scalable architecture
 **Rating**: 9/10 - Outstanding foundation with clear enhancement path
 
 ## Key Architectural Decisions
+
 1. **Zustand for State Management**: Self-initializing stores without provider overhead
 2. **Domain-Driven Design**: Clear separation of auth, games, characters domains
 3. **Monorepo Structure**: Shared UI library and database package
@@ -238,7 +270,9 @@ Each story must meet:
 5. **Component Library**: Centralized `@heist-mind/ui` for consistency
 
 ## Next Quarter Planning
+
 **Q3 2025 Focus Areas**:
+
 - Advanced game features (crew sheets, faction relationships)
 - Real-time collaborative editing
 - Mobile app development

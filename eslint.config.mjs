@@ -11,10 +11,10 @@ import prettier from 'eslint-config-prettier';
 export default [
   // Base JavaScript recommendations
   js.configs.recommended,
-  
+
   // Prettier config to disable conflicting rules
   prettier,
-  
+
   // Global settings
   {
     languageOptions: {
@@ -29,10 +29,10 @@ export default [
         global: 'readonly',
         module: 'readonly',
         require: 'readonly',
-      }
+      },
     },
   },
-  
+
   // TypeScript files configuration
   {
     files: ['**/*.{ts,tsx}'],
@@ -42,36 +42,28 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: {
-          jsx: true
+          jsx: true,
         },
-        project: [
-          './tsconfig.json',
-          './apps/*/tsconfig.json', 
-          './packages/*/tsconfig.json'
-        ]
-      }
+        project: ['./tsconfig.json', './apps/*/tsconfig.json', './packages/*/tsconfig.json'],
+      },
     },
     plugins: {
       '@typescript-eslint': typescript,
-      'import': importPlugin,
-      'react': reactPlugin,
+      import: importPlugin,
+      react: reactPlugin,
       'react-hooks': reactHooks,
-      'jsx-a11y': jsxA11y
+      'jsx-a11y': jsxA11y,
     },
     settings: {
       react: {
-        version: 'detect'
+        version: 'detect',
       },
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,
-          project: [
-            './tsconfig.json',
-            './apps/*/tsconfig.json',
-            './packages/*/tsconfig.json'
-          ]
-        }
-      }
+          project: ['./tsconfig.json', './apps/*/tsconfig.json', './packages/*/tsconfig.json'],
+        },
+      },
     },
     rules: {
       // ===== TYPE SAFETY =====
@@ -80,80 +72,84 @@ export default [
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/strict-boolean-expressions': ['error', {
-        allowString: false,
-        allowNumber: false,
-        allowNullableObject: false
-      }],
+      '@typescript-eslint/strict-boolean-expressions': [
+        'error',
+        {
+          allowString: false,
+          allowNumber: false,
+          allowNullableObject: false,
+        },
+      ],
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      
+
       // ===== CODE QUALITY =====
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_'
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/no-duplicate-enum-values': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/await-thenable': 'error',
-      '@typescript-eslint/no-misused-promises': ['error', {
-        checksVoidReturn: false
-      }],
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        {
+          checksVoidReturn: false,
+        },
+      ],
       '@typescript-eslint/require-await': 'error',
       '@typescript-eslint/prefer-readonly': 'error',
       '@typescript-eslint/prefer-readonly-parameter-types': 'off', // Too strict for this project size
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      
+
       // ===== NAMING CONVENTIONS =====
       '@typescript-eslint/naming-convention': [
         'error',
         {
           selector: 'variableLike',
           format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
-          leadingUnderscore: 'allow'
+          leadingUnderscore: 'allow',
         },
         {
           selector: 'typeLike',
-          format: ['PascalCase']
+          format: ['PascalCase'],
         },
         {
           selector: 'interface',
           format: ['PascalCase'],
           custom: {
             regex: '^I[A-Z]',
-            match: false
-          }
-        }
-      ],
-      
-      // ===== IMPORT ORGANIZATION =====
-      'import/order': ['error', {
-        groups: [
-          'builtin',
-          'external', 
-          'internal',
-          'parent',
-          'sibling',
-          'index',
-          'type'
-        ],
-        'newlines-between': 'always',
-        alphabetize: {
-          order: 'asc',
-          caseInsensitive: true
+            match: false,
+          },
         },
-        pathGroups: [
-          {
-            pattern: '@heist-mind/**',
-            group: 'internal',
-            position: 'before'
-          }
-        ],
-        pathGroupsExcludedImportTypes: ['type']
-      }],
+      ],
+
+      // ===== IMPORT ORGANIZATION =====
+      'import/order': [
+        'error',
+        {
+          groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'type'],
+          'newlines-between': 'always',
+          alphabetize: {
+            order: 'asc',
+            caseInsensitive: true,
+          },
+          pathGroups: [
+            {
+              pattern: '@heist-mind/**',
+              group: 'internal',
+              position: 'before',
+            },
+          ],
+          pathGroupsExcludedImportTypes: ['type'],
+        },
+      ],
       'import/no-cycle': 'error',
       'import/no-self-import': 'error',
       'import/no-unused-modules': 'error',
@@ -161,7 +157,7 @@ export default [
       'import/first': 'error',
       'import/newline-after-import': 'error',
       'import/no-absolute-path': 'error',
-      
+
       // ===== GENERAL CODE QUALITY =====
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',
@@ -176,11 +172,14 @@ export default [
       'object-shorthand': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-template': 'error',
-      'prefer-destructuring': ['error', {
-        object: true,
-        array: false
-      }],
-      
+      'prefer-destructuring': [
+        'error',
+        {
+          object: true,
+          array: false,
+        },
+      ],
+
       // ===== REACT RULES =====
       'react/jsx-uses-react': 'off', // Not needed in React 17+
       'react/react-in-jsx-scope': 'off', // Not needed in React 17+
@@ -202,11 +201,11 @@ export default [
       'react/require-render-return': 'error',
       'react/self-closing-comp': 'error',
       'react/jsx-fragments': ['error', 'syntax'],
-      
+
       // ===== REACT HOOKS =====
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
-      
+
       // ===== ACCESSIBILITY =====
       'jsx-a11y/alt-text': 'error',
       'jsx-a11y/anchor-has-content': 'error',
@@ -230,36 +229,34 @@ export default [
       'jsx-a11y/role-has-required-aria-props': 'error',
       'jsx-a11y/role-supports-aria-props': 'error',
       'jsx-a11y/scope': 'error',
-      'jsx-a11y/tabindex-no-positive': 'error'
-    }
+      'jsx-a11y/tabindex-no-positive': 'error',
+    },
   },
-  
+
   // JavaScript files (less strict)
   {
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     rules: {
       'no-undef': 'error',
-      'no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_'
-      }]
-    }
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
-  
+
   // Configuration files
   {
-    files: [
-      'eslint.config.mjs',
-      '*.config.{js,mjs,ts}',
-      'turbo.json',
-      'package.json'
-    ],
+    files: ['eslint.config.mjs', '*.config.{js,mjs,ts}', 'turbo.json', 'package.json'],
     rules: {
       'import/no-unused-modules': 'off',
-      '@typescript-eslint/no-require-imports': 'off'
-    }
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
-  
+
   // Test files
   {
     files: ['**/*.test.{ts,tsx,js}', '**/*.spec.{ts,tsx,js}'],
@@ -268,7 +265,7 @@ export default [
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
-      'import/no-unused-modules': 'off'
-    }
-  }
+      'import/no-unused-modules': 'off',
+    },
+  },
 ];

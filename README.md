@@ -55,6 +55,7 @@ HeistMind follows a **Domain-Driven Design** approach with:
 ## 📚 Development Scripts
 
 ### Root Commands (Turborepo)
+
 ```bash
 pnpm dev              # Start all development servers
 pnpm build            # Build all packages
@@ -64,6 +65,7 @@ pnpm clean            # Clean all build outputs
 ```
 
 ### Package-Specific Commands
+
 ```bash
 pnpm build:ui         # Build UI package only
 pnpm build:web        # Build web app only
@@ -72,6 +74,7 @@ pnpm dev:web          # Start web app only
 ```
 
 ### Database Commands
+
 ```bash
 pnpm db:push          # Push schema changes to Supabase
 pnpm db:types         # Generate TypeScript types from schema
@@ -87,12 +90,14 @@ pnpm db:types         # Generate TypeScript types from schema
 ## 🌟 Key Features
 
 ### For Game Masters
+
 - Upload and manage custom FitD rulesets
 - Create games with flexible rule configurations
 - Invite players via email or public codes
 - Monitor player activity and character progression
 
 ### For Players
+
 - Join games and create rule-based characters
 - Manage multiple characters across different games
 - Track XP, advancement, and character relationships
@@ -101,17 +106,20 @@ pnpm db:types         # Generate TypeScript types from schema
 ## 🚀 Getting Started
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-org/heist-mind.git
    cd heist-mind
    ```
 
 2. **Install dependencies**
+
    ```bash
    pnpm install
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp .env.example .env.local
    # Edit .env.local with your Supabase credentials

@@ -3,6 +3,7 @@
 ## Architecture Overview
 
 ### Multi-Tenant Monorepo Structure
+
 The project follows a multi-tenant monorepo pattern with clear domain boundaries:
 
 ```
@@ -21,16 +22,19 @@ heist-mind/
 The system is built around three primary domains with clear boundaries:
 
 #### Content Domain
+
 - **Rulesets**: User-uploaded FitD game rules and variations
 - **Templates**: Reusable game creation templates
 - **Validation**: Rule consistency and completeness checking
 
 #### Game Domain
+
 - **Game Sessions**: Individual game instances with specific rulesets
 - **Invitations**: Player invitation and access management
 - **Permissions**: Role-based access control within games
 
 #### Character Domain
+
 - **Characters**: Player characters within specific game contexts
 - **Progression**: XP tracking and advancement within rule constraints
 - **Validation**: Character legality within game-specific rulesets
@@ -40,6 +44,7 @@ The system is built around three primary domains with clear boundaries:
 ### Tenant Isolation Strategy
 
 #### Database-Level Isolation
+
 ```sql
 -- Row Level Security for tenant isolation
 CREATE POLICY "gm_content_isolation" ON rulesets
@@ -56,21 +61,23 @@ CREATE POLICY "game_access_control" ON games
 ```
 
 #### Application-Level Patterns
+
 - **Tenant Context**: Request-scoped tenant identification
 - **Data Scoping**: Automatic filtering of queries by tenant
 - **Permission Boundaries**: Clear separation of GM and Player capabilities
 
 ### Resource Ownership Model
+
 ```typescript
 interface TenantResource {
-  id: string
-  tenantId: string // Game Master's user ID
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  tenantId: string; // Game Master's user ID
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface GameResource extends TenantResource {
-  gameId: string // Additional scope for game-specific resources
+  gameId: string; // Additional scope for game-specific resources
 }
 ```
 
@@ -79,35 +86,38 @@ interface GameResource extends TenantResource {
 ### Rule Definition Pattern
 
 #### Flexible Schema Design
+
 ```typescript
 interface RulesetDefinition {
-  metadata: RulesetMetadata
-  characterCreation: CharacterCreationRules
-  progression: ProgressionRules
-  validation: ValidationRules
+  metadata: RulesetMetadata;
+  characterCreation: CharacterCreationRules;
+  progression: ProgressionRules;
+  validation: ValidationRules;
 }
 
 interface CharacterCreationRules {
-  playbooks: PlaybookDefinition[]
-  attributes: AttributeDefinition[]
-  skills: SkillDefinition[]
-  specialAbilities: AbilityDefinition[]
-  equipment: EquipmentRules
+  playbooks: PlaybookDefinition[];
+  attributes: AttributeDefinition[];
+  skills: SkillDefinition[];
+  specialAbilities: AbilityDefinition[];
+  equipment: EquipmentRules;
 }
 ```
 
 #### Rule Validation Engine
+
 ```typescript
 class RulesetValidator {
-  validateRuleset(ruleset: RulesetDefinition): ValidationResult
-  validateCharacter(character: Character, ruleset: RulesetDefinition): ValidationResult
-  suggestFixes(errors: ValidationError[]): FixSuggestion[]
+  validateRuleset(ruleset: RulesetDefinition): ValidationResult;
+  validateCharacter(character: Character, ruleset: RulesetDefinition): ValidationResult;
+  suggestFixes(errors: ValidationError[]): FixSuggestion[];
 }
 ```
 
 ### Content Management Patterns
 
 #### Upload and Processing Pipeline
+
 1. **File Upload**: Drag-and-drop interface with file type validation
 2. **Schema Validation**: JSON schema validation against FitD structure
 3. **Content Analysis**: Semantic validation of rule relationships
@@ -115,14 +125,15 @@ class RulesetValidator {
 5. **Storage and Indexing**: Optimized storage with search capabilities
 
 #### Version Control Strategy
+
 ```typescript
 interface RulesetVersion {
-  id: string
-  rulesetId: string
-  version: string
-  changes: ChangeLog[]
-  isActive: boolean
-  compatibilityFlags: CompatibilityFlag[]
+  id: string;
+  rulesetId: string;
+  version: string;
+  changes: ChangeLog[];
+  isActive: boolean;
+  compatibilityFlags: CompatibilityFlag[];
 }
 ```
 
@@ -131,62 +142,66 @@ interface RulesetVersion {
 ### Game Lifecycle Management
 
 #### Game States and Transitions
+
 ```typescript
 enum GameState {
-  DRAFT = 'draft',           // Being configured by GM
+  DRAFT = 'draft', // Being configured by GM
   RECRUITING = 'recruiting', // Open for player invitations
-  ACTIVE = 'active',        // Game in progress
-  PAUSED = 'paused',        // Temporarily inactive
-  COMPLETED = 'completed'   // Game finished
+  ACTIVE = 'active', // Game in progress
+  PAUSED = 'paused', // Temporarily inactive
+  COMPLETED = 'completed', // Game finished
 }
 
 class GameStateMachine {
-  transition(from: GameState, to: GameState, context: GameContext): boolean
-  validateTransition(transition: StateTransition): ValidationResult
+  transition(from: GameState, to: GameState, context: GameContext): boolean;
+  validateTransition(transition: StateTransition): ValidationResult;
 }
 ```
 
 #### Invitation Management
+
 ```typescript
 interface GameInvitation {
-  id: string
-  gameId: string
-  invitedBy: string
-  invitedPlayer?: string  // Specific player (optional)
-  inviteCode: string      // Public invitation code
-  expiresAt: Date
-  maxUses?: number
-  usedCount: number
-  status: InvitationStatus
+  id: string;
+  gameId: string;
+  invitedBy: string;
+  invitedPlayer?: string; // Specific player (optional)
+  inviteCode: string; // Public invitation code
+  expiresAt: Date;
+  maxUses?: number;
+  usedCount: number;
+  status: InvitationStatus;
 }
 ```
 
 ### Permission System
 
 #### Role-Based Access Control
+
 ```typescript
 enum GameRole {
   GAME_MASTER = 'gm',
   PLAYER = 'player',
-  OBSERVER = 'observer'
+  OBSERVER = 'observer',
 }
 
 interface GamePermissions {
-  canViewGame: boolean
-  canEditGame: boolean
-  canInvitePlayers: boolean
-  canCreateCharacters: boolean
-  canEditOwnCharacters: boolean
-  canViewOtherCharacters: boolean
+  canViewGame: boolean;
+  canEditGame: boolean;
+  canInvitePlayers: boolean;
+  canCreateCharacters: boolean;
+  canEditOwnCharacters: boolean;
+  canViewOtherCharacters: boolean;
 }
 ```
 
 #### Context-Aware Permissions
+
 ```typescript
 class PermissionService {
-  getUserPermissions(userId: string, gameId: string): GamePermissions
-  checkPermission(userId: string, gameId: string, action: string): boolean
-  enforcePermission(permission: Permission): PermissionDecorator
+  getUserPermissions(userId: string, gameId: string): GamePermissions;
+  checkPermission(userId: string, gameId: string, action: string): boolean;
+  enforcePermission(permission: Permission): PermissionDecorator;
 }
 ```
 
@@ -195,50 +210,54 @@ class PermissionService {
 ### Dynamic Character Creation
 
 #### Rule-Driven Form Generation
+
 ```typescript
 interface CharacterFormConfig {
-  steps: FormStep[]
-  validations: ValidationRule[]
-  dependencies: FieldDependency[]
-  conditionalFields: ConditionalField[]
+  steps: FormStep[];
+  validations: ValidationRule[];
+  dependencies: FieldDependency[];
+  conditionalFields: ConditionalField[];
 }
 
 class CharacterFormBuilder {
-  buildForm(ruleset: RulesetDefinition): CharacterFormConfig
-  validateStep(stepData: StepData, rules: ValidationRule[]): ValidationResult
-  getNextStep(currentStep: FormStep, character: PartialCharacter): FormStep
+  buildForm(ruleset: RulesetDefinition): CharacterFormConfig;
+  validateStep(stepData: StepData, rules: ValidationRule[]): ValidationResult;
+  getNextStep(currentStep: FormStep, character: PartialCharacter): FormStep;
 }
 ```
 
 #### Progressive Validation
+
 ```typescript
 class CharacterValidator {
-  validateStep(step: FormStep, data: StepData, ruleset: RulesetDefinition): ValidationResult
-  validateComplete(character: Character, ruleset: RulesetDefinition): ValidationResult
-  getSuggestions(character: PartialCharacter, ruleset: RulesetDefinition): Suggestion[]
+  validateStep(step: FormStep, data: StepData, ruleset: RulesetDefinition): ValidationResult;
+  validateComplete(character: Character, ruleset: RulesetDefinition): ValidationResult;
+  getSuggestions(character: PartialCharacter, ruleset: RulesetDefinition): Suggestion[];
 }
 ```
 
 ### Character-Game Relationship
 
 #### Flexible Association Model
+
 ```typescript
 interface CharacterGameAssociation {
-  characterId: string
-  gameId: string
-  status: AssociationStatus  // active, inactive, pending
-  joinedAt: Date
-  leftAt?: Date
-  gameSpecificData: Record<string, any>  // Game-specific character modifications
+  characterId: string;
+  gameId: string;
+  status: AssociationStatus; // active, inactive, pending
+  joinedAt: Date;
+  leftAt?: Date;
+  gameSpecificData: Record<string, any>; // Game-specific character modifications
 }
 ```
 
 #### Character Portability Rules
+
 ```typescript
 class PortabilityService {
-  checkCompatibility(character: Character, targetGame: Game): CompatibilityResult
-  adaptCharacter(character: Character, targetRuleset: RulesetDefinition): Character
-  suggestAdaptations(character: Character, targetRuleset: RulesetDefinition): Adaptation[]
+  checkCompatibility(character: Character, targetGame: Game): CompatibilityResult;
+  adaptCharacter(character: Character, targetRuleset: RulesetDefinition): Character;
+  suggestAdaptations(character: Character, targetRuleset: RulesetDefinition): Adaptation[];
 }
 ```
 
@@ -247,35 +266,38 @@ class PortabilityService {
 ### Command Query Responsibility Segregation (CQRS)
 
 #### Command Side (Mutations)
+
 ```typescript
 interface Command {
-  type: string
-  payload: any
-  metadata: CommandMetadata
+  type: string;
+  payload: any;
+  metadata: CommandMetadata;
 }
 
 class CommandHandler<T extends Command> {
-  handle(command: T): Promise<CommandResult>
-  validate(command: T): ValidationResult
+  handle(command: T): Promise<CommandResult>;
+  validate(command: T): ValidationResult;
 }
 ```
 
 #### Query Side (Reads)
+
 ```typescript
 interface Query {
-  type: string
-  parameters: any
+  type: string;
+  parameters: any;
 }
 
 class QueryHandler<T extends Query> {
-  handle(query: T): Promise<QueryResult>
-  buildQuery(parameters: any): DatabaseQuery
+  handle(query: T): Promise<QueryResult>;
+  buildQuery(parameters: any): DatabaseQuery;
 }
 ```
 
 ### Event-Driven Architecture
 
 #### Domain Events
+
 ```typescript
 interface DomainEvent {
   id: string
@@ -299,6 +321,7 @@ class RulesetUpdatedEvent implements DomainEvent
 ```
 
 #### Event Handlers
+
 ```typescript
 interface EventHandler<T extends DomainEvent> {
   canHandle(event: DomainEvent): boolean
@@ -314,38 +337,41 @@ class CharacterValidationHandler implements EventHandler<RulesetUpdatedEvent>
 ### Authentication & Authorization
 
 #### Multi-Level Security
+
 ```typescript
 interface SecurityContext {
-  user: User
-  tenant: Tenant
-  game?: Game
-  permissions: Permission[]
+  user: User;
+  tenant: Tenant;
+  game?: Game;
+  permissions: Permission[];
 }
 
 class SecurityService {
-  authenticate(credentials: Credentials): Promise<AuthResult>
-  authorize(context: SecurityContext, resource: Resource, action: Action): boolean
-  validateAccess(request: Request): Promise<SecurityContext>
+  authenticate(credentials: Credentials): Promise<AuthResult>;
+  authorize(context: SecurityContext, resource: Resource, action: Action): boolean;
+  validateAccess(request: Request): Promise<SecurityContext>;
 }
 ```
 
 #### Data Protection
+
 ```typescript
 class DataProtectionService {
-  encryptSensitiveData(data: any): EncryptedData
-  auditDataAccess(context: SecurityContext, resource: Resource): void
-  anonymizeUserData(userId: string): Promise<void>
+  encryptSensitiveData(data: any): EncryptedData;
+  auditDataAccess(context: SecurityContext, resource: Resource): void;
+  anonymizeUserData(userId: string): Promise<void>;
 }
 ```
 
 ### Content Security
 
 #### User-Generated Content Validation
+
 ```typescript
 class ContentSecurityService {
-  validateUpload(file: File, rules: SecurityRules): SecurityResult
-  scanForMaliciousContent(content: string): ScanResult
-  sanitizeUserInput(input: string): string
+  validateUpload(file: File, rules: SecurityRules): SecurityResult;
+  scanForMaliciousContent(content: string): ScanResult;
+  sanitizeUserInput(input: string): string;
 }
 ```
 
@@ -354,6 +380,7 @@ class ContentSecurityService {
 ### Caching Strategy
 
 #### Multi-Level Caching
+
 ```typescript
 interface CacheService {
   get<T>(key: string): Promise<T | null>
@@ -368,22 +395,24 @@ class SessionCache extends CacheService    // Short-lived, user-scoped
 ```
 
 #### Query Optimization
+
 ```typescript
 class QueryOptimizer {
-  optimizeRulesetQuery(rulesetId: string): OptimizedQuery
-  prefetchGameData(gameId: string): Promise<void>
-  batchCharacterQueries(characterIds: string[]): Promise<Character[]>
+  optimizeRulesetQuery(rulesetId: string): OptimizedQuery;
+  prefetchGameData(gameId: string): Promise<void>;
+  batchCharacterQueries(characterIds: string[]): Promise<Character[]>;
 }
 ```
 
 ### Resource Management
 
 #### Connection Pooling
+
 ```typescript
 class DatabaseConnectionManager {
-  getConnection(tenant: string): Promise<DatabaseConnection>
-  releaseConnection(connection: DatabaseConnection): void
-  monitorConnectionHealth(): HealthMetrics
+  getConnection(tenant: string): Promise<DatabaseConnection>;
+  releaseConnection(connection: DatabaseConnection): void;
+  monitorConnectionHealth(): HealthMetrics;
 }
 ```
 
@@ -392,6 +421,7 @@ class DatabaseConnectionManager {
 ### Hierarchical Error Management
 
 #### Error Types and Recovery
+
 ```typescript
 abstract class ApplicationError extends Error {
   abstract readonly type: string
@@ -405,11 +435,12 @@ class CharacterConstraintError extends ApplicationError
 ```
 
 #### Circuit Breaker Pattern
+
 ```typescript
 class CircuitBreaker {
-  execute<T>(operation: () => Promise<T>): Promise<T>
-  isOpen(): boolean
-  getFailureRate(): number
+  execute<T>(operation: () => Promise<T>): Promise<T>;
+  isOpen(): boolean;
+  getFailureRate(): number;
 }
 ```
 
@@ -418,20 +449,22 @@ class CircuitBreaker {
 ### Multi-Tenant Testing
 
 #### Test Data Isolation
+
 ```typescript
 class TestTenantManager {
-  createTestTenant(): Promise<TestTenant>
-  seedTenantData(tenant: TestTenant, data: SeedData): Promise<void>
-  cleanupTestTenant(tenant: TestTenant): Promise<void>
+  createTestTenant(): Promise<TestTenant>;
+  seedTenantData(tenant: TestTenant, data: SeedData): Promise<void>;
+  cleanupTestTenant(tenant: TestTenant): Promise<void>;
 }
 ```
 
 #### Integration Testing
+
 ```typescript
 class GameFlowTestSuite {
-  testCompleteGameCreationFlow(): Promise<TestResult>
-  testCharacterCreationWithCustomRules(): Promise<TestResult>
-  testMultiPlayerGameInteraction(): Promise<TestResult>
+  testCompleteGameCreationFlow(): Promise<TestResult>;
+  testCharacterCreationWithCustomRules(): Promise<TestResult>;
+  testMultiPlayerGameInteraction(): Promise<TestResult>;
 }
 ```
 
@@ -442,6 +475,7 @@ This system pattern foundation ensures HeistMind can scale securely while mainta
 ### Gaming-Focused Design Language
 
 #### TTRPG Aesthetic Principles
+
 ```typescript
 // Design system philosophy for tabletop gaming
 const designPhilosophy = {
@@ -449,26 +483,27 @@ const designPhilosophy = {
   colorPalette: {
     primary: 'Deep dark backgrounds reduce eye strain',
     accent: 'TTRPG-themed colors (crimson for stress, gold for XP)',
-    semantic: 'Game-specific colors for different mechanics'
+    semantic: 'Game-specific colors for different mechanics',
   },
 
   // Typography reflecting tabletop tradition
   typography: {
     character: 'Bold, readable fonts for character names',
     mechanical: 'Monospace fonts for game mechanics',
-    narrative: 'Clean sans-serif for descriptions'
+    narrative: 'Clean sans-serif for descriptions',
   },
 
   // Spacing based on character sheet layouts
   spacing: {
     sheet: 'Character sheet section spacing',
     component: 'Individual component spacing',
-    tight: 'Dense information display'
-  }
-}
+    tight: 'Dense information display',
+  },
+};
 ```
 
 #### Accessibility-First Component Design
+
 ```typescript
 // Radix UI primitives with WCAG 2.1 compliance
 interface AccessibleComponentProps {
@@ -513,6 +548,7 @@ const CharacterTabs = () => (
 ### Component Architecture Patterns
 
 #### Compound Component Strategy
+
 ```typescript
 // Flexible character sheet composition
 interface CharacterSheetComponents {
@@ -547,42 +583,43 @@ const CustomCharacterSheet = () => (
 ```
 
 #### Wizard Pattern for Complex Workflows
+
 ```typescript
 // Multi-step character creation with validation
 interface WizardState {
-  currentStep: number
-  completedSteps: number[]
-  stepData: Record<string, any>
-  isValid: boolean
+  currentStep: number;
+  completedSteps: number[];
+  stepData: Record<string, any>;
+  isValid: boolean;
 }
 
 class CharacterCreationWizard {
-  private steps: WizardStep[]
-  private state: WizardState
+  private steps: WizardStep[];
+  private state: WizardState;
 
   constructor(ruleset: RulesetDefinition) {
-    this.steps = this.generateStepsFromRuleset(ruleset)
+    this.steps = this.generateStepsFromRuleset(ruleset);
     this.state = {
       currentStep: 0,
       completedSteps: [],
       stepData: {},
-      isValid: false
-    }
+      isValid: false,
+    };
   }
 
   validateCurrentStep(): ValidationResult {
-    const currentStep = this.steps[this.state.currentStep]
-    return currentStep.validation(this.state.stepData)
+    const currentStep = this.steps[this.state.currentStep];
+    return currentStep.validation(this.state.stepData);
   }
 
   canProceed(): boolean {
-    return this.validateCurrentStep().isValid
+    return this.validateCurrentStep().isValid;
   }
 
   nextStep(): void {
     if (this.canProceed()) {
-      this.state.completedSteps.push(this.state.currentStep)
-      this.state.currentStep++
+      this.state.completedSteps.push(this.state.currentStep);
+      this.state.currentStep++;
     }
   }
 }
@@ -591,93 +628,94 @@ class CharacterCreationWizard {
 ### State Management Patterns
 
 #### Domain-Driven State Organization
+
 ```typescript
 // Separate stores for different domains
 interface AppState {
   // Authentication state
   auth: {
-    user: User | null
-    session: Session | null
-    isLoading: boolean
-  }
+    user: User | null;
+    session: Session | null;
+    isLoading: boolean;
+  };
 
   // Character management state
   characters: {
-    byId: Record<string, Character>
-    byGameId: Record<string, string[]>
-    currentCharacter: string | null
-    creationWizard: WizardState | null
-  }
+    byId: Record<string, Character>;
+    byGameId: Record<string, string[]>;
+    currentCharacter: string | null;
+    creationWizard: WizardState | null;
+  };
 
   // Game management state
   games: {
-    byId: Record<string, Game>
-    userGames: string[]
-    currentGame: string | null
-  }
+    byId: Record<string, Game>;
+    userGames: string[];
+    currentGame: string | null;
+  };
 
   // UI state
   ui: {
-    theme: 'dark' | 'light'
-    sidebarOpen: boolean
-    activeModal: string | null
-    notifications: Notification[]
-  }
+    theme: 'dark' | 'light';
+    sidebarOpen: boolean;
+    activeModal: string | null;
+    notifications: Notification[];
+  };
 }
 ```
 
 #### Optimistic Updates with Rollback
+
 ```typescript
 // Character update with optimistic UI
 const useOptimisticCharacterUpdate = () => {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: updateCharacter,
 
     // Optimistic update
-    onMutate: async (variables) => {
-      await queryClient.cancelQueries(['characters', variables.gameId])
+    onMutate: async variables => {
+      await queryClient.cancelQueries(['characters', variables.gameId]);
 
-      const previousCharacters = queryClient.getQueryData(['characters', variables.gameId])
+      const previousCharacters = queryClient.getQueryData(['characters', variables.gameId]);
 
       queryClient.setQueryData(['characters', variables.gameId], (old: Character[]) =>
         old.map(char =>
-          char.id === variables.characterId
-            ? { ...char, ...variables.updates }
-            : char
+          char.id === variables.characterId ? { ...char, ...variables.updates } : char
         )
-      )
+      );
 
-      return { previousCharacters }
+      return { previousCharacters };
     },
 
     // Rollback on error
     onError: (error, variables, context) => {
       if (context?.previousCharacters) {
-        queryClient.setQueryData(['characters', variables.gameId], context.previousCharacters)
+        queryClient.setQueryData(['characters', variables.gameId], context.previousCharacters);
       }
     },
 
     // Always refetch after success or error
     onSettled: (data, error, variables) => {
-      queryClient.invalidateQueries(['characters', variables.gameId])
-    }
-  })
-}
+      queryClient.invalidateQueries(['characters', variables.gameId]);
+    },
+  });
+};
 ```
 
 ### Form Validation Patterns
 
 #### Rule-Driven Validation
+
 ```typescript
 // Dynamic validation based on ruleset
 interface ValidationRule {
-  field: string
-  type: 'required' | 'min' | 'max' | 'pattern' | 'custom'
-  value?: any
-  message: string
-  validator?: (value: any, context: any) => boolean
+  field: string;
+  type: 'required' | 'min' | 'max' | 'pattern' | 'custom';
+  value?: any;
+  message: string;
+  validator?: (value: any, context: any) => boolean;
 }
 
 class RulesetValidator {
@@ -690,28 +728,31 @@ class RulesetValidator {
           field: attr.id,
           type: 'min',
           value: attr.minValue,
-          message: `${attr.name} must be at least ${attr.minValue}`
-        }))
+          message: `${attr.name} must be at least ${attr.minValue}`,
+        }));
 
       case 'skills':
-        return [{
-          field: 'skillPoints',
-          type: 'custom',
-          message: 'Must spend all skill points',
-          validator: (value, context) => {
-            const spent = Object.values(context.skills).reduce((sum, val) => sum + val, 0)
-            return spent === this.ruleset.characterCreation.skillPoints
-          }
-        }]
+        return [
+          {
+            field: 'skillPoints',
+            type: 'custom',
+            message: 'Must spend all skill points',
+            validator: (value, context) => {
+              const spent = Object.values(context.skills).reduce((sum, val) => sum + val, 0);
+              return spent === this.ruleset.characterCreation.skillPoints;
+            },
+          },
+        ];
 
       default:
-        return []
+        return [];
     }
   }
 }
 ```
 
 #### Progressive Validation with User Feedback
+
 ```typescript
 // Real-time validation with helpful guidance
 const CharacterCreationStep = ({ stepData, ruleset, onUpdate }) => {
@@ -751,6 +792,7 @@ const CharacterCreationStep = ({ stepData, ruleset, onUpdate }) => {
 ### Responsive Design Patterns
 
 #### Adaptive Component Layouts
+
 ```typescript
 // Components that adapt to screen size
 const ResponsiveCharacterSheet = ({ character }) => {
@@ -782,6 +824,7 @@ const ResponsiveCharacterSheet = ({ character }) => {
 ```
 
 #### Progressive Enhancement Strategy
+
 ```typescript
 // Core functionality works without JavaScript
 const GameInvitation = ({ inviteCode }: { inviteCode: string }) => {
@@ -814,61 +857,67 @@ const GameInvitation = ({ inviteCode }: { inviteCode: string }) => {
 ### Real-Time Collaboration Patterns
 
 #### Live Character Updates
+
 ```typescript
 // Real-time character synchronization
 const useRealtimeCharacter = (characterId: string) => {
-  const [character, setCharacter] = useState<Character>()
-  const supabase = useSupabaseClient()
+  const [character, setCharacter] = useState<Character>();
+  const supabase = useSupabaseClient();
 
   useEffect(() => {
     const channel = supabase
       .channel(`character:${characterId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'characters',
-        filter: `id=eq.${characterId}`
-      }, (payload) => {
-        setCharacter(payload.new as Character)
-      })
-      .subscribe()
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'characters',
+          filter: `id=eq.${characterId}`,
+        },
+        payload => {
+          setCharacter(payload.new as Character);
+        }
+      )
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [characterId, supabase])
+      supabase.removeChannel(channel);
+    };
+  }, [characterId, supabase]);
 
-  return character
-}
+  return character;
+};
 ```
 
 #### Conflict Resolution Strategy
+
 ```typescript
 // Handle concurrent character edits
 interface CharacterEdit {
-  field: string
-  value: any
-  timestamp: number
-  userId: string
+  field: string;
+  value: any;
+  timestamp: number;
+  userId: string;
 }
 
 class CharacterConflictResolver {
   resolveConflicts(localEdits: CharacterEdit[], remoteEdits: CharacterEdit[]): Character {
-    const allEdits = [...localEdits, ...remoteEdits].sort((a, b) => a.timestamp - b.timestamp)
+    const allEdits = [...localEdits, ...remoteEdits].sort((a, b) => a.timestamp - b.timestamp);
 
     return allEdits.reduce((character, edit) => {
       // Last-write-wins for most fields
       if (edit.field !== 'xp' && edit.field !== 'stress') {
-        character[edit.field] = edit.value
+        character[edit.field] = edit.value;
       }
 
       // Additive for XP and stress
       if (edit.field === 'xp' || edit.field === 'stress') {
-        character[edit.field] = Math.max(character[edit.field] || 0, edit.value)
+        character[edit.field] = Math.max(character[edit.field] || 0, edit.value);
       }
 
-      return character
-    }, {} as Character)
+      return character;
+    }, {} as Character);
   }
 }
 ```
@@ -876,6 +925,7 @@ class CharacterConflictResolver {
 ### Performance Optimization Patterns
 
 #### Lazy Loading with Suspense
+
 ```typescript
 // Component-level code splitting
 const LazyCharacterSheet = lazy(() =>
@@ -895,6 +945,7 @@ const GameSuspense = ({ children, fallback }: SuspenseProps) => (
 ```
 
 #### Virtualization for Large Lists
+
 ```typescript
 // Virtual scrolling for character/game lists
 const VirtualizedCharacterList = ({ characters }: { characters: Character[] }) => {

@@ -15,7 +15,7 @@
     "test:coverage": "vitest run --coverage",
     "validate-types": "vitest run tests/type-validation.test.ts",
     "db:push": "supabase db push",
-    "db:reset": "supabase db reset", 
+    "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > supabase-types.ts",
     "db:types-local": "supabase gen types typescript --local > supabase-types.ts"
