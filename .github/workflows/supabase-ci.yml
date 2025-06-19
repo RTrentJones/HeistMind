@@ -605,7 +605,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update database types after ${{ matrix.environment }} deployment [skip ci]'
-          file_pattern: 'packages/database/supabase-types.ts'
+          file_pattern: 'packages/database/src/supabase-types.ts'
           commit_user_name: 'github-actions[bot]'
           commit_user_email: 'github-actions[bot]@users.noreply.github.com'
 

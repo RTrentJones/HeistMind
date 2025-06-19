@@ -16,9 +16,6 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -33,8 +30,6 @@
     "@supabase/supabase-js": "^2.50.0"
   },
   "devDependencies": {
-    "supabase": "^2.24.3",
-    "typescript": "^5",
-    "vitest": "^2.0.0"
+    "supabase": "^2.24.3"
   }
 }

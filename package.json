@@ -21,16 +21,23 @@
     "dev:web": "pnpm --filter=@heist-mind/web dev",
     "db:push": "pnpm --filter database db:push",
     "db:types": "pnpm --filter database db:types",
+    "dep-check": "pnpm -r list --depth=0",
+    "dep-update": "pnpm -r update",
+    "cleanup": "pnpm -r run clean",
     "prepare": "husky"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
     "@vitest/coverage-v8": "^2.1.9",
     "@vitest/ui": "^2.1.9",
+    "eslint": "^9.17.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-import-resolver-typescript": "^4.4.3",
     "eslint-plugin-import": "^2.31.0",
@@ -43,6 +50,7 @@
     "prettier": "^3.5.3",
     "turbo": "^2.5.4",
     "typescript": "^5.3.3",
+    "vite": "^6.0.0",
     "vitest": "^2.1.9"
   },
   "engines": {

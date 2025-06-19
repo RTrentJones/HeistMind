@@ -1,28 +1,13 @@
 import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
+import { createBaseConfig } from '../../configs/vitest.base';
 
-export default defineConfig({
-  test: {
-    globals: true,
+export default defineConfig(
+  createBaseConfig(__dirname, {
     environment: 'node',
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      exclude: ['node_modules/', '**/*.d.ts', '**/*.config.*', '**/coverage/**', '**/dist/**'],
-      thresholds: {
-        global: {
-          branches: 85,
-          functions: 85,
-          lines: 85,
-          statements: 85,
-        },
-      },
-    },
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
+    coverageThreshold: 85,
+    additionalAliases: {
       '@heist-mind/database': resolve(__dirname, '../database/src'),
     },
-  },
-});
+  })
+);

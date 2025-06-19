@@ -1,34 +1,9 @@
 import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
+import { createBaseConfig } from '../../configs/vitest.base';
 
-export default defineConfig({
-  test: {
-    globals: true,
+export default defineConfig(
+  createBaseConfig(__dirname, {
     environment: 'node',
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      exclude: [
-        'node_modules/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/coverage/**',
-        '**/dist/**',
-        'supabase-types.ts',
-      ],
-      thresholds: {
-        global: {
-          branches: 70,
-          functions: 70,
-          lines: 70,
-          statements: 70,
-        },
-      },
-    },
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
-    },
-  },
-});
+    coverageThreshold: 70,
+  })
+);

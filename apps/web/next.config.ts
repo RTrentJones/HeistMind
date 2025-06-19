@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Clean Next.js config - TypeScript paths handle module resolution
+  transpilePackages: ['@heist-mind/database', '@heist-mind/shared'],
 };
 
 export default nextConfig;
