@@ -13,9 +13,9 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@heist-mind/shared/*": ["../../packages/shared/src/*"],
-      "@heist-mind/database/*": ["../../packages/database/src/*"],
-      "@heist-mind/ui/*": ["../../packages/ui/src/*"]
+      "@heist-mind/shared/*": ["../../packages/shared/dist/*"],
+      "@heist-mind/database/*": ["../../packages/database/dist/*"],
+      "@heist-mind/ui/*": ["../../packages/ui/dist/*"]
     },
     "incremental": true
   },
