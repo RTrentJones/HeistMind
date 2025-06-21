@@ -13,7 +13,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     // Emit
-    "noEmit": true,
+    "noEmit": false,
     "sourceMap": true,
     // Interop
     "isolatedModules": true,
