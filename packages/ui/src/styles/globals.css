@@ -1,79 +1,223 @@
-/* packages/ui/src/styles/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-@layer base {
-  :root {
-    --background: 10 10 10;
-    --foreground: 250 250 250;
+/* Enhanced CSS Variables for HeistMind UI */
+:root {
+  --radius: 0.75rem;
+}
 
-    --card: 23 23 23;
-    --card-foreground: 250 250 250;
+/* Base styles */
+* {
+  border-color: #27272a;
+}
 
-    --primary: 168 85 247;
-    --primary-foreground: 250 250 250;
+body {
+  background-color: #09090b;
+  color: #fafafa;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
 
-    --secondary: 38 38 38;
-    --secondary-foreground: 250 250 250;
+/* Enhanced scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-    --muted: 38 38 38;
-    --muted-foreground: 163 163 163;
+::-webkit-scrollbar-track {
+  background: #27272a;
+  border-radius: 4px;
+}
 
-    --accent: 38 38 38;
-    --accent-foreground: 250 250 250;
+::-webkit-scrollbar-thumb {
+  background: #52525b;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
 
-    --destructive: 239 68 68;
-    --destructive-foreground: 250 250 250;
+::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
 
-    --border: 64 64 64;
-    --input: 64 64 64;
-    --ring: 168 85 247;
+/* Glass morphism utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.glass-sm {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-lg {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Neumorphism utilities */
+.neu-inset {
+  background: #1e1e32;
+  box-shadow: inset 8px 8px 16px #16162a, inset -8px -8px 16px #2a2a3e;
+}
+
+.neu-raised {
+  background: #1e1e32;
+  box-shadow: 8px 8px 16px #16162a, -8px -8px 16px #2a2a3e;
+}
+
+.neu-flat {
+  background: #1e1e32;
+  box-shadow: 4px 4px 8px #16162a, -4px -4px 8px #2a2a3e;
+}
+
+/* Game-specific utility classes */
+.heist-glow {
+  box-shadow: 0 0 20px rgba(139, 62, 255, 0.4);
+}
+
+.heist-glow-ember {
+  box-shadow: 0 0 20px rgba(255, 138, 76, 0.4);
+}
+
+.heist-glow-crimson {
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+
+.heist-glow-steel {
+  box-shadow: 0 0 20px rgba(100, 116, 139, 0.4);
+}
+
+/* Text gradient utilities */
+.text-gradient {
+  background: linear-gradient(135deg, #8b3eff, rgba(139, 62, 255, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-ember {
+  background: linear-gradient(135deg, #ff8a4c, #eab308);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enhanced button hover states */
+.btn-hover-lift {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Typography improvements */
+.font-display {
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-feature-settings: "liga" 1, "dlig" 1;
+}
+
+/* Focus ring improvements */
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid #8b3eff;
+  outline-offset: 2px;
+}
+
+/* Stress indicator styles for game components */
+.stress-low {
+  background-color: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.stress-medium {
+  background-color: rgba(234, 179, 8, 0.2);
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #facc15;
+}
+
+.stress-high {
+  background-color: rgba(249, 115, 22, 0.2);
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #fb923c;
+}
+
+.stress-critical {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  animation: stress-pulse 2s infinite;
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Keyframes */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes stress-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
   }
-
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings:
-      'rlig' 1,
-      'calt' 1;
+  70% { 
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
   }
 }
 
-@layer utilities {
-  /* Better focus states */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 focus:ring-offset-neutral-950;
-  }
+@keyframes dice-roll {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  25% { transform: rotateX(90deg) rotateY(90deg); }
+  50% { transform: rotateX(180deg) rotateY(180deg); }
+  75% { transform: rotateX(270deg) rotateY(270deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
 
-  /* Improved text rendering */
-  .text-balance {
-    text-wrap: balance;
-  }
+.dice-roll {
+  animation: dice-roll 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
 
-  /* Custom scrollbar */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.neutral.700') transparent;
-  }
+/* Neumorphic shadow utilities */
+.shadow-neu-raised {
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.4),
+    -8px -8px 16px rgba(255, 255, 255, 0.05);
+}
 
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+.shadow-neu-flat {
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.3),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.03);
+}
 
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-neutral-700 rounded-full;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-neutral-600;
-  }
+.shadow-neu-pressed {
+  box-shadow: 
+    inset 6px 6px 12px rgba(0, 0, 0, 0.4),
+    inset -6px -6px 12px rgba(255, 255, 255, 0.02);
 }
