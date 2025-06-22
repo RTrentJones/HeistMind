@@ -19,7 +19,7 @@ const meta: Meta<typeof StressTracker> = {
   decorators: [
     Story => (
       <TooltipProvider>
-        <div className='p-6 bg-slate-900 rounded-lg'>
+        <div className='p-6 bg-background-primary rounded-lg'>
           <Story />
         </div>
       </TooltipProvider>
@@ -68,22 +68,22 @@ export const StressLevels: Story = {
         <h3 className='text-lg font-semibold text-white'>Stress Levels</h3>
 
         <div className='space-y-3'>
-          <div className='p-3 bg-slate-800 rounded-lg'>
+          <div className='p-3 bg-background-secondary rounded-lg'>
             <h4 className='text-sm font-medium text-green-400 mb-2'>Low Stress (0-2)</h4>
             <StressTracker current={1} max={9} />
           </div>
 
-          <div className='p-3 bg-slate-800 rounded-lg'>
+          <div className='p-3 bg-background-secondary rounded-lg'>
             <h4 className='text-sm font-medium text-yellow-400 mb-2'>Medium Stress (3-5)</h4>
             <StressTracker current={4} max={9} />
           </div>
 
-          <div className='p-3 bg-slate-800 rounded-lg'>
+          <div className='p-3 bg-background-secondary rounded-lg'>
             <h4 className='text-sm font-medium text-orange-400 mb-2'>High Stress (6-7)</h4>
             <StressTracker current={7} max={9} />
           </div>
 
-          <div className='p-3 bg-slate-800 rounded-lg'>
+          <div className='p-3 bg-background-secondary rounded-lg'>
             <h4 className='text-sm font-medium text-red-400 mb-2'>Critical Stress (8+)</h4>
             <StressTracker current={8} max={9} />
           </div>
@@ -242,7 +242,7 @@ export const CharacterSheet: Story = {
     const [resolve, setResolve] = useState(2);
 
     return (
-      <div className='max-w-md space-y-6 p-6 bg-slate-800 rounded-lg'>
+      <div className='max-w-md space-y-6 p-6 bg-background-secondary rounded-lg'>
         <h3 className='text-xl font-semibold text-purple-400'>Character Sheet</h3>
 
         <div className='space-y-4'>

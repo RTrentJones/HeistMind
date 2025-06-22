@@ -66,7 +66,7 @@ export const Default: Story = {
 
 export const Usage: Story = {
   render: () => (
-    <div className='space-y-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='space-y-4 p-6 bg-background-primary rounded-lg'>
       <h3 className='text-lg font-semibold text-white'>Correct Usage Examples</h3>
       <div className='space-y-3'>
         <div className='space-y-2'>
@@ -105,7 +105,7 @@ export const Usage: Story = {
 
 export const Variants: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-3 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-3 p-6 bg-background-primary rounded-lg'>
       <Badge variant='default'>Default</Badge>
       <Badge variant='secondary'>Secondary</Badge>
       <Badge variant='destructive'>Destructive</Badge>
@@ -117,7 +117,7 @@ export const Variants: Story = {
 
 export const GameThemed: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-3 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-3 p-6 bg-background-primary rounded-lg'>
       <Badge variant='ember' icon={<Sword className='w-3 h-3' />}>
         Ember
       </Badge>
@@ -137,7 +137,7 @@ export const GameThemed: Story = {
 
 export const StatusVariants: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-3 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-3 p-6 bg-background-primary rounded-lg'>
       <Badge variant='success' icon={<CheckCircle className='w-3 h-3' />}>
         Success
       </Badge>
@@ -153,7 +153,7 @@ export const StatusVariants: Story = {
 
 export const SkillLevels: Story = {
   render: () => (
-    <div className='space-y-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='space-y-4 p-6 bg-background-primary rounded-lg'>
       <h3 className='text-lg font-semibold text-white mb-4'>Skill Progression</h3>
       <div className='flex flex-wrap gap-3'>
         <Badge
@@ -187,7 +187,7 @@ export const SkillLevels: Story = {
 
 export const StressIndicators: Story = {
   render: () => (
-    <div className='space-y-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='space-y-4 p-6 bg-background-primary rounded-lg'>
       <h3 className='text-lg font-semibold text-white mb-4'>Stress Levels</h3>
       <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
         <Badge variant='stress-low' size='lg'>
@@ -209,7 +209,7 @@ export const StressIndicators: Story = {
 
 export const WithIcons: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-3 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-3 p-6 bg-background-primary rounded-lg'>
       <Badge variant='ember' icon={<Sword className='w-3 h-3' />}>
         Combat
       </Badge>
@@ -231,7 +231,7 @@ export const WithIcons: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <div className='flex flex-wrap items-center gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap items-center gap-4 p-6 bg-background-primary rounded-lg'>
       <Badge size='sm' variant='ember'>
         Small
       </Badge>
@@ -250,7 +250,7 @@ export const Sizes: Story = {
 
 export const Interactive: Story = {
   render: () => (
-    <div className='space-y-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='space-y-4 p-6 bg-background-primary rounded-lg'>
       <h3 className='text-lg font-semibold text-white mb-4'>Interactive Badges</h3>
       <div className='flex flex-wrap gap-3'>
         <Badge variant='ember' interactive onClick={() => alert('Ember clicked!')}>
@@ -286,7 +286,7 @@ export const Interactive: Story = {
 
 export const CharacterSheet: Story = {
   render: () => (
-    <div className='space-y-6 p-6 bg-slate-900 rounded-lg max-w-md'>
+    <div className='space-y-6 p-6 bg-background-primary rounded-lg max-w-md'>
       <div className='space-y-3'>
         <h3 className='text-lg font-semibold text-purple-400'>Shadows McKenzie</h3>
 

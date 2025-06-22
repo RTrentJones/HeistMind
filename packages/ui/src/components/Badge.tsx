@@ -13,88 +13,100 @@ const badgeVariants = cva(
   [
     'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
     'transition-all duration-200 ease-in-out',
-    'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-zinc-900',
+    'focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-background-primary',
     'select-none',
   ],
   {
     variants: {
       variant: {
-        default: ['border-transparent bg-purple-600 text-white', 'hover:bg-purple-500 shadow-sm'],
-        secondary: ['border-transparent bg-zinc-700 text-zinc-100', 'hover:bg-zinc-600'],
-        destructive: ['border-transparent bg-red-600 text-white', 'hover:bg-red-500 shadow-sm'],
-        outline: ['border-zinc-700 text-zinc-100', 'hover:bg-zinc-800 hover:text-zinc-50'],
+        default: [
+          'border-transparent bg-brand-primary text-white',
+          'hover:bg-brand-secondary shadow-sm',
+        ],
+        secondary: [
+          'border-transparent bg-background-secondary text-foreground-primary',
+          'hover:bg-background-tertiary',
+        ],
+        destructive: [
+          'border-transparent bg-semantic-error text-white',
+          'hover:bg-semantic-error/80 shadow-sm',
+        ],
+        outline: [
+          'border-border-primary text-foreground-primary',
+          'hover:bg-background-secondary hover:text-foreground-primary',
+        ],
         // Glass morphism
         glass: [
-          'bg-white/10 border-white/20 text-white backdrop-blur-sm',
-          'hover:bg-white/20 hover:border-white/30',
+          'bg-background-glass border-border-secondary text-foreground-primary backdrop-blur-sm',
+          'hover:bg-background-glass/80 hover:border-border-primary',
         ],
         // Game-themed variants
         ember: [
-          'bg-gradient-to-r from-orange-500 to-red-500 text-white border-transparent',
-          'hover:from-orange-400 hover:to-red-400 hover:shadow-lg hover:shadow-orange-500/20',
+          'bg-gradient-to-r from-game-ember to-game-crimson text-white border-transparent',
+          'hover:from-game-ember/80 hover:to-game-crimson/80 hover:shadow-lg hover:shadow-game-ember/20',
         ],
         steel: [
-          'bg-gradient-to-r from-blue-500 to-slate-500 text-white border-transparent',
-          'hover:from-blue-400 hover:to-slate-400 hover:shadow-lg hover:shadow-blue-500/20',
+          'bg-gradient-to-r from-game-steel to-game-shadow text-white border-transparent',
+          'hover:from-game-steel/80 hover:to-game-shadow/80 hover:shadow-lg hover:shadow-game-steel/20',
         ],
         shadow: [
-          'bg-gradient-to-r from-slate-800 to-gray-900 text-gray-200 border-gray-700',
-          'hover:from-slate-700 hover:to-gray-800',
+          'bg-gradient-to-r from-game-shadow to-background-tertiary text-foreground-primary border-border-primary',
+          'hover:from-game-shadow/80 hover:to-background-tertiary/80',
         ],
         crimson: [
-          'bg-gradient-to-r from-rose-500 to-pink-600 text-white border-transparent',
-          'hover:from-rose-400 hover:to-pink-500 hover:shadow-lg hover:shadow-rose-500/20',
+          'bg-gradient-to-r from-game-crimson to-semantic-error text-white border-transparent',
+          'hover:from-game-crimson/80 hover:to-semantic-error/80 hover:shadow-lg hover:shadow-game-crimson/20',
         ],
         gold: [
-          'bg-gradient-to-r from-yellow-400 to-orange-400 text-slate-900 border-transparent',
-          'hover:from-yellow-300 hover:to-orange-300 shadow-lg',
+          'bg-gradient-to-r from-game-gold to-semantic-warning text-black border-transparent',
+          'hover:from-game-gold/80 hover:to-semantic-warning/80 shadow-lg',
         ],
         // Status variants
         success: [
-          'bg-green-100 text-green-800 border-green-200',
-          'hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+          'bg-semantic-success/20 text-semantic-success border-semantic-success/30',
+          'hover:bg-semantic-success/30',
         ],
         warning: [
-          'bg-yellow-100 text-yellow-800 border-yellow-200',
-          'hover:bg-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
+          'bg-semantic-warning/20 text-semantic-warning border-semantic-warning/30',
+          'hover:bg-semantic-warning/30',
         ],
         info: [
-          'bg-blue-100 text-blue-800 border-blue-200',
-          'hover:bg-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
+          'bg-semantic-info/20 text-semantic-info border-semantic-info/30',
+          'hover:bg-semantic-info/30',
         ],
         // Skill level variants
         novice: [
-          'bg-gray-100 text-gray-700 border-gray-300',
-          'hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
+          'bg-foreground-muted/20 text-foreground-secondary border-foreground-muted/30',
+          'hover:bg-foreground-muted/30',
         ],
         trained: [
-          'bg-blue-100 text-blue-700 border-blue-300',
-          'hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-600',
+          'bg-semantic-info/20 text-semantic-info border-semantic-info/30',
+          'hover:bg-semantic-info/30',
         ],
         expert: [
-          'bg-purple-100 text-purple-700 border-purple-300',
-          'hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-600',
+          'bg-brand-primary/20 text-brand-primary border-brand-primary/30',
+          'hover:bg-brand-primary/30',
         ],
         master: [
-          'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent',
-          'hover:from-purple-400 hover:to-pink-400 hover:shadow-lg hover:shadow-purple-500/20',
+          'bg-gradient-to-r from-brand-primary to-brand-accent text-white border-transparent',
+          'hover:from-brand-primary/80 hover:to-brand-accent/80 hover:shadow-lg hover:shadow-brand-primary/20',
         ],
         // Stress level variants
         'stress-low': [
-          'bg-green-900/20 text-green-400 border-green-500/40',
-          'hover:bg-green-900/30',
+          'bg-semantic-success/20 text-semantic-success border-semantic-success/40',
+          'hover:bg-semantic-success/30',
         ],
         'stress-medium': [
-          'bg-yellow-900/20 text-yellow-400 border-yellow-500/40',
-          'hover:bg-yellow-900/30',
+          'bg-semantic-warning/20 text-semantic-warning border-semantic-warning/40',
+          'hover:bg-semantic-warning/30',
         ],
         'stress-high': [
-          'bg-orange-900/20 text-orange-400 border-orange-500/40',
-          'hover:bg-orange-900/30',
+          'bg-game-ember/20 text-game-ember border-game-ember/40',
+          'hover:bg-game-ember/30',
         ],
         'stress-critical': [
-          'bg-red-900/20 text-red-400 border-red-500/40',
-          'hover:bg-red-900/30 animate-pulse',
+          'bg-semantic-error/20 text-semantic-error border-semantic-error/40',
+          'hover:bg-semantic-error/30 animate-pulse',
         ],
       },
       size: {
@@ -135,103 +147,105 @@ export interface BadgeProps
   accessibleDescription?: string;
 }
 
-const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      interactive,
-      icon,
-      onRemove,
-      pulse = false,
-      children,
-      onClick,
-      badgeRole,
-      accessibleDescription,
-      'aria-label': ariaLabel,
-      'aria-describedby': ariaDescribedBy,
-      role,
-      ...rest
-    },
-    ref
-  ) => {
-    const prefersReducedMotion = useReducedMotion();
-    const isClickable = interactive || onClick || onRemove;
+const Badge = React.memo(
+  React.forwardRef<HTMLDivElement, BadgeProps>(
+    (
+      {
+        className,
+        variant,
+        size,
+        interactive,
+        icon,
+        onRemove,
+        pulse = false,
+        children,
+        onClick,
+        badgeRole,
+        accessibleDescription,
+        'aria-label': ariaLabel,
+        'aria-describedby': ariaDescribedBy,
+        role,
+        ...rest
+      },
+      ref
+    ) => {
+      const prefersReducedMotion = useReducedMotion();
+      const isClickable = interactive || onClick || onRemove;
 
-    // Build game-specific ARIA attributes
-    const gameAriaAttributes = buildGameComponentAria({
-      gameRole: badgeRole,
-      description: accessibleDescription,
-    });
+      // Build game-specific ARIA attributes
+      const gameAriaAttributes = buildGameComponentAria({
+        gameRole: badgeRole,
+        description: accessibleDescription,
+      });
 
-    const ariaAttributes: AriaAttributes = {
-      'aria-label': ariaLabel,
-      'aria-describedby': ariaDescribedBy || gameAriaAttributes['aria-describedby'],
-      role: role || 'status',
-      ...(isClickable && { tabIndex: 0 }),
-    };
+      const ariaAttributes: AriaAttributes = {
+        'aria-label': ariaLabel,
+        'aria-describedby': ariaDescribedBy || gameAriaAttributes['aria-describedby'],
+        role: role || 'status',
+        ...(isClickable && { tabIndex: 0 }),
+      };
 
-    return (
-      <MotionDiv
-        ref={ref}
-        className={cn(badgeVariants({ variant, size, interactive: !!isClickable, className }))}
-        onClick={onClick}
-        initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
-        animate={
-          pulse && !prefersReducedMotion
-            ? {
-                opacity: 1,
-                scale: [1, 1.05, 1],
-                transition: { repeat: Infinity, duration: 2 },
-              }
-            : {
-                opacity: 1,
-                scale: 1,
-              }
-        }
-        transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
-        {...(isClickable &&
-          !prefersReducedMotion && {
-            whileHover: { scale: 1.05 },
-            whileTap: { scale: 0.95 },
-          })}
-        {...ariaAttributes}
-        {...rest}
-      >
-        {icon && (
-          <span className='flex-shrink-0' aria-hidden='true'>
-            {icon}
-          </span>
-        )}
-        <span className='truncate'>{children}</span>
-        {onRemove && (
-          <button
-            type='button'
-            onClick={e => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            className='flex-shrink-0 ml-1 rounded-full hover:bg-white/20 p-0.5 transition-colors'
-            aria-label='Remove badge'
-            tabIndex={-1}
-          >
-            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20' aria-hidden='true'>
-              <path
-                fillRule='evenodd'
-                d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                clipRule='evenodd'
-              />
-            </svg>
-          </button>
-        )}
+      return (
+        <MotionDiv
+          ref={ref}
+          className={cn(badgeVariants({ variant, size, interactive: !!isClickable, className }))}
+          onClick={onClick}
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
+          animate={
+            pulse && !prefersReducedMotion
+              ? {
+                  opacity: 1,
+                  scale: [1, 1.05, 1],
+                  transition: { repeat: Infinity, duration: 2 },
+                }
+              : {
+                  opacity: 1,
+                  scale: 1,
+                }
+          }
+          transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+          {...(isClickable &&
+            !prefersReducedMotion && {
+              whileHover: { scale: 1.05 },
+              whileTap: { scale: 0.95 },
+            })}
+          {...ariaAttributes}
+          {...rest}
+        >
+          {icon && (
+            <span className='flex-shrink-0' aria-hidden='true'>
+              {icon}
+            </span>
+          )}
+          <span className='truncate'>{children}</span>
+          {onRemove && (
+            <button
+              type='button'
+              onClick={e => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              className='flex-shrink-0 ml-1 rounded-full hover:bg-white/20 p-0.5 transition-colors'
+              aria-label='Remove badge'
+              tabIndex={-1}
+            >
+              <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20' aria-hidden='true'>
+                <path
+                  fillRule='evenodd'
+                  d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+                  clipRule='evenodd'
+                />
+              </svg>
+            </button>
+          )}
 
-        {accessibleDescription && !ariaDescribedBy && (
-          <span className='sr-only'>{accessibleDescription}</span>
-        )}
-      </MotionDiv>
-    );
-  }
+          {accessibleDescription && !ariaDescribedBy && (
+            <span className='sr-only'>{accessibleDescription}</span>
+          )}
+        </MotionDiv>
+      );
+    }
+  )
 );
 Badge.displayName = 'Badge';
 

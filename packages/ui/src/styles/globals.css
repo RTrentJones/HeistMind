@@ -1,109 +1,261 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
-/* Enhanced CSS Variables for HeistMind UI */
-:root {
+/* Tailwind v4 Theme Configuration */
+@theme {
+  /* Brand colors - consistent across themes */
+  --color-brand-primary: hsl(262.1 83.3% 57.8%);
+  --color-brand-secondary: hsl(263.4 70% 50.4%);
+  --color-brand-accent: hsl(270.7 91% 65.1%);
+  
+  /* Semantic colors - consistent across themes */
+  --color-semantic-success: hsl(142.1 76.2% 36.3%);
+  --color-semantic-warning: hsl(32.6 94.6% 43.7%);
+  --color-semantic-error: hsl(346.8 77.2% 49.8%);
+  --color-semantic-info: hsl(217.2 91.2% 59.8%);
+  
+  /* Game colors - consistent across themes */
+  --color-game-ember: hsl(14.3 100% 53.3%);
+  --color-game-steel: hsl(217.2 91.2% 59.8%);
+  --color-game-crimson: hsl(346.8 77.2% 49.8%);
+  --color-game-gold: hsl(45.4 93.4% 47.5%);
+  --color-game-whisper: hsl(240 4.8% 95.9%);
+  
+  /* Theme-aware colors - these will be overridden by theme classes */
+  --color-background-primary: hsl(240 10% 3.9%);
+  --color-background-secondary: hsl(240 5.9% 10%);
+  --color-background-tertiary: hsl(240 4.8% 15.9%);
+  --color-background-elevated: hsl(240 3.7% 21.9%);
+  --color-background-glass: hsla(0 0% 100% / 0.05);
+  
+  --color-foreground-primary: hsl(0 0% 98%);
+  --color-foreground-secondary: hsl(240 5% 84.1%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(220.9 39.3% 11%);
+  
+  --color-border-primary: hsl(240 3.7% 15.9%);
+  --color-border-secondary: hsl(240 4.8% 21.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
+  --color-border-focus: hsl(262.1 83.3% 57.8%);
+  
+  /* Radius for consistency */
   --radius: 0.75rem;
+}
+
+/* Base CSS variable definitions outside @theme to ensure proper cascade */
+:root {
+  /* Dark theme as default */
+  --color-background-primary: hsl(240 10% 3.9%);
+  --color-background-secondary: hsl(240 5.9% 10%);
+  --color-background-tertiary: hsl(240 4.8% 15.9%);
+  --color-background-elevated: hsl(240 3.7% 21.9%);
+  --color-background-glass: hsla(0 0% 100% / 0.05);
+  
+  --color-foreground-primary: hsl(0 0% 98%);
+  --color-foreground-secondary: hsl(240 5% 84.1%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(220.9 39.3% 11%);
+  
+  --color-border-primary: hsl(240 3.7% 15.9%);
+  --color-border-secondary: hsl(240 4.8% 21.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
+}
+
+/* Light theme overrides using CSS variables */
+.light {
+  --color-background-primary: hsl(0 0% 100%);
+  --color-background-secondary: hsl(240 4.8% 95.9%);
+  --color-background-tertiary: hsl(240 5.9% 90%);
+  --color-background-elevated: hsl(0 0% 100%);
+  --color-background-glass: hsla(0 0% 100% / 0.8);
+  
+  --color-foreground-primary: hsl(240 10% 3.9%);
+  --color-foreground-secondary: hsl(240 5.9% 10%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(215.4 16.3% 46.9%);
+  --color-game-whisper: hsl(240 4.8% 95.9%);
+  
+  --color-border-primary: hsl(240 5.9% 90%);
+  --color-border-secondary: hsl(240 4.8% 83.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
+}
+
+/* Dark theme explicit overrides - ensures proper cascade */
+.dark {
+  --color-background-primary: hsl(240 10% 3.9%);
+  --color-background-secondary: hsl(240 5.9% 10%);
+  --color-background-tertiary: hsl(240 4.8% 15.9%);
+  --color-background-elevated: hsl(240 3.7% 21.9%);
+  --color-background-glass: hsla(0 0% 100% / 0.05);
+  
+  --color-foreground-primary: hsl(0 0% 98%);
+  --color-foreground-secondary: hsl(240 5% 84.1%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(220.9 39.3% 11%);
+  --color-game-whisper: hsl(240 4.8% 95.9%);
+  
+  --color-border-primary: hsl(240 3.7% 15.9%);
+  --color-border-secondary: hsl(240 4.8% 21.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
 }
 
 /* Base styles */
 * {
-  border-color: #27272a;
+  border-color: var(--color-border-primary);
 }
 
 body {
-  background-color: #09090b;
-  color: #fafafa;
+  background-color: var(--color-background-primary);
+  color: var(--color-foreground-primary);
   font-feature-settings: "rlig" 1, "calt" 1;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Enhanced scrollbar styling */
+/* Enhanced scrollbar styling - theme aware */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #27272a;
+  background: var(--color-background-tertiary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #52525b;
+  background: var(--color-border-muted);
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
+  background: var(--color-foreground-muted);
 }
 
-/* Glass morphism utilities */
+/* Glass morphism utilities - theme aware */
 .glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-background-glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border-secondary);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .glass-sm {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-background-glass);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border-secondary);
 }
 
 .glass-lg {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-background-glass);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border-secondary);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-/* Neumorphism utilities */
+/* Light theme adjustments for glass */
+.light .glass,
+.light .glass-sm,
+.light .glass-lg {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+/* Neumorphism utilities - theme aware */
 .neu-inset {
-  background: #1e1e32;
-  box-shadow: inset 8px 8px 16px #16162a, inset -8px -8px 16px #2a2a3e;
+  background: var(--color-background-secondary);
+  box-shadow: 
+    inset 8px 8px 16px rgba(0, 0, 0, 0.4),
+    inset -8px -8px 16px rgba(255, 255, 255, 0.05);
 }
 
 .neu-raised {
-  background: #1e1e32;
-  box-shadow: 8px 8px 16px #16162a, -8px -8px 16px #2a2a3e;
+  background: var(--color-background-secondary);
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.4),
+    -8px -8px 16px rgba(255, 255, 255, 0.05);
 }
 
 .neu-flat {
-  background: #1e1e32;
-  box-shadow: 4px 4px 8px #16162a, -4px -4px 8px #2a2a3e;
+  background: var(--color-background-secondary);
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.3),
+    -4px -4px 8px rgba(255, 255, 255, 0.03);
 }
 
-/* Game-specific utility classes */
+/* Light theme neumorphism */
+.light .neu-inset {
+  box-shadow: 
+    inset 8px 8px 16px rgba(0, 0, 0, 0.1),
+    inset -8px -8px 16px rgba(255, 255, 255, 0.8);
+}
+
+.light .neu-raised {
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.1),
+    -8px -8px 16px rgba(255, 255, 255, 0.8);
+}
+
+.light .neu-flat {
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.08),
+    -4px -4px 8px rgba(255, 255, 255, 0.8);
+}
+
+/* Game-specific utility classes - theme aware */
 .heist-glow {
-  box-shadow: 0 0 20px rgba(139, 62, 255, 0.4);
+  box-shadow: 0 0 20px hsl(from var(--color-brand-primary) h s l / 0.4);
 }
 
 .heist-glow-ember {
-  box-shadow: 0 0 20px rgba(255, 138, 76, 0.4);
+  box-shadow: 0 0 20px hsl(from var(--color-game-ember) h s l / 0.4);
 }
 
 .heist-glow-crimson {
-  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 20px hsl(from var(--color-game-crimson) h s l / 0.4);
 }
 
 .heist-glow-steel {
-  box-shadow: 0 0 20px rgba(100, 116, 139, 0.4);
+  box-shadow: 0 0 20px hsl(from var(--color-game-steel) h s l / 0.4);
 }
 
-/* Text gradient utilities */
+.heist-glow-gold {
+  box-shadow: 0 0 20px hsl(from var(--color-game-gold) h s l / 0.4);
+}
+
+/* Text gradient utilities - theme aware */
 .text-gradient {
-  background: linear-gradient(135deg, #8b3eff, rgba(139, 62, 255, 0.8));
+  background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .text-gradient-ember {
-  background: linear-gradient(135deg, #ff8a4c, #eab308);
+  background: linear-gradient(135deg, var(--color-game-ember), var(--color-game-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-steel {
+  background: linear-gradient(135deg, var(--color-game-steel), var(--color-game-shadow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-crimson {
+  background: linear-gradient(135deg, var(--color-game-crimson), var(--color-semantic-error));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

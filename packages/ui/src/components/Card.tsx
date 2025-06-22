@@ -3,10 +3,11 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
 import { MotionDiv } from '../lib/motion-safe';
 import { useId, useReducedMotion, type AriaAttributes } from '../lib/accessibility';
+import { componentDefaults } from '../lib/design-tokens';
 
 const cardVariants = cva(
   [
-    'rounded-xl border text-card-foreground shadow-lg',
+    'rounded-xl border text-foreground-primary shadow-lg',
     'transition-all duration-300 ease-out',
     'relative overflow-hidden group',
   ],
@@ -14,51 +15,52 @@ const cardVariants = cva(
     variants: {
       variant: {
         default: [
-          'bg-zinc-900 border-zinc-800',
-          'hover:shadow-xl hover:shadow-zinc-900/50 hover:border-zinc-700',
-          'hover:bg-zinc-800/90 hover:-translate-y-0.5',
+          'bg-background-secondary border-border-primary',
+          'hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:border-border-secondary',
+          'hover:bg-background-tertiary hover:-translate-y-0.5',
         ],
         glass: [
-          'bg-white/5 backdrop-blur-md border-white/10',
-          'hover:bg-white/10 hover:border-white/20',
-          'shadow-glass hover:shadow-glass-lg',
+          'bg-background-glass backdrop-blur-md border-border-secondary',
+          'hover:bg-background-glass/80 hover:border-border-primary',
+          'shadow-lg hover:shadow-xl hover:shadow-brand-primary/10 hover:-translate-y-0.5',
         ],
         elevated: [
-          'bg-zinc-900 border-zinc-800/50',
-          'shadow-2xl hover:shadow-zinc-900/50',
-          'hover:border-zinc-700 hover:-translate-y-1',
+          'bg-background-elevated border-border-secondary',
+          'shadow-2xl hover:shadow-black/20 dark:hover:shadow-black/50',
+          'hover:border-border-primary hover:-translate-y-1',
         ],
         outline: [
-          'bg-transparent border-2 border-purple-500/30',
-          'hover:border-purple-400/50 hover:bg-purple-500/5',
-          'hover:shadow-glow-purple-sm',
+          'bg-transparent border-2 border-brand-primary/30',
+          'hover:border-brand-primary hover:bg-brand-primary/5',
+          'hover:shadow-lg hover:shadow-brand-primary/25 hover:-translate-y-0.5',
         ],
         gradient: [
-          'bg-gradient-to-br from-purple-900/20 via-zinc-900 to-blue-900/20',
-          'border border-purple-500/30',
-          'hover:from-purple-800/30 hover:to-blue-800/30',
+          'bg-gradient-to-br from-brand-primary/20 via-background-secondary to-game-steel/20',
+          'border border-brand-primary/30',
+          'hover:from-brand-primary/30 hover:to-game-steel/30 hover:border-brand-primary/50',
+          'hover:shadow-lg hover:shadow-brand-primary/15 hover:-translate-y-0.5',
         ],
         neumorphic: [
-          'bg-gradient-to-br from-slate-800 to-slate-900',
-          'shadow-neu-raised hover:shadow-neu-flat',
-          'border-0',
+          'bg-gradient-to-br from-background-tertiary to-background-secondary',
+          'shadow-neu-raised hover:shadow-neu-pressed border-0',
+          'hover:scale-[0.995] transition-all duration-200',
         ],
         character: [
-          'bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95',
-          'border border-purple-500/20 backdrop-blur-sm',
-          'hover:border-purple-400/40 hover:shadow-lg hover:shadow-purple-500/20',
-          'before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent before:opacity-0',
+          'bg-gradient-to-br from-background-secondary/95 via-background-tertiary/90 to-background-secondary/95',
+          'border border-brand-primary/20 backdrop-blur-sm',
+          'hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/20',
+          'before:absolute before:inset-0 before:bg-gradient-to-br before:from-brand-primary/5 before:to-transparent before:opacity-0',
           'hover:before:opacity-100 before:transition-opacity before:duration-300',
         ],
         danger: [
-          'bg-gradient-to-br from-red-900/20 via-zinc-900 to-red-900/20',
-          'border-red-500/30 hover:border-red-400/50',
-          'hover:shadow-lg hover:shadow-red-500/20',
+          'bg-gradient-to-br from-semantic-error/20 via-background-secondary to-semantic-error/20',
+          'border-semantic-error/30 hover:border-semantic-error/50',
+          'hover:shadow-lg hover:shadow-semantic-error/20',
         ],
         success: [
-          'bg-gradient-to-br from-green-900/20 via-zinc-900 to-green-900/20',
-          'border-green-500/30 hover:border-green-400/50',
-          'hover:shadow-lg hover:shadow-green-500/20',
+          'bg-gradient-to-br from-semantic-success/20 via-background-secondary to-semantic-success/20',
+          'border-semantic-success/30 hover:border-semantic-success/50',
+          'hover:shadow-lg hover:shadow-semantic-success/20',
         ],
       },
       size: {
@@ -73,8 +75,8 @@ const cardVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'default',
-      size: 'default',
+      variant: componentDefaults.card.variant,
+      size: componentDefaults.card.size,
       interactive: false,
     },
   }
@@ -82,8 +84,7 @@ const cardVariants = cva(
 
 export interface CardProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'size'>,
-    VariantProps<typeof cardVariants>,
-    AriaAttributes {
+    VariantProps<typeof cardVariants> {
   asChild?: boolean;
   /** Card semantic role for screen readers */
   cardRole?: 'article' | 'section' | 'region' | 'banner' | 'complementary' | 'contentinfo';
@@ -117,7 +118,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const titleId = useId('card-title');
 
     // Build comprehensive ARIA attributes
-    const ariaAttributes: AriaAttributes = {
+    const ariaAttributes = {
       'aria-label': ariaLabel || accessibleTitle,
       'aria-labelledby': ariaLabelledBy || (accessibleTitle ? titleId : undefined),
       'aria-describedby': ariaDescribedBy,
@@ -198,7 +199,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn('text-sm text-muted-foreground leading-relaxed', className)}
+    className={cn('text-sm text-foreground-secondary leading-relaxed', className)}
     {...props}
   />
 ));
@@ -215,7 +216,7 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center pt-4 border-t border-border/50', className)}
+      className={cn('flex items-center pt-4 border-t border-border-secondary', className)}
       {...props}
     />
   )

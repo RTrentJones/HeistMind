@@ -44,25 +44,25 @@ const StressTracker: React.FC<StressTrackerProps> = ({
     const isHovering = hoveredIndex !== null && index <= hoveredIndex;
 
     if (isHovered || isHovering) {
-      return 'bg-red-400 border-red-300 shadow-glow-crimson';
+      return 'bg-semantic-error border-semantic-error/60 shadow-glow-crimson';
     }
 
     if (isFilled) {
       switch (level) {
         case 'low':
-          return 'bg-green-500 border-green-400';
+          return 'bg-semantic-success border-semantic-success/60';
         case 'medium':
-          return 'bg-yellow-500 border-yellow-400';
+          return 'bg-semantic-warning border-semantic-warning/60';
         case 'high':
-          return 'bg-orange-500 border-orange-400';
+          return 'bg-game-ember border-game-ember/60';
         case 'critical':
-          return 'bg-red-500 border-red-400 animate-stress-pulse';
+          return 'bg-semantic-error border-semantic-error/60 animate-stress-pulse';
         default:
-          return 'bg-gray-500 border-gray-400';
+          return 'bg-foreground-muted border-foreground-muted/60';
       }
     }
 
-    return 'bg-slate-800 border-slate-600 hover:border-slate-500';
+    return 'bg-background-secondary border-border-primary hover:border-border-secondary';
   };
 
   const handleClick = (index: number) => {
@@ -90,18 +90,18 @@ const StressTracker: React.FC<StressTrackerProps> = ({
     <div className={cn('space-y-2', className)}>
       {showLabel && (
         <div className='flex items-center justify-between'>
-          <span className='text-sm font-medium text-foreground'>Stress</span>
+          <span className='text-sm font-medium text-foreground-primary'>Stress</span>
           {showNumbers && (
             <span
               className={cn(
                 'text-sm font-medium',
                 level === 'critical'
-                  ? 'text-red-400'
+                  ? 'text-semantic-error'
                   : level === 'high'
-                    ? 'text-orange-400'
+                    ? 'text-game-ember'
                     : level === 'medium'
-                      ? 'text-yellow-400'
-                      : 'text-green-400'
+                      ? 'text-semantic-warning'
+                      : 'text-semantic-success'
               )}
             >
               {current}/{max}

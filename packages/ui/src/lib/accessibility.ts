@@ -5,48 +5,48 @@
 
 import * as React from 'react';
 
-// Common ARIA attributes interface
+// Common ARIA attributes interface - compatible with React.AriaAttributes
 export interface AriaAttributes {
   'aria-label'?: string;
   'aria-labelledby'?: string;
   'aria-describedby'?: string;
-  'aria-expanded'?: boolean;
-  'aria-haspopup'?: boolean | 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog';
-  'aria-hidden'?: boolean;
-  'aria-live'?: 'off' | 'polite' | 'assertive';
-  'aria-atomic'?: boolean;
-  'aria-relevant'?: string;
-  'aria-busy'?: boolean;
-  'aria-current'?: boolean | 'page' | 'step' | 'location' | 'date' | 'time';
-  'aria-disabled'?: boolean;
-  'aria-invalid'?: boolean | 'false' | 'true' | 'grammar' | 'spelling';
-  'aria-pressed'?: boolean;
-  'aria-readonly'?: boolean;
-  'aria-required'?: boolean;
-  'aria-selected'?: boolean;
-  'aria-checked'?: boolean | 'mixed';
-  'aria-level'?: number;
-  'aria-setsize'?: number;
-  'aria-posinset'?: number;
+  'aria-expanded'?: React.AriaAttributes['aria-expanded'];
+  'aria-haspopup'?: React.AriaAttributes['aria-haspopup'];
+  'aria-hidden'?: React.AriaAttributes['aria-hidden'];
+  'aria-live'?: React.AriaAttributes['aria-live'];
+  'aria-atomic'?: React.AriaAttributes['aria-atomic'];
+  'aria-relevant'?: React.AriaAttributes['aria-relevant'];
+  'aria-busy'?: React.AriaAttributes['aria-busy'];
+  'aria-current'?: React.AriaAttributes['aria-current'];
+  'aria-disabled'?: React.AriaAttributes['aria-disabled'];
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+  'aria-pressed'?: React.AriaAttributes['aria-pressed'];
+  'aria-readonly'?: React.AriaAttributes['aria-readonly'];
+  'aria-required'?: React.AriaAttributes['aria-required'];
+  'aria-selected'?: React.AriaAttributes['aria-selected'];
+  'aria-checked'?: React.AriaAttributes['aria-checked'];
+  'aria-level'?: React.AriaAttributes['aria-level'];
+  'aria-setsize'?: React.AriaAttributes['aria-setsize'];
+  'aria-posinset'?: React.AriaAttributes['aria-posinset'];
   'aria-controls'?: string;
   'aria-owns'?: string;
-  'aria-multiselectable'?: boolean;
-  'aria-orientation'?: 'horizontal' | 'vertical';
-  'aria-valuenow'?: number;
-  'aria-valuemax'?: number;
-  'aria-valuemin'?: number;
+  'aria-multiselectable'?: React.AriaAttributes['aria-multiselectable'];
+  'aria-orientation'?: React.AriaAttributes['aria-orientation'];
+  'aria-valuenow'?: React.AriaAttributes['aria-valuenow'];
+  'aria-valuemax'?: React.AriaAttributes['aria-valuemax'];
+  'aria-valuemin'?: React.AriaAttributes['aria-valuemin'];
   role?: string;
 }
 
 // Generate unique IDs for ARIA relationships
 let idCounter = 0;
-export function generateId(prefix = 'hm'): string {
+export function generateAccessibilityId(prefix = 'hm'): string {
   return `${prefix}-${++idCounter}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 // Create stable ID hook
 export function useId(prefix?: string): string {
-  const [id] = React.useState(() => generateId(prefix));
+  const [id] = React.useState(() => generateAccessibilityId(prefix));
   return id;
 }
 
@@ -173,7 +173,7 @@ export function focusLastFocusableElement(container: HTMLElement | null) {
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
   );
 
-  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
   if (lastElement) {
     lastElement.focus();
   }
@@ -191,8 +191,10 @@ export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, isActiv
 
     if (focusableElements.length === 0) return;
 
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+    const firstElement = focusableElements[0] as HTMLElement | undefined;
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
+
+    if (!firstElement || !lastElement) return;
 
     const handleTabKey = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return;
@@ -257,7 +259,7 @@ export function buildButtonAria(props: {
   expanded?: boolean;
   disabled?: boolean;
   controls?: string;
-}): AriaAttributes {
+}) {
   return {
     'aria-label': props.label,
     'aria-describedby': props.describedBy,
@@ -275,7 +277,7 @@ export function buildFormFieldAria(props: {
   required?: boolean;
   invalid?: boolean;
   errorMessage?: string;
-}): AriaAttributes {
+}) {
   return {
     'aria-label': props.label,
     'aria-describedby': props.describedBy,
@@ -288,7 +290,7 @@ export function buildListAria(props: {
   label?: string;
   multiselectable?: boolean;
   orientation?: 'horizontal' | 'vertical';
-}): AriaAttributes {
+}) {
   return {
     'aria-label': props.label,
     'aria-multiselectable': props.multiselectable,
@@ -330,7 +332,7 @@ export function buildGameComponentAria(props: {
 
   const baseAria: AriaAttributes = {
     'aria-label': props.gameRole ? roleDescriptions[props.gameRole] : undefined,
-    'aria-describedby': props.description ? generateId('desc') : undefined,
+    'aria-describedby': props.description ? generateAccessibilityId('desc') : undefined,
   };
 
   // Add value-specific attributes
@@ -380,4 +382,208 @@ export function useHighContrast(): boolean {
   }, []);
 
   return prefersHighContrast;
+}
+
+// Shared hooks for common component behaviors
+
+/**
+ * Hook for managing keyboard navigation on interactive elements
+ */
+export function useKeyboardNavigation(onActivate?: () => void, activationKeys?: KeyboardKey[]) {
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (onActivate) {
+        handleKeyboardActivation(event, onActivate, activationKeys);
+      }
+    },
+    [onActivate, activationKeys]
+  );
+
+  return { onKeyDown: handleKeyDown };
+}
+
+/**
+ * Hook for managing focus states with accessibility announcements
+ */
+export function useFocusState(announceStateChanges = false) {
+  const [isFocused, setIsFocused] = React.useState(false);
+  const announcer = useAnnouncer();
+
+  const focusHandlers = React.useMemo(
+    () => ({
+      onFocus: (event: React.FocusEvent) => {
+        setIsFocused(true);
+        if (announceStateChanges) {
+          const element = event.currentTarget as HTMLElement;
+          const label =
+            element.getAttribute('aria-label') || element.textContent || 'Element focused';
+          announcer(`Focused: ${label}`, 'polite');
+        }
+      },
+      onBlur: () => {
+        setIsFocused(false);
+      },
+    }),
+    [announceStateChanges, announcer]
+  );
+
+  return { isFocused, ...focusHandlers };
+}
+
+/**
+ * Hook for managing loading states with accessibility announcements
+ */
+export function useLoadingState(
+  loading: boolean,
+  loadingText?: string,
+  announceStateChanges = true
+) {
+  const announcer = useAnnouncer();
+  const prevLoading = React.useRef(loading);
+
+  React.useEffect(() => {
+    if (announceStateChanges && prevLoading.current !== loading) {
+      if (loading) {
+        announcer(loadingText || 'Loading started', 'polite');
+      } else if (prevLoading.current) {
+        announcer('Loading completed', 'polite');
+      }
+    }
+    prevLoading.current = loading;
+  }, [loading, loadingText, announcer, announceStateChanges]);
+
+  const loadingContent = React.useMemo(() => {
+    if (!loading) return null;
+
+    return {
+      srOnlySpan: {
+        className: 'sr-only',
+        'aria-live': 'polite' as const,
+        children: loadingText || 'Loading...',
+      },
+      hiddenSpan: {
+        'aria-hidden': 'true' as const,
+        children: loadingText || 'Loading...',
+      },
+    };
+  }, [loading, loadingText]);
+
+  return {
+    loadingContent,
+    isLoading: loading,
+  };
+}
+
+/**
+ * Hook for managing form field validation states with accessibility
+ */
+export function useFormFieldState(
+  error?: string,
+  success?: string,
+  warning?: string,
+  state?: 'default' | 'error' | 'success' | 'warning'
+) {
+  const resolvedState = React.useMemo(() => {
+    return state !== 'default' && state
+      ? state
+      : error
+        ? 'error'
+        : success
+          ? 'success'
+          : warning
+            ? 'warning'
+            : 'default';
+  }, [state, error, success, warning]);
+
+  const message = error || success || warning;
+
+  const getMessageRole = React.useCallback(() => {
+    return resolvedState === 'error' ? 'alert' : 'status';
+  }, [resolvedState]);
+
+  const getAriaLive = React.useCallback(() => {
+    return resolvedState === 'error' ? 'assertive' : 'polite';
+  }, [resolvedState]);
+
+  return {
+    resolvedState,
+    message,
+    messageRole: getMessageRole(),
+    ariaLive: getAriaLive(),
+    hasError: resolvedState === 'error',
+    hasSuccess: resolvedState === 'success',
+    hasWarning: resolvedState === 'warning',
+  };
+}
+
+/**
+ * Hook for managing component IDs and ARIA relationships
+ */
+export function useComponentIds(prefix?: string) {
+  const baseId = useId(prefix);
+
+  const ids = React.useMemo(
+    () => ({
+      component: baseId,
+      label: `${baseId}-label`,
+      description: `${baseId}-desc`,
+      error: `${baseId}-error`,
+      help: `${baseId}-help`,
+    }),
+    [baseId]
+  );
+
+  const buildDescribedBy = React.useCallback(
+    (includeDescription = false, includeError = false, includeHelp = false) => {
+      const describedByIds = [];
+      if (includeDescription) describedByIds.push(ids.description);
+      if (includeError) describedByIds.push(ids.error);
+      if (includeHelp) describedByIds.push(ids.help);
+      return describedByIds.length > 0 ? describedByIds.join(' ') : undefined;
+    },
+    [ids]
+  );
+
+  return { ids, buildDescribedBy };
+}
+
+/**
+ * Hook for managing interactive states with reduced motion support
+ */
+export function useInteractiveMotion(disabled = false, loading = false) {
+  const prefersReducedMotion = useReducedMotion();
+  const isInteractive = !disabled && !loading;
+
+  const motionProps = React.useMemo(() => {
+    if (!isInteractive || prefersReducedMotion) {
+      return {};
+    }
+
+    return {
+      whileHover: { scale: 1.02 },
+      whileTap: { scale: 0.98 },
+    };
+  }, [isInteractive, prefersReducedMotion]);
+
+  const getInitialAnimation = React.useCallback(
+    (defaultInitial: any = { opacity: 0, y: 10 }) => {
+      return prefersReducedMotion ? { opacity: 1 } : defaultInitial;
+    },
+    [prefersReducedMotion]
+  );
+
+  const getTransitionDuration = React.useCallback(
+    (defaultDuration = 0.2) => {
+      return prefersReducedMotion ? 0 : defaultDuration;
+    },
+    [prefersReducedMotion]
+  );
+
+  return {
+    isInteractive,
+    prefersReducedMotion,
+    motionProps,
+    getInitialAnimation,
+    getTransitionDuration,
+  };
 }

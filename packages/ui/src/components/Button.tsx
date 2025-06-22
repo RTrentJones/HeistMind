@@ -4,14 +4,20 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { MotionButton } from '../lib/motion-safe';
-import { useId, useAnnouncer, useReducedMotion, type AriaAttributes } from '../lib/accessibility';
+import {
+  useComponentIds,
+  useLoadingState,
+  useInteractiveMotion,
+  type AriaAttributes,
+} from '../lib/accessibility';
+import { componentDefaults } from '../lib/design-tokens';
 
 const buttonVariants = cva(
   [
     // Base styles
     'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium',
     'transition-all duration-200 ease-in-out',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background-primary',
     'disabled:pointer-events-none disabled:opacity-50',
     'relative overflow-hidden group',
     // Enhanced interaction states
@@ -21,77 +27,77 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: [
-          'bg-gradient-to-r from-purple-600 via-purple-700 to-purple-800',
-          'text-white shadow-lg shadow-purple-500/25',
-          'hover:shadow-purple-500/40 hover:shadow-xl',
-          'hover:from-purple-500 hover:via-purple-600 hover:to-purple-700',
-          'border border-purple-500/20',
+          'bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-primary',
+          'text-white shadow-lg shadow-brand-primary/25',
+          'hover:shadow-brand-primary/40 hover:shadow-xl',
+          'hover:from-brand-secondary hover:via-brand-accent hover:to-brand-secondary',
+          'border border-brand-primary/20',
           'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent',
           'before:translate-x-[-100%] before:transition-transform before:duration-700',
           'hover:before:translate-x-[100%]',
         ],
         destructive: [
-          'bg-gradient-to-r from-red-600 via-red-700 to-red-800',
-          'text-white shadow-lg shadow-red-500/25',
-          'hover:shadow-red-500/40 hover:shadow-xl',
-          'hover:from-red-500 hover:via-red-600 hover:to-red-700',
-          'border border-red-500/20',
+          'bg-gradient-to-r from-semantic-error via-semantic-error/80 to-semantic-error',
+          'text-white shadow-lg shadow-semantic-error/25',
+          'hover:shadow-semantic-error/40 hover:shadow-xl',
+          'hover:from-semantic-error/80 hover:via-semantic-error/60 hover:to-semantic-error/80',
+          'border border-semantic-error/20',
         ],
         outline: [
-          'border-2 border-purple-500/50 bg-transparent text-purple-300',
-          'hover:bg-purple-500/10 hover:border-purple-400',
-          'hover:text-purple-200 hover:shadow-lg hover:shadow-purple-500/20',
+          'border-2 border-brand-primary/50 bg-transparent text-brand-primary',
+          'hover:bg-brand-primary/10 hover:border-brand-primary',
+          'hover:text-brand-accent hover:shadow-lg hover:shadow-brand-primary/20',
           'backdrop-blur-sm',
         ],
         secondary: [
-          'bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900',
-          'text-slate-100 border border-slate-600/50',
-          'hover:from-slate-600 hover:via-slate-700 hover:to-slate-800',
-          'hover:shadow-lg hover:shadow-slate-500/20',
+          'bg-gradient-to-r from-background-tertiary via-background-secondary to-background-tertiary',
+          'text-foreground-primary border border-border-primary',
+          'hover:from-background-secondary hover:via-background-elevated hover:to-background-secondary',
+          'hover:shadow-lg hover:shadow-black/20',
         ],
         ghost: [
-          'bg-transparent text-purple-300 hover:bg-purple-500/10',
-          'hover:text-purple-200 hover:shadow-md',
+          'bg-transparent text-brand-primary hover:bg-brand-primary/10',
+          'hover:text-brand-accent hover:shadow-md',
         ],
-        link: ['text-purple-400 underline-offset-4 hover:underline', 'hover:text-purple-300'],
+        link: ['text-brand-primary underline-offset-4 hover:underline', 'hover:text-brand-accent'],
         // Game-specific variants
         ember: [
-          'bg-gradient-to-r from-orange-600 via-orange-700 to-red-600',
-          'text-white shadow-lg shadow-orange-500/25',
-          'hover:shadow-orange-500/40 hover:shadow-xl',
-          'hover:from-orange-500 hover:via-orange-600 hover:to-red-500',
-          'border border-orange-500/20',
+          'bg-gradient-to-r from-game-ember via-game-ember/80 to-game-crimson',
+          'text-white shadow-lg shadow-game-ember/25',
+          'hover:shadow-game-ember/40 hover:shadow-xl',
+          'hover:from-game-ember/80 hover:via-game-ember/60 hover:to-game-crimson/80',
+          'border border-game-ember/20',
         ],
         steel: [
-          'bg-gradient-to-r from-blue-600 via-blue-700 to-slate-700',
-          'text-white shadow-lg shadow-blue-500/25',
-          'hover:shadow-blue-500/40 hover:shadow-xl',
-          'hover:from-blue-500 hover:via-blue-600 hover:to-slate-600',
-          'border border-blue-500/20',
+          'bg-gradient-to-r from-game-steel via-game-steel/80 to-game-shadow',
+          'text-white shadow-lg shadow-game-steel/25',
+          'hover:shadow-game-steel/40 hover:shadow-xl',
+          'hover:from-game-steel/80 hover:via-game-steel/60 hover:to-game-shadow/80',
+          'border border-game-steel/20',
         ],
         shadow: [
-          'bg-gradient-to-r from-slate-900 via-gray-900 to-black',
-          'text-gray-100 shadow-lg shadow-black/50',
-          'hover:shadow-black/60 hover:shadow-xl',
-          'border border-gray-700/30',
+          'bg-gradient-to-r from-game-shadow via-background-tertiary to-background-secondary',
+          'text-foreground-primary shadow-lg shadow-game-shadow/50',
+          'hover:shadow-game-shadow/60 hover:shadow-xl',
+          'border border-border-muted',
         ],
         crimson: [
-          'bg-gradient-to-r from-rose-600 via-pink-700 to-red-700',
-          'text-white shadow-lg shadow-rose-500/25',
-          'hover:shadow-rose-500/40 hover:shadow-xl',
-          'hover:from-rose-500 hover:via-pink-600 hover:to-red-600',
-          'border border-rose-500/20',
+          'bg-gradient-to-r from-game-crimson via-game-crimson/80 to-semantic-error',
+          'text-white shadow-lg shadow-game-crimson/25',
+          'hover:shadow-game-crimson/40 hover:shadow-xl',
+          'hover:from-game-crimson/80 hover:via-game-crimson/60 hover:to-semantic-error/80',
+          'border border-game-crimson/20',
         ],
         glass: [
-          'bg-white/5 backdrop-blur-md border border-white/10',
-          'text-white hover:bg-white/10',
+          'bg-background-glass backdrop-blur-md border border-border-secondary',
+          'text-foreground-primary hover:bg-background-glass/80',
           'shadow-glass hover:shadow-glass-lg',
-          'hover:border-white/20',
+          'hover:border-border-primary',
         ],
         neon: [
-          'bg-transparent border-2 border-purple-400',
-          'text-purple-400 hover:text-white',
-          'hover:bg-purple-400 hover:shadow-glow-purple',
+          'bg-transparent border-2 border-brand-accent',
+          'text-brand-accent hover:text-white',
+          'hover:bg-brand-accent hover:shadow-glow-purple',
           'hover:animate-pulse-glow transition-all duration-300',
         ],
       },
@@ -110,8 +116,8 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'default',
-      size: 'default',
+      variant: componentDefaults.button.variant,
+      size: componentDefaults.button.size,
       loading: false,
     },
   }
@@ -127,8 +133,7 @@ const LoadingSpinner = () => (
 
 export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'size'>,
-    VariantProps<typeof buttonVariants>,
-    AriaAttributes {
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
   loadingText?: string;
@@ -162,30 +167,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const isDisabled = disabled || loading;
-    const announcer = useAnnouncer();
-    const prefersReducedMotion = useReducedMotion();
-    const descriptionId = useId('btn-desc');
-
-    // Announce loading state changes
-    const prevLoading = React.useRef(loading);
-    React.useEffect(() => {
-      if (announceStateChanges && prevLoading.current !== loading) {
-        if (loading) {
-          announcer.announce(loadingText || 'Loading started', 'polite');
-        } else if (prevLoading.current) {
-          announcer.announce('Loading completed', 'polite');
-        }
-      }
-      prevLoading.current = loading;
-    }, [loading, loadingText, announcer, announceStateChanges]);
+    const { ids } = useComponentIds('btn');
+    const { loadingContent } = useLoadingState(loading, loadingText, announceStateChanges);
+    const { prefersReducedMotion, motionProps, getInitialAnimation, getTransitionDuration } =
+      useInteractiveMotion(isDisabled, loading);
 
     const buttonContent = loading ? (
       <>
         <LoadingSpinner />
-        <span className='sr-only' aria-live='polite'>
-          {loadingText || 'Loading...'}
-        </span>
-        <span aria-hidden='true'>{loadingText || 'Loading...'}</span>
+        {loadingContent && (
+          <>
+            <span {...loadingContent.srOnlySpan} />
+            <span {...loadingContent.hiddenSpan} />
+          </>
+        )}
       </>
     ) : (
       children
@@ -204,9 +199,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     // Build comprehensive ARIA attributes
-    const ariaAttributes: AriaAttributes = {
+    const ariaAttributes = {
       'aria-label': ariaLabel,
-      'aria-describedby': accessibleDescription ? descriptionId : ariaDescribedBy,
+      'aria-describedby': accessibleDescription ? ids.description : ariaDescribedBy,
       'aria-expanded': ariaExpanded,
       'aria-haspopup': ariaHaspopup,
       'aria-controls': ariaControls,
@@ -221,11 +216,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ref={ref}
           className={cn(buttonVariants({ variant, size, loading, className }))}
           disabled={isDisabled}
-          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+          initial={getInitialAnimation()}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
-          whileHover={isDisabled || prefersReducedMotion ? undefined : { scale: 1.02 }}
-          whileTap={isDisabled || prefersReducedMotion ? undefined : { scale: 0.98 }}
+          transition={{ duration: getTransitionDuration(), ease: 'easeOut' }}
+          {...motionProps}
           {...ariaAttributes}
           {...rest}
         >
@@ -233,7 +227,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         </MotionButton>
 
         {accessibleDescription && (
-          <div id={descriptionId} className='sr-only'>
+          <div id={ids.description} className='sr-only'>
             {accessibleDescription}
           </div>
         )}

@@ -2,6 +2,8 @@
 export * from './lib/design-system';
 export * from './lib/utils';
 export * from './lib/accessibility';
+export * from './lib/theme';
+export * from './lib/design-tokens';
 
 // Base components
 export * from './components/Button';
@@ -9,6 +11,7 @@ export * from './components/Card';
 export * from './components/Input';
 export * from './components/Badge';
 export * from './components/Tooltip';
+export * from './components/ThemeToggle';
 
 // Error handling
 export * from './components/ErrorBoundary';

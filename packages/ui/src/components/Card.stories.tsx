@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './Card';
 import { Button } from './Button';
-import { User, Shield, Sword, Crown, Target } from 'lucide-react';
+import { Badge } from './Badge';
+import { User, Shield, Sword, Crown, Target, Star } from 'lucide-react';
 
 const meta: Meta<typeof Card> = {
   title: 'Components/Card',
@@ -67,7 +68,7 @@ export const Default: Story = {
 
 export const Variants: Story = {
   render: () => (
-    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 bg-slate-900 min-h-screen'>
+    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 bg-background-primary min-h-screen'>
       <Card variant='default'>
         <CardHeader>
           <CardTitle>Default</CardTitle>
@@ -78,7 +79,7 @@ export const Variants: Story = {
         </CardContent>
       </Card>
 
-      <Card variant='glass'>
+      <Card variant='glass' interactive>
         <CardHeader>
           <CardTitle>Glass</CardTitle>
           <CardDescription>Glass morphism effect</CardDescription>
@@ -88,7 +89,7 @@ export const Variants: Story = {
         </CardContent>
       </Card>
 
-      <Card variant='elevated'>
+      <Card variant='elevated' interactive>
         <CardHeader>
           <CardTitle>Elevated</CardTitle>
           <CardDescription>Enhanced shadow depth</CardDescription>
@@ -98,7 +99,7 @@ export const Variants: Story = {
         </CardContent>
       </Card>
 
-      <Card variant='outline'>
+      <Card variant='outline' interactive>
         <CardHeader>
           <CardTitle>Outline</CardTitle>
           <CardDescription>Outlined with glow effect</CardDescription>
@@ -108,7 +109,7 @@ export const Variants: Story = {
         </CardContent>
       </Card>
 
-      <Card variant='gradient'>
+      <Card variant='gradient' interactive>
         <CardHeader>
           <CardTitle>Gradient</CardTitle>
           <CardDescription>Gradient background</CardDescription>
@@ -118,7 +119,7 @@ export const Variants: Story = {
         </CardContent>
       </Card>
 
-      <Card variant='neumorphic'>
+      <Card variant='neumorphic' interactive>
         <CardHeader>
           <CardTitle>Neumorphic</CardTitle>
           <CardDescription>Soft embossed effect</CardDescription>
@@ -133,7 +134,7 @@ export const Variants: Story = {
 
 export const CharacterCard: Story = {
   render: () => (
-    <div className='max-w-md bg-slate-900 p-6'>
+    <div className='max-w-md bg-background-primary p-6'>
       <Card variant='character' interactive>
         <CardHeader>
           <div className='flex items-center gap-3'>
@@ -183,7 +184,7 @@ export const CharacterCard: Story = {
 
 export const GameThemed: Story = {
   render: () => (
-    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-900'>
+    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-background-primary'>
       <Card variant='character'>
         <CardHeader>
           <CardTitle variant='gradient'>Heist Planning</CardTitle>
@@ -270,7 +271,7 @@ export const GameThemed: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <div className='space-y-6 p-6 bg-slate-900'>
+    <div className='space-y-6 p-6 bg-background-primary'>
       <Card size='sm'>
         <CardHeader>
           <CardTitle>Small Card</CardTitle>
@@ -333,5 +334,114 @@ export const Interactive: Story = {
         </CardContent>
       </>
     ),
+  },
+};
+
+export const ThemeShowcase: Story = {
+  render: () => (
+    <div className='space-y-8 p-6'>
+      <div className='space-y-3'>
+        <h3 className='text-lg font-semibold text-foreground-primary'>Cards in Current Theme</h3>
+        <p className='text-sm text-foreground-secondary'>
+          Use the theme toggle in the Storybook toolbar to see theme adaptation
+        </p>
+      </div>
+
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+        <Card variant='default'>
+          <CardHeader>
+            <CardTitle>Default Card</CardTitle>
+            <CardDescription>Adapts to current theme</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className='flex gap-2 mb-3'>
+              <Badge variant='default'>Status</Badge>
+              <Badge variant='ember' icon={<Star className='w-3 h-3' />}>
+                Featured
+              </Badge>
+            </div>
+            <p className='text-sm text-foreground-secondary'>
+              Background and text colors automatically adjust.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button variant='default' size='sm'>
+              Action
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card variant='elevated'>
+          <CardHeader>
+            <CardTitle>Elevated Card</CardTitle>
+            <CardDescription>Enhanced depth and shadow</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-2'>
+              <div className='text-xs text-foreground-muted'>Theme-aware properties:</div>
+              <div className='text-xs font-mono bg-background-secondary p-2 rounded'>
+                bg-background-primary
+                <br />
+                text-foreground-primary
+                <br />
+                border-border-primary
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant='glass'>
+          <CardHeader>
+            <CardTitle>Glass Card</CardTitle>
+            <CardDescription>Translucent glass effect</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className='text-sm'>Glass morphism design maintains its effect across themes.</p>
+          </CardContent>
+        </Card>
+
+        <Card variant='character' interactive>
+          <CardHeader>
+            <CardTitle variant='gradient'>Character Card</CardTitle>
+            <CardDescription>Game-themed with interactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className='flex items-center gap-2'>
+              <Sword className='w-4 h-4 text-game-ember' />
+              <span className='text-sm'>Combat Ready</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant='neumorphic'>
+          <CardHeader>
+            <CardTitle>Neumorphic</CardTitle>
+            <CardDescription>Soft, embossed appearance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className='text-sm'>Subtle depth with theme-aware shadows.</p>
+          </CardContent>
+        </Card>
+
+        <Card variant='outline'>
+          <CardHeader>
+            <CardTitle>Outline Card</CardTitle>
+            <CardDescription>Border-focused design</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className='text-sm'>Clean outline style that adapts to theme colors.</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  ),
+  parameters: {
+    layout: 'fullscreen',
+    docs: {
+      description: {
+        story:
+          'Comprehensive showcase of how different card variants adapt to theme changes. Notice how background colors, text contrast, and borders all update automatically.',
+      },
+    },
   },
 };

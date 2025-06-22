@@ -57,7 +57,7 @@ export const Default: Story = {
 
 export const Variants: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button variant='default'>Default</Button>
       <Button variant='destructive'>Destructive</Button>
       <Button variant='outline'>Outline</Button>
@@ -66,11 +66,19 @@ export const Variants: Story = {
       <Button variant='link'>Link</Button>
     </div>
   ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Standard button variants that adapt to the current theme. Switch themes using the toolbar to see how they change.',
+      },
+    },
+  },
 };
 
 export const GameThemed: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button variant='ember'>
         <Sword className='w-4 h-4' />
         Ember
@@ -91,11 +99,19 @@ export const GameThemed: Story = {
       <Button variant='neon'>Neon</Button>
     </div>
   ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Game-themed button variants designed for HeistMind. These maintain their distinctive character across different themes.',
+      },
+    },
+  },
 };
 
 export const Sizes: Story = {
   render: () => (
-    <div className='flex items-center gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex items-center gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button size='sm'>Small</Button>
       <Button size='default'>Default</Button>
       <Button size='lg'>Large</Button>
@@ -106,7 +122,7 @@ export const Sizes: Story = {
 
 export const WithIcons: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button>
         <Sword className='w-4 h-4' />
         Start Heist
@@ -126,7 +142,7 @@ export const WithIcons: Story = {
 
 export const IconButtons: Story = {
   render: () => (
-    <div className='flex gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button size='icon-sm' variant='ghost'>
         <Eye className='w-4 h-4' />
       </Button>
@@ -142,7 +158,7 @@ export const IconButtons: Story = {
 
 export const LoadingStates: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button loading>Loading...</Button>
       <Button loading loadingText='Rolling dice...' variant='ember'>
         Roll Dice
@@ -156,7 +172,7 @@ export const LoadingStates: Story = {
 
 export const DisabledStates: Story = {
   render: () => (
-    <div className='flex flex-wrap gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex flex-wrap gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Button disabled>Disabled</Button>
       <Button disabled variant='ember'>
         Disabled Ember
@@ -178,6 +194,44 @@ export const Interactive: Story = {
     docs: {
       description: {
         story: 'This button demonstrates the interactive hover and click animations.',
+      },
+    },
+  },
+};
+
+export const ThemeAwareness: Story = {
+  render: () => (
+    <div className='space-y-6 p-6'>
+      <div className='space-y-3'>
+        <h3 className='text-lg font-semibold text-foreground-primary'>Buttons in Current Theme</h3>
+        <p className='text-sm text-foreground-secondary'>
+          Use the theme toggle in the Storybook toolbar to see how buttons adapt
+        </p>
+      </div>
+
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+        <Button variant='default'>Default</Button>
+        <Button variant='outline'>Outline</Button>
+        <Button variant='ghost'>Ghost</Button>
+        <Button variant='secondary'>Secondary</Button>
+        <Button variant='ember'>Ember</Button>
+        <Button variant='steel'>Steel</Button>
+        <Button variant='glass'>Glass</Button>
+        <Button variant='neon'>Neon</Button>
+      </div>
+
+      <div className='p-4 bg-background-elevated rounded-lg border border-border-secondary'>
+        <p className='text-sm text-foreground-muted'>
+          Background adapts: bg-background-elevated with border-border-secondary
+        </p>
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Demonstrates how buttons and backgrounds adapt to theme changes. The layout uses theme-aware CSS custom properties that automatically update when the theme changes.',
       },
     },
   },

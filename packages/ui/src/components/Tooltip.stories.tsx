@@ -64,7 +64,7 @@ export const Default: Story = {
 export const Variants: Story = {
   render: () => (
     <TooltipProvider>
-      <div className='flex flex-wrap gap-4 p-6 bg-slate-900 rounded-lg'>
+      <div className='flex flex-wrap gap-4 p-6 bg-background-primary rounded-lg'>
         <Tooltip variant='default' content='Default tooltip'>
           <Button size='sm'>Default</Button>
         </Tooltip>
@@ -112,7 +112,7 @@ export const Variants: Story = {
 export const Sizes: Story = {
   render: () => (
     <TooltipProvider>
-      <div className='flex gap-4 p-6 bg-slate-900 rounded-lg'>
+      <div className='flex gap-4 p-6 bg-background-primary rounded-lg'>
         <Tooltip size='sm' content='Small tooltip with limited text' variant='glass'>
           <Button size='sm'>Small</Button>
         </Tooltip>
@@ -140,7 +140,7 @@ export const Sizes: Story = {
 export const Positioning: Story = {
   render: () => (
     <TooltipProvider>
-      <div className='grid grid-cols-3 gap-8 place-items-center p-6 bg-slate-900 rounded-lg'>
+      <div className='grid grid-cols-3 gap-8 place-items-center p-6 bg-background-primary rounded-lg'>
         <div></div>
         <Tooltip side='top' content='Tooltip above' variant='ember'>
           <Button>Top</Button>
@@ -168,7 +168,7 @@ export const Positioning: Story = {
 export const GameSpecific: Story = {
   render: () => (
     <TooltipProvider>
-      <div className='space-y-6 p-6 bg-slate-900 rounded-lg'>
+      <div className='space-y-6 p-6 bg-background-primary rounded-lg'>
         <div className='space-y-4'>
           <h3 className='text-lg font-semibold text-purple-400'>Character Tooltips</h3>
 
@@ -256,7 +256,7 @@ export const GameSpecific: Story = {
 export const WithIcons: Story = {
   render: () => (
     <TooltipProvider>
-      <div className='flex gap-4 p-6 bg-slate-900 rounded-lg'>
+      <div className='flex gap-4 p-6 bg-background-primary rounded-lg'>
         <Tooltip content='Get help with this feature' variant='glass'>
           <Button variant='ghost' size='icon'>
             <HelpCircle className='w-4 h-4' />
@@ -281,7 +281,7 @@ export const WithIcons: Story = {
 
 export const DelayVariations: Story = {
   render: () => (
-    <div className='flex gap-4 p-6 bg-slate-900 rounded-lg'>
+    <div className='flex gap-4 p-6 bg-background-primary rounded-lg'>
       <Tooltip content='Instant tooltip (0ms delay)' delayDuration={0} variant='glass'>
         <Button size='sm'>Instant</Button>
       </Tooltip>
@@ -303,7 +303,7 @@ export const DelayVariations: Story = {
 
 export const ComplexContent: Story = {
   render: () => (
-    <div className='p-6 bg-slate-900 rounded-lg'>
+    <div className='p-6 bg-background-primary rounded-lg'>
       <Tooltip
         variant='glass'
         size='lg'

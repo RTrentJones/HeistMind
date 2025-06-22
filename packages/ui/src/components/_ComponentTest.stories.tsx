@@ -23,7 +23,7 @@ const meta: Meta = {
   decorators: [
     Story => (
       <TooltipProvider>
-        <div className='min-h-screen bg-zinc-900 p-8'>
+        <div className='min-h-screen bg-background-primary p-8 transition-colors'>
           <Story />
         </div>
       </TooltipProvider>
@@ -49,8 +49,12 @@ export const FullSystemTest: Story = {
     return (
       <div className='max-w-6xl mx-auto space-y-8'>
         <div className='text-center space-y-4'>
-          <h1 className='text-4xl font-bold text-white font-display'>HeistMind UI System</h1>
-          <p className='text-zinc-400 text-lg'>Component Integration & Consistency Test</p>
+          <h1 className='text-4xl font-bold text-foreground-primary font-display'>
+            HeistMind UI System
+          </h1>
+          <p className='text-foreground-secondary text-lg'>
+            Component Integration & Consistency Test
+          </p>
         </div>
 
         {/* Interactive Components Grid */}
@@ -192,8 +196,7 @@ export const FullSystemTest: Story = {
             <CardContent className='space-y-4'>
               <div className='flex gap-2 flex-wrap'>
                 <Tooltip content='This badge shows character level' variant='glass'>
-                  <Badge variant='master' interactive>
-                    <Star className='w-3 h-3' />
+                  <Badge variant='master' interactive icon={<Star className='w-3 h-3' />}>
                     Level 10
                   </Badge>
                 </Tooltip>
@@ -233,12 +236,12 @@ export const FullSystemTest: Story = {
               <div className='grid grid-cols-2 gap-6'>
                 <div className='text-center space-y-2'>
                   <ProgressRing current={stress} max={9} variant='stress' />
-                  <div className='text-sm text-zinc-400'>Stress</div>
+                  <div className='text-sm text-foreground-muted'>Stress</div>
                 </div>
 
                 <div className='text-center space-y-2'>
                   <ProgressRing current={6} max={8} variant='ember' />
-                  <div className='text-sm text-zinc-400'>Heat</div>
+                  <div className='text-sm text-foreground-muted'>Heat</div>
                 </div>
               </div>
 
@@ -255,8 +258,10 @@ export const FullSystemTest: Story = {
         <Card variant='success' className='p-6'>
           <CardContent>
             <div className='text-center space-y-2'>
-              <h3 className='text-xl font-semibold text-green-400'>✅ All Components Functional</h3>
-              <p className='text-green-300'>
+              <h3 className='text-xl font-semibold text-semantic-success'>
+                ✅ All Components Functional
+              </h3>
+              <p className='text-semantic-success/80'>
                 All interactive elements are working correctly with consistent theming and smooth
                 animations.
               </p>

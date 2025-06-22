@@ -24,13 +24,18 @@ const TooltipContent = React.forwardRef<
     const prefersReducedMotion = useReducedMotion();
 
     const variants = {
-      default: 'bg-purple-600 text-white border border-purple-500/20',
-      dark: 'bg-slate-900 text-slate-100 border border-slate-700',
-      light: 'bg-white text-slate-900 border border-slate-200 shadow-lg',
-      glass: 'bg-white/10 text-white border border-white/20 backdrop-blur-md',
-      ember: 'bg-gradient-to-r from-orange-600 to-red-600 text-white border border-orange-500/30',
-      steel: 'bg-gradient-to-r from-blue-600 to-slate-600 text-white border border-blue-500/30',
-      crimson: 'bg-gradient-to-r from-rose-600 to-pink-600 text-white border border-rose-500/30',
+      default: 'bg-brand-primary text-white border border-brand-primary/20',
+      dark: 'bg-background-tertiary text-foreground-primary border border-border-primary',
+      light:
+        'bg-background-elevated text-foreground-primary border border-border-primary shadow-lg',
+      glass:
+        'bg-background-glass text-foreground-primary border border-border-secondary backdrop-blur-md',
+      ember:
+        'bg-gradient-to-r from-game-ember to-game-crimson text-white border border-game-ember/30',
+      steel:
+        'bg-gradient-to-r from-game-steel to-game-shadow text-white border border-game-steel/30',
+      crimson:
+        'bg-gradient-to-r from-game-crimson to-semantic-error text-white border border-game-crimson/30',
     };
 
     const sizes = {
@@ -71,9 +76,9 @@ const TooltipContent = React.forwardRef<
               <TooltipPrimitive.Arrow
                 className={cn(
                   'fill-current',
-                  variant === 'glass' && 'fill-white/10',
-                  variant === 'dark' && 'fill-slate-900',
-                  variant === 'light' && 'fill-white'
+                  variant === 'glass' && 'fill-background-glass',
+                  variant === 'dark' && 'fill-background-tertiary',
+                  variant === 'light' && 'fill-background-elevated'
                 )}
               />
             </motion.div>
@@ -189,7 +194,7 @@ const SkillTooltip: React.FC<{
         <div className='space-y-2'>
           <div className='flex items-center justify-between'>
             <span className='font-semibold'>{name}</span>
-            <span className='text-xs bg-white/20 px-2 py-0.5 rounded'>
+            <span className='text-xs bg-background-glass px-2 py-0.5 rounded'>
               {skillLevel} ({level})
             </span>
           </div>
@@ -236,7 +241,7 @@ const ActionTooltip: React.FC<{
           <div className='flex items-center justify-between'>
             <span className='font-semibold'>{name}</span>
             {risk && (
-              <span className='text-xs bg-white/20 px-2 py-0.5 rounded capitalize'>
+              <span className='text-xs bg-background-glass px-2 py-0.5 rounded capitalize'>
                 {risk} Risk
               </span>
             )}
