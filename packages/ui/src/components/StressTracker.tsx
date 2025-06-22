@@ -44,7 +44,7 @@ const StressTracker: React.FC<StressTrackerProps> = ({
     const isHovering = hoveredIndex !== null && index <= hoveredIndex;
 
     if (isHovered || isHovering) {
-      return 'bg-semantic-error border-semantic-error/60 shadow-glow-crimson';
+      return 'bg-semantic-error border-semantic-error/60 shadow-lg shadow-semantic-error/25';
     }
 
     if (isFilled) {
@@ -177,24 +177,24 @@ const ActionDots: React.FC<ActionDotsProps> = ({
 
   const variants = {
     default: {
-      filled: 'bg-purple-500 border-purple-400 shadow-glow-purple-sm',
-      empty: 'bg-slate-800 border-slate-600 hover:border-slate-500',
+      filled: 'bg-brand-primary border-brand-primary/60 shadow-lg shadow-brand-primary/20',
+      empty: 'bg-background-tertiary border-border-primary hover:border-border-secondary',
     },
     ember: {
-      filled: 'bg-orange-500 border-orange-400 shadow-glow-ember',
-      empty: 'bg-slate-800 border-slate-600 hover:border-orange-600',
+      filled: 'bg-game-ember border-game-ember/60 shadow-lg shadow-game-ember/20',
+      empty: 'bg-background-tertiary border-border-primary hover:border-game-ember/40',
     },
     steel: {
-      filled: 'bg-blue-500 border-blue-400 shadow-glow-steel',
-      empty: 'bg-slate-800 border-slate-600 hover:border-blue-600',
+      filled: 'bg-game-steel border-game-steel/60 shadow-lg shadow-game-steel/20',
+      empty: 'bg-background-tertiary border-border-primary hover:border-game-steel/40',
     },
     shadow: {
-      filled: 'bg-gray-600 border-gray-500',
-      empty: 'bg-slate-800 border-slate-600 hover:border-gray-600',
+      filled: 'bg-game-shadow border-game-shadow/60 shadow-lg shadow-game-shadow/20',
+      empty: 'bg-background-tertiary border-border-primary hover:border-game-shadow/40',
     },
     crimson: {
-      filled: 'bg-red-500 border-red-400 shadow-glow-crimson',
-      empty: 'bg-slate-800 border-slate-600 hover:border-red-600',
+      filled: 'bg-game-crimson border-game-crimson/60 shadow-lg shadow-game-crimson/20',
+      empty: 'bg-background-tertiary border-border-primary hover:border-game-crimson/40',
     },
   };
 
@@ -220,8 +220,8 @@ const ActionDots: React.FC<ActionDotsProps> = ({
     <div className={cn('space-y-2', className)}>
       {label && (
         <div className='flex items-center justify-between'>
-          <span className='text-sm font-medium text-foreground'>{label}</span>
-          <span className='text-sm font-medium text-muted-foreground'>
+          <span className='text-sm font-medium text-foreground-primary'>{label}</span>
+          <span className='text-sm font-medium text-foreground-muted'>
             {current}/{max}
           </span>
         </div>
@@ -281,25 +281,25 @@ const ProgressRing: React.FC<ProgressRingProps> = ({
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   const variants = {
-    default: 'stroke-purple-500',
+    default: 'stroke-brand-primary',
     stress:
       current / max >= 0.8
-        ? 'stroke-red-500'
+        ? 'stroke-semantic-error'
         : current / max >= 0.6
-          ? 'stroke-orange-500'
+          ? 'stroke-game-ember'
           : current / max >= 0.3
-            ? 'stroke-yellow-500'
-            : 'stroke-green-500',
-    ember: 'stroke-orange-500',
-    steel: 'stroke-blue-500',
-    crimson: 'stroke-red-500',
+            ? 'stroke-semantic-warning'
+            : 'stroke-semantic-success',
+    ember: 'stroke-game-ember',
+    steel: 'stroke-game-steel',
+    crimson: 'stroke-game-crimson',
   };
 
   return (
     <div className={cn('relative', className)} style={{ width: size, height: size }}>
       <svg height={size} width={size} className='transform -rotate-90'>
         <circle
-          stroke='rgb(71 85 105)'
+          stroke='var(--color-border-muted)'
           fill='transparent'
           strokeWidth={strokeWidth}
           r={normalizedRadius}

@@ -183,8 +183,8 @@ const CardTitle = React.forwardRef<
     {
       'text-gradient': variant === 'gradient',
       'text-gradient-ember': variant === 'ember',
-      'text-blue-400': variant === 'steel',
-      'text-red-400': variant === 'crimson',
+      'text-game-steel': variant === 'steel',
+      'text-semantic-error': variant === 'crimson',
     },
     className
   );
@@ -223,4 +223,4 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardFooter.displayName = 'CardFooter';
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, cardVariants };

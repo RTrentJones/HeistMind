@@ -54,7 +54,7 @@ export const Default: Story = {
           <CardDescription>View and manage your character's details and abilities.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-muted-foreground'>
+          <p className='text-sm text-foreground-muted'>
             This is the card content area where you can place any components or information.
           </p>
         </CardContent>
@@ -138,8 +138,8 @@ export const CharacterCard: Story = {
       <Card variant='character' interactive>
         <CardHeader>
           <div className='flex items-center gap-3'>
-            <div className='w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center'>
-              <User className='w-6 h-6 text-purple-400' />
+            <div className='w-12 h-12 bg-brand-primary/20 rounded-full flex items-center justify-center'>
+              <User className='w-6 h-6 text-brand-accent' />
             </div>
             <div>
               <CardTitle variant='gradient'>Shadows McKenzie</CardTitle>
@@ -150,20 +150,20 @@ export const CharacterCard: Story = {
         <CardContent>
           <div className='grid grid-cols-3 gap-4 mb-4'>
             <div className='text-center'>
-              <div className='text-2xl font-bold text-purple-400'>3</div>
-              <div className='text-xs text-muted-foreground'>Prowl</div>
+              <div className='text-2xl font-bold text-brand-accent'>3</div>
+              <div className='text-xs text-foreground-muted'>Prowl</div>
             </div>
             <div className='text-center'>
-              <div className='text-2xl font-bold text-blue-400'>2</div>
-              <div className='text-xs text-muted-foreground'>Survey</div>
+              <div className='text-2xl font-bold text-game-steel'>2</div>
+              <div className='text-xs text-foreground-muted'>Survey</div>
             </div>
             <div className='text-center'>
-              <div className='text-2xl font-bold text-green-400'>4</div>
-              <div className='text-xs text-muted-foreground'>Finesse</div>
+              <div className='text-2xl font-bold text-semantic-success'>4</div>
+              <div className='text-xs text-foreground-muted'>Finesse</div>
             </div>
           </div>
           <div className='flex items-center gap-2 text-sm'>
-            <Shield className='w-4 h-4 text-blue-400' />
+            <Shield className='w-4 h-4 text-game-steel' />
             <span>Stress: 2/9</span>
           </div>
         </CardContent>
@@ -193,15 +193,15 @@ export const GameThemed: Story = {
         <CardContent>
           <div className='space-y-3'>
             <div className='flex items-center gap-2'>
-              <Crown className='w-4 h-4 text-yellow-400' />
+              <Crown className='w-4 h-4 text-semantic-warning' />
               <span className='text-sm'>Target: The Doskvol Bank</span>
             </div>
             <div className='flex items-center gap-2'>
-              <Target className='w-4 h-4 text-red-400' />
+              <Target className='w-4 h-4 text-semantic-error' />
               <span className='text-sm'>Security Level: High</span>
             </div>
             <div className='flex items-center gap-2'>
-              <Shield className='w-4 h-4 text-blue-400' />
+              <Shield className='w-4 h-4 text-game-steel' />
               <span className='text-sm'>Crew Reputation: 4</span>
             </div>
           </div>
@@ -217,7 +217,7 @@ export const GameThemed: Story = {
           <CardDescription>High-risk situation detected</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-red-300'>
+          <p className='text-sm text-semantic-error'>
             The Bluecoats are closing in. Your crew needs to make a quick escape or face the
             consequences.
           </p>
@@ -234,7 +234,7 @@ export const GameThemed: Story = {
           <CardDescription>Mission accomplished</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-green-300'>
+          <p className='text-sm text-semantic-success'>
             The heist was a success! Your crew has gained reputation and coin.
           </p>
         </CardContent>

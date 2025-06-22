@@ -165,7 +165,7 @@ const preview: Preview = {
         return React.createElement(
           ThemeContext.Provider,
           { value: { mode, setMode, systemPreference, resolvedMode } },
-          React.createElement(TooltipProvider, {}, children)
+          React.createElement(TooltipProvider, { delayDuration: 300 }, children)
         );
       };
 

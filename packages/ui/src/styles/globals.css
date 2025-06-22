@@ -43,25 +43,10 @@
   --radius: 0.75rem;
 }
 
-/* Base CSS variable definitions outside @theme to ensure proper cascade */
+/* Base CSS variable definitions - inherits from @theme block above */
 :root {
-  /* Dark theme as default */
-  --color-background-primary: hsl(240 10% 3.9%);
-  --color-background-secondary: hsl(240 5.9% 10%);
-  --color-background-tertiary: hsl(240 4.8% 15.9%);
-  --color-background-elevated: hsl(240 3.7% 21.9%);
-  --color-background-glass: hsla(0 0% 100% / 0.05);
-  
-  --color-foreground-primary: hsl(0 0% 98%);
-  --color-foreground-secondary: hsl(240 5% 84.1%);
-  --color-foreground-muted: hsl(240 3.8% 46.1%);
-  --color-foreground-disabled: hsl(240 5% 64.9%);
-  
-  --color-game-shadow: hsl(220.9 39.3% 11%);
-  
-  --color-border-primary: hsl(240 3.7% 15.9%);
-  --color-border-secondary: hsl(240 4.8% 21.9%);
-  --color-border-muted: hsl(240 3.8% 46.1%);
+  /* Additional theme variables not covered in @theme */
+  --theme-mode: 'dark';
 }
 
 /* Light theme overrides using CSS variables */
@@ -372,4 +357,39 @@ body {
   box-shadow: 
     inset 6px 6px 12px rgba(0, 0, 0, 0.4),
     inset -6px -6px 12px rgba(255, 255, 255, 0.02);
+}
+
+/* Glow shadow utilities for components */
+.shadow-glow-purple {
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.5);
+}
+
+.shadow-glow-purple-sm {
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.3);
+}
+
+.shadow-glow-purple-lg {
+  box-shadow: 0 0 30px rgba(147, 51, 234, 0.6);
+}
+
+.shadow-glow-ember {
+  box-shadow: 0 0 20px hsl(from var(--color-game-ember) h s l / 0.5);
+}
+
+.shadow-glow-steel {
+  box-shadow: 0 0 20px hsl(from var(--color-game-steel) h s l / 0.5);
+}
+
+.shadow-glow-crimson {
+  box-shadow: 0 0 20px hsl(from var(--color-game-crimson) h s l / 0.5);
+}
+
+/* Light theme adjustments for glow shadows */
+.light .shadow-glow-purple,
+.light .shadow-glow-purple-sm,
+.light .shadow-glow-purple-lg,
+.light .shadow-glow-ember,
+.light .shadow-glow-steel,
+.light .shadow-glow-crimson {
+  filter: brightness(0.8);
 }

@@ -150,7 +150,9 @@ export const Positioning: Story = {
         <Tooltip side='left' content='Tooltip to the left' variant='steel'>
           <Button>Left</Button>
         </Tooltip>
-        <div className='text-white text-sm'>Hover buttons to see tooltip positioning</div>
+        <div className='text-foreground-primary text-sm'>
+          Hover buttons to see tooltip positioning
+        </div>
         <Tooltip side='right' content='Tooltip to the right' variant='steel'>
           <Button>Right</Button>
         </Tooltip>
@@ -170,7 +172,7 @@ export const GameSpecific: Story = {
     <TooltipProvider>
       <div className='space-y-6 p-6 bg-background-primary rounded-lg'>
         <div className='space-y-4'>
-          <h3 className='text-lg font-semibold text-purple-400'>Character Tooltips</h3>
+          <h3 className='text-lg font-semibold text-brand-accent'>Character Tooltips</h3>
 
           <div className='flex flex-wrap gap-3'>
             <StressTooltip
@@ -192,7 +194,7 @@ export const GameSpecific: Story = {
         </div>
 
         <div className='space-y-4'>
-          <h3 className='text-lg font-semibold text-blue-400'>Skill Tooltips</h3>
+          <h3 className='text-lg font-semibold text-game-steel'>Skill Tooltips</h3>
 
           <div className='flex flex-wrap gap-3'>
             <SkillTooltip
@@ -218,7 +220,7 @@ export const GameSpecific: Story = {
         </div>
 
         <div className='space-y-4'>
-          <h3 className='text-lg font-semibold text-red-400'>Action Tooltips</h3>
+          <h3 className='text-lg font-semibold text-semantic-error'>Action Tooltips</h3>
 
           <div className='flex flex-wrap gap-3'>
             <ActionTooltip
@@ -309,19 +311,19 @@ export const ComplexContent: Story = {
         size='lg'
         content={
           <div className='space-y-3'>
-            <div className='font-semibold text-purple-300'>The Cutter</div>
+            <div className='font-semibold text-brand-accent'>The Cutter</div>
             <div className='text-sm space-y-2'>
               <p>A fighter who specializes in violence and intimidation.</p>
-              <div className='border-t border-white/20 pt-2'>
-                <div className='font-medium text-xs text-purple-200'>Starting Actions:</div>
+              <div className='border-t border-border-primary/20 pt-2'>
+                <div className='font-medium text-xs text-brand-secondary'>Starting Actions:</div>
                 <ul className='text-xs mt-1 space-y-0.5'>
                   <li>• Skirmish: Fight with weapons</li>
                   <li>• Hunt: Track and pursue</li>
                   <li>• Wreck: Smash and destroy</li>
                 </ul>
               </div>
-              <div className='border-t border-white/20 pt-2'>
-                <div className='font-medium text-xs text-purple-200'>Special Ability:</div>
+              <div className='border-t border-border-primary/20 pt-2'>
+                <div className='font-medium text-xs text-brand-secondary'>Special Ability:</div>
                 <p className='text-xs mt-1'>Battleborn - Push yourself for +1d on Skirmish rolls</p>
               </div>
             </div>

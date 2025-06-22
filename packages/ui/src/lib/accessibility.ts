@@ -41,7 +41,7 @@ export interface AriaAttributes {
 // Generate unique IDs for ARIA relationships
 let idCounter = 0;
 export function generateAccessibilityId(prefix = 'hm'): string {
-  return `${prefix}-${++idCounter}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${prefix}-${++idCounter}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Create stable ID hook

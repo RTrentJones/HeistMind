@@ -67,8 +67,8 @@ const ThemeToggle = React.memo(
           onClick={cycleTheme}
           className={cn(
             'transition-all duration-200',
-            resolvedMode === 'dark' && variant === 'ghost' && 'hover:bg-zinc-800',
-            resolvedMode === 'light' && variant === 'ghost' && 'hover:bg-zinc-100',
+            resolvedMode === 'dark' && variant === 'ghost' && 'hover:bg-background-tertiary',
+            resolvedMode === 'light' && variant === 'ghost' && 'hover:bg-background-tertiary',
             className
           )}
           aria-label={getAccessibleLabel()}

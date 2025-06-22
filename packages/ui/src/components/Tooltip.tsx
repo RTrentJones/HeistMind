@@ -118,14 +118,12 @@ const Tooltip: React.FC<TooltipProps> = ({
   }
 
   return (
-    <TooltipProvider delayDuration={delayDuration}>
-      <TooltipRoot>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent variant={variant} size={size} side={side} className={className} {...props}>
-          {content}
-        </TooltipContent>
-      </TooltipRoot>
-    </TooltipProvider>
+    <TooltipRoot delayDuration={delayDuration}>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent variant={variant} size={size} side={side} className={className} {...props}>
+        {content}
+      </TooltipContent>
+    </TooltipRoot>
   );
 };
 

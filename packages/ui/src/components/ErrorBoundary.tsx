@@ -126,13 +126,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <Card variant='danger' className='max-w-2xl mx-auto my-4'>
           <CardHeader>
-            <CardTitle className='flex items-center gap-2 text-red-400'>
+            <CardTitle className='flex items-center gap-2 text-semantic-error'>
               <AlertTriangle className='w-5 h-5' />
               {title}
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-4'>
-            <div className='text-sm text-zinc-300'>
+            <div className='text-sm text-foreground-secondary'>
               {error?.message || 'An unexpected error occurred while rendering this component.'}
             </div>
 
@@ -174,22 +174,24 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
             {showDetails && (
               <div className='space-y-3 text-xs'>
-                <div className='bg-zinc-800/50 p-3 rounded border'>
-                  <div className='font-medium text-zinc-400 mb-1'>Error ID:</div>
-                  <code className='text-zinc-300'>{errorId}</code>
+                <div className='bg-background-tertiary p-3 rounded border'>
+                  <div className='font-medium text-foreground-muted mb-1'>Error ID:</div>
+                  <code className='text-foreground-secondary'>{errorId}</code>
                 </div>
 
                 {error?.stack && (
-                  <div className='bg-zinc-800/50 p-3 rounded border'>
-                    <div className='font-medium text-zinc-400 mb-2'>Stack Trace:</div>
-                    <pre className='text-zinc-300 whitespace-pre-wrap break-all'>{error.stack}</pre>
+                  <div className='bg-background-tertiary p-3 rounded border'>
+                    <div className='font-medium text-foreground-muted mb-2'>Stack Trace:</div>
+                    <pre className='text-foreground-secondary whitespace-pre-wrap break-all'>
+                      {error.stack}
+                    </pre>
                   </div>
                 )}
 
                 {errorInfo?.componentStack && (
-                  <div className='bg-zinc-800/50 p-3 rounded border'>
-                    <div className='font-medium text-zinc-400 mb-2'>Component Stack:</div>
-                    <pre className='text-zinc-300 whitespace-pre-wrap'>
+                  <div className='bg-background-tertiary p-3 rounded border'>
+                    <div className='font-medium text-foreground-muted mb-2'>Component Stack:</div>
+                    <pre className='text-foreground-secondary whitespace-pre-wrap'>
                       {errorInfo.componentStack}
                     </pre>
                   </div>
@@ -197,7 +199,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               </div>
             )}
 
-            <div className='text-xs text-zinc-500 pt-2 border-t border-zinc-700'>
+            <div className='text-xs text-foreground-muted pt-2 border-t border-border-secondary'>
               If this error persists, please report it with the error ID above.
             </div>
           </CardContent>

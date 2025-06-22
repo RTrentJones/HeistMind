@@ -91,14 +91,14 @@ const buttonVariants = cva(
         glass: [
           'bg-background-glass backdrop-blur-md border border-border-secondary',
           'text-foreground-primary hover:bg-background-glass/80',
-          'shadow-glass hover:shadow-glass-lg',
+          'shadow-lg hover:shadow-xl hover:shadow-black/10',
           'hover:border-border-primary',
         ],
         neon: [
           'bg-transparent border-2 border-brand-accent',
           'text-brand-accent hover:text-white',
-          'hover:bg-brand-accent hover:shadow-glow-purple',
-          'hover:animate-pulse-glow transition-all duration-300',
+          'hover:bg-brand-accent hover:shadow-lg hover:shadow-brand-accent/50',
+          'transition-all duration-300',
         ],
       },
       size: {
@@ -142,6 +142,15 @@ export interface ButtonProps
   /** Custom accessible description for the button action */
   accessibleDescription?: string;
 }
+
+// Strict type constraints for button variants
+export type SafeButtonProps = ButtonProps &
+  (
+    | { variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'link'; asChild?: false }
+    | { variant: 'destructive'; asChild?: false; 'aria-label': string }
+    | { variant: 'ember' | 'steel' | 'crimson' | 'glass' | 'neon'; asChild?: false }
+    | { asChild: true; children: React.ReactElement }
+  );
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (

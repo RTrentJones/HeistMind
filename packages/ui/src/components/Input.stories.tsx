@@ -53,7 +53,7 @@ export const Default: Story = {
 
 export const Variants: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Input variant='default' placeholder='Default input' label='Default' />
       <Input variant='glass' placeholder='Glass morphism input' label='Glass' />
       <Input variant='neon' placeholder='Neon themed input' label='Neon' />
@@ -66,7 +66,7 @@ export const Variants: Story = {
 
 export const WithIcons: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Input
         icon={<User className='w-4 h-4' />}
         placeholder='Character name'
@@ -101,7 +101,7 @@ export const WithIcons: Story = {
 
 export const PasswordInput: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Input type='password' placeholder='Enter password' label='Password' showPasswordToggle />
       <Input
         type='password'
@@ -117,7 +117,7 @@ export const PasswordInput: Story = {
 
 export const States: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Input placeholder='Default state' label='Default' defaultValue='Normal input' />
       <Input
         placeholder='Error state'
@@ -143,7 +143,7 @@ export const States: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Input
         size='sm'
         placeholder='Small input'
@@ -174,9 +174,9 @@ export const Sizes: Story = {
 
 export const GameThemed: Story = {
   render: () => (
-    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-background-primary rounded-lg'>
+    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <div className='space-y-4'>
-        <h3 className='text-lg font-semibold text-purple-400'>Character Creation</h3>
+        <h3 className='text-lg font-semibold text-brand-accent'>Character Creation</h3>
         <Input
           variant='neon'
           placeholder='Enter character name'
@@ -201,7 +201,7 @@ export const GameThemed: Story = {
       </div>
 
       <div className='space-y-4'>
-        <h3 className='text-lg font-semibold text-blue-400'>Crew Information</h3>
+        <h3 className='text-lg font-semibold text-game-steel'>Crew Information</h3>
         <Input variant='glass' placeholder='Enter crew name' label='Crew Name' />
         <Input variant='ghost' placeholder='Describe your crew' label='Crew Description' />
         <Input
@@ -219,7 +219,7 @@ export const GameThemed: Story = {
 
 export const DisabledState: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Input
         disabled
         placeholder='Disabled input'
@@ -239,7 +239,7 @@ export const DisabledState: Story = {
 
 export const TextareaStory: Story = {
   render: () => (
-    <div className='space-y-6 w-80 p-6 bg-background-primary rounded-lg'>
+    <div className='space-y-6 w-80 p-6 bg-background-secondary rounded-lg border border-border-primary'>
       <Textarea placeholder='Enter character background...' label='Character Background' rows={4} />
       <Textarea
         variant='glass'

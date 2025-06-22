@@ -65,26 +65,26 @@ export const StressLevels: Story = {
   render: () => (
     <div className='space-y-6'>
       <div className='space-y-4'>
-        <h3 className='text-lg font-semibold text-white'>Stress Levels</h3>
+        <h3 className='text-lg font-semibold text-foreground-primary'>Stress Levels</h3>
 
         <div className='space-y-3'>
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-green-400 mb-2'>Low Stress (0-2)</h4>
+            <h4 className='text-sm font-medium text-semantic-success mb-2'>Low Stress (0-2)</h4>
             <StressTracker current={1} max={9} />
           </div>
 
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-yellow-400 mb-2'>Medium Stress (3-5)</h4>
+            <h4 className='text-sm font-medium text-semantic-warning mb-2'>Medium Stress (3-5)</h4>
             <StressTracker current={4} max={9} />
           </div>
 
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-orange-400 mb-2'>High Stress (6-7)</h4>
+            <h4 className='text-sm font-medium text-semantic-warning mb-2'>High Stress (6-7)</h4>
             <StressTracker current={7} max={9} />
           </div>
 
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-red-400 mb-2'>Critical Stress (8+)</h4>
+            <h4 className='text-sm font-medium text-semantic-error mb-2'>Critical Stress (8+)</h4>
             <StressTracker current={8} max={9} />
           </div>
         </div>
@@ -99,10 +99,12 @@ export const InteractiveStress: Story = {
 
     return (
       <div className='space-y-4'>
-        <h3 className='text-lg font-semibold text-white'>Interactive Stress Tracker</h3>
-        <p className='text-sm text-gray-400'>Click the dots to adjust stress level</p>
+        <h3 className='text-lg font-semibold text-foreground-primary'>
+          Interactive Stress Tracker
+        </h3>
+        <p className='text-sm text-foreground-muted'>Click the dots to adjust stress level</p>
         <StressTracker current={stress} max={9} onChange={setStress} interactive size='lg' />
-        <div className='text-sm text-gray-300'>
+        <div className='text-sm text-foreground-secondary'>
           Current stress level: <span className='font-medium'>{stress}/9</span>
         </div>
       </div>
@@ -114,17 +116,17 @@ export const Sizes: Story = {
   render: () => (
     <div className='space-y-6'>
       <div className='space-y-3'>
-        <h4 className='text-sm font-medium text-white'>Small</h4>
+        <h4 className='text-sm font-medium text-foreground-primary'>Small</h4>
         <StressTracker current={4} max={9} size='sm' />
       </div>
 
       <div className='space-y-3'>
-        <h4 className='text-sm font-medium text-white'>Default</h4>
+        <h4 className='text-sm font-medium text-foreground-primary'>Default</h4>
         <StressTracker current={4} max={9} size='default' />
       </div>
 
       <div className='space-y-3'>
-        <h4 className='text-sm font-medium text-white'>Large</h4>
+        <h4 className='text-sm font-medium text-foreground-primary'>Large</h4>
         <StressTracker current={4} max={9} size='lg' />
       </div>
     </div>
@@ -139,7 +141,7 @@ export const ActionDotsStory: Story = {
 
     return (
       <div className='space-y-6'>
-        <h3 className='text-lg font-semibold text-white'>Action Dots</h3>
+        <h3 className='text-lg font-semibold text-foreground-primary'>Action Dots</h3>
 
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <div className='space-y-3'>
@@ -186,7 +188,7 @@ export const ActionDotsStory: Story = {
 export const ActionDotVariants: Story = {
   render: () => (
     <div className='space-y-6'>
-      <h3 className='text-lg font-semibold text-white'>Action Dot Variants</h3>
+      <h3 className='text-lg font-semibold text-foreground-primary'>Action Dot Variants</h3>
 
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         <ActionDots current={2} max={4} label='Default' variant='default' />
@@ -206,27 +208,27 @@ export const ActionDotVariants: Story = {
 export const ProgressRings: Story = {
   render: () => (
     <div className='space-y-6'>
-      <h3 className='text-lg font-semibold text-white'>Progress Rings</h3>
+      <h3 className='text-lg font-semibold text-foreground-primary'>Progress Rings</h3>
 
       <div className='grid grid-cols-2 md:grid-cols-4 gap-6'>
         <div className='text-center space-y-2'>
           <ProgressRing current={3} max={9} variant='stress' />
-          <div className='text-sm text-gray-400'>Stress</div>
+          <div className='text-sm text-foreground-muted'>Stress</div>
         </div>
 
         <div className='text-center space-y-2'>
           <ProgressRing current={6} max={8} variant='ember' />
-          <div className='text-sm text-gray-400'>Heat</div>
+          <div className='text-sm text-foreground-muted'>Heat</div>
         </div>
 
         <div className='text-center space-y-2'>
           <ProgressRing current={4} max={12} variant='steel' />
-          <div className='text-sm text-gray-400'>Rep</div>
+          <div className='text-sm text-foreground-muted'>Rep</div>
         </div>
 
         <div className='text-center space-y-2'>
           <ProgressRing current={2} max={4} variant='crimson' />
-          <div className='text-sm text-gray-400'>Trauma</div>
+          <div className='text-sm text-foreground-muted'>Trauma</div>
         </div>
       </div>
     </div>
@@ -243,7 +245,7 @@ export const CharacterSheet: Story = {
 
     return (
       <div className='max-w-md space-y-6 p-6 bg-background-secondary rounded-lg'>
-        <h3 className='text-xl font-semibold text-purple-400'>Character Sheet</h3>
+        <h3 className='text-xl font-semibold text-brand-accent'>Character Sheet</h3>
 
         <div className='space-y-4'>
           <StressTracker current={stress} max={9} onChange={setStress} interactive size='default' />
@@ -254,7 +256,7 @@ export const CharacterSheet: Story = {
           </div>
 
           <div className='space-y-3'>
-            <h4 className='text-sm font-medium text-white'>Attributes</h4>
+            <h4 className='text-sm font-medium text-foreground-primary'>Attributes</h4>
             <ActionDots
               current={prowess}
               max={4}

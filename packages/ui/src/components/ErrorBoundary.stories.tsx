@@ -184,7 +184,7 @@ export const CustomFallbacks: Story = {
 
           <div className='space-y-2'>
             <h3 className='text-sm font-medium'>Page Fallback</h3>
-            <div className='h-64 border border-zinc-700 rounded overflow-hidden'>
+            <div className='h-64 border border-border-secondary rounded overflow-hidden'>
               <ErrorBoundary fallback={ErrorFallbacks.Page}>
                 <BuggyComponent shouldThrow={errors.page} />
               </ErrorBoundary>
@@ -230,7 +230,7 @@ export const SimpleErrorBoundaryDemo: Story = {
 
         <SimpleErrorBoundary
           fallback={
-            <div className='p-4 bg-red-900/20 border border-red-500/40 rounded text-red-400'>
+            <div className='p-4 bg-semantic-error/20 border border-semantic-error/40 rounded text-semantic-error'>
               Something went wrong with this component.
             </div>
           }

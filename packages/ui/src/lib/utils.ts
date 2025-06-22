@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * Generate a random ID for component instances
  */
 export function generateId(prefix: string = 'hm'): string {
-  return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${prefix}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
