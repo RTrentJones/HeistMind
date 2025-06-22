@@ -2,6 +2,7 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
 import { MotionDiv } from '../lib/motion-safe';
+import { useId, useReducedMotion, type AriaAttributes } from '../lib/accessibility';
 
 const cardVariants = cva(
   [
@@ -81,17 +82,54 @@ const cardVariants = cva(
 
 export interface CardProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'size'>,
-    VariantProps<typeof cardVariants> {
+    VariantProps<typeof cardVariants>,
+    AriaAttributes {
   asChild?: boolean;
+  /** Card semantic role for screen readers */
+  cardRole?: 'article' | 'section' | 'region' | 'banner' | 'complementary' | 'contentinfo';
+  /** Accessible heading for the card */
+  accessibleTitle?: string;
+  /** Whether the card represents important content */
+  landmark?: boolean;
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant, size, interactive, asChild, children, ...rest }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      interactive,
+      asChild,
+      children,
+      cardRole,
+      accessibleTitle,
+      landmark,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledBy,
+      'aria-describedby': ariaDescribedBy,
+      role,
+      ...rest
+    },
+    ref
+  ) => {
+    const prefersReducedMotion = useReducedMotion();
+    const titleId = useId('card-title');
+
+    // Build comprehensive ARIA attributes
+    const ariaAttributes: AriaAttributes = {
+      'aria-label': ariaLabel || accessibleTitle,
+      'aria-labelledby': ariaLabelledBy || (accessibleTitle ? titleId : undefined),
+      'aria-describedby': ariaDescribedBy,
+      role: role || cardRole || (landmark ? 'region' : undefined),
+    };
+
     if (asChild) {
       return (
         <MotionDiv
           className={cn(cardVariants({ variant, size, interactive, className }))}
           ref={ref}
+          {...ariaAttributes}
           {...rest}
         >
           {children}
@@ -100,18 +138,27 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     }
 
     return (
-      <MotionDiv
-        className={cn(cardVariants({ variant, size, interactive, className }))}
-        ref={ref}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        whileHover={interactive ? { scale: 1.02, y: -2 } : undefined}
-        whileTap={interactive ? { scale: 0.98 } : undefined}
-        {...rest}
-      >
-        {children}
-      </MotionDiv>
+      <>
+        <MotionDiv
+          className={cn(cardVariants({ variant, size, interactive, className }))}
+          ref={ref}
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
+          whileHover={interactive && !prefersReducedMotion ? { scale: 1.02, y: -2 } : undefined}
+          whileTap={interactive && !prefersReducedMotion ? { scale: 0.98 } : undefined}
+          {...ariaAttributes}
+          {...rest}
+        >
+          {children}
+        </MotionDiv>
+
+        {accessibleTitle && !ariaLabel && !ariaLabelledBy && (
+          <h2 id={titleId} className='sr-only'>
+            {accessibleTitle}
+          </h2>
+        )}
+      </>
     );
   }
 );

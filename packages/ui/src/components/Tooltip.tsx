@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { useReducedMotion, type AriaAttributes } from '../lib/accessibility';
 
 const TooltipProvider = TooltipPrimitive.Provider;
 
@@ -20,6 +21,8 @@ const TooltipContent = React.forwardRef<
     { className, sideOffset = 4, variant = 'default', size = 'default', children, ...props },
     ref
   ) => {
+    const prefersReducedMotion = useReducedMotion();
+
     const variants = {
       default: 'bg-purple-600 text-white border border-purple-500/20',
       dark: 'bg-slate-900 text-slate-100 border border-slate-700',
@@ -55,13 +58,14 @@ const TooltipContent = React.forwardRef<
               className
             )}
             asChild
+            role='tooltip'
             {...props}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 2 }}
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: 2 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 2 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.15, ease: 'easeOut' }}
             >
               {children}
               <TooltipPrimitive.Arrow

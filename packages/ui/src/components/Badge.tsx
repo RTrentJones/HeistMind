@@ -3,6 +3,11 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
 import { type ComponentProps, type IconProps, type MotionSafeProps } from '../lib/types';
 import { MotionDiv } from '../lib/motion-safe';
+import {
+  useReducedMotion,
+  buildGameComponentAria,
+  type AriaAttributes,
+} from '../lib/accessibility';
 
 const badgeVariants = cva(
   [
@@ -111,7 +116,11 @@ const badgeVariants = cva(
   }
 );
 
-export interface BadgeProps extends MotionSafeProps, IconProps, VariantProps<typeof badgeVariants> {
+export interface BadgeProps
+  extends MotionSafeProps,
+    IconProps,
+    VariantProps<typeof badgeVariants>,
+    AriaAttributes {
   /** Badge content */
   children: React.ReactNode;
   /** Callback when remove button is clicked. Shows a remove button when provided. */
@@ -120,6 +129,10 @@ export interface BadgeProps extends MotionSafeProps, IconProps, VariantProps<typ
   pulse?: boolean;
   /** Component size variant */
   size?: 'sm' | 'default' | 'lg' | 'xl';
+  /** Badge semantic role for accessibility */
+  badgeRole?: 'status' | 'skill' | 'action' | 'inventory' | 'character';
+  /** Accessible description for complex badges */
+  accessibleDescription?: string;
 }
 
 const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
@@ -134,20 +147,39 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
       pulse = false,
       children,
       onClick,
+      badgeRole,
+      accessibleDescription,
+      'aria-label': ariaLabel,
+      'aria-describedby': ariaDescribedBy,
+      role,
       ...rest
     },
     ref
   ) => {
+    const prefersReducedMotion = useReducedMotion();
     const isClickable = interactive || onClick || onRemove;
+
+    // Build game-specific ARIA attributes
+    const gameAriaAttributes = buildGameComponentAria({
+      gameRole: badgeRole,
+      description: accessibleDescription,
+    });
+
+    const ariaAttributes: AriaAttributes = {
+      'aria-label': ariaLabel,
+      'aria-describedby': ariaDescribedBy || gameAriaAttributes['aria-describedby'],
+      role: role || 'status',
+      ...(isClickable && { tabIndex: 0 }),
+    };
 
     return (
       <MotionDiv
         ref={ref}
         className={cn(badgeVariants({ variant, size, interactive: !!isClickable, className }))}
         onClick={onClick}
-        initial={{ opacity: 0, scale: 0.8 }}
+        initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
         animate={
-          pulse
+          pulse && !prefersReducedMotion
             ? {
                 opacity: 1,
                 scale: [1, 1.05, 1],
@@ -158,14 +190,20 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
                 scale: 1,
               }
         }
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        {...(isClickable && {
-          whileHover: { scale: 1.05 },
-          whileTap: { scale: 0.95 },
-        })}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+        {...(isClickable &&
+          !prefersReducedMotion && {
+            whileHover: { scale: 1.05 },
+            whileTap: { scale: 0.95 },
+          })}
+        {...ariaAttributes}
         {...rest}
       >
-        {icon && <span className='flex-shrink-0'>{icon}</span>}
+        {icon && (
+          <span className='flex-shrink-0' aria-hidden='true'>
+            {icon}
+          </span>
+        )}
         <span className='truncate'>{children}</span>
         {onRemove && (
           <button
@@ -175,8 +213,10 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
               onRemove();
             }}
             className='flex-shrink-0 ml-1 rounded-full hover:bg-white/20 p-0.5 transition-colors'
+            aria-label='Remove badge'
+            tabIndex={-1}
           >
-            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
+            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20' aria-hidden='true'>
               <path
                 fillRule='evenodd'
                 d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
@@ -184,6 +224,10 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
               />
             </svg>
           </button>
+        )}
+
+        {accessibleDescription && !ariaDescribedBy && (
+          <span className='sr-only'>{accessibleDescription}</span>
         )}
       </MotionDiv>
     );

@@ -4,6 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { MotionButton } from '../lib/motion-safe';
+import { useId, useAnnouncer, useReducedMotion, type AriaAttributes } from '../lib/accessibility';
 
 const buttonVariants = cva(
   [
@@ -126,10 +127,15 @@ const LoadingSpinner = () => (
 
 export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'size'>,
-    VariantProps<typeof buttonVariants> {
+    VariantProps<typeof buttonVariants>,
+    AriaAttributes {
   asChild?: boolean;
   loading?: boolean;
   loadingText?: string;
+  /** Announce loading state changes to screen readers */
+  announceStateChanges?: boolean;
+  /** Custom accessible description for the button action */
+  accessibleDescription?: string;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -143,16 +149,43 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       loadingText,
       children,
       disabled,
+      announceStateChanges = true,
+      accessibleDescription,
+      'aria-label': ariaLabel,
+      'aria-describedby': ariaDescribedBy,
+      'aria-expanded': ariaExpanded,
+      'aria-haspopup': ariaHaspopup,
+      'aria-controls': ariaControls,
+      'aria-pressed': ariaPressed,
       ...rest
     },
     ref
   ) => {
     const isDisabled = disabled || loading;
+    const announcer = useAnnouncer();
+    const prefersReducedMotion = useReducedMotion();
+    const descriptionId = useId('btn-desc');
+
+    // Announce loading state changes
+    const prevLoading = React.useRef(loading);
+    React.useEffect(() => {
+      if (announceStateChanges && prevLoading.current !== loading) {
+        if (loading) {
+          announcer.announce(loadingText || 'Loading started', 'polite');
+        } else if (prevLoading.current) {
+          announcer.announce('Loading completed', 'polite');
+        }
+      }
+      prevLoading.current = loading;
+    }, [loading, loadingText, announcer, announceStateChanges]);
 
     const buttonContent = loading ? (
       <>
         <LoadingSpinner />
-        {loadingText || 'Loading...'}
+        <span className='sr-only' aria-live='polite'>
+          {loadingText || 'Loading...'}
+        </span>
+        <span aria-hidden='true'>{loadingText || 'Loading...'}</span>
       </>
     ) : (
       children
@@ -170,20 +203,41 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       );
     }
 
+    // Build comprehensive ARIA attributes
+    const ariaAttributes: AriaAttributes = {
+      'aria-label': ariaLabel,
+      'aria-describedby': accessibleDescription ? descriptionId : ariaDescribedBy,
+      'aria-expanded': ariaExpanded,
+      'aria-haspopup': ariaHaspopup,
+      'aria-controls': ariaControls,
+      'aria-pressed': ariaPressed,
+      'aria-disabled': isDisabled,
+      'aria-busy': loading,
+    };
+
     return (
-      <MotionButton
-        ref={ref}
-        className={cn(buttonVariants({ variant, size, loading, className }))}
-        disabled={isDisabled}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        whileHover={isDisabled ? undefined : { scale: 1.02 }}
-        whileTap={isDisabled ? undefined : { scale: 0.98 }}
-        {...rest}
-      >
-        {buttonContent}
-      </MotionButton>
+      <>
+        <MotionButton
+          ref={ref}
+          className={cn(buttonVariants({ variant, size, loading, className }))}
+          disabled={isDisabled}
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+          whileHover={isDisabled || prefersReducedMotion ? undefined : { scale: 1.02 }}
+          whileTap={isDisabled || prefersReducedMotion ? undefined : { scale: 0.98 }}
+          {...ariaAttributes}
+          {...rest}
+        >
+          {buttonContent}
+        </MotionButton>
+
+        {accessibleDescription && (
+          <div id={descriptionId} className='sr-only'>
+            {accessibleDescription}
+          </div>
+        )}
+      </>
     );
   }
 );
