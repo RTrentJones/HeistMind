@@ -75,9 +75,9 @@ export const animations = {
   glow: {
     animate: {
       boxShadow: [
-        '0 0 10px rgba(147, 51, 234, 0.3)',
-        '0 0 20px rgba(147, 51, 234, 0.5)',
-        '0 0 10px rgba(147, 51, 234, 0.3)',
+        '0 0 10px hsl(from var(--color-brand-primary) h s l / 0.3)',
+        '0 0 20px hsl(from var(--color-brand-primary) h s l / 0.5)',
+        '0 0 10px hsl(from var(--color-brand-primary) h s l / 0.3)',
       ],
     },
     transition: {

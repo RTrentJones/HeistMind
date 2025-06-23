@@ -201,7 +201,7 @@ export const Interactive: Story = {
 
 export const ThemeAwareness: Story = {
   render: () => (
-    <div className='space-y-6 p-6'>
+    <div className='space-y-6 p-6 bg-background-secondary'>
       <div className='space-y-3'>
         <h3 className='text-lg font-semibold text-foreground-primary'>Buttons in Current Theme</h3>
         <p className='text-sm text-foreground-secondary'>
