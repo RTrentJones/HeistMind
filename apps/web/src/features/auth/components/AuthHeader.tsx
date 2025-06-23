@@ -37,7 +37,7 @@ export function AuthHeader() {
             <span className='text-sm text-neutral-300'>
               Welcome, {user.profile?.displayName || user.email}
             </span>
-            <Button variant='outline' size='sm' onClick={handleSignOut} isLoading={isLoading}>
+            <Button variant='outline' size='sm' onClick={handleSignOut} loading={isLoading}>
               Sign Out
             </Button>
           </div>
@@ -47,12 +47,12 @@ export function AuthHeader() {
               variant='ghost'
               size='sm'
               onClick={handleDiscordSignIn}
-              isLoading={isLoading}
+              loading={isLoading}
               className='text-neutral-300 hover:text-white'
             >
               Sign In
             </Button>
-            <Button variant='primary' size='sm' onClick={handleDiscordSignIn} isLoading={isLoading}>
+            <Button variant='default' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
               Sign Up with Discord
             </Button>
           </div>

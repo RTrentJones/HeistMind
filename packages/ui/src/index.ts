@@ -5,6 +5,12 @@ export * from './lib/accessibility';
 export * from './lib/theme';
 export * from './lib/design-tokens';
 
+// Layout components
+export * from './components/Container';
+
+// Navigation components
+export * from './components/Header';
+
 // Base components
 export * from './components/Button';
 export * from './components/Card';
