@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Container,
   Card,
   CardContent,
   Section,
@@ -60,9 +59,9 @@ export default function AuthCallback() {
 
   return (
     <Section variant='hero' padding='none' width='full' className='min-h-screen'>
-      <Container className='flex items-center justify-center min-h-screen'>
+      <Stack justify='center' align='center' className='min-h-screen'>
         <Card>
-          <CardContent className='p-8'>
+          <CardContent>
             {error ? (
               <ErrorDisplay
                 variant='default'
@@ -100,7 +99,7 @@ export default function AuthCallback() {
             )}
           </CardContent>
         </Card>
-      </Container>
+      </Stack>
     </Section>
   );
 }

@@ -5,7 +5,6 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "incremental": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,

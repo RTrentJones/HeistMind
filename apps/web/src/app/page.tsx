@@ -24,7 +24,7 @@ export default function HomePage() {
         <Container maxWidth='7xl'>
           <Stack gap='xl' align='center'>
             {/* Hero Section */}
-            <Stack gap='lg' align='center' className='text-center'>
+            <Stack gap='lg' align='center'>
               <Heading level='h1' variant='hero' animate>
                 Welcome to{' '}
                 <Text as='span' variant='accent'>
@@ -40,7 +40,7 @@ export default function HomePage() {
             </Stack>
 
             {/* Features Grid */}
-            <Grid cols={3} gap='lg' className='mt-12' animateChildren staggerDelay={0.2}>
+            <Grid cols={3} gap='lg' animateChildren staggerDelay={0.2}>
               <Card>
                 <CardHeader>
                   <CardTitle>Dynamic Character Creation</CardTitle>
@@ -79,7 +79,7 @@ export default function HomePage() {
             </Grid>
 
             {/* Call to Action */}
-            <Stack gap='md' align='center' className='mt-16 text-center'>
+            <Stack gap='md' align='center'>
               <Heading level='h2' variant='primary' animate>
                 Ready to start your next heist?
               </Heading>
