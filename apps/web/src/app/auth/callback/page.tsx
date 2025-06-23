@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Container, Card, CardContent } from '@heist-mind/ui';
+import {
+  Container,
+  Card,
+  CardContent,
+  Section,
+  Stack,
+  StatusIcon,
+  LoadingSpinner,
+  ErrorDisplay,
+  Heading,
+  Text,
+} from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 
 export default function AuthCallback() {
@@ -48,40 +59,48 @@ export default function AuthCallback() {
   }, [isAuthenticated, router]);
 
   return (
-    <div className='min-h-screen bg-neutral-950'>
+    <Section variant='hero' padding='none' width='full' className='min-h-screen'>
       <Container className='flex items-center justify-center min-h-screen'>
         <Card>
-          <CardContent className='text-center space-y-4 p-8'>
+          <CardContent className='p-8'>
             {error ? (
-              <>
-                <div className='w-12 h-12 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center mx-auto'>
-                  <span className='text-red-400 text-xl'>✕</span>
-                </div>
-                <div className='space-y-2'>
-                  <h2 className='text-lg font-semibold text-red-400'>Authentication Failed</h2>
-                  <p className='text-neutral-400'>{error}</p>
-                  <p className='text-neutral-500 text-sm'>Redirecting you back...</p>
-                </div>
-              </>
+              <ErrorDisplay
+                variant='default'
+                layout='centered'
+                title='Authentication Failed'
+                message={error}
+                size='md'
+                animate
+              >
+                <Text size='sm' variant='muted'>
+                  Redirecting you back...
+                </Text>
+              </ErrorDisplay>
             ) : (
-              <>
-                <div className='w-12 h-12 rounded-full bg-orange-500/20 border border-orange-400 flex items-center justify-center mx-auto'>
-                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-orange-400'></div>
-                </div>
-                <div className='space-y-2'>
-                  <h2 className='text-lg font-semibold text-white'>Completing Sign In</h2>
-                  <p className='text-neutral-400'>
-                    Waiting for Discord authentication to complete...
-                  </p>
-                  <p className='text-neutral-500 text-xs'>
+              <Stack gap='lg' align='center' className='text-center'>
+                <StatusIcon
+                  status='loading'
+                  size='xl'
+                  animation='pulse'
+                  icon={<LoadingSpinner size='md' variant='accent' speed='normal' />}
+                />
+
+                <Stack gap='sm' align='center'>
+                  <Heading level='h2' variant='primary'>
+                    Completing Sign In
+                  </Heading>
+
+                  <Text variant='secondary'>Waiting for Discord authentication to complete...</Text>
+
+                  <Text size='xs' variant='muted'>
                     Supabase is processing your OAuth tokens automatically
-                  </p>
-                </div>
-              </>
+                  </Text>
+                </Stack>
+              </Stack>
             )}
           </CardContent>
         </Card>
       </Container>
-    </div>
+    </Section>
   );
 }

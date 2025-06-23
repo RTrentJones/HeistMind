@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
-import { Button, Header, HeaderBrand, HeaderActions } from '@heist-mind/ui';
+import { Button, Header, HeaderBrand, HeaderActions, Heading, Text, Stack } from '@heist-mind/ui';
 
 export function AuthHeader() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -26,36 +26,33 @@ export function AuthHeader() {
   return (
     <Header>
       <HeaderBrand>
-        <h1 className='text-xl font-bold text-white'>
-          <span className='text-primary-400'>Heist</span>Mind
-        </h1>
+        <Heading level='h1' variant='default' as='h1'>
+          <Text as='span' variant='accent'>
+            Heist
+          </Text>
+          Mind
+        </Heading>
       </HeaderBrand>
 
       <HeaderActions>
         {isAuthenticated && user ? (
-          <div className='flex items-center space-x-4'>
-            <span className='text-sm text-neutral-300'>
+          <Stack direction='row' gap='md' align='center'>
+            <Text size='sm' variant='muted'>
               Welcome, {user.profile?.displayName || user.email}
-            </span>
+            </Text>
             <Button variant='outline' size='sm' onClick={handleSignOut} loading={isLoading}>
               Sign Out
             </Button>
-          </div>
+          </Stack>
         ) : (
-          <div className='flex items-center space-x-3'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={handleDiscordSignIn}
-              loading={isLoading}
-              className='text-neutral-300 hover:text-white'
-            >
+          <Stack direction='row' gap='sm' align='center'>
+            <Button variant='ghost' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
               Sign In
             </Button>
             <Button variant='default' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
               Sign Up with Discord
             </Button>
-          </div>
+          </Stack>
         )}
       </HeaderActions>
     </Header>

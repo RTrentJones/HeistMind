@@ -1,38 +1,55 @@
 'use client';
 
-import { Container, Card, CardHeader, CardTitle, CardContent } from '@heist-mind/ui';
+import {
+  Container,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Section,
+  Grid,
+  Stack,
+  Heading,
+  Paragraph,
+  Text,
+} from '@heist-mind/ui';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 
 export default function HomePage() {
   return (
-    <div className='min-h-screen bg-neutral-950'>
+    <Section variant='hero' padding='none' width='full' className='min-h-screen' as='div'>
       <AuthHeader />
 
-      <main className='py-12'>
-        <Container>
-          <div className='text-center space-y-8'>
+      <Section as='main' variant='default' padding='xl' width='container'>
+        <Container maxWidth='7xl'>
+          <Stack gap='xl' align='center'>
             {/* Hero Section */}
-            <div className='space-y-4'>
-              <h1 className='text-4xl md:text-6xl font-bold text-white'>
-                Welcome to <span className='text-orange-400'>Heist</span>Mind
-              </h1>
-              <p className='text-xl text-neutral-300 max-w-2xl mx-auto'>
+            <Stack gap='lg' align='center' className='text-center'>
+              <Heading level='h1' variant='hero' animate>
+                Welcome to{' '}
+                <Text as='span' variant='accent'>
+                  Heist
+                </Text>
+                Mind
+              </Heading>
+
+              <Paragraph variant='lead' maxWidth='2xl' align='center' animate>
                 The ultimate character management platform for Forged in the Dark tabletop RPGs.
                 Create, manage, and advance your scoundrels across multiple campaigns.
-              </p>
-            </div>
+              </Paragraph>
+            </Stack>
 
             {/* Features Grid */}
-            <div className='grid md:grid-cols-3 gap-6 mt-12'>
+            <Grid cols={3} gap='lg' className='mt-12' animateChildren staggerDelay={0.2}>
               <Card>
                 <CardHeader>
                   <CardTitle>Dynamic Character Creation</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className='text-neutral-400'>
+                  <Text variant='secondary'>
                     Build characters using any Forged in the Dark ruleset. Upload custom rules or
                     use community-created content.
-                  </p>
+                  </Text>
                 </CardContent>
               </Card>
 
@@ -41,10 +58,10 @@ export default function HomePage() {
                   <CardTitle>Multi-Game Management</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className='text-neutral-400'>
+                  <Text variant='secondary'>
                     Organize characters across multiple games and campaigns. Track advancement,
                     stress, and relationships.
-                  </p>
+                  </Text>
                 </CardContent>
               </Card>
 
@@ -53,24 +70,26 @@ export default function HomePage() {
                   <CardTitle>Seamless Collaboration</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className='text-neutral-400'>
+                  <Text variant='secondary'>
                     Share characters with GMs, clone builds for new games, and collaborate on crew
                     sheets and faction relationships.
-                  </p>
+                  </Text>
                 </CardContent>
               </Card>
-            </div>
+            </Grid>
 
             {/* Call to Action */}
-            <div className='mt-16 space-y-4'>
-              <h2 className='text-2xl font-semibold text-white'>Ready to start your next heist?</h2>
-              <p className='text-neutral-400'>
+            <Stack gap='md' align='center' className='mt-16 text-center'>
+              <Heading level='h2' variant='primary' animate>
+                Ready to start your next heist?
+              </Heading>
+              <Text variant='secondary' animate>
                 Sign up with Discord to begin managing your scoundrels and join the community.
-              </p>
-            </div>
-          </div>
+              </Text>
+            </Stack>
+          </Stack>
         </Container>
-      </main>
-    </div>
+      </Section>
+    </Section>
   );
 }
