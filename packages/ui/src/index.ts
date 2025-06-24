@@ -1,9 +1,25 @@
 // Design System & Core utilities
 export * from './lib/design-system';
 export * from './lib/utils';
-export * from './lib/accessibility';
-export * from './lib/theme';
 export * from './lib/design-tokens';
+export * from './lib/runtime-validation';
+
+// Test utilities (development only - not included in production builds)
+// export * from './lib/test-utils';
+
+// Shared hooks (includes useKeyboardNavigation and useTheme)
+export * from './hooks';
+
+// Accessibility utilities (excluding conflicting exports)
+export {
+  useComponentIds,
+  useLoadingState,
+  useInteractiveMotion,
+  type AriaAttributes,
+} from './lib/accessibility';
+
+// Theme utilities (excluding conflicting exports)
+export { type ThemeConfig } from './lib/theme';
 
 // Layout components
 export * from './components/Container';
@@ -23,6 +39,7 @@ export * from './components/Paragraph';
 export * from './components/StatusIcon';
 export * from './components/LoadingSpinner';
 export * from './components/ErrorDisplay';
+export * from './components/Alert';
 
 // Base components
 export * from './components/Button';

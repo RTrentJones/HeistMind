@@ -1,10 +1,20 @@
 import { defineConfig } from 'vitest/config';
-import { createBaseConfig } from '../../configs/vitest.base';
 
-export default defineConfig(
-  createBaseConfig(__dirname, {
+export default defineConfig({
+  test: {
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
-    coverageThreshold: 80,
-  })
-);
+    globals: true,
+    pool: 'forks', // Use process forks for better isolation
+    coverage: {
+      threshold: {
+        global: {
+          statements: 80,
+          branches: 80,
+          functions: 80,
+          lines: 80,
+        },
+      },
+    },
+  },
+});
