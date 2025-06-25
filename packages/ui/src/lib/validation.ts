@@ -3,7 +3,15 @@
  * Provides development-time warnings for invalid combinations
  */
 
-import { isValidDesignToken, type ValidDesignToken } from './variant-types';
+import {
+  isValidDesignToken,
+  type ValidDesignToken,
+  type ValidButtonCombination,
+  type ValidInputState,
+} from './variant-types';
+
+// Re-export constraint types for components
+export type { ValidButtonCombination, ValidInputState } from './variant-types';
 
 // Development mode validation
 const isDev = process.env.NODE_ENV === 'development';

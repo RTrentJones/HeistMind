@@ -55,6 +55,8 @@ export const useDebouncedCallback = <T extends (...args: readonly unknown[]) => 
     callbackRef.current = callback;
   }, [callback]);
 
+  const isMountedRef = useRef(true);
+
   const debouncedCallback = useRef((...args: Parameters<T>) => {
     const currentTime = Date.now();
     const timeSinceLastCall = currentTime - (lastCallTimeRef.current || 0);
@@ -78,19 +80,23 @@ export const useDebouncedCallback = <T extends (...args: readonly unknown[]) => 
       clearTimeout(maxTimeoutRef.current);
     }
 
-    // Set trailing timeout
+    // Set trailing timeout with mount check
     if (trailing) {
       timeoutRef.current = window.setTimeout(() => {
-        lastInvokeTimeRef.current = Date.now();
-        callbackRef.current(...args);
+        if (isMountedRef.current) {
+          lastInvokeTimeRef.current = Date.now();
+          callbackRef.current(...args);
+        }
       }, delay);
     }
 
-    // Set max wait timeout
+    // Set max wait timeout with mount check
     if (maxWait && timeSinceLastInvoke < maxWait) {
       maxTimeoutRef.current = window.setTimeout(() => {
-        lastInvokeTimeRef.current = Date.now();
-        callbackRef.current(...args);
+        if (isMountedRef.current) {
+          lastInvokeTimeRef.current = Date.now();
+          callbackRef.current(...args);
+        }
       }, maxWait - timeSinceLastInvoke);
     }
 
@@ -101,6 +107,7 @@ export const useDebouncedCallback = <T extends (...args: readonly unknown[]) => 
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }

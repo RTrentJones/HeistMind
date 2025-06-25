@@ -39,9 +39,28 @@ export interface AriaAttributes {
 }
 
 // Generate unique IDs for ARIA relationships
+import { ID_PATTERNS } from './constants';
+
 let idCounter = 0;
-export function generateAccessibilityId(prefix = 'hm'): string {
-  return `${prefix}-${++idCounter}-${Math.random().toString(36).substring(2, 11)}`;
+export function generateAccessibilityId(prefix?: string): string {
+  const validatedPrefix = prefix || ID_PATTERNS.DEFAULT_PREFIX;
+
+  // Validate prefix to prevent XSS and invalid DOM IDs
+  if (typeof validatedPrefix !== 'string') {
+    throw new Error('Prefix must be a string');
+  }
+
+  if (validatedPrefix.length > ID_PATTERNS.MAX_PREFIX_LENGTH) {
+    throw new Error(`Prefix cannot exceed ${ID_PATTERNS.MAX_PREFIX_LENGTH} characters`);
+  }
+
+  if (!ID_PATTERNS.PREFIX_REGEX.test(validatedPrefix)) {
+    throw new Error(
+      'Prefix must start with a letter and contain only letters, numbers, hyphens, and underscores'
+    );
+  }
+
+  return `${validatedPrefix}-${++idCounter}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Create stable ID hook
@@ -90,8 +109,11 @@ export class AriaAnnouncer {
   announce(message: string, priority: 'polite' | 'assertive' = 'polite') {
     if (!this.liveRegion) return;
 
+    // Sanitize message to prevent XSS
+    const sanitizedMessage = this.sanitizeMessage(message);
+
     this.liveRegion.setAttribute('aria-live', priority);
-    this.liveRegion.textContent = message;
+    this.liveRegion.textContent = sanitizedMessage;
 
     // Clear after announcement
     setTimeout(() => {
@@ -99,6 +121,19 @@ export class AriaAnnouncer {
         this.liveRegion.textContent = '';
       }
     }, 1000);
+  }
+
+  private sanitizeMessage(message: string): string {
+    if (typeof message !== 'string') {
+      return '';
+    }
+
+    // Remove HTML tags and limit length for security
+    return message
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&[^;]+;/g, '') // Remove HTML entities
+      .trim()
+      .slice(0, 500); // Limit length
   }
 }
 

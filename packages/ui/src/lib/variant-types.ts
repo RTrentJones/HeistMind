@@ -7,7 +7,7 @@ import { type VariantProps } from 'class-variance-authority';
 import { buttonVariants } from '../components/Button';
 import { cardVariants } from '../components/Card';
 import { badgeVariants } from '../components/Badge';
-import { inputVariants } from '../components/InputBase';
+import { inputVariants } from '../components/Input';
 
 // Extract variant types from CVA definitions
 export type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>['variant']>;

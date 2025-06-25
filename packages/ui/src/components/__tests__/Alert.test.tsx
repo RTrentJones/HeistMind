@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { vi } from 'vitest';
+import { act } from '@testing-library/react';
 import { Alert, AlertTitle, AlertDescription } from '../Alert';
 import { render, screen, userEvent, testAccessibility, testVariants } from '../../lib/test-utils';
 
@@ -111,7 +112,10 @@ describe('Alert Components', () => {
       );
 
       const dismissButton = screen.getByRole('button', { name: /dismiss alert/i });
-      await user.click(dismissButton);
+
+      await act(async () => {
+        await user.click(dismissButton);
+      });
 
       expect(handleDismiss).toHaveBeenCalledTimes(1);
     });
@@ -126,7 +130,9 @@ describe('Alert Components', () => {
 
       expect(alert).toBeInTheDocument();
 
-      await user.click(dismissButton);
+      await act(async () => {
+        await user.click(dismissButton);
+      });
 
       expect(alert).not.toBeInTheDocument();
     });
@@ -150,7 +156,9 @@ describe('Alert Components', () => {
 
       // Test Enter key
       dismissButton.focus();
-      await user.keyboard('{Enter}');
+      await act(async () => {
+        await user.keyboard('{Enter}');
+      });
       expect(handleDismiss).toHaveBeenCalledTimes(1);
     });
   });
@@ -280,7 +288,7 @@ describe('Alert Components', () => {
       const faultyDismiss = vi.fn(() => {
         throw new Error('Dismiss error');
       });
-      const consoleError = vi.spyOn(console, 'error').mockImplementation();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
       const user = userEvent.setup();
 
       render(
@@ -290,18 +298,23 @@ describe('Alert Components', () => {
       );
 
       const dismissButton = screen.getByRole('button', { name: /dismiss alert/i });
+      const alert = screen.getByRole('alert');
 
-      // Should not throw error to user - wrap in try/catch to prevent unhandled error
-      try {
+      expect(alert).toBeInTheDocument();
+
+      // Should handle error gracefully without throwing
+      await act(async () => {
         await user.click(dismissButton);
-      } catch (error) {
-        // Expected error - should be caught by component error boundary
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toBe('Dismiss error');
-      }
+      });
 
       // Verify the function was called despite the error
       expect(faultyDismiss).toHaveBeenCalled();
+
+      // Verify alert is still dismissed despite the error
+      expect(alert).not.toBeInTheDocument();
+
+      // Verify error was logged to console
+      expect(consoleError).toHaveBeenCalledWith('Error in onDismiss handler:', expect.any(Error));
 
       consoleError.mockRestore();
     });

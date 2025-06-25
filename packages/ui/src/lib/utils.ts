@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { STRESS_THRESHOLDS, ID_PATTERNS } from './constants';
 
 /**
  * Utility function for merging Tailwind CSS classes with clsx
@@ -9,9 +10,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Generate a random ID for component instances
+ * Generate a random ID for component instances with input validation
  */
-export function generateId(prefix: string = 'hm'): string {
+export function generateId(prefix: string = ID_PATTERNS.DEFAULT_PREFIX): string {
+  // Validate prefix to prevent XSS and invalid DOM IDs
+  if (typeof prefix !== 'string') {
+    throw new Error('Prefix must be a string');
+  }
+
+  if (prefix.length > ID_PATTERNS.MAX_PREFIX_LENGTH) {
+    throw new Error(`Prefix cannot exceed ${ID_PATTERNS.MAX_PREFIX_LENGTH} characters`);
+  }
+
+  if (!ID_PATTERNS.PREFIX_REGEX.test(prefix)) {
+    throw new Error(
+      'Prefix must start with a letter and contain only letters, numbers, hyphens, and underscores'
+    );
+  }
+
   return `${prefix}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
@@ -43,10 +59,13 @@ export function calculateStressLevel(
   current: number,
   max: number
 ): 'low' | 'medium' | 'high' | 'critical' {
+  if (max <= 0) throw new Error('Max value must be greater than zero');
+  if (current < 0) throw new Error('Current value cannot be negative');
+
   const percentage = (current / max) * 100;
-  if (percentage < 25) return 'low';
-  if (percentage < 50) return 'medium';
-  if (percentage < 75) return 'high';
+  if (percentage < STRESS_THRESHOLDS.LOW) return 'low';
+  if (percentage < STRESS_THRESHOLDS.MEDIUM) return 'medium';
+  if (percentage < STRESS_THRESHOLDS.HIGH) return 'high';
   return 'critical';
 }
 

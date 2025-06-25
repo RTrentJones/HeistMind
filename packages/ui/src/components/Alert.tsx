@@ -100,7 +100,11 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
 
     const handleDismiss = () => {
       setIsVisible(false);
-      onDismiss?.();
+      try {
+        onDismiss?.();
+      } catch (error) {
+        console.error('Error in onDismiss handler:', error);
+      }
     };
 
     if (!isVisible) {

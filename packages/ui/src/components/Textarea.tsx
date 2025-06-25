@@ -1,22 +1,28 @@
 import * as React from 'react';
 import { cn } from '../lib/utils';
 import { MotionDiv, MotionTextarea } from '../lib/motion-safe';
-import { useFormFieldState, useInteractiveMotion } from '../lib/accessibility';
-import { inputVariants } from './InputBase';
+import {
+  useComponentIds,
+  useFormFieldState,
+  useInteractiveMotion,
+  buildFormFieldAria,
+} from '../lib/accessibility';
+import { inputVariants } from './Input';
 import { type VariantProps } from 'class-variance-authority';
 
-export interface TextareaFieldProps
+export interface TextareaProps
   extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'>,
     VariantProps<typeof inputVariants> {
   label?: string;
   error?: string;
   success?: string;
   warning?: string;
+  helpText?: string;
   resizable?: boolean;
 }
 
-const TextareaField = React.memo(
-  React.forwardRef<HTMLTextAreaElement, TextareaFieldProps>(
+const Textarea = React.memo(
+  React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     (
       {
         className,
@@ -43,22 +49,51 @@ const TextareaField = React.memo(
       const { prefersReducedMotion, getInitialAnimation, getTransitionDuration } =
         useInteractiveMotion(disabled);
 
+      const { ids } = useComponentIds('textarea');
+      const resolvedId = props.id || ids.component;
+
+      const ariaAttributes = buildFormFieldAria({
+        label: props['aria-label'] || label,
+        describedBy:
+          [
+            props['aria-describedby'],
+            props.helpText ? ids.help : null,
+            message ? ids.error : null,
+            label ? ids.label : null,
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined,
+        required: props.required,
+        invalid: resolvedState === 'error',
+        errorMessage: error,
+      });
+
       return (
         <div className='space-y-2'>
           {label && (
             <label
+              id={ids.label}
+              htmlFor={resolvedId}
               className={cn(
                 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground-primary',
                 resolvedState === 'error' && 'text-semantic-error',
                 resolvedState === 'success' && 'text-semantic-success',
-                resolvedState === 'warning' && 'text-semantic-warning'
+                resolvedState === 'warning' && 'text-semantic-warning',
+                props.required && 'after:content-["*"] after:ml-1 after:text-semantic-error'
               )}
             >
               {label}
             </label>
           )}
 
+          {props.helpText && (
+            <div id={ids.help} className='text-sm text-foreground-muted'>
+              {props.helpText}
+            </div>
+          )}
+
           <MotionTextarea
+            id={resolvedId}
             className={cn(
               inputVariants({
                 variant,
@@ -80,11 +115,13 @@ const TextareaField = React.memo(
               scale: isFocused && !prefersReducedMotion ? 1.01 : 1,
             }}
             transition={{ duration: getTransitionDuration() }}
+            {...ariaAttributes}
             {...props}
           />
 
           {message && (
             <MotionDiv
+              id={ids.error}
               className={cn(
                 'text-sm',
                 resolvedState === 'error' && 'text-semantic-error',
@@ -95,6 +132,8 @@ const TextareaField = React.memo(
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: getTransitionDuration() }}
+              role='alert'
+              aria-live='polite'
             >
               {message}
             </MotionDiv>
@@ -104,6 +143,6 @@ const TextareaField = React.memo(
     }
   )
 );
-TextareaField.displayName = 'TextareaField';
+Textarea.displayName = 'Textarea';
 
-export { TextareaField };
+export { Textarea };
