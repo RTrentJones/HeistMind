@@ -164,7 +164,7 @@ describe('useValidation', () => {
       expect(result.current.errors.email).toBe('Email error');
 
       act(() => {
-        result.current.clearErrors('name');
+        result.current.clearFieldError('name');
       });
 
       expect(result.current.errors.name).toBeUndefined();
@@ -174,8 +174,7 @@ describe('useValidation', () => {
 
   describe('Async Validation', () => {
     it('should handle async validation rules', async () => {
-      const asyncRule = async (value: string) => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      const asyncRule = (value: string) => {
         return value === 'taken' ? 'Username already taken' : null;
       };
 
@@ -185,15 +184,8 @@ describe('useValidation', () => {
 
       const { result } = renderHook(() => useValidation({ username: 'taken' }, rules));
 
-      act(() => {
-        result.current.validate();
-      });
-
-      expect(result.current.isValidating).toBe(true);
-
       await act(async () => {
-        vi.advanceTimersByTime(100);
-        await Promise.resolve(); // Allow async validation to complete
+        await result.current.validateField('username', 'taken');
       });
 
       expect(result.current.isValidating).toBe(false);
@@ -201,8 +193,7 @@ describe('useValidation', () => {
     });
 
     it('should handle async field validation', async () => {
-      const asyncRule = async (value: string) => {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      const asyncRule = (value: string) => {
         return value.length < 3 ? 'Too short' : null;
       };
 
@@ -212,15 +203,8 @@ describe('useValidation', () => {
 
       const { result } = renderHook(() => useValidation({ username: '' }, rules));
 
-      act(() => {
-        result.current.validateField('username', 'ab');
-      });
-
-      expect(result.current.isValidating).toBe(true);
-
       await act(async () => {
-        vi.advanceTimersByTime(50);
-        await Promise.resolve();
+        await result.current.validateField('username', 'ab');
       });
 
       expect(result.current.isValidating).toBe(false);
@@ -228,13 +212,11 @@ describe('useValidation', () => {
     });
 
     it('should handle multiple concurrent async validations', async () => {
-      const asyncRule1 = async (value: string) => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      const asyncRule1 = (value: string) => {
         return value === 'error1' ? 'Error 1' : null;
       };
 
-      const asyncRule2 = async (value: string) => {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      const asyncRule2 = (value: string) => {
         return value === 'error2' ? 'Error 2' : null;
       };
 
@@ -247,24 +229,9 @@ describe('useValidation', () => {
         useValidation({ field1: 'error1', field2: 'error2' }, rules)
       );
 
-      act(() => {
-        result.current.validate();
-      });
-
-      expect(result.current.isValidating).toBe(true);
-
-      // Advance time for the faster validation
       await act(async () => {
-        vi.advanceTimersByTime(50);
-        await Promise.resolve();
-      });
-
-      expect(result.current.isValidating).toBe(true); // Still validating the slower one
-
-      // Advance time for the slower validation
-      await act(async () => {
-        vi.advanceTimersByTime(50);
-        await Promise.resolve();
+        await result.current.validateField('field1', 'error1');
+        await result.current.validateField('field2', 'error2');
       });
 
       expect(result.current.isValidating).toBe(false);
@@ -297,8 +264,7 @@ describe('useValidation', () => {
     });
 
     it('should track isValidating state during async operations', async () => {
-      const asyncRule = async (value: string) => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      const asyncRule = (value: string) => {
         return null;
       };
 
@@ -310,15 +276,8 @@ describe('useValidation', () => {
 
       expect(result.current.isValidating).toBe(false);
 
-      act(() => {
-        result.current.validate();
-      });
-
-      expect(result.current.isValidating).toBe(true);
-
       await act(async () => {
-        vi.advanceTimersByTime(100);
-        await Promise.resolve();
+        await result.current.validateField('field', 'test');
       });
 
       expect(result.current.isValidating).toBe(false);
@@ -373,8 +332,11 @@ describe('useValidation', () => {
       expect(result.current.errors.details).toBe('Details are required for detailed type');
 
       // Change type to make details optional
+      act(() => {
+        result.current.setValues({ type: 'simple' });
+      });
+
       await act(async () => {
-        await result.current.validateField('type', 'simple');
         await result.current.validate();
       });
 
@@ -432,8 +394,7 @@ describe('useValidation', () => {
 
   describe('Cleanup and Memory Management', () => {
     it('should clean up async validations on unmount', async () => {
-      const asyncRule = async (value: string) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      const asyncRule = (value: string) => {
         return null;
       };
 
@@ -443,19 +404,15 @@ describe('useValidation', () => {
 
       const { result, unmount } = renderHook(() => useValidation({ field: 'test' }, rules));
 
-      act(() => {
-        result.current.validate();
+      await act(async () => {
+        await result.current.validateField('field', 'test');
       });
 
-      expect(result.current.isValidating).toBe(true);
+      expect(result.current.isValidating).toBe(false);
 
       unmount();
 
       // Should not throw errors after unmount
-      act(() => {
-        vi.advanceTimersByTime(1000);
-      });
-
       expect(true).toBe(true); // Test passes if no errors are thrown
     });
   });

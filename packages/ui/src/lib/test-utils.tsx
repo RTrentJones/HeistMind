@@ -5,7 +5,7 @@
 
 import React, { ReactElement } from 'react';
 import { vi } from 'vitest';
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
+import { render, RenderOptions, RenderResult, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -184,12 +184,17 @@ export const testLoadingStates = async (
   loadingTestId: string = 'loading-indicator'
 ) => {
   // Test loading state
-  const { rerender } = renderComponent(true);
+  const result = renderComponent(true);
   expect(document.querySelector(`[data-testid="${loadingTestId}"]`)).toBeInTheDocument();
 
-  // Test loaded state
-  renderComponent(false);
-  expect(document.querySelector(`[data-testid="${loadingTestId}"]`)).not.toBeInTheDocument();
+  // Test loaded state - need to properly clear the loading state
+  result.unmount();
+  const newResult = renderComponent(false);
+
+  // Wait for any async updates to complete
+  await waitFor(() => {
+    expect(document.querySelector(`[data-testid="${loadingTestId}"]`)).not.toBeInTheDocument();
+  });
 };
 
 /**

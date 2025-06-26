@@ -192,7 +192,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toBeInTheDocument();
-      expect(badge.textContent).toBe('   ');
+      expect(badge.textContent?.trim()).toBe('');
     });
   });
 

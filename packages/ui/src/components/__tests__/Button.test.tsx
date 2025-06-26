@@ -115,7 +115,7 @@ describe('Button Component', () => {
     });
 
     it('handles loading state transitions', async () => {
-      testLoadingStates(
+      await testLoadingStates(
         loading => render(<Button loading={loading}>Test</Button>),
         'loading-spinner'
       );

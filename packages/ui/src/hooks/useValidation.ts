@@ -119,7 +119,7 @@ export function useValidation<T extends Record<string, unknown>>(
         return `Validation failed for ${String(field)}: Unknown error`;
       }
     },
-    [validatorRules]
+    [validatorRules, state.values]
   );
 
   const validateAll = useCallback((): {

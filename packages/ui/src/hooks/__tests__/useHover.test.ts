@@ -6,18 +6,17 @@ import { renderHook, act } from '@testing-library/react';
 import { vi } from 'vitest';
 import { useHover } from '../useHover';
 
-// Mock useEventListener
-vi.mock('../useEventListener', () => ({
-  useEventListener: vi.fn((event, handler, ref) => {
-    if (ref && ref.current) {
-      ref.current.addEventListener(event, handler);
-      return () => ref.current?.removeEventListener(event, handler);
-    }
-  }),
-}));
+// Don't mock useEventListener - use the real implementation
 
 describe('useHover', () => {
   let mockElement: HTMLElement;
+
+  // Helper function to wait for useEffect to complete
+  const waitForEffects = async () => {
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+  };
 
   beforeEach(() => {
     mockElement = document.createElement('div');
@@ -37,6 +36,14 @@ describe('useHover', () => {
         dispatchEvent: vi.fn(),
       })),
     });
+
+    // Mock touch detection to ensure non-touch environment
+    delete (window as any).ontouchstart;
+
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      writable: true,
+      value: 0,
+    });
   });
 
   afterEach(() => {
@@ -45,8 +52,11 @@ describe('useHover', () => {
   });
 
   describe('Basic Functionality', () => {
-    it('should return initial hover state as false', () => {
+    it('should return initial hover state as false', async () => {
       const { result } = renderHook(() => useHover());
+
+      // Wait for initial useEffect to complete
+      await waitForEffects();
 
       expect(result.current.isHovered).toBe(false);
       expect(result.current.hoverRef.current).toBe(null);
@@ -54,12 +64,15 @@ describe('useHover', () => {
       expect(typeof result.current.handlers.onMouseLeave).toBe('function');
     });
 
-    it('should set hover state to true on mouse enter', () => {
+    it('should set hover state to true on mouse enter', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      // Wait for useEffect to update touch detection
+      await waitForEffects();
 
       act(() => {
         result.current.handlers.onMouseEnter();
@@ -68,12 +81,14 @@ describe('useHover', () => {
       expect(result.current.isHovered).toBe(true);
     });
 
-    it('should set hover state to false on mouse leave', () => {
+    it('should set hover state to false on mouse leave', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       // First hover
       act(() => {
@@ -90,12 +105,14 @@ describe('useHover', () => {
   });
 
   describe('Event Handling', () => {
-    it('should handle multiple hover cycles', () => {
+    it('should handle multiple hover cycles', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       // First cycle
       act(() => {
@@ -120,12 +137,14 @@ describe('useHover', () => {
       expect(result.current.isHovered).toBe(false);
     });
 
-    it('should handle rapid mouse events', () => {
+    it('should handle rapid mouse events', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       // Rapid enter/leave events
       act(() => {
@@ -141,12 +160,14 @@ describe('useHover', () => {
   });
 
   describe('Focus Handling', () => {
-    it('should set hover state to true on focus', () => {
+    it('should set hover state to true on focus', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       act(() => {
         result.current.handlers.onFocus();
@@ -155,12 +176,14 @@ describe('useHover', () => {
       expect(result.current.isHovered).toBe(true);
     });
 
-    it('should set hover state to false on blur', () => {
+    it('should set hover state to false on blur', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       // First focus
       act(() => {
@@ -329,7 +352,7 @@ describe('useHover', () => {
   });
 
   describe('Motion Preferences', () => {
-    it('should respect reduced motion preference', () => {
+    it('should respect reduced motion preference', async () => {
       // Mock reduced motion preference
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
@@ -355,6 +378,8 @@ describe('useHover', () => {
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       act(() => {
         result.current.handlers.onMouseEnter();
@@ -399,8 +424,10 @@ describe('useHover', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle null ref gracefully', () => {
+    it('should handle null ref gracefully', async () => {
       const { result } = renderHook(() => useHover());
+
+      await waitForEffects();
 
       expect(result.current.hoverRef.current).toBe(null);
 
@@ -413,7 +440,7 @@ describe('useHover', () => {
       }).not.toThrow();
     });
 
-    it('should handle non-touch devices', () => {
+    it('should handle non-touch devices', async () => {
       // Mock non-touch device
       Object.defineProperty(navigator, 'maxTouchPoints', {
         writable: true,
@@ -426,6 +453,8 @@ describe('useHover', () => {
         result.current.hoverRef.current = mockElement;
       });
 
+      await waitForEffects();
+
       act(() => {
         result.current.handlers.onMouseEnter();
       });
@@ -435,8 +464,10 @@ describe('useHover', () => {
   });
 
   describe('Performance', () => {
-    it('should not recreate handlers on re-renders', () => {
+    it('should not recreate handlers on re-renders', async () => {
       const { result, rerender } = renderHook(() => useHover());
+
+      await waitForEffects();
 
       const initialHandlers = result.current.handlers;
 
@@ -450,12 +481,14 @@ describe('useHover', () => {
       expect(typeof result.current.handlers.onMouseLeave).toBe('function');
     });
 
-    it('should handle many rapid hover events efficiently', () => {
+    it('should handle many rapid hover events efficiently', async () => {
       const { result } = renderHook(() => useHover());
 
       act(() => {
         result.current.hoverRef.current = mockElement;
       });
+
+      await waitForEffects();
 
       // Simulate many rapid events
       act(() => {

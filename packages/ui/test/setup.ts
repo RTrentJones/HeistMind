@@ -44,6 +44,36 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 // Mock window.scrollTo
 global.scrollTo = vi.fn();
 
+// Mock PointerEvent for motion-dom compatibility
+if (!global.PointerEvent) {
+  global.PointerEvent = class PointerEvent extends Event {
+    pointerId: number;
+    width: number;
+    height: number;
+    pressure: number;
+    tangentialPressure: number;
+    tiltX: number;
+    tiltY: number;
+    twist: number;
+    pointerType: string;
+    isPrimary: boolean;
+
+    constructor(type: string, options: any = {}) {
+      super(type, options);
+      this.pointerId = options.pointerId || 1;
+      this.width = options.width || 1;
+      this.height = options.height || 1;
+      this.pressure = options.pressure || 0;
+      this.tangentialPressure = options.tangentialPressure || 0;
+      this.tiltX = options.tiltX || 0;
+      this.tiltY = options.tiltY || 0;
+      this.twist = options.twist || 0;
+      this.pointerType = options.pointerType || 'mouse';
+      this.isPrimary = options.isPrimary || true;
+    }
+  } as any;
+}
+
 // Mock HTMLElement methods
 Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
   value: vi.fn(),

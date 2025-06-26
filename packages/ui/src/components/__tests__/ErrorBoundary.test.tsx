@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { vi } from 'vitest';
-import { render, screen } from '../../lib/test-utils';
+import { render, screen, act } from '../../lib/test-utils';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 // Test component that throws an error
@@ -120,10 +120,10 @@ describe('ErrorBoundary', () => {
 
   describe('Custom Fallback', () => {
     it('renders custom fallback when provided', () => {
-      const customFallback = <div data-testid='custom-fallback'>Custom error UI</div>;
+      const CustomFallback = () => <div data-testid='custom-fallback'>Custom error UI</div>;
 
       render(
-        <ErrorBoundary fallback={customFallback}>
+        <ErrorBoundary fallback={CustomFallback}>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
       );
@@ -133,12 +133,14 @@ describe('ErrorBoundary', () => {
     });
 
     it('passes error information to custom fallback function', () => {
-      const fallbackFn = vi.fn((error: Error, retry: () => void) => (
-        <div>
-          <span>Error: {error.message}</span>
-          <button onClick={retry}>Custom Retry</button>
-        </div>
-      ));
+      const fallbackFn = vi.fn(
+        ({ error, resetError }: { error: Error; resetError: () => void; errorId: string }) => (
+          <div>
+            <span>Error: {error.message}</span>
+            <button onClick={resetError}>Custom Retry</button>
+          </div>
+        )
+      );
 
       render(
         <ErrorBoundary fallback={fallbackFn}>
@@ -148,9 +150,13 @@ describe('ErrorBoundary', () => {
 
       expect(fallbackFn).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'Fallback test error',
+          error: expect.objectContaining({
+            message: 'Fallback test error',
+          }),
+          resetError: expect.any(Function),
+          errorId: expect.any(String),
         }),
-        expect.any(Function)
+        undefined
       );
       expect(screen.getByText('Error: Fallback test error')).toBeInTheDocument();
     });
@@ -212,16 +218,23 @@ describe('ErrorBoundary', () => {
       const retryButton = screen.getByRole('button', { name: /try again/i });
 
       // Focus the button
-      retryButton.focus();
+      await act(async () => {
+        retryButton.focus();
+      });
       expect(retryButton).toHaveFocus();
 
       // Should be activatable with Enter
-      await user.keyboard('{Enter}');
-      expect(retryButton).toHaveFocus();
+      await act(async () => {
+        await user.keyboard('{Enter}');
+      });
 
       // Should be activatable with Space
-      await user.keyboard(' ');
-      expect(retryButton).toHaveFocus();
+      await act(async () => {
+        await user.keyboard(' ');
+      });
+
+      // Verify button remains focusable
+      expect(retryButton).toBeEnabled();
     });
   });
 

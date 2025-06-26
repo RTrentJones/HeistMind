@@ -15,7 +15,9 @@ describe('useEventListener', () => {
   });
 
   afterEach(() => {
-    document.body.removeChild(mockElement);
+    if (mockElement.parentNode) {
+      document.body.removeChild(mockElement);
+    }
     vi.restoreAllMocks();
   });
 
@@ -26,16 +28,16 @@ describe('useEventListener', () => {
 
       renderHook(() => useEventListener('click', handler, mockElement));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
     });
 
-    it('should add event listener to window when no element provided', () => {
+    it('should add event listener to window when window is provided', () => {
       const handler = vi.fn();
       const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
 
-      renderHook(() => useEventListener('resize', handler));
+      renderHook(() => useEventListener('resize', handler, window));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('resize', handler, undefined);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function), undefined);
     });
 
     it('should add event listener to document when document provided', () => {
@@ -44,7 +46,7 @@ describe('useEventListener', () => {
 
       renderHook(() => useEventListener('keydown', handler, document));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', handler, undefined);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), undefined);
     });
 
     it('should pass options to addEventListener', () => {
@@ -54,7 +56,7 @@ describe('useEventListener', () => {
 
       renderHook(() => useEventListener('scroll', handler, mockElement, options));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', handler, options);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function), options);
     });
   });
 
@@ -111,7 +113,7 @@ describe('useEventListener', () => {
 
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
     });
 
     it('should remove event listener when element changes', () => {
@@ -127,8 +129,8 @@ describe('useEventListener', () => {
 
       rerender({ element: newElement });
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
-      expect(addEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
     });
 
     it('should remove event listener when event type changes', () => {
@@ -145,8 +147,12 @@ describe('useEventListener', () => {
 
       rerender({ eventType: 'mousedown' as const });
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
-      expect(addEventListenerSpy).toHaveBeenCalledWith('mousedown', handler, undefined);
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'mousedown',
+        expect.any(Function),
+        undefined
+      );
     });
 
     it('should handle element removal from DOM gracefully', () => {
@@ -154,7 +160,9 @@ describe('useEventListener', () => {
       const { unmount } = renderHook(() => useEventListener('click', handler, mockElement));
 
       // Remove element from DOM before unmounting hook
-      document.body.removeChild(mockElement);
+      if (mockElement.parentNode) {
+        document.body.removeChild(mockElement);
+      }
 
       // Should not throw error
       expect(() => unmount()).not.toThrow();
@@ -189,7 +197,7 @@ describe('useEventListener', () => {
 
       rerender({ element: null });
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
     });
 
     it('should handle changing from null to element', () => {
@@ -203,7 +211,7 @@ describe('useEventListener', () => {
 
       rerender({ element: mockElement });
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('click', handler, undefined);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
     });
   });
 
@@ -292,7 +300,7 @@ describe('useEventListener', () => {
 
       renderHook(() => useEventListener('click', handler, mockElement, true));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('click', handler, true);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), true);
     });
 
     it('should handle object options', () => {
@@ -302,7 +310,7 @@ describe('useEventListener', () => {
 
       renderHook(() => useEventListener('click', handler, mockElement, options));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('click', handler, options);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), options);
     });
 
     it('should update listeners when options change', () => {
@@ -319,8 +327,12 @@ describe('useEventListener', () => {
 
       rerender({ options: { capture: true } });
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', handler, { passive: true });
-      expect(addEventListenerSpy).toHaveBeenCalledWith('click', handler, { capture: true });
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), {
+        passive: true,
+      });
+      expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), {
+        capture: true,
+      });
     });
   });
 

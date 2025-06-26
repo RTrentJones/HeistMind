@@ -124,7 +124,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <Card variant='danger' className='max-w-2xl mx-auto my-4'>
+        <Card
+          variant='danger'
+          className='max-w-2xl mx-auto my-4'
+          role='alert'
+          aria-live='assertive'
+        >
           <CardHeader>
             <CardTitle className='flex items-center gap-2 text-semantic-error'>
               <AlertTriangle className='w-5 h-5' />
