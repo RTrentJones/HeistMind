@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in values.
+# DO NOT commit terraform.tfvars to version control.
+
+# --- Supabase ---
+supabase_access_token      = ""   # From https://supabase.com/dashboard/account/tokens
+supabase_organization_id   = ""   # From Supabase dashboard > Org Settings
+supabase_project_name      = "heistmind-db"
+supabase_database_password = ""   # Strong password for the database
+supabase_region            = "us-east-1"
+
+# --- GitHub ---
+github_token = ""                 # PAT with repo + actions scopes
+github_repo  = ""                 # owner/repo format (e.g. rtj/HeistMind)

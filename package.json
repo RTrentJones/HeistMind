@@ -21,6 +21,8 @@
     "dev:web": "pnpm --filter=@heist-mind/web dev",
     "db:push": "pnpm --filter database db:push",
     "db:types": "pnpm --filter database db:types",
+    "infra:setup": "./scripts/setup-supabase.sh",
+    "infra:plan": "cd infra/terraform && terraform plan",
     "dep-check": "pnpm -r list --depth=0",
     "dep-update": "pnpm -r update",
     "cleanup": "pnpm -r run clean",

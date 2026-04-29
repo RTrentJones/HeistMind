@@ -89,7 +89,8 @@ tmp/
 temp/
 
 # Editor directories and files
-.vscode/*
+.vscode
+.kiro
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -123,3 +124,9 @@ Thumbs.db
 # Supabase
 supabase/.branches
 supabase/.temp
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+infra/terraform/terraform.tfvars
+infra/terraform/*.auto.tfvars
