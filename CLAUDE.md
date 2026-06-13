@@ -8,12 +8,21 @@ HeistMind is a game management platform for Blades in the Dark and other Forged 
 
 ## Monorepo Structure
 
-pnpm workspaces + Turborepo monorepo with four packages:
+pnpm workspaces + Turborepo monorepo (workspaces: `apps/*`, `packages/*`):
 
 - **apps/web** — Next.js 15 (App Router) with React 19, the main web application
+- **apps/discord-bot** — empty placeholder for a future Discord bot (not yet implemented)
 - **packages/database** — Supabase client with repository pattern abstraction over domain types
 - **packages/ui** — Shared component library built on Radix UI primitives + Tailwind CSS 4
-- **packages/shared** — Common utilities and types
+- **packages/shared** — Common utilities and types (depends on `database`)
+
+Build order matters: `database` ← `shared` ← `ui` ← `web`. Turbo's `^build` dependency
+enforces this, so `pnpm build` (or any `dev`/`test`/`lint` task) rebuilds upstream packages
+first. After editing a `packages/*` source file, downstream packages consume its built `dist/`,
+not its source — rebuild the package (or run its `dev` watcher) for changes to propagate.
+
+Shared tooling config lives in `configs/` (`tsconfig.base.json`, `vitest.base.ts` —
+`createBaseConfig` is imported by each package's `vitest.config.ts`).
 
 ## Commands
 
@@ -77,6 +86,8 @@ All API calls go through `apiClient` which wraps fetch with retry (exponential b
 ### Database (packages/database)
 
 Repository pattern: domain types and repository interfaces are exported publicly; Supabase-specific implementations are internal. Factory functions (`createDatabaseProvider`, `createRepositories`, `createAuthService`) provide the public API. Auth uses Discord OAuth with automatic profile creation via database triggers.
+
+SQL migrations live in `supabase/migrations/` (`supabase/config.toml` configures the local stack); `pnpm db:push` applies them. `pnpm db:types` regenerates `src/supabase-types.ts` from the remote schema (`db:types-local` from a local stack), so run it after schema changes.
 
 ### UI Library (packages/ui)
 
