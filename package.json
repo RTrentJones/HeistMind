@@ -3,18 +3,66 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm run --parallel dev",
-    "build": "pnpm run -r build",
-    "lint": "pnpm run -r lint",
-    "type-check": "pnpm run -r type-check",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "test:watch": "turbo test:watch",
+    "test:coverage": "turbo test:coverage",
+    "clean": "turbo clean",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "pnpm lint && pnpm type-check && pnpm test",
+    "build:ui": "turbo build --filter=@heist-mind/ui",
+    "build:web": "turbo build --filter=@heist-mind/web",
+    "dev:ui": "pnpm --filter=@heist-mind/ui dev",
+    "dev:web": "pnpm --filter=@heist-mind/web dev",
     "db:push": "pnpm --filter database db:push",
-    "db:types": "pnpm --filter database db:types"
+    "db:types": "pnpm --filter database db:types",
+    "infra:setup": "./scripts/setup-supabase.sh",
+    "infra:plan": "cd infra/terraform && terraform plan",
+    "dep-check": "pnpm -r list --depth=0",
+    "dep-update": "pnpm -r update",
+    "cleanup": "pnpm -r run clean",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "typescript": "^5.3.3"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
+    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/ui": "^2.1.9",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-import-resolver-typescript": "^4.4.3",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "^5.3.3",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.9"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=20.0.0",
+    "pnpm": ">=9.15.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,yaml,yml}": [
+      "prettier --write"
+    ]
   }
 }

@@ -1,0 +1,395 @@
+@import "tailwindcss";
+
+/* Tailwind v4 Theme Configuration */
+@theme {
+  /* Brand colors - consistent across themes */
+  --color-brand-primary: hsl(262.1 83.3% 57.8%);
+  --color-brand-secondary: hsl(263.4 70% 50.4%);
+  --color-brand-accent: hsl(270.7 91% 65.1%);
+  
+  /* Semantic colors - consistent across themes */
+  --color-semantic-success: hsl(142.1 76.2% 36.3%);
+  --color-semantic-warning: hsl(32.6 94.6% 43.7%);
+  --color-semantic-error: hsl(346.8 77.2% 49.8%);
+  --color-semantic-info: hsl(217.2 91.2% 59.8%);
+  
+  /* Game colors - consistent across themes */
+  --color-game-ember: hsl(14.3 100% 53.3%);
+  --color-game-steel: hsl(217.2 91.2% 59.8%);
+  --color-game-crimson: hsl(346.8 77.2% 49.8%);
+  --color-game-gold: hsl(45.4 93.4% 47.5%);
+  --color-game-whisper: hsl(240 4.8% 95.9%);
+  
+  /* Theme-aware colors - these will be overridden by theme classes */
+  --color-background-primary: hsl(240 10% 3.9%);
+  --color-background-secondary: hsl(240 5.9% 10%);
+  --color-background-tertiary: hsl(240 4.8% 15.9%);
+  --color-background-elevated: hsl(240 3.7% 21.9%);
+  --color-background-glass: hsla(0 0% 100% / 0.05);
+  
+  --color-foreground-primary: hsl(0 0% 98%);
+  --color-foreground-secondary: hsl(240 5% 84.1%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(220.9 39.3% 11%);
+  
+  --color-border-primary: hsl(240 3.7% 15.9%);
+  --color-border-secondary: hsl(240 4.8% 21.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
+  --color-border-focus: hsl(262.1 83.3% 57.8%);
+  
+  /* Radius for consistency */
+  --radius: 0.75rem;
+}
+
+/* Base CSS variable definitions - inherits from @theme block above */
+:root {
+  /* Additional theme variables not covered in @theme */
+  --theme-mode: 'dark';
+}
+
+/* Light theme overrides using CSS variables */
+.light {
+  --color-background-primary: hsl(0 0% 100%);
+  --color-background-secondary: hsl(240 4.8% 95.9%);
+  --color-background-tertiary: hsl(240 5.9% 90%);
+  --color-background-elevated: hsl(0 0% 100%);
+  --color-background-glass: hsla(0 0% 100% / 0.8);
+  
+  --color-foreground-primary: hsl(240 10% 3.9%);
+  --color-foreground-secondary: hsl(240 5.9% 10%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(215.4 16.3% 46.9%);
+  --color-game-whisper: hsl(240 4.8% 95.9%);
+  
+  --color-border-primary: hsl(240 5.9% 90%);
+  --color-border-secondary: hsl(240 4.8% 83.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
+}
+
+/* Dark theme explicit overrides - ensures proper cascade */
+.dark {
+  --color-background-primary: hsl(240 10% 3.9%);
+  --color-background-secondary: hsl(240 5.9% 10%);
+  --color-background-tertiary: hsl(240 4.8% 15.9%);
+  --color-background-elevated: hsl(240 3.7% 21.9%);
+  --color-background-glass: hsla(0 0% 100% / 0.05);
+  
+  --color-foreground-primary: hsl(0 0% 98%);
+  --color-foreground-secondary: hsl(240 5% 84.1%);
+  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  --color-foreground-disabled: hsl(240 5% 64.9%);
+  
+  --color-game-shadow: hsl(220.9 39.3% 11%);
+  --color-game-whisper: hsl(240 4.8% 95.9%);
+  
+  --color-border-primary: hsl(240 3.7% 15.9%);
+  --color-border-secondary: hsl(240 4.8% 21.9%);
+  --color-border-muted: hsl(240 3.8% 46.1%);
+}
+
+/* Base styles */
+* {
+  border-color: var(--color-border-primary);
+}
+
+body {
+  background-color: var(--color-background-primary);
+  color: var(--color-foreground-primary);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Enhanced scrollbar styling - theme aware */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-muted);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground-muted);
+}
+
+/* Glass morphism utilities - theme aware */
+.glass {
+  background: var(--color-background-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-secondary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.glass-sm {
+  background: var(--color-background-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-secondary);
+}
+
+.glass-lg {
+  background: var(--color-background-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border-secondary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme adjustments for glass */
+.light .glass,
+.light .glass-sm,
+.light .glass-lg {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+/* Neumorphism utilities - theme aware */
+.neu-inset {
+  background: var(--color-background-secondary);
+  box-shadow: 
+    inset 8px 8px 16px rgba(0, 0, 0, 0.4),
+    inset -8px -8px 16px rgba(255, 255, 255, 0.05);
+}
+
+.neu-raised {
+  background: var(--color-background-secondary);
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.4),
+    -8px -8px 16px rgba(255, 255, 255, 0.05);
+}
+
+.neu-flat {
+  background: var(--color-background-secondary);
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.3),
+    -4px -4px 8px rgba(255, 255, 255, 0.03);
+}
+
+/* Light theme neumorphism */
+.light .neu-inset {
+  box-shadow: 
+    inset 8px 8px 16px rgba(0, 0, 0, 0.1),
+    inset -8px -8px 16px rgba(255, 255, 255, 0.8);
+}
+
+.light .neu-raised {
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.1),
+    -8px -8px 16px rgba(255, 255, 255, 0.8);
+}
+
+.light .neu-flat {
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.08),
+    -4px -4px 8px rgba(255, 255, 255, 0.8);
+}
+
+/* Game-specific utility classes - theme aware */
+.heist-glow {
+  box-shadow: 0 0 20px hsl(from var(--color-brand-primary) h s l / 0.4);
+}
+
+.heist-glow-ember {
+  box-shadow: 0 0 20px hsl(from var(--color-game-ember) h s l / 0.4);
+}
+
+.heist-glow-crimson {
+  box-shadow: 0 0 20px hsl(from var(--color-game-crimson) h s l / 0.4);
+}
+
+.heist-glow-steel {
+  box-shadow: 0 0 20px hsl(from var(--color-game-steel) h s l / 0.4);
+}
+
+.heist-glow-gold {
+  box-shadow: 0 0 20px hsl(from var(--color-game-gold) h s l / 0.4);
+}
+
+/* Text gradient utilities - theme aware */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-brand-primary), var(--color-brand-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-ember {
+  background: linear-gradient(135deg, var(--color-game-ember), var(--color-game-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-steel {
+  background: linear-gradient(135deg, var(--color-game-steel), var(--color-game-shadow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-crimson {
+  background: linear-gradient(135deg, var(--color-game-crimson), var(--color-semantic-error));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enhanced button hover states */
+.btn-hover-lift {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Typography improvements */
+.font-display {
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-feature-settings: "liga" 1, "dlig" 1;
+}
+
+/* Focus ring improvements */
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
+}
+
+/* Stress indicator styles for game components */
+.stress-low {
+  background-color: hsl(from var(--color-semantic-success) h s l / 0.2);
+  border-color: hsl(from var(--color-semantic-success) h s l / 0.4);
+  color: var(--color-semantic-success);
+}
+
+.stress-medium {
+  background-color: hsl(from var(--color-semantic-warning) h s l / 0.2);
+  border-color: hsl(from var(--color-semantic-warning) h s l / 0.4);
+  color: var(--color-semantic-warning);
+}
+
+.stress-high {
+  background-color: hsl(from var(--color-game-ember) h s l / 0.2);
+  border-color: hsl(from var(--color-game-ember) h s l / 0.4);
+  color: var(--color-game-ember);
+}
+
+.stress-critical {
+  background-color: hsl(from var(--color-semantic-error) h s l / 0.2);
+  border-color: hsl(from var(--color-semantic-error) h s l / 0.4);
+  color: var(--color-semantic-error);
+  animation: stress-pulse 2s infinite;
+}
+
+/* Shimmer effect for loading states */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(from var(--color-foreground-primary) h s l / 0.4),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Keyframes */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes stress-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 0 0 0 hsl(from var(--color-semantic-error) h s l / 0.7);
+  }
+  70% { 
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px hsl(from var(--color-semantic-error) h s l / 0);
+  }
+}
+
+@keyframes dice-roll {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  25% { transform: rotateX(90deg) rotateY(90deg); }
+  50% { transform: rotateX(180deg) rotateY(180deg); }
+  75% { transform: rotateX(270deg) rotateY(270deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+.dice-roll {
+  animation: dice-roll 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Neumorphic shadow utilities */
+.shadow-neu-raised {
+  box-shadow: 
+    8px 8px 16px rgba(0, 0, 0, 0.4),
+    -8px -8px 16px rgba(255, 255, 255, 0.05);
+}
+
+.shadow-neu-flat {
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.3),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.03);
+}
+
+.shadow-neu-pressed {
+  box-shadow: 
+    inset 6px 6px 12px rgba(0, 0, 0, 0.4),
+    inset -6px -6px 12px rgba(255, 255, 255, 0.02);
+}
+
+/* Glow shadow utilities for components */
+.shadow-glow-purple {
+  box-shadow: 0 0 20px hsl(from var(--color-brand-primary) h s l / 0.5);
+}
+
+.shadow-glow-purple-sm {
+  box-shadow: 0 0 10px hsl(from var(--color-brand-primary) h s l / 0.3);
+}
+
+.shadow-glow-purple-lg {
+  box-shadow: 0 0 30px hsl(from var(--color-brand-primary) h s l / 0.6);
+}
+
+.shadow-glow-ember {
+  box-shadow: 0 0 20px hsl(from var(--color-game-ember) h s l / 0.5);
+}
+
+.shadow-glow-steel {
+  box-shadow: 0 0 20px hsl(from var(--color-game-steel) h s l / 0.5);
+}
+
+.shadow-glow-crimson {
+  box-shadow: 0 0 20px hsl(from var(--color-game-crimson) h s l / 0.5);
+}
+
+/* Light theme adjustments for glow shadows */
+.light .shadow-glow-purple,
+.light .shadow-glow-purple-sm,
+.light .shadow-glow-purple-lg,
+.light .shadow-glow-ember,
+.light .shadow-glow-steel,
+.light .shadow-glow-crimson {
+  filter: brightness(0.8);
+}

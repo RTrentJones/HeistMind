@@ -1,10 +1,37 @@
 {
   "name": "@heist-mind/database",
   "version": "1.0.0",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "validate-types": "vitest run tests/type-validation.test.ts",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types.ts"
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff",
+    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/supabase-types.ts",
+    "db:types-local": "supabase gen types typescript --local > src/supabase-types.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0"
+  },
+  "devDependencies": {
+    "supabase": "^2.24.3"
   }
 }

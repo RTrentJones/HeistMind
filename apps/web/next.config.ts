@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ['@heist-mind/database', '@heist-mind/shared', '@heist-mind/ui'],
 };
 
 export default nextConfig;
