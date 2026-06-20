@@ -20,8 +20,9 @@
     "tailwind.config.mjs"
   ],
   "scripts": {
-    "build": "npm run build:js && npm run build:types",
+    "build": "npm run build:js && npm run build:css && npm run build:types",
     "build:js": "tsup",
+    "build:css": "node scripts/build-css.mjs",
     "build:types": "tsc --project tsconfig.build.json",
     "dev": "tsup --watch",
     "test": "vitest run",
