@@ -50,8 +50,11 @@ export {
   isValidDesignToken,
 } from './lib/variant-types';
 
-// Test utilities (development only - tree-shakeable)
-export { render, screen, fireEvent, waitFor } from './lib/test-utils';
+// Test utilities live in './lib/test-utils' and are imported directly by test
+// files. They must NOT be re-exported here: the web app transpiles this package
+// from source (next transpilePackages + tsconfig path -> packages/ui/src), so a
+// re-export pulls vitest / @testing-library (and its `act` import) into the
+// production bundle.
 
 // Shared hooks (includes useKeyboardNavigation and useTheme)
 export * from './hooks';

@@ -197,7 +197,7 @@ export const createAppError = (
 };
 
 // Error boundary helper
-export const withErrorBoundary = <T extends (...args: unknown[]) => unknown>(
+export const withErrorBoundary = <T extends (...args: never[]) => unknown>(
   fn: T,
   fallback?: (...args: Parameters<T>) => ReturnType<T>
 ): T => {
@@ -212,7 +212,7 @@ export const withErrorBoundary = <T extends (...args: unknown[]) => unknown>(
 };
 
 // Promise error boundary
-export const withAsyncErrorBoundary = <T extends (...args: unknown[]) => Promise<unknown>>(
+export const withAsyncErrorBoundary = <T extends (...args: never[]) => Promise<unknown>>(
   fn: T,
   fallback?: (...args: Parameters<T>) => ReturnType<T>
 ): T => {

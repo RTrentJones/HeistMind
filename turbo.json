@@ -7,6 +7,8 @@
       "cache": true
     },
     "@heist-mind/database#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
       "env": [
         "POSTGRES_URL",
         "POSTGRES_PRISMA_URL",
@@ -22,6 +24,8 @@
       ]
     },
     "@heist-mind/web#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
       "env": [
         "POSTGRES_URL",
         "POSTGRES_PRISMA_URL",
