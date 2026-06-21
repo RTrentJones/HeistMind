@@ -94,8 +94,10 @@ authenticated fixtures are already there to drive the real UI.
 
 ## Greenlight integration
 
-The Greenlight `playwright` verify mode gained a `suite` option (run a real Playwright suite
-against the deployed URL, with the URL injected as `PLAYWRIGHT_BASE_URL`). Once that ships in
-`npx @rtrentjones/greenlight`, set `GREENLIGHT_PLAYWRIGHT=1` and `verify/heistmind.config.ts`
-runs this suite as part of `greenlight verify` directly. Until then, `greenlight-verify.yml`
-runs the identical suite as an explicit step — same gate, same outcome.
+Greenlight ≥ 2.15 ships a `suite` option on the `playwright` verify mode: it runs a real Playwright
+suite against the deployed URL, injecting it as `PLAYWRIGHT_BASE_URL` (and `GREENLIGHT_VERIFY_URL`).
+`verify/heistmind.config.ts` uses it, so a single `greenlight verify` runs `api` + `playwright` +
+`agent-web` and the deploy gate fails if any user journey fails. `greenlight-verify.yml` installs
+pnpm + the chromium browser before invoking greenlight (the suite shells out to
+`pnpm exec playwright test`). The identical suite runs at PR time via `ci.yml` against a local
+Supabase stack — write once, gate everywhere.

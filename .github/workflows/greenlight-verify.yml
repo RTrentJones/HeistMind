@@ -1,13 +1,15 @@
 name: greenlight-verify
 
 # Vercel deploys heistmind on push and posts a deployment_status to GitHub; we verify the exact
-# deployed URL. Two gates, both must pass for the commit status to go green:
-#   1. greenlight verify (verify/heistmind.config.ts) — fast api check (+ agent-web when
-#      ANTHROPIC_API_KEY is set). The cheap "is it served & protected" pre-gate.
-#   2. the Playwright e2e/ suite run against the deployed URL — full user journeys, including
-#      authenticated flows via Supabase admin session injection (no Discord; see e2e/README.md).
-# Auth-gated specs skip themselves when this env's SUPABASE_SERVICE_ROLE_KEY secret is absent, so
-# the gate still passes on the public surface until those secrets are wired.
+# deployed URL with `greenlight verify` (verify/heistmind.config.ts). One call runs every mode in
+# the spec — all must pass for the commit status to go green:
+#   - api        : served + protection check (200 with bypass, else 401).
+#   - playwright : the full e2e/ suite against the deployment (greenlight ≥ 2.15 injects the URL as
+#                  PLAYWRIGHT_BASE_URL). Authenticated journeys via Supabase admin session injection
+#                  (no Discord; see e2e/README.md).
+#   - agent-web  : an LLM smoke, only when ANTHROPIC_API_KEY is set.
+# Auth-gated specs skip themselves when this env's SUPABASE_SERVICE_ROLE_KEY secret is absent, so the
+# gate still passes on the public surface until those secrets are wired.
 on:
   deployment_status:
 
@@ -25,13 +27,8 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Greenlight verify (api + agent-web)
-        env:
-          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
-
-      # Deep gate: the same Playwright suite that runs in PR CI, pointed at the live deployment.
+      # The playwright mode shells out to `pnpm exec playwright test`, so deps + the browser must be
+      # present before greenlight runs.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -41,15 +38,18 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
-      - name: Playwright suite vs. deployment
+
+      - name: Greenlight verify (api + playwright + agent-web)
         env:
-          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          # Optional: wire these for this env to exercise authenticated journeys against the deploy.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Forwarded to the playwright suite (greenlight injects PLAYWRIGHT_BASE_URL itself).
+          # Wire these for the deploy's env to exercise authenticated journeys against it.
           E2E_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           E2E_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: pnpm exec playwright test
+        run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
