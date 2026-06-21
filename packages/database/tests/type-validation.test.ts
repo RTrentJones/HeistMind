@@ -9,8 +9,13 @@ describe('Database Type System Integrity', () => {
       const mockDatabase = {} as Database;
       expect(typeof mockDatabase).toBe('object');
 
-      // Verify key table types exist
-      expect('Tables' in ({} as Database['public'])).toBeTruthy();
+      // Verify the public schema exposes Tables. NOTE: `import type` is erased by esbuild at
+      // runtime, so a runtime `in` check on `({} as Database['public'])` (just `{}`) is always
+      // false. Encode the guarantee at the type level instead — `satisfies` makes this a compile
+      // error if `Tables` is not a key of `Database['public']` (the real check is the build's tsc),
+      // while staying true at runtime.
+      const tablesKey = 'Tables' satisfies keyof Database['public'];
+      expect(tablesKey).toBe('Tables');
     });
 
     it('should compile all domain types', () => {
