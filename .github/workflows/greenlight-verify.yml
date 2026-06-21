@@ -23,6 +23,8 @@ jobs:
       # you set ANTHROPIC_API_KEY. (Unit tests live in this repo's own CI, not the deploy gate.)
       - name: Verify the deployment
         env:
-          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          # Per-tool secret (the bypass value is per Vercel project) → no collision if another vercel
+          # tool is added; the env var the spec reads stays generic.
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_HEISTMIND }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
