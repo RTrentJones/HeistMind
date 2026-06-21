@@ -215,6 +215,22 @@ describe('Error Creation Utilities', () => {
 });
 
 describe('Error Boundaries', () => {
+  // This block lives outside the `ErrorHandler` describe, so it needs its own notification-store
+  // mock (the one declared there is out of scope here — the cause of the ReferenceError).
+  let mockNotificationStore: Record<string, ReturnType<typeof vi.fn>>;
+
+  beforeEach(() => {
+    mockNotificationStore = {
+      error: vi.fn(),
+      success: vi.fn(),
+      warning: vi.fn(),
+      info: vi.fn(),
+    };
+    (useNotificationStore.getState as ReturnType<typeof vi.fn>).mockReturnValue(
+      mockNotificationStore
+    );
+  });
+
   it('should wrap function with error boundary', () => {
     const mockFn = vi.fn().mockImplementation(() => {
       throw new Error('Test error');
