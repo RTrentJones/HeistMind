@@ -1,0 +1,28 @@
+name: greenlight-verify
+
+# Vercel deploys heistmind on push and posts a deployment_status to GitHub; we verify the exact
+# deployed URL. ANTHROPIC_API_KEY (optional) enables the agent-web scenarios — absent → omitted
+# (see verify/heistmind.config.ts), so the gate stays green on the api check alone.
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  verify:
+    if: ${{ github.event.deployment_status.state == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # agent-web needs browsers: add `- run: npx -y playwright install --with-deps chromium` when
+      # you set ANTHROPIC_API_KEY. (Unit tests live in this repo's own CI, not the deploy gate.)
+      - name: Verify the deployment
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
