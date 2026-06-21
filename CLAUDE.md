@@ -108,3 +108,15 @@ The `.memory-bank/` directory contains project continuity docs (projectbrief.md,
 ## Environment Variables
 
 Required Supabase env vars (see `.env.example`): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, plus Postgres connection vars.
+
+## Greenlight loop (deploy → verify → promote)
+
+This repo uses Greenlight. Ship changes through the deploy-verify-promote skill:
+branch → change → deploy preview → `greenlight verify` → beta → verify → `greenlight promote` → prod → verify.
+
+Agentic kit:
+- Skill: `.claude/skills/deploy-verify-promote/SKILL.md` (the loop).
+- MCP servers: `.mcp.json` recommends the relevant providers — run `/mcp` to authenticate.
+    Vercel is OAuth; Supabase needs `SUPABASE_ACCESS_TOKEN` (+ `SUPABASE_PROJECT_REF`) in your env.
+- Best-practice skills (one-time, user scope):
+    `claude plugin marketplace add cloudflare/skills && claude plugin install cloudflare@cloudflare`

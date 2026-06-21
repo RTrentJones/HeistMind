@@ -26,7 +26,8 @@
     "dep-check": "pnpm -r list --depth=0",
     "dep-update": "pnpm -r update",
     "cleanup": "pnpm -r run clean",
-    "prepare": "husky"
+    "prepare": "husky",
+    "greenlight": "npx @rtrentjones/greenlight"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
