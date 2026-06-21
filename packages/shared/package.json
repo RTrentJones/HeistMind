@@ -21,7 +21,7 @@
     "clean": "rm -rf dist",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
     "@heist-mind/database": "workspace:*"

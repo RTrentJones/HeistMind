@@ -57,6 +57,15 @@
       "dependsOn": ["^build"],
       "cache": true
     },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "cache": true
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
     "clean": {
       "cache": false
     }
