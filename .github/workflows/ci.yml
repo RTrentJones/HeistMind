@@ -83,3 +83,65 @@ jobs:
             packages/*/dist
           retention-days: 7
           if-no-files-found: ignore
+
+  e2e:
+    name: E2E (Playwright + local Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Boots Postgres + Auth via Docker and applies supabase/migrations (incl. the profiles
+      # trigger), so admin-created users get a real profile row — the same state a Discord
+      # sign-up produces. Maps the local stack's keys into the env the app + suite read.
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Export Supabase env
+        run: |
+          supabase status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            >> "$GITHUB_ENV"
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # PLAYWRIGHT_BASE_URL is unset → playwright.config boots `pnpm dev:web` against the local
+      # stack. global-setup mints + injects the GM/Player sessions using the service-role key.
+      - name: Run Playwright suite
+        run: pnpm exec playwright test
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop || true
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: e2e/.report/
+          retention-days: 7
+          if-no-files-found: ignore

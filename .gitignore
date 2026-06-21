@@ -130,3 +130,11 @@ infra/terraform/.terraform/
 infra/terraform/*.tfstate*
 infra/terraform/terraform.tfvars
 infra/terraform/*.auto.tfvars
+
+# Playwright / E2E
+/test-results/
+/playwright-report/
+e2e/.auth/
+e2e/.report/
+e2e/.results/
+greenlight-playwright-suite.patch

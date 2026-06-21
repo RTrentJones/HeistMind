@@ -15,7 +15,9 @@ const logsOnFailure =
 const api = bypass
   ? {
       mode: 'api',
-      checks: [{ path: '/', status: 200, requestHeaders: { 'x-vercel-protection-bypass': bypass } }],
+      checks: [
+        { path: '/', status: 200, requestHeaders: { 'x-vercel-protection-bypass': bypass } },
+      ],
       logsOnFailure,
     }
   : { mode: 'api', checks: [{ path: '/', status: 401 }], logsOnFailure };
@@ -34,4 +36,23 @@ const agentWeb = process.env.ANTHROPIC_API_KEY
     ]
   : [];
 
-export default [api, ...agentWeb];
+// playwright suite — the deep deploy gate. Runs the full e2e/ suite against the EXACT deployed
+// URL (greenlight injects it as PLAYWRIGHT_BASE_URL). Auth is handled by admin session injection,
+// not Discord (see e2e/README.md). The suite skips its auth-gated specs unless this env's
+// SUPABASE_SERVICE_ROLE_KEY is present, so the gate stays green on the public surface meanwhile.
+//
+// Guarded by GREENLIGHT_PLAYWRIGHT=1 because the `suite` field requires greenlight-verify with the
+// playwright-suite fix (packages/verify). Until that's published, the CI workflow runs the same
+// suite directly (greenlight-verify.yml); flip the flag once `npx @rtrentjones/greenlight` ships it.
+const playwright =
+  process.env.GREENLIGHT_PLAYWRIGHT === '1'
+    ? [
+        {
+          mode: 'playwright',
+          suite: { command: 'pnpm exec playwright test', timeoutMs: 600_000 },
+          logsOnFailure,
+        },
+      ]
+    : [];
+
+export default [api, ...playwright, ...agentWeb];

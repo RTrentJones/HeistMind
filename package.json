@@ -11,6 +11,10 @@
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "test:coverage": "turbo test:coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report e2e/.report",
     "clean": "turbo clean",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -30,6 +34,8 @@
     "greenlight": "npx @rtrentjones/greenlight"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@supabase/supabase-js": "^2.50.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

@@ -1,0 +1,27 @@
+// OAuth callback handling — exercised directly (no Discord needed) by hitting /auth/callback
+// with the query params Supabase would append. Covers the loading state and the error path,
+// which are pure client logic in app/auth/callback/page.tsx.
+
+import { test, expect } from '../support/fixtures';
+
+test.describe('auth callback', () => {
+  test('shows the completing-sign-in loading state by default', async ({ page }) => {
+    await page.goto('/auth/callback');
+
+    await expect(page.getByRole('heading', { name: /completing sign in/i })).toBeVisible();
+    await expect(page.getByText(/waiting for discord authentication/i)).toBeVisible();
+  });
+
+  test('surfaces an OAuth error and redirects home', async ({ page }) => {
+    await page.goto(
+      '/auth/callback?error=access_denied&error_description=' +
+        encodeURIComponent('User denied the request')
+    );
+
+    await expect(page.getByRole('heading', { name: /authentication failed/i })).toBeVisible();
+    await expect(page.getByText(/user denied the request/i)).toBeVisible();
+
+    // The page schedules a redirect back to home with an error marker.
+    await page.waitForURL(/\/\?error=auth_failed/, { timeout: 10_000 });
+  });
+});
