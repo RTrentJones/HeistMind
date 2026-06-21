@@ -2,7 +2,7 @@ name: greenlight-verify
 
 # Vercel deploys heistmind on push and posts a deployment_status to GitHub; we verify the exact
 # deployed URL. ANTHROPIC_API_KEY (optional) enables the agent-web scenarios — absent → omitted
-# (see verify/heistmind.config.ts), so the gate stays green on api + test alone.
+# (see verify/heistmind.config.ts), so the gate stays green on the api check alone.
 on:
   deployment_status:
 
@@ -19,12 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Install deps (for test-mode)
-        run: |
-          corepack enable || true
-          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile;
-          elif [ -f yarn.lock ]; then yarn install --frozen-lockfile;
-          else npm ci; fi
+      # agent-web needs browsers: add `- run: npx -y playwright install --with-deps chromium` when
+      # you set ANTHROPIC_API_KEY. (Unit tests live in this repo's own CI, not the deploy gate.)
       - name: Verify the deployment
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

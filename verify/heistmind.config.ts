@@ -1,9 +1,9 @@
 // Greenlight verify spec for heistmind (next/vercel) — run by .github/workflows/greenlight-verify.yml
 // after Vercel deploys (deployment_status). An array combines modes (allPass):
-//  - api: the deployed URL serves (200).
-//  - test: this tool's own suite — set the real command for your package manager.
+//  - api: the deployed URL serves (200) — the deployment signal.
 //  - agent-web: an LLM drives the live UI; runs ONLY when ANTHROPIC_API_KEY is set (else omitted,
-//    so the gate stays green). Replace the scenario with real user tasks + assertions.
+//    so the gate stays green). Replace the scenario with real HeistMind user tasks + assertions.
+// Unit tests live in this repo's own CI (pnpm validate) — not the per-deploy gate.
 const agentWeb = process.env.ANTHROPIC_API_KEY
   ? [
       {
@@ -19,10 +19,4 @@ const agentWeb = process.env.ANTHROPIC_API_KEY
     ]
   : [];
 
-export default [
-  { mode: 'api', checks: [{ path: '/', status: 200 }] },
-  // HeistMind is pnpm + turbo. `pnpm test` runs the workspace suite; narrow with --filter or drop
-  // this spec if you'd rather let PR CI own unit tests and keep the deploy gate to api + agent-web.
-  { mode: 'test', command: 'pnpm test' },
-  ...agentWeb,
-];
+export default [{ mode: 'api', checks: [{ path: '/', status: 200 }] }, ...agentWeb];
