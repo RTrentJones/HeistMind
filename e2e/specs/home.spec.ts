@@ -8,7 +8,9 @@ test.describe('home page (anonymous)', () => {
     await page.goto('/');
 
     await expect(page.getByRole('heading', { name: /welcome to/i })).toBeVisible();
-    await expect(page.getByText(/forged in the dark/i)).toBeVisible();
+    // "forged in the dark" appears in several places on the hero — assert at least one is visible
+    // (a bare getByText is a strict-mode violation when it matches multiple elements).
+    await expect(page.getByText(/forged in the dark/i).first()).toBeVisible();
     // Next.js error overlay / generic crash guard.
     await expect(page.getByText(/application error|something went wrong/i)).toHaveCount(0);
   });
