@@ -131,6 +131,12 @@ jobs:
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
+      # `pnpm dev:web` (next dev) imports the workspace packages' BUILD output — e.g.
+      # `@heist-mind/ui/styles` → dist/index.css (CSS can't be transpiled on the fly). Vercel builds
+      # them in prod; build them here so the local dev server boots.
+      - name: Build workspace packages
+        run: pnpm --filter "./packages/*" build
+
       # PLAYWRIGHT_BASE_URL is unset → playwright.config boots `pnpm dev:web` against the local
       # stack. global-setup mints + injects the GM/Player sessions using the service-role key.
       - name: Run Playwright suite
