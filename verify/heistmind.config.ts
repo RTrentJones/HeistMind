@@ -43,10 +43,19 @@ const agentWeb = process.env.ANTHROPIC_API_KEY
 // by admin session injection, not Discord (see e2e/README.md); the suite skips its auth-gated specs
 // unless this env's SUPABASE_SERVICE_ROLE_KEY is present, so the gate stays green on the public
 // surface meanwhile. The workflow installs pnpm + the chromium browser before greenlight runs.
-const playwright = {
-  mode: 'playwright',
-  suite: { command: 'pnpm exec playwright test', timeoutMs: 600_000 },
-  logsOnFailure,
-};
+//
+// Gated on the bypass: the deployment_status target_url is the *.vercel.app deploy behind
+// Deployment Protection (401), so the BROWSER can only load it when the bypass secret is set (it's
+// sent as a header + cookie, see playwright.config.ts). Without it, omit playwright — the api 401
+// check alone holds the gate green — exactly how agent-web is gated on ANTHROPIC_API_KEY.
+const playwright = bypass
+  ? [
+      {
+        mode: 'playwright',
+        suite: { command: 'pnpm exec playwright test', timeoutMs: 600_000 },
+        logsOnFailure,
+      },
+    ]
+  : [];
 
-export default [api, playwright, ...agentWeb];
+export default [api, ...playwright, ...agentWeb];

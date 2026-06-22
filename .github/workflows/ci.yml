@@ -118,12 +118,15 @@ jobs:
         run: supabase start
 
       - name: Export Supabase env
+        # `supabase status -o env` emits KEY="value" (quoted); appended verbatim to $GITHUB_ENV the
+        # quotes become part of the value → the supabase-js client gets `"http://…"` and throws
+        # "Invalid URL". Strip the surrounding quotes so the URL/keys are clean.
         run: |
           supabase status -o env \
             --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
             --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
             --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
-            >> "$GITHUB_ENV"
+            | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
