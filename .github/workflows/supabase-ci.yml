@@ -434,10 +434,13 @@ jobs:
           - environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
       max-parallel: 1 # Deploy one environment at a time
 
-    environment:
-      name: ${{ matrix.environment }}
-      url: https://${{ matrix.environment }}.heistmind.app # Add your actual URLs
-
+    # NOTE: intentionally no GitHub `environment:` block. This is a DATABASE migration deploy,
+    # not a web deployment — a job-level `environment:` emits a deployment_status event, which
+    # the greenlight-verify workflow (an APP deploy gate) consumes and then runs the full web
+    # e2e against that deployment's target_url (the Actions run URL, not the app) → every spec
+    # fails. The matrix already carries the target env (`matrix.environment`); GitHub
+    # environment tracking/protection isn't used here (none configured), and prod is gated via
+    # workflow_dispatch above. So we omit `environment:` to avoid the spurious app-verify run.
     timeout-minutes: 20
 
     steps:
