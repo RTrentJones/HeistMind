@@ -138,3 +138,14 @@ e2e/.auth/
 e2e/.report/
 e2e/.results/
 greenlight-playwright-suite.patch
+
+# Design Sync — generated card bundle (build artifact; pnpm design:bundle)
+/design-sync/bundle/
+
+# Design Sync (/design-sync skill) — transient artifacts (durable set under .design-sync/ stays tracked)
+.design-sync/sb-reference/
+.design-sync/learnings/
+.design-sync/.cache/
+.design-sync/node_modules
+.ds-sync/
+ds-bundle/

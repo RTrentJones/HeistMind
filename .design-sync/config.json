@@ -1,0 +1,39 @@
+{
+  "projectId": "a2523874-6287-4817-ab03-c10404052bd8",
+  "pkg": "@heist-mind/ui",
+  "shape": "storybook",
+  "storybookConfigDir": "packages/ui/.storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "buildCmd": "pnpm -F \"@heist-mind/ui...\" build",
+  "cssEntry": "dist/index.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "extraEntries": ["../../.design-sync/extra/preview-runtime.mjs"],
+  "provider": {
+    "component": "PreviewRuntime",
+    "inner": {
+      "component": "ThemeProvider",
+      "props": { "defaultMode": "dark" },
+      "inner": { "component": "TooltipProvider" }
+    }
+  },
+  "titleMap": {
+    "ThemeSystem": null,
+    "ComponentIntegrationTest": null
+  },
+  "overrides": {
+    "Container": { "cardMode": "column" },
+    "Grid": { "cardMode": "column" },
+    "Section": { "cardMode": "column" },
+    "Stack": { "cardMode": "column" },
+    "Header": {
+      "cardMode": "column",
+      "skip": [
+        "navigation-header--with-logo",
+        "navigation-header--complex-navigation",
+        "navigation-header--theme-showcase"
+      ]
+    },
+    "LoadingSpinner": { "cardMode": "column" },
+    "Heading": { "cardMode": "column" }
+  }
+}
