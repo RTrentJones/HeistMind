@@ -7,10 +7,330 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
+  development: {
+    Tables: {
+      characters: {
+        Row: {
+          adaptations: Json | null
+          advancement_history: Json | null
+          avatar_url: string | null
+          character_data: Json
+          created_at: string | null
+          created_by: string
+          description: string | null
+          experience_points: number | null
+          game_id: string
+          id: string
+          is_template: boolean | null
+          name: string
+          original_ruleset_id: string | null
+          playbook_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          adaptations?: Json | null
+          advancement_history?: Json | null
+          avatar_url?: string | null
+          character_data: Json
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          experience_points?: number | null
+          game_id: string
+          id?: string
+          is_template?: boolean | null
+          name: string
+          original_ruleset_id?: string | null
+          playbook_type: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          adaptations?: Json | null
+          advancement_history?: Json | null
+          avatar_url?: string | null
+          character_data?: Json
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          experience_points?: number | null
+          game_id?: string
+          id?: string
+          is_template?: boolean | null
+          name?: string
+          original_ruleset_id?: string | null
+          playbook_type?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "characters_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "characters_original_ruleset_id_fkey"
+            columns: ["original_ruleset_id"]
+            isOneToOne: false
+            referencedRelation: "rulesets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_players: {
+        Row: {
+          game_id: string
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          left_at: string | null
+          permissions: Json | null
+          player_id: string
+          role: string | null
+          status: string | null
+        }
+        Insert: {
+          game_id: string
+          id?: string
+          invited_at?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          permissions?: Json | null
+          player_id: string
+          role?: string | null
+          status?: string | null
+        }
+        Update: {
+          game_id?: string
+          id?: string
+          invited_at?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          permissions?: Json | null
+          player_id?: string
+          role?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          allow_co_gms: boolean | null
+          allow_spectators: boolean | null
+          created_at: string | null
+          created_by: string
+          current_players: number | null
+          description: string | null
+          house_rules: string | null
+          id: string
+          invite_only: boolean | null
+          max_players: number | null
+          name: string
+          public_listing: boolean | null
+          rule_overrides: Json | null
+          ruleset_id: string
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_co_gms?: boolean | null
+          allow_spectators?: boolean | null
+          created_at?: string | null
+          created_by: string
+          current_players?: number | null
+          description?: string | null
+          house_rules?: string | null
+          id?: string
+          invite_only?: boolean | null
+          max_players?: number | null
+          name: string
+          public_listing?: boolean | null
+          rule_overrides?: Json | null
+          ruleset_id: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_co_gms?: boolean | null
+          allow_spectators?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          current_players?: number | null
+          description?: string | null
+          house_rules?: string | null
+          id?: string
+          invite_only?: boolean | null
+          max_players?: number | null
+          name?: string
+          public_listing?: boolean | null
+          rule_overrides?: Json | null
+          ruleset_id?: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "games_ruleset_id_fkey"
+            columns: ["ruleset_id"]
+            isOneToOne: false
+            referencedRelation: "rulesets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invitations: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          game_id: string
+          id: string
+          invite_code: string | null
+          invited_by: string
+          invited_player: string | null
+          max_uses: number | null
+          responded_at: string | null
+          status: string | null
+          used_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          game_id: string
+          id?: string
+          invite_code?: string | null
+          invited_by: string
+          invited_player?: string | null
+          max_uses?: number | null
+          responded_at?: string | null
+          status?: string | null
+          used_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          game_id?: string
+          id?: string
+          invite_code?: string | null
+          invited_by?: string
+          invited_player?: string | null
+          max_uses?: number | null
+          responded_at?: string | null
+          status?: string | null
+          used_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rulesets: {
+        Row: {
+          compatibility_flags: Json | null
+          content: Json
+          created_at: string | null
+          created_by: string
+          description: string | null
+          file_size: number | null
+          id: string
+          is_public: boolean | null
+          name: string
+          original_filename: string | null
+          schema_version: string
+          status: string | null
+          tags: string[] | null
+          updated_at: string | null
+          version: string
+        }
+        Insert: {
+          compatibility_flags?: Json | null
+          content: Json
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          original_filename?: string | null
+          schema_version?: string
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          version?: string
+        }
+        Update: {
+          compatibility_flags?: Json | null
+          content?: Json
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          original_filename?: string | null
+          schema_version?: string
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      get_user_game_role: {
+        Args: { game_id: string; user_id: string }
+        Returns: string
+      }
+      is_game_master: {
+        Args: { game_id: string; user_id: string }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  production: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -178,7 +498,14 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  development: {
+    Enums: {},
+  },
+  production: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

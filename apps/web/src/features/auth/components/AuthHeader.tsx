@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { Button, Header, HeaderBrand, HeaderActions, Heading, Text, Stack } from '@heist-mind/ui';
 
@@ -37,6 +38,12 @@ export function AuthHeader() {
       <HeaderActions>
         {isAuthenticated && user ? (
           <Stack direction='row' gap='md' align='center'>
+            <Button asChild variant='ghost' size='sm'>
+              <Link href='/games'>Campaigns</Link>
+            </Button>
+            <Button asChild variant='ghost' size='sm'>
+              <Link href='/rulesets'>Rulesets</Link>
+            </Button>
             <Text size='sm' variant='muted'>
               Welcome, {user.profile?.displayName || user.email}
             </Text>

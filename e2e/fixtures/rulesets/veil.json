@@ -1,0 +1,83 @@
+{
+  "metadata": {
+    "name": "Veil & Vow",
+    "version": "0.9.0",
+    "author": "HeistMind E2E",
+    "description": "A quiet game of haunted oaths and borrowed power. Minimal ruleset: no custom steps, no point-buy, untiered powers. (Original FitD-style test ruleset.)",
+    "system": "Forged in the Dark"
+  },
+  "playbooks": [
+    {
+      "id": "seer",
+      "name": "The Seer",
+      "description": "One who reads the veil and trades in glimpsed futures.",
+      "startingAbilities": ["foresight"],
+      "specialAbilities": ["foresight", "ward"],
+      "contacts": [{ "name": "The Archivist", "description": "Keeper of forbidden ledgers." }],
+      "equipment": [],
+      "attributes": { "mind": 2, "body": 0, "spirit": 1 },
+      "skills": {}
+    },
+    {
+      "id": "warden",
+      "name": "The Warden",
+      "description": "A sworn protector bound by an oath they can never break.",
+      "startingAbilities": ["ward"],
+      "specialAbilities": ["ward", "foresight"],
+      "contacts": [{ "name": "Sister Quill", "description": "An oathkeeper of the old order." }],
+      "equipment": [],
+      "attributes": { "body": 2, "spirit": 1, "mind": 0 },
+      "skills": {}
+    }
+  ],
+  "attributes": [
+    {
+      "id": "mind",
+      "name": "Mind",
+      "description": "Reason, memory, and the reading of signs.",
+      "skills": ["Recall", "Discern", "Parley"]
+    },
+    {
+      "id": "body",
+      "name": "Body",
+      "description": "Endurance, force, and steady hands.",
+      "skills": ["Endure", "Strike", "Move"]
+    },
+    {
+      "id": "spirit",
+      "name": "Spirit",
+      "description": "Will, faith, and communion with the veil.",
+      "skills": ["Commune", "Resist", "Bind"]
+    }
+  ],
+  "skills": [],
+  "specialAbilities": [
+    {
+      "id": "foresight",
+      "name": "Foresight",
+      "description": "Once per score, ask the GM one true thing about what is to come."
+    },
+    {
+      "id": "ward",
+      "name": "Ward",
+      "description": "Raise a brief barrier against harm, mundane or otherwise."
+    },
+    {
+      "id": "echo",
+      "name": "Echo",
+      "description": "Hear the last words spoken in a place you stand."
+    }
+  ],
+  "equipment": {
+    "loadCapacity": { "light": 3, "normal": 5, "heavy": 6 },
+    "items": [],
+    "categories": []
+  },
+  "advancement": {
+    "xpTriggers": [],
+    "advancementOptions": []
+  },
+  "characterCreation": {
+    "steps": []
+  }
+}

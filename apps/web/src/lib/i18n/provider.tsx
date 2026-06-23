@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { Section, Stack, StatusIcon, Text } from '@heist-mind/ui';
+import { Section, Stack, StatusIcon, Text, TooltipProvider } from '@heist-mind/ui';
 import i18n from '@/lib/i18n/';
 
 interface I18nProviderProps {
@@ -46,5 +46,13 @@ export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
     );
   }
 
-  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+  // TooltipProvider (Radix) must wrap the app so tooltip-bearing components — e.g. the
+  // StressTracker dot allocator used in the character wizard's Attributes step — can render
+  // without throwing "`Tooltip` must be used within `TooltipProvider`". Kept here (a client
+  // boundary) rather than the server root layout, where Radix's hook-using Provider can't go.
+  return (
+    <I18nextProvider i18n={i18n}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </I18nextProvider>
+  );
 }
