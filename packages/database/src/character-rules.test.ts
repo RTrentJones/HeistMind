@@ -208,9 +208,36 @@ describe('validateCharacter — creation mode', () => {
     expect(codes(r)).toContain('ABILITY_LOCKED');
   });
 
+  it('blocks a tier-locked ability even when it has no prerequisite', () => {
+    // ghost-step is tier 2, has no prerequisite, and is not in the Razor's roster.
+    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
+    const r = validateCharacter(rs, character({ specialAbilities: ['ghost-step'] }), {
+      mode: 'creation',
+    });
+    expect(r.errors.find(e => e.code === 'ABILITY_LOCKED')?.message).toMatch(
+      /not available at character creation/
+    );
+  });
+
   it('blocks an incomplete required step', () => {
     const r = validateCharacter(ruleset(), character({ playbook: '' }), { mode: 'creation' });
     expect(codes(r)).toContain('STEP_INCOMPLETE');
+  });
+
+  it('skips non-required steps and flags an incomplete required attributes step', () => {
+    const rs = ruleset({
+      characterCreation: {
+        steps: [
+          { id: 'special-abilities', name: 'Edges', description: '', order: 1, required: false },
+          { id: 'action-ratings', name: 'Ratings', description: '', order: 2, required: true },
+        ],
+      },
+    });
+    // Empty attributes → the required attributes step is incomplete; the non-required step is skipped.
+    const r = validateCharacter(rs, character({ playbook: 'razor' }), { mode: 'creation' });
+    expect(r.errors.filter(e => e.code === 'STEP_INCOMPLETE').map(e => e.field)).toEqual([
+      'steps.action-ratings',
+    ]);
   });
 
   it('blocks an incomplete required choice step', () => {
@@ -273,6 +300,179 @@ describe('validateCharacter — stress / trauma', () => {
       character({ trauma: ['a', 'b', 'c'] })
     );
     expect(codes(r)).toContain('TRAUMA_OVER');
+  });
+});
+
+describe('advancementCost — by category', () => {
+  it('resolves by category when no option id matches', () => {
+    const rs = ruleset();
+    rs.advancement.advancementOptions = [
+      { id: 'x', name: 'X', description: '', cost: 4, category: 'attribute' },
+    ];
+    expect(
+      advancementCost(rs, { type: 'attribute', target: 'grit', cost: 1, description: '' })
+    ).toBe(4);
+  });
+});
+
+describe('pointBuySpent — ignores non-positive ratings', () => {
+  it('skips attributes set to 0 or below', () => {
+    expect(pointBuySpent(ruleset(), { grit: 0, edge: 3 })).toBe(3);
+  });
+});
+
+describe('isAbilityUnlocked / prerequisites — edge cases', () => {
+  it('treats an unknown ability id as unlocked (and never errors on it)', () => {
+    expect(isAbilityUnlocked(ruleset(), character(), 'made-up')).toBe(true);
+    const r = validateCharacter(ruleset(), character({ specialAbilities: ['made-up'] }), {
+      mode: 'creation',
+    });
+    expect(codes(r)).not.toContain('ABILITY_LOCKED');
+  });
+  it('treats a free-text prerequisite (not a known ability) as satisfied', () => {
+    const rs = ruleset();
+    rs.specialAbilities = [
+      { id: 'sharpshot', name: 'Sharpshot', description: '', tier: 1, prerequisite: 'a keen eye' },
+    ];
+    expect(isAbilityUnlocked(rs, character({ specialAbilities: ['sharpshot'] }), 'sharpshot')).toBe(
+      true
+    );
+  });
+});
+
+describe('restriction conditions — full matrix', () => {
+  const withRestriction = (field: string, condition: string, value: unknown) =>
+    ruleset({
+      characterCreation: {
+        steps: [],
+        restrictions: [{ field, condition, value: value as never, message: 'nope' }],
+      },
+    });
+
+  it('min: violated below the threshold, ok at/above', () => {
+    expect(
+      codes(
+        validateCharacter(
+          withRestriction('attributes.grit', 'min', 2),
+          character({ attributes: { grit: 1 } }),
+          { mode: 'creation' }
+        )
+      )
+    ).toContain('RESTRICTION');
+    expect(
+      codes(
+        validateCharacter(
+          withRestriction('attributes.grit', 'min', 2),
+          character({ attributes: { grit: 2 } }),
+          { mode: 'creation' }
+        )
+      )
+    ).not.toContain('RESTRICTION');
+  });
+  it('equals: ok when equal, violated otherwise', () => {
+    expect(
+      codes(
+        validateCharacter(
+          withRestriction('playbook', 'equals', 'razor'),
+          character({ playbook: 'razor' }),
+          { mode: 'creation' }
+        )
+      )
+    ).not.toContain('RESTRICTION');
+    expect(
+      codes(
+        validateCharacter(
+          withRestriction('playbook', 'equals', 'hawk'),
+          character({ playbook: 'razor' }),
+          { mode: 'creation' }
+        )
+      )
+    ).toContain('RESTRICTION');
+  });
+  it('oneOf: ok when the (nested custom) value is in the set', () => {
+    const rs = withRestriction('custom.crew-ties', 'oneOf', ['loyal', 'rival']);
+    expect(
+      codes(
+        validateCharacter(rs, character({ custom: { 'crew-ties': 'loyal' } }), { mode: 'creation' })
+      )
+    ).not.toContain('RESTRICTION');
+    expect(
+      codes(
+        validateCharacter(rs, character({ custom: { 'crew-ties': 'indebted' } }), {
+          mode: 'creation',
+        })
+      )
+    ).toContain('RESTRICTION');
+  });
+  it('required: violated when the field is empty', () => {
+    expect(
+      codes(
+        validateCharacter(withRestriction('vice', 'required', null), character({ vice: '' }), {
+          mode: 'creation',
+        })
+      )
+    ).toContain('RESTRICTION');
+  });
+  it('required: ok when the field is present', () => {
+    expect(
+      codes(
+        validateCharacter(
+          withRestriction('vice', 'required', null),
+          character({ vice: 'Gambling' }),
+          { mode: 'creation' }
+        )
+      )
+    ).not.toContain('RESTRICTION');
+  });
+  it('max against a non-numeric field is a no-op', () => {
+    expect(
+      codes(
+        validateCharacter(withRestriction('playbook', 'max', 3), character({ playbook: 'razor' }), {
+          mode: 'creation',
+        })
+      )
+    ).not.toContain('RESTRICTION');
+  });
+  it('resolves a missing nested path to undefined (required → violated)', () => {
+    expect(
+      codes(
+        validateCharacter(withRestriction('custom.missing.deep', 'required', null), character(), {
+          mode: 'creation',
+        })
+      )
+    ).toContain('RESTRICTION');
+  });
+});
+
+describe('defensive branches', () => {
+  it('defaults an attribute without maxValue to the action-rating cap', () => {
+    const rs = ruleset({ attributes: [{ id: 'wits', name: 'Wits', description: '', skills: [] }] });
+    const r = validateCharacter(rs, character({ attributes: { wits: 9 } }), { mode: 'creation' });
+    expect(codes(r)).toContain('ATTR_OVER_CAP'); // capped at DEFAULT_ATTR_MAX
+  });
+
+  it('treats a null field value as empty (required → violated)', () => {
+    const rs = ruleset({
+      characterCreation: {
+        steps: [],
+        restrictions: [
+          { field: 'custom.x', condition: 'required', value: null as never, message: 'x' },
+        ],
+      },
+    });
+    expect(
+      codes(validateCharacter(rs, character({ custom: { x: null } }), { mode: 'creation' }))
+    ).toContain('RESTRICTION');
+  });
+
+  it('does not throw on a structurally-minimal ruleset (missing optional arrays)', () => {
+    const bare = {
+      metadata: ruleset().metadata,
+      playbooks: [],
+      specialAbilities: [],
+      advancement: {},
+    } as unknown as RulesetContent;
+    expect(validateCharacter(bare, character(), { mode: 'creation' }).isValid).toBe(true);
   });
 });
 

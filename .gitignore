@@ -137,6 +137,7 @@ infra/terraform/*.auto.tfvars
 e2e/.auth/
 e2e/.report/
 e2e/.results/
+e2e/.coverage/
 greenlight-playwright-suite.patch
 
 # Design Sync — generated card bundle (build artifact; pnpm design:bundle)
