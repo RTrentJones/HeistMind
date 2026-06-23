@@ -4,6 +4,11 @@
 import type { DatabaseProvider, DatabaseRepositories, DatabaseTransaction } from './repositories';
 import type { AuthService, AuthConfig } from './auth-types';
 import { SupabaseProfileRepository } from './implementations/supabase-profile-repository';
+import { SupabaseRulesetRepository } from './implementations/supabase-ruleset-repository';
+import { SupabaseGameRepository } from './implementations/supabase-game-repository';
+import { SupabaseGamePlayerRepository } from './implementations/supabase-game-player-repository';
+import { SupabaseCharacterRepository } from './implementations/supabase-character-repository';
+import type { CoreSchema } from './implementations/result-helpers';
 import { SupabaseAuthService } from './implementations/supabase-auth-service';
 import { createClient } from './client';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -82,13 +87,18 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
   }
 
   createRepositories(): DatabaseRepositories {
+    // Core tables (rulesets/games/characters/game_players) live in an env schema
+    // (default 'development' per the migration); profiles stays in public.
+    const schema: CoreSchema =
+      (process.env.NEXT_PUBLIC_HEISTMIND_SCHEMA as CoreSchema) || 'development';
+
     return {
       profiles: new SupabaseProfileRepository(this.client),
-      // TODO: Add other repository implementations
-      rulesets: {} as any, // Placeholder
-      games: {} as any, // Placeholder
-      gamePlayers: {} as any, // Placeholder
-      characters: {} as any, // Placeholder
+      rulesets: new SupabaseRulesetRepository(this.client, schema),
+      games: new SupabaseGameRepository(this.client, schema),
+      gamePlayers: new SupabaseGamePlayerRepository(this.client, schema),
+      characters: new SupabaseCharacterRepository(this.client, schema),
+      // Aggregate/invitation repositories are outside the current journey scope.
       invitations: {} as any, // Placeholder
       gameManagement: {} as any, // Placeholder
       characterManagement: {} as any, // Placeholder

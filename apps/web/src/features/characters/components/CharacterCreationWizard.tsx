@@ -33,32 +33,29 @@ export function CharacterCreationWizard({
   onCancel,
 }: CharacterCreationWizardProps) {
   const router = useRouter();
-  const {
-    steps,
-    stepIndex,
-    name,
-    isLoading,
-    init,
-    setName,
-    goNext,
-    goBack,
-    goToStep,
-    isStepValid,
-    submit,
-  } = useCharacterCreationStore(
-    useShallow(s => ({
-      steps: s.steps,
-      stepIndex: s.stepIndex,
-      name: s.name,
-      isLoading: s.isLoading,
-      init: s.initFromRuleset,
-      setName: s.setName,
-      goNext: s.goNext,
-      goBack: s.goBack,
-      goToStep: s.goToStep,
-      isStepValid: s.isStepValid,
-      submit: s.submit,
-    }))
+  const { steps, stepIndex, name, isLoading, init, setName, goNext, goBack, goToStep, submit } =
+    useCharacterCreationStore(
+      useShallow(s => ({
+        steps: s.steps,
+        stepIndex: s.stepIndex,
+        name: s.name,
+        isLoading: s.isLoading,
+        init: s.initFromRuleset,
+        setName: s.setName,
+        goNext: s.goNext,
+        goBack: s.goBack,
+        goToStep: s.goToStep,
+        submit: s.submit,
+      }))
+    );
+
+  // Validity depends on `draft` (and `name`), which the selector above intentionally omits
+  // (the draft is large and changes constantly). Subscribe to the computed per-step validity
+  // as a primitive boolean array so the Next button and the stepper re-render the instant a
+  // selection makes the current step valid — without this the footer's disabled state goes
+  // stale and the wizard deadlocks (Next never enables after picking a playbook).
+  const stepValidity = useCharacterCreationStore(
+    useShallow(s => s.steps.map((_, i) => s.isStepValid(i)))
   );
 
   useEffect(() => {
@@ -69,7 +66,7 @@ export function CharacterCreationWizard({
   if (!step) return null;
 
   const isLast = stepIndex === steps.length - 1;
-  const canAdvance = isStepValid(stepIndex);
+  const canAdvance = stepValidity[stepIndex] ?? false;
 
   const handleFinish = async () => {
     const id = await submit();
@@ -82,22 +79,22 @@ export function CharacterCreationWizard({
   const nameField = (
     <div style={{ maxWidth: 460 }}>
       <Input
-        label="Character name"
+        label='Character name'
         required
-        placeholder="e.g. Shadows McKenzie"
+        placeholder='e.g. Shadows McKenzie'
         value={name}
         onChange={e => setName(e.target.value)}
-        helpText="Required — shown on the character sheet."
+        helpText='Required — shown on the character sheet.'
       />
     </div>
   );
 
   const stepHeading = (
     <div>
-      <Heading level="h2" variant="primary">
+      <Heading level='h2' variant='primary'>
         {step.name}
       </Heading>
-      {step.description && <Text className="text-foreground-muted">{step.description}</Text>}
+      {step.description && <Text className='text-foreground-muted'>{step.description}</Text>}
     </div>
   );
 
@@ -109,7 +106,7 @@ export function CharacterCreationWizard({
 
   const footer = (
     <footer
-      className="flex items-center gap-3"
+      className='flex items-center gap-3'
       style={{
         position: 'fixed',
         bottom: 0,
@@ -123,19 +120,19 @@ export function CharacterCreationWizard({
         borderTop: '1px solid var(--color-border-primary)',
       }}
     >
-      <Button variant="ghost" onClick={onCancel ?? (() => router.back())}>
+      <Button variant='ghost' onClick={onCancel ?? (() => router.back())}>
         Cancel
       </Button>
       <div style={{ flex: 1 }} />
-      <Button variant="outline" onClick={goBack} disabled={stepIndex === 0}>
+      <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
         Back
       </Button>
       {isLast ? (
-        <Button variant="ember" loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
+        <Button variant='ember' loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
           Create character
         </Button>
       ) : (
-        <Button variant="default" disabled={!canAdvance} onClick={goNext}>
+        <Button variant='default' disabled={!canAdvance} onClick={goNext}>
           Next
         </Button>
       )}
@@ -146,18 +143,18 @@ export function CharacterCreationWizard({
     return (
       <>
         <div
-          className="mx-auto grid grid-cols-1 gap-6 md:grid-cols-[228px_minmax(0,1fr)] min-[1180px]:grid-cols-[272px_minmax(0,1fr)_340px]"
+          className='mx-auto grid grid-cols-1 gap-6 md:grid-cols-[228px_minmax(0,1fr)] min-[1180px]:grid-cols-[272px_minmax(0,1fr)_340px]'
           style={{ maxWidth: 1280, padding: '36px clamp(20px,4vw,32px) 130px' }}
         >
-          <div className="hidden md:block">
+          <div className='hidden md:block'>
             <WizardRail />
           </div>
-          <div className="flex flex-col gap-[26px]">
+          <div className='flex flex-col gap-[26px]'>
             {nameField}
             {stepHeading}
             {content}
           </div>
-          <div className="hidden min-[1180px]:block">
+          <div className='hidden min-[1180px]:block'>
             <WizardSummary />
           </div>
         </div>
@@ -167,25 +164,25 @@ export function CharacterCreationWizard({
   }
 
   return (
-    <div className="mx-auto" style={{ maxWidth: 900, padding: '36px clamp(20px,4vw,32px) 130px' }}>
+    <div className='mx-auto' style={{ maxWidth: 900, padding: '36px clamp(20px,4vw,32px) 130px' }}>
       <div style={{ marginBottom: 26 }}>{nameField}</div>
 
       {/* Stepper — Badge isn't clickable on its own, so wrap in a button */}
       <div
-        className="flex flex-wrap gap-2"
+        className='flex flex-wrap gap-2'
         style={{ marginBottom: 30 }}
-        role="tablist"
-        aria-label="Creation steps"
+        role='tablist'
+        aria-label='Creation steps'
       >
         {steps.map((s, i) => (
           <button
             key={s.id}
-            type="button"
+            type='button'
             onClick={() => goToStep(i)}
             aria-current={i === stepIndex}
-            className="cursor-pointer border-0 bg-transparent p-0"
+            className='cursor-pointer border-0 bg-transparent p-0'
           >
-            <Badge variant={i === stepIndex ? 'ember' : isStepValid(i) ? 'success' : 'outline'}>
+            <Badge variant={i === stepIndex ? 'ember' : stepValidity[i] ? 'success' : 'outline'}>
               {s.name}
             </Badge>
           </button>

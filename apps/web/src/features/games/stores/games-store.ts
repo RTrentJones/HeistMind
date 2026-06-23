@@ -11,6 +11,14 @@ import {
 } from '@heist-mind/database';
 import { LoadingState } from '@/shared/types';
 import { getRepositories } from '@/lib/auth';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
+
+/** Resolve the signed-in user id, or throw if unauthenticated. */
+function requireUserId(): string {
+  const id = useAuthStore.getState().user?.id;
+  if (!id) throw new Error('You must be signed in to perform this action.');
+  return id;
+}
 
 interface GamesState extends LoadingState {
   // Game collections
@@ -198,7 +206,7 @@ export const useGamesStore = create<GamesState>()(
           set({ isLoading: true, error: null });
           try {
             const repositories = getRepositories();
-            const result = await repositories.games.create('current-user-id', data); // TODO: Get from auth
+            const result = await repositories.games.create(requireUserId(), data);
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to create game');
@@ -227,7 +235,7 @@ export const useGamesStore = create<GamesState>()(
           set({ isLoading: true, error: null });
           try {
             const repositories = getRepositories();
-            const result = await repositories.games.update(gameId, 'current-user-id', data); // TODO: Get from auth
+            const result = await repositories.games.update(gameId, requireUserId(), data);
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to update game');
@@ -266,7 +274,7 @@ export const useGamesStore = create<GamesState>()(
           set({ isLoading: true, error: null });
           try {
             const repositories = getRepositories();
-            const result = await repositories.games.delete(gameId, 'current-user-id'); // TODO: Get from auth
+            const result = await repositories.games.delete(gameId, requireUserId());
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to delete game');
@@ -298,8 +306,8 @@ export const useGamesStore = create<GamesState>()(
             const repositories = getRepositories();
             const result = await repositories.gamePlayers.addPlayer(
               gameId,
-              'current-user-id', // TODO: Get from auth
-              'current-user-id', // TODO: Get from auth
+              requireUserId(),
+              requireUserId(),
               'player'
             );
 
@@ -326,8 +334,8 @@ export const useGamesStore = create<GamesState>()(
             const repositories = getRepositories();
             const result = await repositories.gamePlayers.removePlayer(
               gameId,
-              'current-user-id', // TODO: Get from auth
-              'current-user-id' // TODO: Get from auth
+              requireUserId(),
+              requireUserId()
             );
 
             if (!result.success) {
@@ -478,6 +486,6 @@ export const useActiveGames = () =>
   );
 
 export const useUserCreatedGames = () =>
-  useGamesStore(
-    state => state.userGames.filter(game => game.createdBy === 'current-user-id') // TODO: Get from auth
+  useGamesStore(state =>
+    state.userGames.filter(game => game.createdBy === useAuthStore.getState().user?.id)
   );

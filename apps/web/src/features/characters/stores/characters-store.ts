@@ -10,6 +10,14 @@ import {
 } from '@heist-mind/database';
 import { LoadingState } from '@/shared/types';
 import { getRepositories } from '@/lib/auth';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
+
+/** Resolve the signed-in user id, or throw if unauthenticated. */
+function requireUserId(): string {
+  const id = useAuthStore.getState().user?.id;
+  if (!id) throw new Error('You must be signed in to perform this action.');
+  return id;
+}
 
 interface CharactersState extends LoadingState {
   // Character collections
@@ -80,7 +88,7 @@ export const useCharactersStore = create<CharactersState>()(
           try {
             const repositories = getRepositories();
             // Note: This would typically be a search/filter endpoint
-            const result = await repositories.characters.findByPlayer('current-user-id'); // TODO: Get from auth
+            const result = await repositories.characters.findByPlayer(requireUserId());
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to load characters');
@@ -202,7 +210,7 @@ export const useCharactersStore = create<CharactersState>()(
           set({ isLoading: true, error: null });
           try {
             const repositories = getRepositories();
-            const result = await repositories.characters.create('current-user-id', data); // TODO: Get from auth
+            const result = await repositories.characters.create(requireUserId(), data);
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to create character');
@@ -237,11 +245,7 @@ export const useCharactersStore = create<CharactersState>()(
           set({ isLoading: true, error: null });
           try {
             const repositories = getRepositories();
-            const result = await repositories.characters.update(
-              characterId,
-              'current-user-id',
-              data
-            ); // TODO: Get from auth
+            const result = await repositories.characters.update(characterId, requireUserId(), data);
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to update character');
@@ -290,7 +294,7 @@ export const useCharactersStore = create<CharactersState>()(
           set({ isLoading: true, error: null });
           try {
             const repositories = getRepositories();
-            const result = await repositories.characters.delete(characterId, 'current-user-id'); // TODO: Get from auth
+            const result = await repositories.characters.delete(characterId, requireUserId());
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to delete character');
@@ -329,10 +333,10 @@ export const useCharactersStore = create<CharactersState>()(
             const repositories = getRepositories();
             const result = await repositories.characters.addExperience(
               characterId,
-              'current-user-id',
+              requireUserId(),
               amount,
               reason
-            ); // TODO: Get from auth
+            );
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to add experience');
@@ -384,9 +388,9 @@ export const useCharactersStore = create<CharactersState>()(
             const repositories = getRepositories();
             const result = await repositories.characterManagement.advanceCharacter(
               characterId,
-              'current-user-id',
+              requireUserId(),
               advancement
-            ); // TODO: Get from auth
+            );
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to advance character');
@@ -438,8 +442,8 @@ export const useCharactersStore = create<CharactersState>()(
             const result = await repositories.characters.transferToGame(
               characterId,
               targetGameId,
-              'current-user-id'
-            ); // TODO: Get from auth
+              requireUserId()
+            );
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to transfer character');
@@ -495,8 +499,8 @@ export const useCharactersStore = create<CharactersState>()(
             const result = await repositories.characters.cloneCharacter(
               characterId,
               targetGameId,
-              'current-user-id'
-            ); // TODO: Get from auth
+              requireUserId()
+            );
 
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to clone character');

@@ -2,6 +2,7 @@
   "extends": "../../configs/tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
+    "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"],
       "@heist-mind/shared": ["../../packages/shared/src"]

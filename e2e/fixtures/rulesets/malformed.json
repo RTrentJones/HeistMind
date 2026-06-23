@@ -1,0 +1,5 @@
+{
+  "note": "Valid JSON, but not a valid ruleset: missing metadata and playbooks, empty attributes.",
+  "attributes": [],
+  "characterCreation": { "steps": [] }
+}

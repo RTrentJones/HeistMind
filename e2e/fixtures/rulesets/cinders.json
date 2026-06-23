@@ -1,0 +1,213 @@
+{
+  "metadata": {
+    "name": "Cinders & Coin",
+    "version": "1.2.0",
+    "author": "HeistMind E2E",
+    "description": "A grim heist game of debt, fire, and fragile alliances. (Original FitD-style test ruleset.)",
+    "system": "Forged in the Dark"
+  },
+  "playbooks": [
+    {
+      "id": "razor",
+      "name": "The Razor",
+      "description": "A dangerous enforcer who settles debts with a blade and a stare.",
+      "startingAbilities": ["battle-born"],
+      "specialAbilities": ["battle-born", "menace"],
+      "contacts": [{ "name": "Vex", "description": "A fence who never forgets a face." }],
+      "equipment": ["blade", "armor"],
+      "attributes": { "grit": 2, "edge": 0, "charm": 0 },
+      "skills": {}
+    },
+    {
+      "id": "hawk",
+      "name": "The Hawk",
+      "description": "A patient marksman who maps every rooftop before the job.",
+      "startingAbilities": ["sharpshot"],
+      "specialAbilities": ["sharpshot", "ghost-step"],
+      "contacts": [{ "name": "Mara", "description": "A roof-runner with eyes everywhere." }],
+      "equipment": ["longbow"],
+      "attributes": { "edge": 2, "grit": 0, "charm": 0 },
+      "skills": {}
+    },
+    {
+      "id": "sparrow",
+      "name": "The Sparrow",
+      "description": "A nimble infiltrator who slips through any lock or crowd.",
+      "startingAbilities": ["ghost-step"],
+      "specialAbilities": ["ghost-step", "sharpshot"],
+      "contacts": [{ "name": "Old Pell", "description": "A locksmith of dubious loyalty." }],
+      "equipment": ["tools"],
+      "attributes": { "edge": 1, "grit": 1, "charm": 0 },
+      "skills": {}
+    }
+  ],
+  "attributes": [
+    {
+      "id": "edge",
+      "name": "Edge",
+      "description": "Perception, cunning, and a knack for the angles.",
+      "skills": ["Scout", "Study", "Case", "Rig"],
+      "defaultValue": 0,
+      "maxValue": 4
+    },
+    {
+      "id": "grit",
+      "name": "Grit",
+      "description": "Force, speed, and the will to weather violence.",
+      "skills": ["Finesse", "Skulk", "Scrap", "Smash"],
+      "defaultValue": 0,
+      "maxValue": 4
+    },
+    {
+      "id": "charm",
+      "name": "Charm",
+      "description": "Presence, nerve, and the gift of the silver tongue.",
+      "skills": ["Channel", "Order", "Consort", "Sway"],
+      "defaultValue": 0,
+      "maxValue": 4
+    }
+  ],
+  "skills": [],
+  "specialAbilities": [
+    {
+      "id": "battle-born",
+      "name": "Battle-Born",
+      "tier": 1,
+      "description": "Spend armor to shrug off harm or push yourself in a fight."
+    },
+    {
+      "id": "ghost-step",
+      "name": "Ghost Step",
+      "tier": 2,
+      "description": "Move unseen through shadow, briefly slipping the notice of others."
+    },
+    {
+      "id": "sharpshot",
+      "name": "Sharpshot",
+      "tier": 1,
+      "description": "Ignore cover and range when you take a careful shot."
+    },
+    {
+      "id": "menace",
+      "name": "Menace",
+      "tier": 1,
+      "description": "When you command through fear, take +1 effect."
+    }
+  ],
+  "equipment": {
+    "loadCapacity": { "light": 3, "normal": 5, "heavy": 6 },
+    "items": [
+      {
+        "id": "blade",
+        "name": "A Fine Blade",
+        "description": "Balanced steel.",
+        "load": 1,
+        "category": "weapon"
+      },
+      {
+        "id": "armor",
+        "name": "Armor",
+        "description": "Worn leather.",
+        "load": 2,
+        "category": "gear"
+      },
+      {
+        "id": "tools",
+        "name": "Burglar's Tools",
+        "description": "Picks and pries.",
+        "load": 1,
+        "category": "gear"
+      },
+      {
+        "id": "longbow",
+        "name": "Longbow",
+        "description": "Silent at distance.",
+        "load": 2,
+        "category": "weapon"
+      }
+    ],
+    "categories": [
+      { "id": "weapon", "name": "Weapons", "description": "Things that end arguments." },
+      { "id": "gear", "name": "Gear", "description": "Everything else." }
+    ]
+  },
+  "advancement": {
+    "xpTriggers": [
+      {
+        "id": "desperate",
+        "name": "Desperate Action",
+        "description": "Mark XP when you roll a desperate action.",
+        "value": 1
+      }
+    ],
+    "advancementOptions": [
+      {
+        "id": "buy-ability",
+        "name": "New Special Ability",
+        "description": "Gain a new edge.",
+        "cost": 6,
+        "category": "ability"
+      }
+    ]
+  },
+  "characterCreation": {
+    "pointBuy": {
+      "totalPoints": 7,
+      "attributeCosts": { "1": 1, "2": 2, "3": 3, "4": 4 },
+      "skillCosts": { "1": 1, "2": 2 }
+    },
+    "steps": [
+      {
+        "id": "playbook",
+        "name": "Choose Crew Role",
+        "description": "Pick the archetype your scoundrel is built on.",
+        "order": 1,
+        "required": true
+      },
+      {
+        "id": "action-ratings",
+        "name": "Assign Action Ratings",
+        "description": "Spend your starting points across the three attributes.",
+        "order": 2,
+        "required": true
+      },
+      {
+        "id": "special-abilities",
+        "name": "Pick Edges",
+        "description": "Choose the special abilities that bend the rules in your favor.",
+        "order": 3,
+        "required": false
+      },
+      {
+        "id": "crew-ties",
+        "name": "Crew Ties",
+        "description": "How does this scoundrel relate to the rest of the crew?",
+        "order": 4,
+        "required": false,
+        "options": [
+          { "id": "loyal", "name": "Loyal", "description": "You would take a blade for the crew." },
+          { "id": "indebted", "name": "Indebted", "description": "You owe someone here, badly." },
+          {
+            "id": "rival",
+            "name": "Rival",
+            "description": "You and another member have unfinished business."
+          }
+        ]
+      },
+      {
+        "id": "identity",
+        "name": "Origins & Vice",
+        "description": "Heritage, background, and the vice that steadies them.",
+        "order": 5,
+        "required": false
+      },
+      {
+        "id": "review",
+        "name": "Confirm Crew Member",
+        "description": "Review the sheet, then send them to the table.",
+        "order": 6,
+        "required": true
+      }
+    ]
+  }
+}
