@@ -1,11 +1,18 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { Suspense, use, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { GameWithDetails } from '@heist-mind/database';
-import { Container, ErrorDisplay, Heading, LoadingSpinner, Stack, Text } from '@heist-mind/ui';
+import { Container, ErrorDisplay, LoadingSpinner, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
+
+/** Wizard with the layout chosen by `?layout=rail` (default `single`). */
+function WizardWithLayout({ game, gameId }: { game: GameWithDetails; gameId: string }) {
+  const layout = useSearchParams().get('layout') === 'rail' ? 'rail' : 'single';
+  return <CharacterCreationWizard ruleset={game.ruleset} gameId={gameId} layout={layout} />;
+}
 
 export default function NewCharacterPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
@@ -46,15 +53,15 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
 
   if (!isAuthenticated) {
     return (
-      <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>Please sign in to create a character.</Text>
+      <Container maxWidth="md" padding="lg">
+        <Text variant="muted">Please sign in to create a character.</Text>
       </Container>
     );
   }
 
   if (loading) {
     return (
-      <Container maxWidth='md' padding='lg'>
+      <Container maxWidth="md" padding="lg">
         <LoadingSpinner />
       </Container>
     );
@@ -62,7 +69,7 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
 
   if (error || !game) {
     return (
-      <Container maxWidth='md' padding='lg'>
+      <Container maxWidth="md" padding="lg">
         <ErrorDisplay title="Couldn't load game" message={error ?? 'Unknown error'} />
       </Container>
     );
@@ -70,17 +77,9 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
 
   return (
     <main>
-      <Container maxWidth='3xl' padding='lg'>
-        <Stack direction='column' gap='xs'>
-          <Heading level='h1' variant='hero'>
-            Create a Character
-          </Heading>
-          <Text variant='muted'>
-            {game.ruleset.name} · {game.name}
-          </Text>
-        </Stack>
-      </Container>
-      <CharacterCreationWizard ruleset={game.ruleset} gameId={gameId} />
+      <Suspense fallback={null}>
+        <WizardWithLayout game={game} gameId={gameId} />
+      </Suspense>
     </main>
   );
 }

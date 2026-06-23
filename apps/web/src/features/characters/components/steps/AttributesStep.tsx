@@ -1,22 +1,13 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Stack,
-  StressTracker,
-  Text,
-} from '@heist-mind/ui';
+import { Badge, Card, StressTracker, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 
 /**
  * Attribute / action-rating allocator. One controllable `StressTracker` per
- * attribute (the DS's dot-allocator interaction), driven by
- * `ruleset.content.attributes` and the optional point-buy budget.
+ * attribute (the DS dot allocator), driven by `ruleset.content.attributes` and
+ * the optional point-buy budget. Ported from the spec design.
  */
 export function AttributesStep() {
   const { attributes, values, pointBuy, setAttribute } = useCharacterCreationStore(
@@ -29,50 +20,52 @@ export function AttributesStep() {
   );
 
   if (attributes.length === 0) {
-    return <Text variant='muted'>This ruleset has no attributes defined.</Text>;
+    return <Text variant="muted">This ruleset has no attributes defined.</Text>;
   }
 
   const spent = Object.values(values).reduce((a, b) => a + b, 0);
   const over = pointBuy ? spent > pointBuy.totalPoints : false;
 
   return (
-    <Stack direction='column' gap='md'>
+    <div className="flex flex-col gap-4">
       {pointBuy && (
-        <Badge variant={over ? 'stress-critical' : 'steel'}>
-          {spent} / {pointBuy.totalPoints} points spent
-        </Badge>
+        <div>
+          <Badge variant={over ? 'stress-critical' : 'steel'} size="lg">
+            {spent} / {pointBuy.totalPoints} points spent
+          </Badge>
+        </div>
       )}
 
       {attributes.map(attr => (
-        <Card key={attr.id} variant='default'>
-          <CardHeader>
-            <Stack direction='row' justify='between' align='center'>
-              <CardTitle>{attr.name}</CardTitle>
-              <Stack direction='row' gap='xs' className='flex-wrap'>
-                {attr.skills.map(sk => (
-                  <Badge key={sk} variant='outline' size='sm'>
-                    {sk}
-                  </Badge>
-                ))}
-              </Stack>
-            </Stack>
-          </CardHeader>
-          <CardContent>
-            {attr.description && (
-              <Text variant='muted' size='sm'>
-                {attr.description}
-              </Text>
-            )}
-            <StressTracker
-              current={values[attr.id] ?? 0}
-              max={attr.maxValue ?? 4}
-              interactive
-              showNumbers
-              onChange={v => setAttribute(attr.id, v)}
-            />
-          </CardContent>
+        <Card key={attr.id} variant="default">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <span className="font-display" style={{ fontSize: 19 }}>
+              {attr.name}
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {attr.skills.map(sk => (
+                <Badge key={sk} variant="outline" size="sm">
+                  {sk}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          {attr.description && (
+            <div className="text-foreground-muted" style={{ fontSize: 13, margin: '8px 0 14px' }}>
+              {attr.description}
+            </div>
+          )}
+          <StressTracker
+            current={values[attr.id] ?? 0}
+            max={attr.maxValue ?? 4}
+            interactive
+            showNumbers
+            showLabel={false}
+            size="lg"
+            onChange={v => setAttribute(attr.id, v)}
+          />
         </Card>
       ))}
-    </Stack>
+    </div>
   );
 }

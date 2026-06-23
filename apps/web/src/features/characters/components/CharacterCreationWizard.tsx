@@ -4,26 +4,31 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useShallow } from 'zustand/react/shallow';
 import type { Ruleset } from '@heist-mind/database';
-import { Badge, Button, Container, Heading, Input, Stack, Text } from '@heist-mind/ui';
+import { Badge, Button, Heading, Input, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../stores/character-creation-store';
 import { WizardStep } from './WizardStep';
+import { WizardRail } from './layout/WizardRail';
+import { WizardSummary } from './layout/WizardSummary';
 
 interface CharacterCreationWizardProps {
   ruleset: Ruleset;
   gameId: string;
+  /**
+   * `single` (default) — centered single column with a Badge stepper.
+   * `rail` — 3-column: left step rail, center stage, right live summary.
+   * Both are ported from the Claude Design templates (see `../design/`).
+   */
+  layout?: 'single' | 'rail';
   /** Called with the new character id after a successful create. */
   onComplete?: (characterId: string) => void;
   onCancel?: () => void;
 }
 
-/**
- * Ruleset-driven character creation wizard. The step list comes from the
- * ruleset (`deriveSteps`); each step renders the real `@heist-mind/ui`
- * components. Submitting persists the character via the repository layer.
- */
+/** Ruleset-driven character creation wizard. */
 export function CharacterCreationWizard({
   ruleset,
   gameId,
+  layout = 'single',
   onComplete,
   onCancel,
 }: CharacterCreationWizardProps) {
@@ -74,74 +79,122 @@ export function CharacterCreationWizard({
     }
   };
 
-  return (
-    <Container maxWidth='3xl' padding='lg'>
-      <Stack direction='column' gap='lg'>
-        <Input
-          label='Character name'
-          placeholder='Name your character'
-          value={name}
-          onChange={e => setName(e.target.value)}
-          required
-        />
+  const nameField = (
+    <div style={{ maxWidth: 460 }}>
+      <Input
+        label="Character name"
+        required
+        placeholder="e.g. Shadows McKenzie"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        helpText="Required — shown on the character sheet."
+      />
+    </div>
+  );
 
-        {/* Stepper — Badge isn't clickable on its own, so wrap in a button. */}
-        <Stack
-          direction='row'
-          gap='xs'
-          className='flex-wrap'
-          role='tablist'
-          aria-label='Creation steps'
+  const stepHeading = (
+    <div>
+      <Heading level="h2" variant="primary">
+        {step.name}
+      </Heading>
+      {step.description && <Text className="text-foreground-muted">{step.description}</Text>}
+    </div>
+  );
+
+  const content = (
+    <div key={step.id}>
+      <WizardStep step={step} ruleset={ruleset} />
+    </div>
+  );
+
+  const footer = (
+    <footer
+      className="flex items-center gap-3"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 25,
+        padding: '14px clamp(20px,4vw,32px)',
+        background: 'color-mix(in oklab, var(--color-background-secondary) 92%, transparent)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        borderTop: '1px solid var(--color-border-primary)',
+      }}
+    >
+      <Button variant="ghost" onClick={onCancel ?? (() => router.back())}>
+        Cancel
+      </Button>
+      <div style={{ flex: 1 }} />
+      <Button variant="outline" onClick={goBack} disabled={stepIndex === 0}>
+        Back
+      </Button>
+      {isLast ? (
+        <Button variant="ember" loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
+          Create character
+        </Button>
+      ) : (
+        <Button variant="default" disabled={!canAdvance} onClick={goNext}>
+          Next
+        </Button>
+      )}
+    </footer>
+  );
+
+  if (layout === 'rail') {
+    return (
+      <>
+        <div
+          className="mx-auto grid grid-cols-1 gap-6 md:grid-cols-[228px_minmax(0,1fr)] min-[1180px]:grid-cols-[272px_minmax(0,1fr)_340px]"
+          style={{ maxWidth: 1280, padding: '36px clamp(20px,4vw,32px) 130px' }}
         >
-          {steps.map((s, i) => (
-            <button
-              key={s.id}
-              type='button'
-              onClick={() => goToStep(i)}
-              aria-current={i === stepIndex}
-              className='cursor-pointer border-0 bg-transparent p-0'
-            >
-              <Badge variant={i === stepIndex ? 'ember' : isStepValid(i) ? 'success' : 'outline'}>
-                {i + 1}. {s.name}
-              </Badge>
-            </button>
-          ))}
-        </Stack>
+          <div className="hidden md:block">
+            <WizardRail />
+          </div>
+          <div className="flex flex-col gap-[26px]">
+            {nameField}
+            {stepHeading}
+            {content}
+          </div>
+          <div className="hidden min-[1180px]:block">
+            <WizardSummary />
+          </div>
+        </div>
+        {footer}
+      </>
+    );
+  }
 
-        <Stack direction='column' gap='sm'>
-          <Heading level='h2' variant='primary'>
-            {step.name}
-          </Heading>
-          {step.description && <Text variant='muted'>{step.description}</Text>}
-        </Stack>
+  return (
+    <div className="mx-auto" style={{ maxWidth: 900, padding: '36px clamp(20px,4vw,32px) 130px' }}>
+      <div style={{ marginBottom: 26 }}>{nameField}</div>
 
-        <WizardStep step={step} ruleset={ruleset} />
+      {/* Stepper — Badge isn't clickable on its own, so wrap in a button */}
+      <div
+        className="flex flex-wrap gap-2"
+        style={{ marginBottom: 30 }}
+        role="tablist"
+        aria-label="Creation steps"
+      >
+        {steps.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => goToStep(i)}
+            aria-current={i === stepIndex}
+            className="cursor-pointer border-0 bg-transparent p-0"
+          >
+            <Badge variant={i === stepIndex ? 'ember' : isStepValid(i) ? 'success' : 'outline'}>
+              {s.name}
+            </Badge>
+          </button>
+        ))}
+      </div>
 
-        <Stack direction='row' justify='between' align='center'>
-          <Button variant='ghost' onClick={onCancel ?? (() => router.back())}>
-            Cancel
-          </Button>
-          <Stack direction='row' gap='sm'>
-            <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
-              Back
-            </Button>
-            {isLast ? (
-              <Button
-                variant='ember'
-                loading={isLoading}
-                disabled={!canAdvance}
-                onClick={handleFinish}
-              >
-                Create character
-              </Button>
-            ) : (
-              <Button variant='default' disabled={!canAdvance} onClick={goNext}>
-                Next
-              </Button>
-            )}
-          </Stack>
-        </Stack>
-      </Stack>
-    </Container>
+      {stepHeading}
+      <div style={{ marginTop: 26 }}>{content}</div>
+      {footer}
+    </div>
   );
 }
