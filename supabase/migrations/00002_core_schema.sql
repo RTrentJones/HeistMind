@@ -392,23 +392,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to check if a user is an ACTIVE member (any role) of a specific game.
--- SECURITY DEFINER so the lookup runs as the table owner and BYPASSES RLS — this is
--- what lets the game_players SELECT policy ask "is the caller in this game?" WITHOUT
--- re-entering its own policy (an inline `EXISTS (SELECT FROM game_players …)` recurses:
--- Postgres raises "infinite recursion detected in policy for relation game_players").
-CREATE OR REPLACE FUNCTION is_active_game_member(user_id UUID, game_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM game_players
-    WHERE player_id = user_id
-    AND game_players.game_id = is_active_game_member.game_id
-    AND status = 'active'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Function to get user's role in specific game
 CREATE OR REPLACE FUNCTION get_user_game_role(user_id UUID, game_id UUID)
 RETURNS TEXT AS $$
@@ -613,7 +596,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('game_players_select_policy')
                    AND tablename = 'game_players'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON game_players FOR SELECT USING (player_id = auth.uid() OR is_active_game_member(auth.uid(), game_players.game_id))',
+        EXECUTE format('CREATE POLICY %I ON game_players FOR SELECT USING (player_id = auth.uid() OR EXISTS (SELECT 1 FROM game_players gp WHERE gp.game_id = game_players.game_id AND gp.player_id = auth.uid() AND gp.status = ''active''))',
                        get_constraint_name('game_players_select_policy'));
     END IF;
 

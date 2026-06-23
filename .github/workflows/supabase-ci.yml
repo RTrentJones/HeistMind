@@ -12,6 +12,9 @@ on:
     paths:
       - 'supabase/**'
       - 'packages/database/**'
+  # Manual trigger — required to deploy migrations to production (main), which is otherwise
+  # gated to keep prod deploys deliberate (Greenlight's explicit-promotion model).
+  workflow_dispatch:
 
 # Prevent concurrent deployments to the same environment
 concurrency:
@@ -245,14 +248,10 @@ jobs:
 
           echo "🎯 Testing rollback for schema: $TARGET_SCHEMA"
 
-          # Create schema-specific backup (avoid permission issues)
-          echo "💾 Creating schema-targeted backup..."
-          pg_dump postgres://postgres:postgres@127.0.0.1:54322/postgres \
-            --schema=public \
-            --schema=$TARGET_SCHEMA \
-            --no-owner \
-            --no-privileges \
-            > before_migration_${TARGET_SCHEMA}.sql
+          # Use the Supabase CLI's bundled pg_dump (matches the server's PG17). The runner's
+          # host pg_dump is 16.x and refuses to dump a newer server ("server version mismatch").
+          echo "💾 Creating schema dump (CLI-native, version-matched)..."
+          supabase db dump --local -f "before_migration_${TARGET_SCHEMA}.sql"
 
           if [ ! -f "before_migration_${TARGET_SCHEMA}.sql" ]; then
             echo "❌ Failed to create backup for rollback testing"
@@ -419,11 +418,14 @@ jobs:
     name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
     needs: [validate, security-scan]
+    # development → auto-deploy (Greenlight's develop→beta). main → production only via a
+    # manual workflow_dispatch, so prod migrations stay an explicit, deliberate promotion.
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+      (github.ref == 'refs/heads/development' ||
+       (github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'))
 
     # Use matrix for parallel deployments if needed
     strategy:
