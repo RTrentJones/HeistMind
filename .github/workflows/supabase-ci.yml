@@ -22,7 +22,10 @@ env:
   # Pin versions for reproducibility
   PNPM_VERSION: '9.15.0'
   NODE_VERSION: '20.18.0' # Use latest LTS version
-  SUPABASE_CLI_VERSION: '1.142.2' # Pin specific version
+  # `latest` to match ci.yml's working E2E job. The old 1.142.2 pin predates
+  # config.toml's `db.major_version = 17` (and many modern config fields), so it died with
+  # "Failed reading config: Invalid db.major_version: 17" on every `supabase start`.
+  SUPABASE_CLI_VERSION: 'latest'
 
 jobs:
   # Detect what actually changed to optimize CI time
@@ -121,10 +124,14 @@ jobs:
           supabase stop --no-backup 2>/dev/null || echo "No existing instance to stop"
           docker volume prune -f 2>/dev/null || echo "No volumes to prune"
 
-          # Start with retries
+          # Start with retries. Track success so an exhausted loop FAILS the step — otherwise
+          # the loop's exit code is the last `sleep` (0) and the step goes green while the DB
+          # never came up, surfacing later as a confusing "connection refused" in psql.
+          started=false
           for i in {1..3}; do
             if supabase start; then
               echo "✅ Supabase started successfully"
+              started=true
               break
             else
               echo "⚠️ Attempt $i failed, retrying..."
@@ -132,6 +139,10 @@ jobs:
               sleep 5
             fi
           done
+          if [ "$started" != "true" ]; then
+            echo "❌ Supabase failed to start after 3 attempts"
+            exit 1
+          fi
 
       - name: Validate migration syntax
         run: |
