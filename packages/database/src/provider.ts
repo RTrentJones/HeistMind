@@ -8,6 +8,7 @@ import { SupabaseRulesetRepository } from './implementations/supabase-ruleset-re
 import { SupabaseGameRepository } from './implementations/supabase-game-repository';
 import { SupabaseGamePlayerRepository } from './implementations/supabase-game-player-repository';
 import { SupabaseCharacterRepository } from './implementations/supabase-character-repository';
+import { SupabaseCharacterManagementRepository } from './implementations/supabase-character-management-repository';
 import type { CoreSchema } from './implementations/result-helpers';
 import { SupabaseAuthService } from './implementations/supabase-auth-service';
 import { createClient } from './client';
@@ -98,10 +99,10 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
       games: new SupabaseGameRepository(this.client, schema),
       gamePlayers: new SupabaseGamePlayerRepository(this.client, schema),
       characters: new SupabaseCharacterRepository(this.client, schema),
+      characterManagement: new SupabaseCharacterManagementRepository(this.client, schema),
       // Aggregate/invitation repositories are outside the current journey scope.
       invitations: {} as any, // Placeholder
       gameManagement: {} as any, // Placeholder
-      characterManagement: {} as any, // Placeholder
     };
   }
 

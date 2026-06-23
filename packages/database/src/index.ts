@@ -7,6 +7,9 @@ export * from './domain-types';
 // Re-export repository interfaces (for dependency injection)
 export * from './repositories';
 
+// Re-export the pure character-validity rules (shared by the web UI + the DB layer)
+export * from './character-rules';
+
 // Re-export authentication types and interfaces
 export * from './auth-types';
 

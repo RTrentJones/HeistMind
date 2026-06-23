@@ -47,6 +47,29 @@ describe('validateRulesetContent', () => {
     const result = validateRulesetContent({ ...validContent, playbooks: [{ foo: 'bar' }] });
     expect(result.ok).toBe(false);
   });
+
+  it('accepts present, well-formed stress and abilityChoices', () => {
+    const result = validateRulesetContent({
+      ...validContent,
+      stress: { max: 9, traumaMax: 4 },
+      characterCreation: { steps: [], abilityChoices: 2 },
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects a malformed stress block', () => {
+    const result = validateRulesetContent({ ...validContent, stress: { max: 'nine' } });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.some(e => e.includes('stress'))).toBe(true);
+  });
+
+  it('rejects a non-numeric abilityChoices', () => {
+    const result = validateRulesetContent({
+      ...validContent,
+      characterCreation: { steps: [], abilityChoices: 'two' },
+    });
+    expect(result.ok).toBe(false);
+  });
 });
 
 describe('parseAndValidateRuleset', () => {

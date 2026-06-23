@@ -149,6 +149,11 @@ export interface CharacterManagementRepository {
     userId: string,
     data: CreateCharacterData
   ): Promise<Result<CharacterWithDetails>>;
+  updateCharacterWithValidation(
+    characterId: string,
+    userId: string,
+    data: UpdateCharacterData
+  ): Promise<Result<Character>>;
   advanceCharacter(
     characterId: string,
     userId: string,

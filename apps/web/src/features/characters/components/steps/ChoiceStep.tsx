@@ -2,7 +2,16 @@
 
 import { useShallow } from 'zustand/react/shallow';
 import type { CreationStep } from '@heist-mind/database';
-import { Badge, Card, CardDescription, CardHeader, CardTitle, Stack, Text } from '@heist-mind/ui';
+import {
+  Alert,
+  Badge,
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Stack,
+  Text,
+} from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 
 /**
@@ -25,6 +34,11 @@ export function ChoiceStep({ step }: { step: CreationStep | undefined }) {
 
   return (
     <Stack direction='column' gap='sm'>
+      {step.required && selected == null && (
+        <Alert variant='warning' size='sm'>
+          Choose an option to continue.
+        </Alert>
+      )}
       {options.map(opt => {
         const isSelected = selected === opt.id;
         return (
