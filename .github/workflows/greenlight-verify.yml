@@ -51,7 +51,12 @@ jobs:
           # service-role key (bypasses RLS) is a real secret. Auth specs skip if it's absent.
           E2E_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           E2E_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Authenticated journeys are a PRE-PROD gate: only inject the (RLS-bypassing) service-role
+          # key on non-Production deploys. auth.users is project-global, so this keeps the prod
+          # deployment_status from creating personas; Preview/beta still exercises the full auth flow,
+          # and global-teardown deletes them afterwards. `!= 'Production' && … || ''` avoids the
+          # empty-string falsy trap of the usual `&& '' || …` ternary.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event.deployment_status.environment != 'Production' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
         run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
 
       - name: Upload Playwright report
