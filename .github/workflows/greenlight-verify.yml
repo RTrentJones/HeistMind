@@ -45,10 +45,12 @@ jobs:
           # tool is added; the env var the spec reads stays generic.
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_HEISTMIND }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Forwarded to the playwright suite (greenlight injects PLAYWRIGHT_BASE_URL itself).
-          # Wire these for the deploy's env to exercise authenticated journeys against it.
-          E2E_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          E2E_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Forwarded to the playwright suite (greenlight injects PLAYWRIGHT_BASE_URL itself) to
+          # exercise authenticated journeys. URL + anon are PUBLIC provider-instance config (the anon
+          # key ships in the browser; its protection is RLS) → repo Variables, not secrets. Only the
+          # service-role key (bypasses RLS) is a real secret. Auth specs skip if it's absent.
+          E2E_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
 
