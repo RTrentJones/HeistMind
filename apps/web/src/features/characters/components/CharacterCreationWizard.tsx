@@ -7,26 +7,28 @@ import type { Ruleset } from '@heist-mind/database';
 import { Badge, Button, Heading, Input, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../stores/character-creation-store';
 import { WizardStep } from './WizardStep';
+import { WizardRail } from './layout/WizardRail';
+import { WizardSummary } from './layout/WizardSummary';
 
 interface CharacterCreationWizardProps {
   ruleset: Ruleset;
   gameId: string;
+  /**
+   * `single` (default) — centered single column with a Badge stepper.
+   * `rail` — 3-column: left step rail, center stage, right live summary.
+   * Both are ported from the Claude Design templates (see `../design/`).
+   */
+  layout?: 'single' | 'rail';
   /** Called with the new character id after a successful create. */
   onComplete?: (characterId: string) => void;
   onCancel?: () => void;
 }
 
-/**
- * Ruleset-driven character creation wizard (single-column layout).
- *
- * Presentation is ported from the Claude Design `character-creator-spec`
- * template (see `../design/`): persistent name field, Badge stepper, step
- * heading, and a fixed translucent footer with Cancel / Back / Next|Create.
- * The data layer (steps, draft, submit → repository) lives in the store.
- */
+/** Ruleset-driven character creation wizard. */
 export function CharacterCreationWizard({
   ruleset,
   gameId,
+  layout = 'single',
   onComplete,
   onCancel,
 }: CharacterCreationWizardProps) {
@@ -77,19 +79,96 @@ export function CharacterCreationWizard({
     }
   };
 
+  const nameField = (
+    <div style={{ maxWidth: 460 }}>
+      <Input
+        label="Character name"
+        required
+        placeholder="e.g. Shadows McKenzie"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        helpText="Required — shown on the character sheet."
+      />
+    </div>
+  );
+
+  const stepHeading = (
+    <div>
+      <Heading level="h2" variant="primary">
+        {step.name}
+      </Heading>
+      {step.description && <Text className="text-foreground-muted">{step.description}</Text>}
+    </div>
+  );
+
+  const content = (
+    <div key={step.id}>
+      <WizardStep step={step} ruleset={ruleset} />
+    </div>
+  );
+
+  const footer = (
+    <footer
+      className="flex items-center gap-3"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 25,
+        padding: '14px clamp(20px,4vw,32px)',
+        background: 'color-mix(in oklab, var(--color-background-secondary) 92%, transparent)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        borderTop: '1px solid var(--color-border-primary)',
+      }}
+    >
+      <Button variant="ghost" onClick={onCancel ?? (() => router.back())}>
+        Cancel
+      </Button>
+      <div style={{ flex: 1 }} />
+      <Button variant="outline" onClick={goBack} disabled={stepIndex === 0}>
+        Back
+      </Button>
+      {isLast ? (
+        <Button variant="ember" loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
+          Create character
+        </Button>
+      ) : (
+        <Button variant="default" disabled={!canAdvance} onClick={goNext}>
+          Next
+        </Button>
+      )}
+    </footer>
+  );
+
+  if (layout === 'rail') {
+    return (
+      <>
+        <div
+          className="mx-auto grid grid-cols-1 gap-6 md:grid-cols-[228px_minmax(0,1fr)] min-[1180px]:grid-cols-[272px_minmax(0,1fr)_340px]"
+          style={{ maxWidth: 1280, padding: '36px clamp(20px,4vw,32px) 130px' }}
+        >
+          <div className="hidden md:block">
+            <WizardRail />
+          </div>
+          <div className="flex flex-col gap-[26px]">
+            {nameField}
+            {stepHeading}
+            {content}
+          </div>
+          <div className="hidden min-[1180px]:block">
+            <WizardSummary />
+          </div>
+        </div>
+        {footer}
+      </>
+    );
+  }
+
   return (
     <div className="mx-auto" style={{ maxWidth: 900, padding: '36px clamp(20px,4vw,32px) 130px' }}>
-      {/* Character name — persistent, required */}
-      <div style={{ marginBottom: 26, maxWidth: 460 }}>
-        <Input
-          label="Character name"
-          required
-          placeholder="e.g. Shadows McKenzie"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          helpText="Required — shown on the character sheet."
-        />
-      </div>
+      <div style={{ marginBottom: 26 }}>{nameField}</div>
 
       {/* Stepper — Badge isn't clickable on its own, so wrap in a button */}
       <div
@@ -113,50 +192,9 @@ export function CharacterCreationWizard({
         ))}
       </div>
 
-      {/* Step heading + description */}
-      <Heading level="h2" variant="primary">
-        {step.name}
-      </Heading>
-      {step.description && <Text className="text-foreground-muted">{step.description}</Text>}
-
-      {/* Step content (key remounts on step change for the entrance feel) */}
-      <div key={step.id} style={{ marginTop: 26 }}>
-        <WizardStep step={step} ruleset={ruleset} />
-      </div>
-
-      {/* Fixed translucent footer nav */}
-      <footer
-        className="flex items-center gap-3"
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 25,
-          padding: '14px clamp(20px,4vw,32px)',
-          background: 'color-mix(in oklab, var(--color-background-secondary) 92%, transparent)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          borderTop: '1px solid var(--color-border-primary)',
-        }}
-      >
-        <Button variant="ghost" onClick={onCancel ?? (() => router.back())}>
-          Cancel
-        </Button>
-        <div style={{ flex: 1 }} />
-        <Button variant="outline" onClick={goBack} disabled={stepIndex === 0}>
-          Back
-        </Button>
-        {isLast ? (
-          <Button variant="ember" loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
-            Create character
-          </Button>
-        ) : (
-          <Button variant="default" disabled={!canAdvance} onClick={goNext}>
-            Next
-          </Button>
-        )}
-      </footer>
+      {stepHeading}
+      <div style={{ marginTop: 26 }}>{content}</div>
+      {footer}
     </div>
   );
 }
