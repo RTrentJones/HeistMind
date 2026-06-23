@@ -11,6 +11,7 @@
 //
 // Auth is the injected GM session (see e2e/support); a missing session skips, not fails.
 
+import { isLocalStack } from '../support/env';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, fixturePath, uniqueName, uploadRuleset } from '../support/rulesets';
 
@@ -19,6 +20,15 @@ import { createCampaign, fixturePath, uniqueName, uploadRuleset } from '../suppo
 test.describe.configure({ timeout: 90_000 });
 
 test.describe('GM full journey: upload → campaign → character → modify', () => {
+  // Mutates the per-env (development) schema, which only exists/works against the local
+  // Supabase stack (migrations + grants + RLS fix). Skip against deployed verify targets.
+  test.beforeEach(() => {
+    test.skip(
+      !isLocalStack(),
+      'Requires the local Supabase stack (per-env schema + migrations not yet on this deploy).'
+    );
+  });
+
   test('full ruleset drives custom wizard, then character is created and modified', async ({
     gmPage,
   }) => {

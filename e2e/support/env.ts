@@ -36,3 +36,15 @@ export function getE2EEnv(): E2EEnv {
 export function hasAdminAuth(env: E2EEnv = getE2EEnv()): boolean {
   return Boolean(env.supabaseUrl && env.supabaseAnonKey && env.supabaseServiceRoleKey);
 }
+
+/**
+ * True when the suite targets the local dev stack (paired with a local Supabase in CI),
+ * rather than a deployed preview/beta/prod URL. Mirrors `playwright.config.ts`'s `isLocal`.
+ * Data-mutating journeys (ruleset upload → game → character) require the per-env schema +
+ * migrations (config.toml exposure, schema grants, the game_players RLS fix) and admin
+ * session injection — guaranteed locally, not on a deployed target until those migrations
+ * ship to that env's Supabase. Such specs gate on this so the deploy-verify gate stays green.
+ */
+export function isLocalStack(env: E2EEnv = getE2EEnv()): boolean {
+  return env.baseURL.startsWith('http://localhost') || env.baseURL.startsWith('http://127.0.0.1');
+}

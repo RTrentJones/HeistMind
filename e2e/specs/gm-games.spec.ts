@@ -3,6 +3,7 @@
 // the focused unit-level GM flows. The gmPage fixture provides an authenticated GM context
 // (no Discord); a missing injected session skips rather than fails.
 
+import { isLocalStack } from '../support/env';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, fixturePath, uniqueName, uploadRuleset } from '../support/rulesets';
 
@@ -10,6 +11,14 @@ import { createCampaign, fixturePath, uniqueName, uploadRuleset } from '../suppo
 test.describe.configure({ timeout: 60_000 });
 
 test.describe('GM: rulesets & games', () => {
+  // Mutates the per-env (development) schema — only valid against the local Supabase stack.
+  test.beforeEach(() => {
+    test.skip(
+      !isLocalStack(),
+      'Requires the local Supabase stack (per-env schema + migrations not yet on this deploy).'
+    );
+  });
+
   test('GM uploads a custom FitD ruleset', async ({ gmPage }) => {
     const name = uniqueName('Veil & Vow');
     await uploadRuleset(gmPage, 'veil.json', name);
