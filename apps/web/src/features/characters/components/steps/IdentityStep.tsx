@@ -1,10 +1,10 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import { Input, Stack } from '@heist-mind/ui';
+import { Input } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 
-/** Free-text identity details written to the character draft. */
+/** Free-text identity details, ported from the spec design. */
 export function IdentityStep() {
   const { heritage, background, vice, setField } = useCharacterCreationStore(
     useShallow(s => ({
@@ -16,27 +16,28 @@ export function IdentityStep() {
   );
 
   return (
-    <Stack direction='column' gap='md'>
+    <div className="flex flex-col gap-[18px]" style={{ maxWidth: 480 }}>
       <Input
-        label='Heritage'
-        placeholder='Where are you from?'
+        label="Heritage"
+        placeholder="Akoros, Iruvia, the Dagger Isles…"
         value={heritage}
         onChange={e => setField('heritage', e.target.value)}
-        helpText='Your origin and upbringing.'
+        helpText="Where they come from and how they were raised."
       />
       <Input
-        label='Background'
-        placeholder='What did you do before the crew?'
+        label="Background"
+        placeholder="Academic, Labor, Military, Underworld…"
         value={background}
         onChange={e => setField('background', e.target.value)}
+        helpText="The life they led before the crew found them."
       />
       <Input
-        label='Vice'
-        placeholder='What do you indulge in?'
+        label="Vice"
+        placeholder="Faith, Gambling, Luxury, Stupor…"
         value={vice}
         onChange={e => setField('vice', e.target.value)}
-        helpText='How you blow off stress between scores.'
+        helpText="How they blow off stress when the score is done."
       />
-    </Stack>
+    </div>
   );
 }

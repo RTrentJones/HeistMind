@@ -1,67 +1,88 @@
 'use client';
 
-import { useShallow } from 'zustand/react/shallow';
-import { Badge, Card, CardContent, CardHeader, Heading, Stack, Text } from '@heist-mind/ui';
-import { useCharacterCreationStore } from '../../stores/character-creation-store';
+import type { ReactNode } from 'react';
+import { Badge, Card, Heading } from '@heist-mind/ui';
+import { useCharacterSummary } from '../../lib/use-character-summary';
 
-/** Read-only character-sheet summary before submitting. */
-export function ReviewStep() {
-  const { name, draft, ruleset } = useCharacterCreationStore(
-    useShallow(s => ({ name: s.name, draft: s.draft, ruleset: s.ruleset }))
+const LABEL_STYLE = {
+  fontSize: 11,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase' as const,
+  marginBottom: 9,
+};
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="text-foreground-muted" style={LABEL_STYLE}>
+        {title}
+      </div>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
   );
+}
 
-  const playbook = ruleset?.content.playbooks.find(p => p.id === draft.playbook);
-  const attrDefs = ruleset?.content.attributes ?? [];
-  const abilityName = (id: string) =>
-    ruleset?.content.specialAbilities.find(a => a.id === id)?.name ?? id;
+function Empty({ children }: { children: ReactNode }) {
+  return (
+    <span className="text-foreground-muted" style={{ fontSize: 13 }}>
+      {children}
+    </span>
+  );
+}
+
+/** Read-only character-sheet summary, ported from the spec design. */
+export function ReviewStep() {
+  const { charName, playbookName, attrBadges, abilityBadges, identityBadges } =
+    useCharacterSummary();
 
   return (
-    <Card variant='character'>
-      <CardHeader>
-        <Heading level='h3' variant='gradient'>
-          {name || 'Unnamed character'}
+    <Card variant="character">
+      <div className="flex flex-col gap-1" style={{ marginBottom: 18 }}>
+        <Heading level="h2" variant="gradient">
+          {charName}
         </Heading>
-        <Text variant='muted'>{playbook?.name ?? 'No playbook selected'}</Text>
-      </CardHeader>
-      <CardContent>
-        <Stack direction='column' gap='md'>
-          <div>
-            <Text as='strong'>Attributes</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {attrDefs.map(a => (
-                <Badge key={a.id} variant='steel'>
-                  {a.name} {draft.attributes[a.id] ?? 0}
-                </Badge>
-              ))}
-            </Stack>
-          </div>
+        <div className="text-foreground-muted" style={{ fontSize: 14 }}>
+          {playbookName ?? 'No playbook chosen'}
+        </div>
+      </div>
 
-          <div>
-            <Text as='strong'>Special Abilities</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {draft.specialAbilities.length > 0 ? (
-                draft.specialAbilities.map(id => (
-                  <Badge key={id} variant='success'>
-                    {abilityName(id)}
-                  </Badge>
-                ))
-              ) : (
-                <Text variant='muted' size='sm'>
-                  None selected
-                </Text>
-              )}
-            </Stack>
-          </div>
-
-          {(draft.heritage || draft.background || draft.vice) && (
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {draft.heritage && <Badge variant='outline'>Heritage: {draft.heritage}</Badge>}
-              {draft.background && <Badge variant='outline'>Background: {draft.background}</Badge>}
-              {draft.vice && <Badge variant='outline'>Vice: {draft.vice}</Badge>}
-            </Stack>
+      <div className="flex flex-col gap-[18px]">
+        <Section title="Attributes">
+          {attrBadges.length > 0 ? (
+            attrBadges.map(b => (
+              <Badge key={b} variant="steel">
+                {b}
+              </Badge>
+            ))
+          ) : (
+            <Empty>No points assigned.</Empty>
           )}
-        </Stack>
-      </CardContent>
+        </Section>
+
+        <Section title="Special Abilities">
+          {abilityBadges.length > 0 ? (
+            abilityBadges.map(b => (
+              <Badge key={b} variant="success">
+                {b}
+              </Badge>
+            ))
+          ) : (
+            <Empty>None chosen.</Empty>
+          )}
+        </Section>
+
+        <Section title="Identity">
+          {identityBadges.length > 0 ? (
+            identityBadges.map(b => (
+              <Badge key={b} variant="outline">
+                {b}
+              </Badge>
+            ))
+          ) : (
+            <Empty>Identity not set.</Empty>
+          )}
+        </Section>
+      </div>
     </Card>
   );
 }

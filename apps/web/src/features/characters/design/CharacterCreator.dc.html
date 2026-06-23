@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Character Creator" description="A data-driven, multi-step character creator wizard for Forged-in-the-Dark games. Swap the world model in the logic class to retheme for any setting." -->
+<helmet>
+  <script src="./ds-base.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    .cc-root{min-height:100vh;background:var(--color-background-primary);color:var(--color-foreground-primary);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+    .cc-scroll::-webkit-scrollbar{width:10px;height:10px}
+    .cc-scroll::-webkit-scrollbar-thumb{background:var(--color-background-elevated);border-radius:8px;border:2px solid var(--color-background-primary)}
+    .cc-body{display:grid;gap:0;align-items:stretch}
+    .cc-body.lay-rail{grid-template-columns:272px minmax(0,1fr) 340px}
+    .cc-body.lay-top{grid-template-columns:minmax(0,1fr) 340px}
+    .cc-body.lay-focus{grid-template-columns:minmax(0,1fr)}
+    .cc-stage{min-height:0}
+    @keyframes ccFade{from{transform:translateY(9px)}to{transform:none}}
+    [data-anim]{animation:ccFade .4s cubic-bezier(.2,.7,.2,1) both}
+    @media (prefers-reduced-motion:reduce){[data-anim]{animation:none}}
+    @media (max-width:1180px){
+      .cc-body.lay-rail{grid-template-columns:228px minmax(0,1fr)}
+      .cc-body.lay-rail .cc-summary,.cc-body.lay-top .cc-summary{display:none}
+    }
+    @media (max-width:780px){
+      .cc-body.lay-rail,.cc-body.lay-top{grid-template-columns:minmax(0,1fr)}
+      .cc-body.lay-rail .cc-rail{display:none}
+    }
+    .cc-grid-cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}
+    .cc-two{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+    @media (max-width:640px){.cc-two{grid-template-columns:1fr}}
+    .cc-field{width:100%;background:var(--color-background-tertiary);border:1px solid var(--color-border-primary);color:var(--color-foreground-primary);border-radius:10px;padding:12px 14px;font-family:var(--font-sans);font-size:15px;outline:none;transition:border-color .15s,box-shadow .15s}
+    .cc-field:focus{border-color:var(--color-brand-accent)}
+    .cc-field::placeholder{color:var(--color-foreground-muted)}
+  </style>
+</helmet>
+<x-import component-from-global-scope="HeistMindUi.ThemeProvider" defaultMode="dark" hint-size="100%,100%">
+<x-import component-from-global-scope="HeistMindUi.TooltipProvider" hint-size="100%,100%">
+<div class="cc-root dark" style="{{ rootAccentStyle }}">
+
+  <!-- ===== Header ===== -->
+  <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;padding:16px 28px;background:color-mix(in oklab, var(--color-background-secondary) 86%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--color-border-primary)">
+    <div style="display:flex;align-items:center;gap:12px;min-width:0">
+      <div style="width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px;flex:none;background:var(--cc-accent-soft);border:1px solid var(--cc-accent-line);color:var(--cc-accent)">✦</div>
+      <div style="min-width:0">
+        <div class="font-display" style="font-size:17px;line-height:1.1;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ worldName }}</div>
+        <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-foreground-muted)">Character Forge</div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="text-align:right;line-height:1.2">
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted)">{{ stepKicker }}</div>
+        <div class="font-display" style="font-size:14px;color:var(--color-foreground-secondary)">{{ stepTitle }}</div>
+      </div>
+      <div style="width:46px;height:46px;flex:none;position:relative;display:grid;place-items:center">
+        <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--cc-accent) {{ progressDeg }}, var(--color-background-elevated) 0)"></div>
+        <div style="position:absolute;inset:4px;border-radius:50%;background:var(--color-background-secondary)"></div>
+        <div style="position:relative;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">{{ progressPctLabel }}</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Top stepper (lay-top / lay-focus) ===== -->
+  <sc-if value="{{ showTopStepper }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:16px 28px 0;display:flex;justify-content:center">
+      <div class="cc-scroll" style="display:flex;gap:8px;max-width:1080px;width:100%;overflow-x:auto;padding-bottom:6px">
+        <sc-for list="{{ stepsView }}" as="st" hint-placeholder-count="8">
+          <button onClick="{{ st.onClick }}" style="{{ st.pillStyle }}">
+            <span style="{{ st.pillDotStyle }}">{{ st.pillMark }}</span>
+            <span style="white-space:nowrap">{{ st.short }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== Body ===== -->
+  <div class="cc-body {{ bodyCls }}">
+
+    <!-- Rail stepper (lay-rail) -->
+    <sc-if value="{{ isRail }}" hint-placeholder-val="{{ true }}">
+      <aside class="cc-rail cc-scroll" style="border-right:1px solid var(--color-border-primary);padding:24px 18px;display:flex;flex-direction:column;gap:4px;background:color-mix(in oklab, var(--color-background-secondary) 50%, transparent)">
+        <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-foreground-muted);padding:0 8px 10px">Steps</div>
+        <sc-for list="{{ stepsView }}" as="st" hint-placeholder-count="8">
+          <button onClick="{{ st.onClick }}" style="{{ st.railStyle }}">
+            <span style="{{ st.railDotStyle }}">{{ st.pillMark }}</span>
+            <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;min-width:0">
+              <span style="font-size:10px;letter-spacing:.12em;color:var(--color-foreground-muted)">STEP {{ st.nn }}</span>
+              <span style="font-size:14px;font-weight:600;white-space:nowrap">{{ st.label }}</span>
+            </span>
+          </button>
+        </sc-for>
+        <div style="flex:1"></div>
+        <div style="margin-top:18px;padding:14px;border-radius:12px;border:1px dashed var(--color-border-secondary);background:var(--color-background-tertiary)">
+          <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:6px">Now forging</div>
+          <div class="font-display" style="font-size:16px;color:var(--cc-accent)">{{ heroLine }}</div>
+        </div>
+      </aside>
+    </sc-if>
+
+    <!-- Stage / step content -->
+    <main class="cc-stage cc-scroll" style="padding:30px clamp(20px,4vw,48px) 120px;max-width:100%">
+      <div data-anim="{{ stepIndex }}" style="margin:0 auto;max-width:{{ stageMax }}">
+
+        <!-- step heading -->
+        <div style="margin-bottom:24px">
+          <div style="display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--cc-accent);margin-bottom:10px"><span style="width:18px;height:1px;background:var(--cc-accent);display:inline-block"></span>{{ stepKicker }}</div>
+          <h1 class="font-display" style="font-size:clamp(28px,4vw,40px);margin:0 0 8px;line-height:1.05">{{ stepTitle }}</h1>
+          <p style="margin:0;color:var(--color-foreground-secondary);font-size:15px;max-width:62ch">{{ stepDesc }}</p>
+        </div>
+
+        <!-- STEP: Playbook -->
+        <sc-if value="{{ isPlaybookStep }}" hint-placeholder-val="{{ true }}">
+          <div class="cc-grid-cards">
+            <sc-for list="{{ playbookView }}" as="pb" hint-placeholder-count="6">
+              <button onClick="{{ pb.onClick }}" style="{{ pb.cardStyle }}">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+                  <div style="width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:22px;background:{{ pb.tintBg }};border:1px solid {{ pb.tintLine }};color:{{ pb.accentColor }}">{{ pb.glyph }}</div>
+                  <span style="{{ pb.checkStyle }}">✓</span>
+                </div>
+                <div class="font-display" style="font-size:20px;margin-top:14px;line-height:1.05">{{ pb.name }}</div>
+                <div style="font-size:12px;letter-spacing:.04em;color:{{ pb.accentColor }};text-transform:uppercase;margin-top:3px">{{ pb.archetype }}</div>
+                <div style="font-size:13px;color:var(--color-foreground-secondary);margin-top:10px;line-height:1.5">{{ pb.blurb }}</div>
+                <div style="margin-top:13px;display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ pb.startTags }}" as="tg" hint-placeholder-count="2">
+                    <span style="font-size:11px;padding:3px 9px;border-radius:999px;background:var(--color-background-elevated);color:var(--color-foreground-secondary);border:1px solid var(--color-border-secondary)">{{ tg }}</span>
+                  </sc-for>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- STEP: Name & Look -->
+        <sc-if value="{{ isLookStep }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;gap:26px;grid-template-columns:300px minmax(0,1fr);align-items:start" class="cc-look">
+            <!-- avatar picker -->
+            <div>
+              <div style="aspect-ratio:1;border-radius:16px;border:1px solid var(--color-border-primary);background:var(--color-background-secondary);position:relative;overflow:hidden;display:grid;place-items:center">
+                <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 9px,color-mix(in oklab,var(--color-foreground-muted) 7%,transparent) 9px,color-mix(in oklab,var(--color-foreground-muted) 7%,transparent) 18px)"></div>
+                <div style="position:relative;text-align:center">
+                  <div style="{{ portraitMedallion }}">{{ portraitGlyph }}</div>
+                  <div style="font-family:var(--font-mono);font-size:11px;color:var(--color-foreground-muted);margin-top:14px;letter-spacing:.04em">drop portrait · or keep sigil</div>
+                </div>
+              </div>
+              <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin:16px 0 8px">Frame</div>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ portraits }}" as="fr" hint-placeholder-count="4">
+                  <button onClick="{{ fr.onClick }}" title="{{ fr.label }}" style="{{ fr.btnStyle }}"><span style="{{ fr.iconStyle }}"></span></button>
+                </sc-for>
+              </div>
+            </div>
+            <!-- fields -->
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div>
+                <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:7px">Alias <span style="color:var(--cc-accent)">— what the streets call them</span></label>
+                <input class="cc-field" style="font-family:var(--font-display);font-size:22px" placeholder="The Magpie" value="{{ alias }}" onInput="{{ onAlias }}" />
+              </div>
+              <div class="cc-two">
+                <div>
+                  <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:7px">True name</label>
+                  <input class="cc-field" placeholder="Eira Vance" value="{{ truename }}" onInput="{{ onTruename }}" />
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:7px">Pronouns</label>
+                  <input class="cc-field" placeholder="she / her" value="{{ pronouns }}" onInput="{{ onPronouns }}" />
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:9px">Heritage</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ heritages }}" as="h" hint-placeholder-count="6">
+                    <button onClick="{{ h.onClick }}" style="{{ h.chipStyle }}">{{ h.name }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:9px">Background</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ backgrounds }}" as="b" hint-placeholder-count="8">
+                    <button onClick="{{ b.onClick }}" style="{{ b.chipStyle }}">{{ b.name }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:7px">Look &amp; demeanour</label>
+                <textarea class="cc-field" rows="2" style="resize:vertical" placeholder="Rain-soaked greatcoat, a quiet voice, ink-stained fingers." onInput="{{ onAppearance }}">{{ appearance }}</textarea>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- STEP: Actions -->
+        <sc-if value="{{ isActionsStep }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px solid var(--cc-accent-line);background:var(--cc-accent-soft)">
+              <span style="font-size:13px;color:var(--color-foreground-secondary)">Dots to spend</span>
+              <span class="font-display" style="font-size:20px;color:var(--cc-accent);font-variant-numeric:tabular-nums">{{ actionsRemaining }}</span>
+            </div>
+            <span style="font-size:13px;color:var(--color-foreground-muted)">{{ actionsHint }}</span>
+          </div>
+          <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+            <sc-for list="{{ attrView }}" as="attr" hint-placeholder-count="3">
+              <div style="border:1px solid var(--color-border-primary);border-radius:14px;background:var(--color-background-secondary);padding:18px 18px 8px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+                  <div class="font-display" style="font-size:17px">{{ attr.name }}</div>
+                  <div style="font-size:12px;color:var(--color-foreground-muted)">{{ attr.rating }} rated</div>
+                </div>
+                <sc-for list="{{ attr.actions }}" as="act" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--color-border-primary)">
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14px;font-weight:600">{{ act.name }}</div>
+                      <div style="font-size:12px;color:var(--color-foreground-muted);line-height:1.3">{{ act.desc }}</div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex:none">
+                      <sc-for list="{{ act.dots }}" as="dot" hint-placeholder-count="4">
+                        <button onClick="{{ dot.onClick }}" title="{{ dot.title }}" style="{{ dot.style }}"></button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- STEP: Abilities -->
+        <sc-if value="{{ isAbilitiesStep }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ hasPlaybook }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+              <span style="font-size:13px;color:var(--color-foreground-secondary)">{{ abilityNote }}</span>
+            </div>
+            <div class="cc-two">
+              <sc-for list="{{ abilitiesView }}" as="ab" hint-placeholder-count="6">
+                <button onClick="{{ ab.onClick }}" style="{{ ab.cardStyle }}">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="{{ ab.dotStyle }}"></span>
+                    <span class="font-display" style="font-size:17px">{{ ab.name }}</span>
+                    <span style="{{ ab.tagStyle }}">{{ ab.tag }}</span>
+                  </div>
+                  <div style="font-size:13px;color:var(--color-foreground-secondary);margin-top:9px;line-height:1.5">{{ ab.desc }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noPlaybook }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:40px;text-align:center;border:1px dashed var(--color-border-secondary);border-radius:14px;color:var(--color-foreground-muted)">Choose a playbook first to unlock its special abilities.</div>
+          </sc-if>
+        </sc-if>
+
+        <!-- STEP: Ties -->
+        <sc-if value="{{ isTiesStep }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ hasPlaybook }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:13px;color:var(--color-foreground-secondary);margin-bottom:18px">Mark one contact as a <strong style="color:var(--color-semantic-success)">Friend</strong> and one as a <strong style="color:var(--color-game-crimson)">Rival</strong>. The rest are simply people who know your name.</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ contactsView }}" as="ct" hint-placeholder-count="3">
+                <div style="{{ ct.rowStyle }}">
+                  <div style="width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--color-background-elevated);color:var(--color-foreground-secondary)">{{ ct.initial }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:15px;font-weight:600">{{ ct.name }}</div>
+                    <div style="font-size:12px;color:var(--color-foreground-muted)">{{ ct.role }}</div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex:none">
+                    <button onClick="{{ ct.onFriend }}" style="{{ ct.friendStyle }}">Friend</button>
+                    <button onClick="{{ ct.onRival }}" style="{{ ct.rivalStyle }}">Rival</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noPlaybook }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:40px;text-align:center;border:1px dashed var(--color-border-secondary);border-radius:14px;color:var(--color-foreground-muted)">Choose a playbook first to meet its cast of contacts.</div>
+          </sc-if>
+        </sc-if>
+
+        <!-- STEP: Vice -->
+        <sc-if value="{{ isViceStep }}" hint-placeholder-val="{{ false }}">
+          <div class="cc-grid-cards">
+            <sc-for list="{{ vicesView }}" as="v" hint-placeholder-count="7">
+              <button onClick="{{ v.onClick }}" style="{{ v.cardStyle }}">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span class="font-display" style="font-size:18px">{{ v.name }}</span>
+                  <span style="{{ v.checkStyle }}">✓</span>
+                </div>
+                <div style="font-size:13px;color:var(--color-foreground-secondary);margin-top:8px;line-height:1.5">{{ v.desc }}</div>
+              </button>
+            </sc-for>
+          </div>
+          <div style="margin-top:22px;max-width:520px">
+            <label style="display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:7px">Purveyor — who feeds the habit</label>
+            <input class="cc-field" placeholder="Madame Tesslyn's parlour on Crow's Foot" value="{{ purveyor }}" onInput="{{ onPurveyor }}" />
+          </div>
+        </sc-if>
+
+        <!-- STEP: Loadout -->
+        <sc-if value="{{ isLoadoutStep }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:20px">
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ loadTiers }}" as="lt" hint-placeholder-count="3">
+                <button onClick="{{ lt.onClick }}" style="{{ lt.btnStyle }}">
+                  <span style="font-weight:600">{{ lt.label }}</span>
+                  <span style="font-size:11px;opacity:.75;margin-left:6px">{{ lt.maxLabel }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="flex:1;min-width:160px;display:flex;align-items:center;gap:10px">
+              <div style="flex:1;height:8px;border-radius:6px;background:var(--color-background-elevated);overflow:hidden">
+                <div style="height:100%;width:{{ loadPct }};background:{{ loadBarColor }};transition:width .25s"></div>
+              </div>
+              <span style="font-size:13px;color:var(--color-foreground-secondary);white-space:nowrap;font-variant-numeric:tabular-nums">Load {{ usedLoad }} / {{ loadMax }}</span>
+            </div>
+          </div>
+          <div class="cc-two">
+            <sc-for list="{{ gearView }}" as="g" hint-placeholder-count="8">
+              <button onClick="{{ g.onClick }}" style="{{ g.rowStyle }}">
+                <span style="{{ g.boxStyle }}">{{ g.boxMark }}</span>
+                <span style="flex:1;min-width:0;text-align:left">
+                  <span style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;font-weight:600">{{ g.name }}</span><span style="{{ g.sigStyle }}">{{ g.sigTag }}</span></span>
+                  <span style="display:block;font-size:12px;color:var(--color-foreground-muted);margin-top:2px">{{ g.desc }}</span>
+                </span>
+                <span style="display:flex;gap:3px;flex:none">
+                  <sc-for list="{{ g.loadPips }}" as="lp" hint-placeholder-count="2">
+                    <span style="{{ lp }}"></span>
+                  </sc-for>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- STEP: Review -->
+        <sc-if value="{{ isReviewStep }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;gap:18px;grid-template-columns:1fr 1fr" class="cc-review">
+            <div style="grid-column:1/-1;display:flex;align-items:center;gap:18px;padding:22px;border-radius:16px;border:1px solid var(--cc-accent-line);background:linear-gradient(120deg, var(--cc-accent-soft), transparent)">
+              <div style="{{ portraitMedallion }}">{{ portraitGlyph }}</div>
+              <div style="min-width:0">
+                <div class="font-display" style="font-size:30px;line-height:1.05">{{ sumName }}</div>
+                <div style="font-size:13px;color:var(--cc-accent);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">{{ sumPlaybook }}{{ sumArchetypeSuffix }}</div>
+                <div style="font-size:13px;color:var(--color-foreground-secondary);margin-top:5px">{{ sumIdentity }}</div>
+              </div>
+            </div>
+
+            <div style="border:1px solid var(--color-border-primary);border-radius:14px;background:var(--color-background-secondary);padding:18px">
+              <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:12px">Action Ratings</div>
+              <sc-for list="{{ sumActions }}" as="a" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+                  <span style="flex:1;font-size:14px">{{ a.name }}</span>
+                  <span style="display:flex;gap:4px">
+                    <sc-for list="{{ a.pips }}" as="p" hint-placeholder-count="4">
+                      <span style="{{ p }}"></span>
+                    </sc-for>
+                  </span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noActions }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-foreground-muted)">No dots assigned yet.</div></sc-if>
+            </div>
+
+            <div style="border:1px solid var(--color-border-primary);border-radius:14px;background:var(--color-background-secondary);padding:18px;display:flex;flex-direction:column;gap:16px">
+              <div>
+                <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:10px">Stress &amp; Trauma</div>
+                <x-import component-from-global-scope="HeistMindUi.StressTracker" current="{{ sumStress }}" max="{{ nine }}" showLabel="{{ true }}" hint-size="260px,70px"></x-import>
+                <div style="display:flex;gap:8px;margin-top:14px">
+                  <sc-for list="{{ traumaBoxes }}" as="t" hint-placeholder-count="4">
+                    <span style="flex:1;height:30px;border-radius:7px;border:1px solid var(--color-border-secondary);background:var(--color-background-tertiary)"></span>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:8px">Special Abilities</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ sumAbilities }}" as="ab" hint-placeholder-count="2">
+                    <span style="font-size:12px;padding:4px 10px;border-radius:999px;background:var(--cc-accent-soft);color:var(--cc-accent);border:1px solid var(--cc-accent-line)">{{ ab }}</span>
+                  </sc-for>
+                  <sc-if value="{{ noAbilities }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-foreground-muted)">None chosen.</span></sc-if>
+                </div>
+              </div>
+            </div>
+
+            <div style="grid-column:1/-1;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+              <div style="border:1px solid var(--color-border-primary);border-radius:12px;background:var(--color-background-secondary);padding:14px 16px">
+                <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:5px">Ties</div>
+                <div style="font-size:14px"><span style="color:var(--color-semantic-success)">▲</span> {{ sumFriend }}</div>
+                <div style="font-size:14px;margin-top:3px"><span style="color:var(--color-game-crimson)">▼</span> {{ sumRival }}</div>
+              </div>
+              <div style="border:1px solid var(--color-border-primary);border-radius:12px;background:var(--color-background-secondary);padding:14px 16px">
+                <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:5px">Vice</div>
+                <div style="font-size:14px">{{ sumVice }}</div>
+                <div style="font-size:12px;color:var(--color-foreground-muted);margin-top:3px">{{ sumPurveyor }}</div>
+              </div>
+              <div style="border:1px solid var(--color-border-primary);border-radius:12px;background:var(--color-background-secondary);padding:14px 16px">
+                <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted);margin-bottom:5px">Loadout</div>
+                <div style="font-size:14px">{{ sumGearCount }} items</div>
+                <div style="font-size:12px;color:var(--color-foreground-muted);margin-top:3px">{{ sumLoadTier }} · load {{ usedLoad }}</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </main>
+
+    <!-- Summary panel -->
+    <sc-if value="{{ showSidePanel }}" hint-placeholder-val="{{ true }}">
+      <aside class="cc-summary cc-scroll" style="border-left:1px solid var(--color-border-primary);background:color-mix(in oklab, var(--color-background-secondary) 60%, transparent);padding:24px 20px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div style="{{ portraitMedallionSm }}">{{ portraitGlyph }}</div>
+          <div style="min-width:0">
+            <div class="font-display" style="font-size:19px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sumName }}</div>
+            <div style="font-size:12px;color:var(--cc-accent);text-transform:uppercase;letter-spacing:.05em">{{ sumPlaybook }}</div>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--color-border-primary)"></div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ sidePanel }}" as="row" hint-placeholder-count="6">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <span style="width:6px;height:6px;border-radius:50%;margin-top:7px;flex:none;background:{{ row.dot }}"></span>
+              <div style="min-width:0">
+                <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-foreground-muted)">{{ row.label }}</div>
+                <div style="font-size:14px;color:var(--color-foreground-secondary)">{{ row.value }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex:1"></div>
+        <div style="padding:14px;border-radius:12px;background:var(--color-background-tertiary);border:1px solid var(--color-border-primary)">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--color-foreground-muted);margin-bottom:7px"><span>Completion</span><span style="color:var(--cc-accent);font-weight:700">{{ progressPctLabel }}</span></div>
+          <div style="height:7px;border-radius:5px;background:var(--color-background-elevated);overflow:hidden"><div style="height:100%;width:{{ progressPct }};background:var(--cc-accent);transition:width .3s"></div></div>
+        </div>
+      </aside>
+    </sc-if>
+  </div>
+
+  <!-- ===== Footer nav ===== -->
+  <footer style="position:fixed;bottom:0;left:0;right:0;z-index:25;display:flex;align-items:center;gap:14px;padding:14px clamp(20px,4vw,32px);background:color-mix(in oklab, var(--color-background-secondary) 92%, transparent);backdrop-filter:blur(14px);border-top:1px solid var(--color-border-primary)">
+    <x-import component-from-global-scope="HeistMindUi.Button" variant="ghost" size="lg" onClick="{{ back }}" disabled="{{ backDisabled }}" hint-size="110px,46px">← Back</x-import>
+    <div style="flex:1;display:flex;align-items:center;gap:7px;justify-content:center">
+      <sc-for list="{{ dotsView }}" as="d" hint-placeholder-count="8">
+        <button onClick="{{ d.onClick }}" title="{{ d.title }}" style="{{ d.style }}"></button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}">
+      <x-import component-from-global-scope="HeistMindUi.Button" variant="{{ nextVariant }}" size="lg" onClick="{{ onFinish }}" hint-size="180px,46px">⚔ Send to the Crew</x-import>
+    </sc-if>
+    <sc-if value="{{ notLast }}" hint-placeholder-val="{{ true }}">
+      <x-import component-from-global-scope="HeistMindUi.Button" variant="{{ nextVariant }}" size="lg" onClick="{{ next }}" hint-size="150px,46px">{{ nextLabel }} →</x-import>
+    </sc-if>
+  </footer>
+
+  <!-- Finish toast -->
+  <sc-if value="{{ showToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in oklab,var(--color-background-primary) 70%, transparent);backdrop-filter:blur(4px)" onClick="{{ dismissToast }}">
+      <div style="text-align:center;padding:40px 48px;border-radius:20px;border:1px solid var(--cc-accent-line);background:var(--color-background-secondary);box-shadow:0 30px 80px rgba(0,0,0,.6)">
+        <div style="{{ portraitMedallion }}">{{ portraitGlyph }}</div>
+        <div class="font-display" style="font-size:28px;margin-top:18px">{{ sumName }} is ready.</div>
+        <div style="color:var(--color-foreground-secondary);margin-top:6px;max-width:36ch">{{ sumPlaybook }} · {{ sumVice }} vice · {{ sumGearCount }} items packed. The score awaits.</div>
+        <div style="margin-top:18px;font-size:12px;color:var(--color-foreground-muted)">click anywhere to close</div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-import>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:820},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;rail&quot;,&quot;top&quot;,&quot;focus&quot;],&quot;default&quot;:&quot;rail&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;worldName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Duskhaven&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;crimson&quot;,&quot;ember&quot;,&quot;steel&quot;,&quot;gold&quot;,&quot;purple&quot;],&quot;default&quot;:&quot;crimson&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showSummary&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const ACC = {
+  crimson: 'var(--color-game-crimson)',
+  ember: 'var(--color-game-ember)',
+  steel: 'var(--color-game-steel)',
+  gold: 'var(--color-game-gold)',
+  purple: 'var(--color-brand-primary)'
+};
+const VAR = {
+  crimson: 'crimson', ember: 'ember', steel: 'steel', gold: 'default', purple: 'default'
+};
+
+// ===== THE WORLD =====================================================
+// Everything below is data. Swap it to retheme the forge for any
+// Forged-in-the-Dark setting: change playbooks, actions, vices & gear
+// and the entire wizard reskins itself. Nothing in the UI is hardcoded.
+const WORLD = {
+  name: 'Duskhaven',
+  attributes: [
+    { id:'insight', name:'Insight', actions:[
+      { id:'hunt', name:'Hunt', desc:'track a target or strike from afar' },
+      { id:'study', name:'Study', desc:'scrutinise details, decipher meaning' },
+      { id:'survey', name:'Survey', desc:'observe a scene, sense danger' },
+      { id:'tinker', name:'Tinker', desc:'fiddle with devices & mechanisms' } ]},
+    { id:'prowess', name:'Prowess', actions:[
+      { id:'finesse', name:'Finesse', desc:'dexterity, subtlety, deft hands' },
+      { id:'prowl', name:'Prowl', desc:'move quietly, climb, ambush' },
+      { id:'skirmish', name:'Skirmish', desc:'entangle a foe in close combat' },
+      { id:'wreck', name:'Wreck', desc:'unleash savage force & ruin' } ]},
+    { id:'resolve', name:'Resolve', actions:[
+      { id:'attune', name:'Attune', desc:'open your mind to the arcane' },
+      { id:'command', name:'Command', desc:'compel others by sheer will' },
+      { id:'consort', name:'Consort', desc:'socialise with friends & contacts' },
+      { id:'sway', name:'Sway', desc:'persuade with charm or lies' } ]}
+  ],
+  playbooks: [
+    { id:'brute', name:'The Brute', archetype:'Enforcer', glyph:'\u2694', accent:'crimson',
+      blurb:'A dangerous, deadly fighter who solves problems with overwhelming presence.',
+      start:{ skirmish:2, command:1 },
+      abilities:[
+        { id:'br1', name:'Ironhide', sig:true, desc:'When you take harm, you may resist it without rolling — once per score.' },
+        { id:'br2', name:'Pile Driver', desc:'If you press a brutal attack, take +1d and increased impact.' },
+        { id:'br3', name:'Menace', desc:'When you Command through intimidation, you get +1 effect.' },
+        { id:'br4', name:'Brawler', desc:'You can take on a small gang in melee as if you were a small gang yourself.' },
+        { id:'br5', name:'Living Wall', desc:'Protect an ally; the harm transfers to you, reduced one level.' } ],
+      contacts:[
+        { name:'Garrec', role:'a brawny dock boss' },
+        { name:'Sister Mol', role:'a fence with a temper' },
+        { name:'Old Vint', role:'a scarred duelling master' } ],
+      items:[ { id:'heavyblade', name:'A heavy weapon', load:2, desc:'cleaver, maul, or greatblade' } ] },
+
+    { id:'hunter', name:'The Hunter', archetype:'Sharpshooter', glyph:'\u27B4', accent:'ember',
+      blurb:'A deadly marksman and tracker who never loses the trail.',
+      start:{ hunt:2, survey:1 },
+      abilities:[
+        { id:'hu1', name:'Deadeye', sig:true, desc:'When you Hunt a target you have studied, do +1 effect and gain a special angle.' },
+        { id:'hu2', name:'Ghost Trail', desc:'You can track a quarry across the city by signs others miss.' },
+        { id:'hu3', name:'Sharpshooter', desc:'Your ranged attacks reach absurd distances; treat range one step closer.' },
+        { id:'hu4', name:'Trick Shot', desc:'Once per score, turn a missed shot into a fortunate ricochet.' },
+        { id:'hu5', name:'Survivalist', desc:'You can live off the land; +1d to recover, forage, or endure.' } ],
+      contacts:[
+        { name:'Bell', role:'a wandering tinker' },
+        { name:'Cass', role:'a roof-runner courier' },
+        { name:'Mr. Quint', role:'a black-market gunsmith' } ],
+      items:[ { id:'longrifle', name:'A long rifle', load:2, desc:'silent at distance' } ] },
+
+    { id:'ghost', name:'The Ghost', archetype:'Infiltrator', glyph:'\u263E', accent:'steel',
+      blurb:'A silent shadow who slips through any defence unseen.',
+      start:{ prowl:2, finesse:1 },
+      abilities:[
+        { id:'gh1', name:'Shadowstep', sig:true, desc:'Once per score, vanish from sight and reappear in a nearby unwatched spot.' },
+        { id:'gh2', name:'Light Fingers', desc:'When you Finesse to lift or plant an item, no one notices on a 4/5.' },
+        { id:'gh3', name:'Infiltrator', desc:'You ignore quality and Tier when bypassing security measures.' },
+        { id:'gh4', name:'Cat\u2019s Eyes', desc:'You see clearly in darkness and notice the smallest details.' },
+        { id:'gh5', name:'Slip Free', desc:'Spend stress to wriggle out of any binding, grip, or enclosure.' } ],
+      contacts:[
+        { name:'Pin', role:'a child lookout' },
+        { name:'Lady Drisc', role:'a discreet locksmith' },
+        { name:'Ferro', role:'a sewer guide' } ],
+      items:[ { id:'tools', name:'Fine burglary tools', load:1, desc:'picks, wires, glass-cutter' } ] },
+
+    { id:'tongue', name:'The Silver Tongue', archetype:'Confidence Artist', glyph:'\u2726', accent:'gold',
+      blurb:'A charming rogue who can talk their way into — and out of — anything.',
+      start:{ sway:2, consort:1 },
+      abilities:[
+        { id:'to1', name:'Honeyed Words', sig:true, desc:'When you Sway, you may convince a mark of a falsehood that benefits you.' },
+        { id:'to2', name:'Read a Room', desc:'When you Survey a social scene, learn an extra detail and who holds power.' },
+        { id:'to3', name:'False Face', desc:'Adopt a persona; strangers assume it is genuinely you.' },
+        { id:'to4', name:'Trust in Me', desc:'+1d when you Consort with someone who already likes you.' },
+        { id:'to5', name:'Quick Exit', desc:'When a con sours, slip away in the confusion before it lands.' } ],
+      contacts:[
+        { name:'Velour', role:'a parlour madame' },
+        { name:'Inspector Hale', role:'a bribable officer' },
+        { name:'Tobin', role:'a society gossip' } ],
+      items:[ { id:'disguise', name:'A disguise kit', load:1, desc:'paints, wigs, papers' } ] },
+
+    { id:'architect', name:'The Architect', archetype:'Mastermind', glyph:'\u25C8', accent:'purple',
+      blurb:'A patient planner who sees every angle three moves ahead.',
+      start:{ consort:2, study:1 },
+      abilities:[
+        { id:'ar1', name:'Grand Design', sig:true, desc:'Declare a contingency at the start; reveal it later as a reduced-cost flashback.' },
+        { id:'ar2', name:'Spider\u2019s Web', desc:'Your informants feed you rumours; start each downtime with free intel.' },
+        { id:'ar3', name:'Calculating', desc:'When you devise a detailed plan, the engagement roll gets +1d.' },
+        { id:'ar4', name:'Patron', desc:'A powerful backer; once per score, call on resources beyond your Tier.' },
+        { id:'ar5', name:'Compartmentalise', desc:'Your operatives do not know each other; a captured one reveals nothing.' } ],
+      contacts:[
+        { name:'Madam Eves', role:'a spymaster' },
+        { name:'Lord Scurlock', role:'a sinister patron' },
+        { name:'Penn', role:'a forger of documents' } ],
+      items:[ { id:'ledger', name:'An intel ledger', load:0, desc:'names, debts, secrets' } ] },
+
+    { id:'adept', name:'The Adept', archetype:'Channeler', glyph:'\u2737', accent:'purple',
+      blurb:'A conduit for strange and forbidden power that others fear to touch.',
+      start:{ attune:2, study:1 },
+      abilities:[
+        { id:'ad1', name:'Sixth Sense', sig:true, desc:'Attune to sense spirits, wards, and lingering power around you.' },
+        { id:'ad2', name:'Ghost Ward', desc:'Spend stress to ward an area; spirits cannot cross your boundary.' },
+        { id:'ad3', name:'Compel', desc:'Bind a spirit to a single command until the task is done.' },
+        { id:'ad4', name:'Tempest', desc:'Channel raw power through your body, unleashing a burst of force.' },
+        { id:'ad5', name:'Iron Will', desc:'+armour against the mental and spiritual harm of arcane horrors.' } ],
+      contacts:[
+        { name:'The Reconciled', role:'a friendly ghost' },
+        { name:'Dr. Hollis', role:'a forbidden scholar' },
+        { name:'Veretia', role:'a vampire of the court' } ],
+      items:[ { id:'implements', name:'Arcane implements', load:1, desc:'chalk, salts, focus' } ] },
+
+    { id:'mechanic', name:'The Mechanic', archetype:'Saboteur', glyph:'\u2699', accent:'ember',
+      blurb:'An inventor and saboteur with a gadget for every locked door.',
+      start:{ tinker:2, wreck:1 },
+      abilities:[
+        { id:'me1', name:'Field Kit', sig:true, desc:'Your tools count one Tier higher; flashback to having built the right gadget.' },
+        { id:'me2', name:'Alchemist', desc:'With a small workshop you can brew smoke, fire, and acid.' },
+        { id:'me3', name:'Overclock', desc:'Push a device past its limits for a burst of power — at a risk.' },
+        { id:'me4', name:'Saboteur', desc:'When you Wreck a mechanism, the damage looks like an accident.' },
+        { id:'me5', name:'Analyst', desc:'Study a device to learn exactly how to disable or exploit it.' } ],
+      contacts:[
+        { name:'Sparkwright Joss', role:'a leviathan-blood refiner' },
+        { name:'Grub', role:'a scrap dealer' },
+        { name:'Engineer Vey', role:'a railway insider' } ],
+      items:[ { id:'sparktools', name:'Spark-craft tools', load:1, desc:'arc-driver & cells' } ] }
+  ],
+  commonGear: [
+    { id:'blade', name:'A blade or two', load:1, desc:'reliable steel' },
+    { id:'pistol', name:'A fine pistol', load:1, desc:'one good shot' },
+    { id:'pistols', name:'A pair of pistols', load:2, desc:'twice the trouble' },
+    { id:'armor', name:'Armour', load:2, desc:'reduce harm once' },
+    { id:'heavyarmor', name:'Heavy armour', load:3, desc:'reduce harm, but slow' },
+    { id:'throwing', name:'Throwing knives', load:1, desc:'silent at a distance' },
+    { id:'climbing', name:'Climbing gear', load:2, desc:'rope, hooks, harness' },
+    { id:'documents', name:'Documents', load:0, desc:'papers, maps, letters' },
+    { id:'drops', name:'Drops & poisons', load:0, desc:'a subtle edge' },
+    { id:'lantern', name:'A subtle lantern', load:1, desc:'light when you need it' }
+  ],
+  vices: [
+    { id:'faith', name:'Faith', desc:'commune at a temple, shrine, or forbidden altar' },
+    { id:'gambling', name:'Gambling', desc:'games of chance, duels, reckless wagers' },
+    { id:'luxury', name:'Luxury', desc:'indulgence in fine, expensive things' },
+    { id:'obligation', name:'Obligation', desc:'duty to a person, family, or cause' },
+    { id:'pleasure', name:'Pleasure', desc:'gratification, company, sensation' },
+    { id:'stupor', name:'Stupor', desc:'oblivion via drink, drug, or trance' },
+    { id:'weird', name:'Weird', desc:'strange rituals and unsettling experiences' }
+  ],
+  heritages: ['Duskhaven','The Drowned Coast','Far Tradeport','The Iron Reach','The Undercity','The Ashlands'],
+  backgrounds: ['Academic','Labour','Trade','Military','Law','Underworld','Performer','Noble']
+};
+
+const STEPS = [
+  { id:'playbook', label:'Playbook', short:'Playbook' },
+  { id:'look', label:'Name & Look', short:'Name' },
+  { id:'actions', label:'Action Ratings', short:'Actions' },
+  { id:'abilities', label:'Abilities', short:'Abilities' },
+  { id:'ties', label:'Friends & Rivals', short:'Ties' },
+  { id:'vice', label:'Vice', short:'Vice' },
+  { id:'loadout', label:'Loadout', short:'Loadout' },
+  { id:'review', label:'Review', short:'Review' }
+];
+const TIERS = { light:{label:'Light', max:3}, normal:{label:'Normal', max:5}, heavy:{label:'Heavy', max:6} };
+const FRAMES = ['circle','shield','hex','diamond'];
+
+class Component extends DCLogic {
+  state = {
+    step: 0, playbookId: null,
+    alias: '', truename: '', pronouns: '', appearance: '',
+    heritage: null, background: null, portrait: 0,
+    actions: {}, abilities: [], friendId: null, rivalId: null,
+    vice: null, purveyor: '', gear: [], loadTier: 'normal',
+    toast: false
+  };
+
+  get world() { return WORLD; }
+  pb() { return WORLD.playbooks.find(p => p.id === this.state.playbookId) || null; }
+  accentKey() { const p = this.pb(); return p ? p.accent : (this.props.accent || 'crimson'); }
+  acc(pct, base) { return 'color-mix(in oklab, ' + (base || ACC[this.accentKey()]) + ' ' + pct + '%, transparent)'; }
+
+  goStep(i) { this.setState({ step: Math.max(0, Math.min(STEPS.length - 1, i)) }); }
+  next() { this.goStep(this.state.step + 1); }
+  back() { this.goStep(this.state.step - 1); }
+
+  selectPlaybook(id) {
+    const p = WORLD.playbooks.find(x => x.id === id);
+    this.setState({ playbookId: id, actions: Object.assign({}, p.start),
+      abilities: p.abilities.filter(a => a.sig).map(a => a.id),
+      friendId: null, rivalId: null, gear: [] });
+  }
+  startVal(aid) { const p = this.pb(); return (p && p.start[aid]) || 0; }
+  extraUsed() {
+    let n = 0; for (const a of this.allActions()) { const r = this.state.actions[a.id] || 0; n += Math.max(0, r - this.startVal(a.id)); } return n;
+  }
+  allActions() { return WORLD.attributes.flatMap(at => at.actions); }
+  setDot(aid, n) {
+    const cur = this.state.actions[aid] || 0;
+    let next = (n === cur) ? n - 1 : n;
+    next = Math.max(next, this.startVal(aid));
+    if (next > cur && this.extraUsed() + (next - cur) - Math.max(0, cur - this.startVal(aid)) > 4) {
+      const room = 4 - this.extraUsed(); next = cur + Math.max(0, room); if (next === cur) return;
+    }
+    next = Math.min(4, next);
+    const a = Object.assign({}, this.state.actions); a[aid] = next; this.setState({ actions: a });
+  }
+  toggleAbility(id) {
+    const p = this.pb(); const ab = p && p.abilities.find(x => x.id === id);
+    if (!ab || ab.sig) return;
+    const list = this.state.abilities.slice(); const i = list.indexOf(id);
+    if (i >= 0) list.splice(i, 1); else list.push(id);
+    this.setState({ abilities: list });
+  }
+  setTie(id, kind) {
+    if (kind === 'friend') this.setState({ friendId: this.state.friendId === id ? null : id, rivalId: this.state.rivalId === id ? null : this.state.rivalId });
+    else this.setState({ rivalId: this.state.rivalId === id ? null : id, friendId: this.state.friendId === id ? null : this.state.friendId });
+  }
+  usedLoad() { const all = this.gearList(); return this.state.gear.reduce((s, id) => { const g = all.find(x => x.id === id); return s + (g ? g.load : 0); }, 0); }
+  gearList() { const p = this.pb(); return WORLD.commonGear.concat(p ? p.items : []); }
+  toggleGear(id) {
+    const list = this.state.gear.slice(); const i = list.indexOf(id);
+    if (i >= 0) list.splice(i, 1);
+    else { const g = this.gearList().find(x => x.id === id); if (this.usedLoad() + g.load > TIERS[this.state.loadTier].max) return; list.push(id); }
+    this.setState({ gear: list });
+  }
+
+  pip(filled, color, sz) {
+    const s = sz || 12;
+    return 'width:' + s + 'px;height:' + s + 'px;border-radius:50%;display:inline-block;' +
+      (filled ? 'background:' + color + ';border:1px solid ' + color : 'background:transparent;border:1px solid var(--color-border-muted)');
+  }
+
+  renderVals() {
+    const s = this.state, p = this.pb();
+    const accentColor = ACC[this.accentKey()];
+    const accentSoft = this.acc(13), accentLine = this.acc(42), accentMid = this.acc(70);
+    const layout = this.props.layout || 'rail';
+    const isRail = layout === 'rail', isTop = layout === 'top', isFocus = layout === 'focus';
+    const stepCount = STEPS.length;
+    const progress = stepCount > 1 ? s.step / (stepCount - 1) : 0;
+    const v = {};
+
+    v.worldName = this.props.worldName || WORLD.name;
+    v.isRail = isRail; v.isTop = isTop; v.isFocus = isFocus;
+    v.bodyCls = 'lay-' + layout;
+    v.showTopStepper = isTop || isFocus;
+    v.showSidePanel = !isFocus && (this.props.showSummary !== false);
+    v.stageMax = isFocus ? '820px' : (isRail ? '880px' : '1040px');
+    v.accentColor = accentColor; v.accentSoft = accentSoft; v.accentLine = accentLine;
+    v.rootAccentStyle = '--cc-accent:' + accentColor + ';--cc-accent-soft:' + accentSoft + ';--cc-accent-line:' + accentLine;
+
+    const cur = STEPS[s.step];
+    v.stepIndex = s.step;
+    v.stepKicker = 'Step ' + String(s.step + 1).padStart(2, '0') + ' / ' + String(stepCount).padStart(2, '0');
+    v.stepTitle = cur.label;
+    v.stepDesc = {
+      playbook: 'Every scoundrel starts as an archetype. Pick the playbook that fits the trouble you cause.',
+      look: 'Give them a name, a face, and a place they came from before the crew found them.',
+      actions: 'Assign your starting action dots. Your playbook grants a few; spend the rest where you like.',
+      abilities: 'Special abilities bend the rules in your favour. Your signature is locked in — choose the rest.',
+      ties: 'No one in this city stands alone. Decide who has your back and who wants it broken.',
+      vice: 'Stress is relieved by indulging a vice. Choose the one that quiets the noise in your head.',
+      loadout: 'Decide how heavy you travel. Heavier means more gear on hand — and more attention drawn.',
+      review: 'The full character sheet. Look it over, then send your scoundrel to the table.'
+    }[cur.id];
+    v.heroLine = s.alias || (p ? p.name : 'an unnamed rogue');
+    v.progressPct = Math.round(progress * 100) + '%';
+    v.progressDeg = Math.round(progress * 360) + 'deg';
+    v.progressPctLabel = Math.round(progress * 100) + '%';
+
+    // flags
+    v.isPlaybookStep = cur.id === 'playbook';
+    v.isLookStep = cur.id === 'look';
+    v.isActionsStep = cur.id === 'actions';
+    v.isAbilitiesStep = cur.id === 'abilities';
+    v.isTiesStep = cur.id === 'ties';
+    v.isViceStep = cur.id === 'vice';
+    v.isLoadoutStep = cur.id === 'loadout';
+    v.isReviewStep = cur.id === 'review';
+    v.hasPlaybook = !!p; v.noPlaybook = !p;
+
+    // completion per step
+    const complete = i => {
+      const id = STEPS[i].id;
+      if (id === 'playbook') return !!p;
+      if (id === 'look') return !!s.alias.trim();
+      if (id === 'actions') return this.extraUsed() >= 4;
+      if (id === 'abilities') return s.abilities.length >= 2;
+      if (id === 'ties') return !!s.friendId;
+      if (id === 'vice') return !!s.vice;
+      if (id === 'loadout') return s.gear.length > 0;
+      return false;
+    };
+
+    // stepper
+    const railBase = 'display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;border-radius:11px;border:1px solid transparent;background:transparent;color:var(--color-foreground-secondary);cursor:pointer;transition:all .15s';
+    v.stepsView = STEPS.map((st, i) => {
+      const active = i === s.step, done = complete(i);
+      const nn = String(i + 1).padStart(2, '0');
+      const mark = done && !active ? '\u2713' : String(i + 1);
+      const railStyle = active
+        ? railBase + ';background:' + accentSoft + ';border-color:' + accentLine + ';color:var(--color-foreground-primary)'
+        : railBase;
+      const railDot = 'width:26px;height:26px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;' +
+        (active ? 'background:' + accentColor + ';color:#0b0b0d'
+          : done ? 'background:' + this.acc(22, 'var(--color-semantic-success)') + ';color:var(--color-semantic-success);border:1px solid ' + this.acc(40, 'var(--color-semantic-success)')
+          : 'background:var(--color-background-elevated);color:var(--color-foreground-muted)');
+      const pillStyle = 'display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;border:1px solid ' +
+        (active ? accentLine + ';background:' + accentSoft + ';color:var(--color-foreground-primary)'
+          : 'var(--color-border-primary);background:var(--color-background-secondary);color:var(--color-foreground-muted)');
+      const pillDot = 'width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;' +
+        (active ? 'background:' + accentColor + ';color:#0b0b0d'
+          : done ? 'background:transparent;color:var(--color-semantic-success);border:1px solid ' + this.acc(45, 'var(--color-semantic-success)')
+          : 'background:var(--color-background-elevated);color:var(--color-foreground-muted)');
+      return { nn, label: st.label, short: st.short, pillMark: mark, onClick: () => this.goStep(i),
+        railStyle, railDotStyle: railDot, pillStyle, pillDotStyle: pillDot };
+    });
+
+    // footer dots
+    v.dotsView = STEPS.map((st, i) => {
+      const active = i === s.step, done = complete(i);
+      const style = 'width:' + (active ? 26 : 9) + 'px;height:9px;border-radius:6px;cursor:pointer;border:none;padding:0;transition:all .25s;background:' +
+        (active ? accentColor : done ? accentMid : 'var(--color-background-elevated)');
+      return { onClick: () => this.goStep(i), title: st.label, style };
+    });
+
+    // nav
+    v.back = () => this.back(); v.next = () => this.next();
+    v.backDisabled = s.step === 0; v.isLast = s.step === stepCount - 1; v.notLast = s.step !== stepCount - 1;
+    v.nextLabel = 'Continue';
+    v.nextVariant = VAR[this.accentKey()];
+    v.onFinish = () => this.setState({ toast: true });
+    v.showToast = s.toast; v.dismissToast = () => this.setState({ toast: false });
+
+    // ---- Playbook step
+    v.playbookView = WORLD.playbooks.map(pb => {
+      const sel = pb.id === s.playbookId; const c = ACC[pb.accent];
+      const cardStyle = 'text-align:left;cursor:pointer;border-radius:16px;padding:18px;transition:all .18s;background:var(--color-background-secondary);border:1px solid ' +
+        (sel ? c : 'var(--color-border-primary)') + (sel ? ';box-shadow:0 0 0 1px ' + c + ', 0 12px 30px ' + this.acc(22, c) : '');
+      const checkStyle = 'width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;transition:all .15s;' +
+        (sel ? 'background:' + c + ';color:#0b0b0d;opacity:1' : 'opacity:0');
+      const startTags = Object.keys(pb.start).map(k => { const a = this.allActions().find(x => x.id === k); return a.name + ' ' + pb.start[k]; });
+      return { id: pb.id, name: pb.name, archetype: pb.archetype, blurb: pb.blurb, glyph: pb.glyph,
+        accentColor: c, tintBg: this.acc(14, c), tintLine: this.acc(40, c), cardStyle, checkStyle, startTags,
+        onClick: () => this.selectPlaybook(pb.id) };
+    });
+
+    // ---- Look step
+    v.alias = s.alias; v.truename = s.truename; v.pronouns = s.pronouns; v.appearance = s.appearance;
+    v.onAlias = e => this.setState({ alias: e.target.value });
+    v.onTruename = e => this.setState({ truename: e.target.value });
+    v.onPronouns = e => this.setState({ pronouns: e.target.value });
+    v.onAppearance = e => this.setState({ appearance: e.target.value });
+    const chip = sel => 'cursor:pointer;font-size:13px;padding:8px 13px;border-radius:10px;transition:all .15s;border:1px solid ' +
+      (sel ? accentLine + ';background:' + accentSoft + ';color:var(--color-foreground-primary)' : 'var(--color-border-primary);background:var(--color-background-tertiary);color:var(--color-foreground-secondary)');
+    v.heritages = WORLD.heritages.map(h => ({ name: h, chipStyle: chip(s.heritage === h), onClick: () => this.setState({ heritage: s.heritage === h ? null : h }) }));
+    v.backgrounds = WORLD.backgrounds.map(b => ({ name: b, chipStyle: chip(s.background === b), onClick: () => this.setState({ background: s.background === b ? null : b }) }));
+    v.portraitGlyph = p ? p.glyph : '\u2726';
+    const frameShape = (shape, sel, size) => {
+      const sz = size || 18; let r = '4px';
+      if (shape === 'circle') r = '50%'; if (shape === 'hex') r = '30% 30% 30% 30%/30%'; if (shape === 'diamond') r = '4px';
+      const rot = shape === 'diamond' ? 'transform:rotate(45deg);' : '';
+      return 'display:block;width:' + sz + 'px;height:' + sz + 'px;border-radius:' + r + ';' + rot + 'border:2px solid ' + (sel ? accentColor : 'var(--color-foreground-muted)');
+    };
+    v.portraits = FRAMES.map((f, i) => ({ label: f, onClick: () => this.setState({ portrait: i }),
+      btnStyle: 'width:40px;height:40px;display:grid;place-items:center;border-radius:10px;cursor:pointer;transition:all .15s;background:var(--color-background-tertiary);border:1px solid ' + (s.portrait === i ? accentLine : 'var(--color-border-primary)'),
+      iconStyle: frameShape(f, s.portrait === i) }));
+    const medShape = FRAMES[s.portrait];
+    let medRadius = '20px';
+    if (medShape === 'circle') medRadius = '50%'; if (medShape === 'hex') medRadius = '30%';
+    const medRot = medShape === 'diamond' ? 'border-radius:14px;transform:rotate(45deg)' : 'border-radius:' + medRadius;
+    v.portraitMedallion = 'width:96px;height:96px;display:inline-grid;place-items:center;font-size:46px;margin:0 auto;color:' + accentColor + ';background:' + accentSoft + ';border:1px solid ' + accentLine + ';' + medRot;
+    v.portraitMedallionSm = 'width:44px;height:44px;flex:none;display:grid;place-items:center;font-size:22px;color:' + accentColor + ';background:' + accentSoft + ';border:1px solid ' + accentLine + ';border-radius:' + (medShape === 'circle' ? '50%' : '12px');
+
+    // ---- Actions step
+    v.actionsRemaining = Math.max(0, 4 - this.extraUsed());
+    v.actionsHint = 'Playbook dots are locked in. You have 4 free dots to spend (max 4 per action).';
+    v.attrView = WORLD.attributes.map(at => {
+      let rated = 0;
+      const actions = at.actions.map(a => {
+        const r = s.actions[a.id] || 0; if (r > 0) rated++;
+        const start = this.startVal(a.id);
+        const dots = [1, 2, 3, 4].map(n => {
+          const filled = n <= r, granted = n <= start;
+          const c = granted ? accentColor : accentColor;
+          const style = 'width:19px;height:19px;border-radius:50%;padding:0;cursor:pointer;transition:all .12s;' +
+            (filled ? 'background:' + (granted ? accentColor : accentColor) + ';border:1px solid ' + accentColor + (granted ? ';box-shadow:inset 0 0 0 2px var(--color-background-secondary)' : '')
+              : 'background:transparent;border:1px solid var(--color-border-muted)');
+          return { onClick: () => this.setDot(a.id, n), title: a.name + ' ' + n, style };
+        });
+        return { name: a.name, desc: a.desc, dots };
+      });
+      return { name: at.name, rating: rated, actions };
+    });
+
+    // ---- Abilities step
+    v.abilityNote = p ? ('Signature locked: ' + p.abilities.find(a => a.sig).name + '. ' + s.abilities.length + ' of ' + p.abilities.length + ' selected.') : '';
+    v.abilitiesView = p ? p.abilities.map(a => {
+      const sel = s.abilities.includes(a.id);
+      const cardStyle = 'text-align:left;cursor:' + (a.sig ? 'default' : 'pointer') + ';border-radius:14px;padding:16px;transition:all .16s;background:var(--color-background-secondary);border:1px solid ' +
+        (sel ? accentLine : 'var(--color-border-primary)') + (sel ? ';box-shadow:0 0 0 1px ' + accentLine : '');
+      const dotStyle = 'width:16px;height:16px;border-radius:50%;flex:none;' + (sel ? 'background:' + accentColor + ';border:1px solid ' + accentColor : 'background:transparent;border:1px solid var(--color-border-muted)');
+      const tag = a.sig ? 'Signature' : (sel ? 'Chosen' : '');
+      const tagStyle = tag ? ('margin-left:auto;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;' +
+        (a.sig ? 'background:' + accentSoft + ';color:' + accentColor + ';border:1px solid ' + accentLine : 'background:var(--color-background-elevated);color:var(--color-foreground-secondary)')) : 'display:none';
+      return { name: a.name, desc: a.desc, dotStyle, tag, tagStyle, onClick: () => this.toggleAbility(a.id) };
+    }) : [];
+
+    // ---- Ties step
+    const allContacts = p ? p.contacts : [];
+    v.contactsView = allContacts.map((c, i) => {
+      const id = p.id + i; const isF = s.friendId === id, isR = s.rivalId === id;
+      const rowStyle = 'display:flex;align-items:center;gap:14px;padding:14px;border-radius:13px;background:var(--color-background-secondary);transition:all .15s;border:1px solid ' +
+        (isF ? this.acc(45, 'var(--color-semantic-success)') : isR ? this.acc(45, 'var(--color-game-crimson)') : 'var(--color-border-primary)');
+      const tieBtn = (on, col) => 'cursor:pointer;font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;transition:all .15s;border:1px solid ' +
+        (on ? col + ';background:' + this.acc(18, col) + ';color:' + col : 'var(--color-border-secondary);background:transparent;color:var(--color-foreground-muted)');
+      return { name: c.name, role: c.role, initial: c.name[0],
+        onFriend: () => this.setTie(id, 'friend'), onRival: () => this.setTie(id, 'rival'),
+        friendStyle: tieBtn(isF, 'var(--color-semantic-success)'), rivalStyle: tieBtn(isR, 'var(--color-game-crimson)'), rowStyle };
+    });
+
+    // ---- Vice step
+    v.vice = s.vice; v.purveyor = s.purveyor; v.onPurveyor = e => this.setState({ purveyor: e.target.value });
+    v.vicesView = WORLD.vices.map(vi => {
+      const sel = s.vice === vi.id;
+      const cardStyle = 'text-align:left;cursor:pointer;border-radius:14px;padding:16px;transition:all .16s;background:var(--color-background-secondary);border:1px solid ' +
+        (sel ? accentLine : 'var(--color-border-primary)') + (sel ? ';box-shadow:0 0 0 1px ' + accentLine : '');
+      const checkStyle = 'width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;transition:all .15s;' +
+        (sel ? 'background:' + accentColor + ';color:#0b0b0d;opacity:1' : 'opacity:0');
+      return { name: vi.name, desc: vi.desc, cardStyle, checkStyle, onClick: () => this.setState({ vice: s.vice === vi.id ? null : vi.id }) };
+    });
+
+    // ---- Loadout step
+    const tierMax = TIERS[s.loadTier].max, used = this.usedLoad();
+    v.usedLoad = used; v.loadMax = tierMax;
+    v.loadPct = Math.min(100, Math.round(used / tierMax * 100)) + '%';
+    v.loadBarColor = used > tierMax ? 'var(--color-semantic-error)' : accentColor;
+    v.loadTiers = Object.keys(TIERS).map(k => {
+      const sel = s.loadTier === k;
+      return { label: TIERS[k].label, maxLabel: TIERS[k].max + ' load',
+        btnStyle: 'cursor:pointer;padding:9px 15px;border-radius:10px;transition:all .15s;border:1px solid ' +
+          (sel ? accentLine + ';background:' + accentSoft + ';color:var(--color-foreground-primary)' : 'var(--color-border-primary);background:var(--color-background-secondary);color:var(--color-foreground-secondary)'),
+        onClick: () => this.setState({ loadTier: k }) };
+    });
+    v.gearView = this.gearList().map(g => {
+      const sel = s.gear.includes(g.id); const sig = (p && p.items.some(it => it.id === g.id));
+      const rowStyle = 'display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;padding:13px 14px;border-radius:12px;transition:all .15s;background:var(--color-background-secondary);border:1px solid ' +
+        (sel ? accentLine : 'var(--color-border-primary)');
+      const boxStyle = 'width:22px;height:22px;flex:none;border-radius:6px;display:grid;place-items:center;font-size:13px;font-weight:700;transition:all .15s;' +
+        (sel ? 'background:' + accentColor + ';color:#0b0b0d;border:1px solid ' + accentColor : 'background:transparent;color:transparent;border:1px solid var(--color-border-muted)');
+      const loadPips = Array.from({ length: Math.max(1, g.load) }, () => this.pip(true, g.load === 0 ? 'var(--color-border-muted)' : 'var(--color-foreground-muted)', 7));
+      if (g.load === 0) loadPips.length = 0;
+      return { name: g.name, desc: g.desc, rowStyle, boxStyle, boxMark: sel ? '\u2713' : '',
+        sigTag: sig ? 'Signature' : '', sigStyle: sig ? 'font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:' + accentSoft + ';color:' + accentColor : 'display:none',
+        loadPips, onClick: () => this.toggleGear(g.id) };
+    });
+
+    // ---- Summary / review
+    const name = s.alias.trim() || 'Unnamed';
+    v.sumName = name;
+    v.sumPlaybook = p ? p.name : 'No playbook';
+    v.sumArchetypeSuffix = p ? (' · ' + p.archetype) : '';
+    const idBits = [s.pronouns, s.heritage, s.background].filter(Boolean);
+    v.sumIdentity = idBits.length ? idBits.join(' · ') : 'origins unknown';
+    const ratedActions = this.allActions().map(a => ({ a, r: s.actions[a.id] || 0 })).filter(x => x.r > 0);
+    v.noActions = ratedActions.length === 0;
+    v.sumActions = ratedActions.map(x => ({ name: x.a.name, pips: [1, 2, 3, 4].map(n => this.pip(n <= x.r, accentColor, 11)) }));
+    const chosenAb = p ? p.abilities.filter(a => s.abilities.includes(a.id)).map(a => a.name) : [];
+    v.sumAbilities = chosenAb; v.noAbilities = chosenAb.length === 0;
+    const contact = id => { if (!p || id == null) return null; const idx = Number(String(id).replace(p.id, '')); return p.contacts[idx]; };
+    const f = contact(s.friendId), r = contact(s.rivalId);
+    v.sumFriend = f ? f.name : '—'; v.sumRival = r ? r.name : '—';
+    const vice = WORLD.vices.find(x => x.id === s.vice);
+    v.sumVice = vice ? vice.name : '—';
+    v.sumPurveyor = s.purveyor || (vice ? 'no purveyor set' : '');
+    v.sumGearCount = s.gear.length; v.sumLoadTier = TIERS[s.loadTier].label;
+    v.sumStress = 0; v.nine = 9; v.traumaBoxes = [0, 1, 2, 3];
+
+    // side panel rows
+    v.sidePanel = [
+      { label: 'Heritage', value: s.heritage || '—', dot: accentColor },
+      { label: 'Background', value: s.background || '—', dot: accentColor },
+      { label: 'Top action', value: (ratedActions.slice().sort((a, b) => b.r - a.r)[0] ? (ratedActions.slice().sort((a, b) => b.r - a.r)[0].a.name + ' ' + ratedActions.slice().sort((a, b) => b.r - a.r)[0].r) : '—'), dot: accentColor },
+      { label: 'Abilities', value: chosenAb.length ? chosenAb.join(', ') : '—', dot: accentColor },
+      { label: 'Vice', value: v.sumVice, dot: accentColor },
+      { label: 'Loadout', value: s.gear.length + ' items · ' + TIERS[s.loadTier].label, dot: accentColor }
+    ];
+
+    v.nextVariant = VAR[this.accentKey()];
+    return v;
+  }
+}
+</script>
+</body>
+</html>
