@@ -13,6 +13,7 @@
 // Discord OAuth itself is validated separately and narrowly (see specs/auth-discord.spec.ts):
 // we assert the redirect *wiring*, we do not round-trip the live consent screen.
 
+import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { E2EEnv } from './env';
 
@@ -24,16 +25,23 @@ export interface TestUser {
   id?: string;
 }
 
-/** Deterministic personas. Stable emails make provisioning idempotent across runs. */
+// A fresh, NON-committed password each run. `auth.users` is project-global (shared by the
+// schema-per-env beta/prod), so a hardcoded password in this PUBLIC repo would mean anyone
+// could sign in as these personas on prod. Generating it per run (used only to mint the
+// injected session in global-setup, never published) removes that exposure; global-teardown
+// then deletes the personas so they don't persist at all.
+const RUN_PASSWORD = `E2e-${randomUUID()}`;
+
+/** Deterministic personas (stable emails → idempotent provisioning; per-run password). */
 export const TEST_USERS = {
   gm: {
     email: 'e2e-gm@heistmind.test',
-    password: 'e2e-Heist-GM-pw-1',
+    password: RUN_PASSWORD,
     username: 'e2e-gamemaster',
   } satisfies TestUser,
   player: {
     email: 'e2e-player@heistmind.test',
-    password: 'e2e-Heist-Player-pw-1',
+    password: RUN_PASSWORD,
     username: 'e2e-player',
   } satisfies TestUser,
 } as const;
@@ -95,4 +103,14 @@ async function findUserByEmail(
 export async function deleteTestUser(env: E2EEnv, userId: string): Promise<void> {
   const admin = adminClient(env);
   await admin.auth.admin.deleteUser(userId).catch(() => undefined);
+}
+
+/** Delete every deterministic persona — best-effort, idempotent. Called by global-teardown so
+ * the test accounts never persist in the project-global auth.users between runs. */
+export async function cleanupTestUsers(env: E2EEnv): Promise<void> {
+  const admin = adminClient(env);
+  for (const user of Object.values(TEST_USERS)) {
+    const found = await findUserByEmail(admin, user.email);
+    if (found) await admin.auth.admin.deleteUser(found.id).catch(() => undefined);
+  }
 }
