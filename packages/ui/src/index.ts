@@ -69,6 +69,9 @@ export {
 
 // Theme utilities (excluding conflicting exports)
 export { type ThemeConfig } from './lib/theme';
+// ThemeProvider pairs with the exported `useTheme` hook — components such as
+// Header read theme context from it, so it must be part of the public API.
+export { ThemeProvider, type ThemeProviderProps } from './lib/theme';
 
 // Layout components
 export * from './components/Container';
