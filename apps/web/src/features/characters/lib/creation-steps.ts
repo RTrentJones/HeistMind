@@ -1,32 +1,12 @@
-import type { Ruleset, CharacterData } from '@heist-mind/database';
+import { stepKind, type StepKind, type Ruleset, type CharacterData } from '@heist-mind/database';
 
 /**
- * The wizard is RULESET-DRIVEN: the steps come from
- * `ruleset.content.characterCreation.steps`. Each step has a free-form `id`,
- * so we normalize that id to a known "kind" to pick the right step component.
- * Anything we don't recognize falls back to the generic `choice` renderer,
- * which is driven entirely by the step's own `options` — so a custom GM
- * ruleset with novel steps still renders something useful.
+ * The wizard is RULESET-DRIVEN: steps come from `ruleset.content.characterCreation.steps`. Each
+ * step has a free-form `id` normalized to a known "kind" (via the canonical `stepKind` in
+ * @heist-mind/database, shared with the validator) to pick the right step component. Unrecognized
+ * ids fall back to the generic `choice` renderer, driven by the step's own `options`.
  */
-export type StepKind = 'playbook' | 'attributes' | 'abilities' | 'identity' | 'review' | 'choice';
-
-export function stepKind(id: string): StepKind {
-  const s = id.toLowerCase();
-  if (s.includes('playbook') || s.includes('class') || s.includes('archetype')) return 'playbook';
-  if (s.includes('attribute') || s.includes('action') || s.includes('rating')) return 'attributes';
-  if (s.includes('abilit') || s.includes('special') || s.includes('move') || s.includes('power'))
-    return 'abilities';
-  if (
-    s.includes('identity') ||
-    s.includes('heritage') ||
-    s.includes('background') ||
-    s.includes('vice') ||
-    s.includes('detail')
-  )
-    return 'identity';
-  if (s.includes('review') || s.includes('confirm') || s.includes('summary')) return 'review';
-  return 'choice';
-}
+export { stepKind, type StepKind };
 
 /** Lightweight, serializable step metadata for the stepper + navigation. */
 export interface WizardStepMeta {

@@ -15,14 +15,16 @@ import {
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { CharacterEditor } from './CharacterEditor';
 
-/** View a character and modify it (rename + award XP). */
+/** View a character and modify it (rename, award XP, and edit the validated build). */
 export function CharacterSheet({ characterId }: { characterId: string }) {
   const { user } = useAuth();
   const [character, setCharacter] = useState<CharacterWithDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -86,82 +88,90 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const abilities = character.characterData?.specialAbilities ?? [];
 
   return (
-    <Card variant='character'>
-      <Stack direction='column' gap='md'>
-        {editing ? (
-          <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-            <Input label='Name' value={name} onChange={e => setName(e.target.value)} />
-            <Button variant='ember' onClick={saveName} loading={saving}>
-              Save
-            </Button>
-            <Button
-              variant='ghost'
-              onClick={() => {
-                setEditing(false);
-                setName(character.name);
-              }}
-            >
-              Cancel
+    <Stack direction='column' gap='lg'>
+      <Card variant='character'>
+        <Stack direction='column' gap='md'>
+          {editing ? (
+            <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+              <Input label='Name' value={name} onChange={e => setName(e.target.value)} />
+              <Button variant='ember' onClick={saveName} loading={saving}>
+                Save
+              </Button>
+              <Button
+                variant='ghost'
+                onClick={() => {
+                  setEditing(false);
+                  setName(character.name);
+                }}
+              >
+                Cancel
+              </Button>
+            </Stack>
+          ) : (
+            <Stack direction='row' justify='between' align='center'>
+              <Heading level='h2' variant='gradient'>
+                {character.name}
+              </Heading>
+              <Stack direction='row' gap='sm' align='center'>
+                <Button variant='outline' size='sm' onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+                <Button variant='outline' size='sm' onClick={() => setShowEditor(s => !s)}>
+                  {showEditor ? 'Close editor' : 'Edit build'}
+                </Button>
+              </Stack>
+            </Stack>
+          )}
+
+          <Text variant='muted'>
+            {character.ruleset.name} · {character.playbookType}
+          </Text>
+
+          <Stack direction='row' gap='sm' align='center'>
+            <Badge variant='gold'>{character.experiencePoints} XP</Badge>
+            <Button variant='outline' size='sm' onClick={addXp} loading={saving}>
+              Add XP
             </Button>
           </Stack>
-        ) : (
-          <Stack direction='row' justify='between' align='center'>
-            <Heading level='h2' variant='gradient'>
-              {character.name}
-            </Heading>
-            <Button variant='outline' size='sm' onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          </Stack>
-        )}
 
-        <Text variant='muted'>
-          {character.ruleset.name} · {character.playbookType}
-        </Text>
+          <div>
+            <Text as='strong'>Attributes</Text>
+            <Stack direction='row' gap='sm' className='flex-wrap'>
+              {Object.entries(attributes).filter(([, v]) => v > 0).length > 0 ? (
+                Object.entries(attributes)
+                  .filter(([, v]) => v > 0)
+                  .map(([k, v]) => (
+                    <Badge key={k} variant='steel'>
+                      {k} {v}
+                    </Badge>
+                  ))
+              ) : (
+                <Text variant='muted' size='sm'>
+                  No points assigned.
+                </Text>
+              )}
+            </Stack>
+          </div>
 
-        <Stack direction='row' gap='sm' align='center'>
-          <Badge variant='gold'>{character.experiencePoints} XP</Badge>
-          <Button variant='outline' size='sm' onClick={addXp} loading={saving}>
-            Add XP
-          </Button>
-        </Stack>
-
-        <div>
-          <Text as='strong'>Attributes</Text>
-          <Stack direction='row' gap='sm' className='flex-wrap'>
-            {Object.entries(attributes).filter(([, v]) => v > 0).length > 0 ? (
-              Object.entries(attributes)
-                .filter(([, v]) => v > 0)
-                .map(([k, v]) => (
-                  <Badge key={k} variant='steel'>
-                    {k} {v}
+          <div>
+            <Text as='strong'>Special Abilities</Text>
+            <Stack direction='row' gap='sm' className='flex-wrap'>
+              {abilities.length > 0 ? (
+                abilities.map(a => (
+                  <Badge key={a} variant='success'>
+                    {a}
                   </Badge>
                 ))
-            ) : (
-              <Text variant='muted' size='sm'>
-                No points assigned.
-              </Text>
-            )}
-          </Stack>
-        </div>
-
-        <div>
-          <Text as='strong'>Special Abilities</Text>
-          <Stack direction='row' gap='sm' className='flex-wrap'>
-            {abilities.length > 0 ? (
-              abilities.map(a => (
-                <Badge key={a} variant='success'>
-                  {a}
-                </Badge>
-              ))
-            ) : (
-              <Text variant='muted' size='sm'>
-                None chosen.
-              </Text>
-            )}
-          </Stack>
-        </div>
-      </Stack>
-    </Card>
+              ) : (
+                <Text variant='muted' size='sm'>
+                  None chosen.
+                </Text>
+              )}
+            </Stack>
+          </div>
+        </Stack>
+      </Card>
+      {showEditor && <CharacterEditor character={character} onSaved={() => void load()} />}
+    </Stack>
   );
 }

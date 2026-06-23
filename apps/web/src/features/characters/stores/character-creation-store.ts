@@ -1,11 +1,53 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Ruleset, CharacterData, CreateCharacterData } from '@heist-mind/database';
+import {
+  validateCharacter,
+  abilityChoiceLimit,
+  isAbilityUnlocked,
+  pointBuySpent,
+  type Ruleset,
+  type RulesetContent,
+  type CharacterData,
+  type CreateCharacterData,
+} from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import type { LoadingState } from '@/shared/types';
-import { deriveSteps, emptyDraft, stepKind, type WizardStepMeta } from '../lib/creation-steps';
+import {
+  deriveSteps,
+  emptyDraft,
+  stepKind,
+  type StepKind,
+  type WizardStepMeta,
+} from '../lib/creation-steps';
+
+/** The highest affordable rating for one attribute, given what the others already cost. */
+function maxAffordableRating(
+  content: RulesetContent,
+  attributes: Record<string, number>,
+  attributeId: string,
+  cap: number
+): number {
+  const pointBuy = content.characterCreation?.pointBuy;
+  if (!pointBuy) return cap;
+  const others = pointBuySpent(content, { ...attributes, [attributeId]: 0 });
+  const remaining = pointBuy.totalPoints - others;
+  const costAt = (r: number) => (r > 0 ? (pointBuy.attributeCosts?.[r] ?? r) : 0);
+  for (let r = cap; r >= 0; r--) if (costAt(r) <= remaining) return r;
+  return 0;
+}
+
+/** Whether a validation error's field belongs to a given creation step (to gate Next per-step). */
+function errorBelongsToStep(field: string, kind: StepKind, stepId: string): boolean {
+  if (field === `steps.${stepId}`) return true;
+  if (kind === 'attributes')
+    return field === 'attributes' || field.startsWith('attributes.') || field.startsWith('skills');
+  if (kind === 'abilities')
+    return field === 'specialAbilities' || field.startsWith('specialAbilities.');
+  if (kind === 'choice') return field.startsWith('custom');
+  return false;
+}
 
 interface CharacterCreationState extends LoadingState {
   // Transient (NOT persisted) — re-supplied on mount via initFromRuleset.
@@ -103,22 +145,51 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
         },
 
         setAttribute: (attributeId, value) =>
-          set(state => ({
-            draft: {
-              ...state.draft,
-              attributes: { ...state.draft.attributes, [attributeId]: Math.max(0, value) },
-            },
-          })),
-
-        toggleAbility: abilityId =>
           set(state => {
-            const has = state.draft.specialAbilities.includes(abilityId);
+            const content = state.ruleset?.content;
+            if (!content) return {};
+            const attrDef = content.attributes.find(a => a.id === attributeId);
+            const cap = attrDef?.maxValue ?? 4;
+            // Clamp to the attribute cap AND to what the point-buy budget can afford.
+            const affordable = maxAffordableRating(
+              content,
+              state.draft.attributes,
+              attributeId,
+              cap
+            );
+            const next = Math.max(0, Math.min(value, affordable));
             return {
               draft: {
                 ...state.draft,
-                specialAbilities: has
-                  ? state.draft.specialAbilities.filter(a => a !== abilityId)
-                  : [...state.draft.specialAbilities, abilityId],
+                attributes: { ...state.draft.attributes, [attributeId]: next },
+              },
+            };
+          }),
+
+        toggleAbility: abilityId =>
+          set(state => {
+            const content = state.ruleset?.content;
+            if (!content) return {};
+            const has = state.draft.specialAbilities.includes(abilityId);
+            if (has) {
+              return {
+                draft: {
+                  ...state.draft,
+                  specialAbilities: state.draft.specialAbilities.filter(a => a !== abilityId),
+                },
+              };
+            }
+            // Adding: enforce the choice limit and tier/prerequisite gating.
+            if (
+              state.draft.specialAbilities.length >=
+              abilityChoiceLimit(content, state.draft.playbook)
+            )
+              return {};
+            if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
+            return {
+              draft: {
+                ...state.draft,
+                specialAbilities: [...state.draft.specialAbilities, abilityId],
               },
             };
           }),
@@ -145,25 +216,27 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
         },
 
         isStepValid: index => {
-          const { steps, draft, name } = get();
+          const { steps, draft, name, ruleset } = get();
           const step = steps[index];
-          if (!step) return false;
-          if (!step.required) return true;
-          switch (stepKind(step.id)) {
-            case 'playbook':
-              return draft.playbook.length > 0;
-            case 'attributes':
-              return Object.values(draft.attributes).some(v => v > 0);
-            case 'review':
-              return name.trim().length > 0 && draft.playbook.length > 0;
-            default:
-              return true;
-          }
+          const content = ruleset?.content;
+          if (!step || !content) return false;
+          const kind = stepKind(step.id);
+          const { errors, isValid } = validateCharacter(content, draft, { mode: 'creation' });
+          // The review step gates on the WHOLE build being valid (+ a name).
+          if (kind === 'review')
+            return isValid && name.trim().length > 0 && draft.playbook.length > 0;
+          // Other steps gate only on errors that belong to that step.
+          return !errors.some(e => errorBelongsToStep(e.field, kind, step.id));
         },
 
         canSubmit: () => {
-          const { name, draft } = get();
-          return name.trim().length > 0 && draft.playbook.length > 0;
+          const { name, draft, ruleset } = get();
+          const content = ruleset?.content;
+          if (!content) return false;
+          return (
+            name.trim().length > 0 &&
+            validateCharacter(content, draft, { mode: 'creation' }).isValid
+          );
         },
 
         submit: async () => {
@@ -191,7 +264,12 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
               characterData: draft,
               playbookType: draft.playbook,
             };
-            const result = await getRepositories().characters.create(userId, data);
+            // Route through the validated create so the server enforces the same rules.
+            const result =
+              await getRepositories().characterManagement.createCharacterWithValidation(
+                userId,
+                data
+              );
             if (!result.success) {
               throw new Error(result.error?.message || 'Failed to create character');
             }

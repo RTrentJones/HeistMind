@@ -91,7 +91,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     await expect(gmPage.getByText('0 XP')).toBeVisible();
 
     const renamed = uniqueName('Asher "Cinder" Vane');
-    await gmPage.getByRole('button', { name: 'Edit' }).click();
+    await gmPage.getByRole('button', { name: 'Edit', exact: true }).click();
     await gmPage.getByLabel('Name', { exact: true }).fill(renamed);
     await gmPage.getByRole('button', { name: 'Save' }).click();
     await expect(gmPage.getByRole('heading', { name: renamed })).toBeVisible();

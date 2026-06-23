@@ -62,13 +62,36 @@ export function validateRulesetContent(input: unknown): RulesetValidationResult 
   const creation = content.characterCreation;
   if (!isObject(creation)) {
     errors.push('characterCreation is required and must be an object.');
-  } else if (!Array.isArray(creation.steps)) {
-    errors.push('characterCreation.steps must be an array (it may be empty).');
+  } else {
+    if (!Array.isArray(creation.steps)) {
+      errors.push('characterCreation.steps must be an array (it may be empty).');
+    }
+    // abilityChoices is optional, but must be a number when present
+    if (creation.abilityChoices !== undefined && typeof creation.abilityChoices !== 'number') {
+      errors.push('characterCreation.abilityChoices must be a number when present.');
+    }
+    // pointBuy.attributeCosts values must be numeric when present (drives the budget)
+    if (isObject(creation.pointBuy) && isObject(creation.pointBuy.attributeCosts)) {
+      const bad = Object.values(creation.pointBuy.attributeCosts).some(v => typeof v !== 'number');
+      if (bad) errors.push('characterCreation.pointBuy.attributeCosts values must be numbers.');
+    }
   }
 
   // specialAbilities is optional, but must be an array when present
   if (content.specialAbilities !== undefined && !Array.isArray(content.specialAbilities)) {
     errors.push('specialAbilities must be an array when present.');
+  }
+
+  // stress is optional, but { max, traumaMax } must be numbers when present
+  if (content.stress !== undefined) {
+    const stress = content.stress;
+    if (
+      !isObject(stress) ||
+      typeof stress.max !== 'number' ||
+      typeof stress.traumaMax !== 'number'
+    ) {
+      errors.push('stress must be an object with numeric max and traumaMax when present.');
+    }
   }
 
   if (errors.length > 0) return { ok: false, errors };

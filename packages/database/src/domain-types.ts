@@ -127,6 +127,13 @@ export interface RulesetContent {
   equipment: EquipmentRules;
   advancement: AdvancementRules;
   characterCreation: CreationRules;
+  /** Stress/trauma bounds. Optional; defaults to BitD `{ max: 9, traumaMax: 4 }` when absent. */
+  stress?: StressRules;
+}
+
+export interface StressRules {
+  max: number;
+  traumaMax: number;
 }
 
 export interface PlaybookDefinition {
@@ -226,6 +233,11 @@ export interface CreationRules {
   steps: CreationStep[];
   pointBuy?: PointBuyRules;
   restrictions?: CreationRestriction[];
+  /**
+   * How many special abilities a character may choose at creation (counts the playbook's
+   * seeded `startingAbilities`). Defaults to `playbook.startingAbilities.length`, else 1.
+   */
+  abilityChoices?: number;
 }
 
 export interface CreationStep {

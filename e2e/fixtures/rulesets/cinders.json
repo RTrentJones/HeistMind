@@ -145,17 +145,27 @@
         "id": "buy-ability",
         "name": "New Special Ability",
         "description": "Gain a new edge.",
-        "cost": 6,
+        "cost": 2,
         "category": "ability"
       }
     ]
   },
+  "stress": { "max": 9, "traumaMax": 4 },
   "characterCreation": {
     "pointBuy": {
       "totalPoints": 7,
       "attributeCosts": { "1": 1, "2": 2, "3": 3, "4": 4 },
       "skillCosts": { "1": 1, "2": 2 }
     },
+    "abilityChoices": 2,
+    "restrictions": [
+      {
+        "field": "attributes.grit",
+        "condition": "max",
+        "value": 3,
+        "message": "Grit cannot exceed 3 at character creation."
+      }
+    ],
     "steps": [
       {
         "id": "playbook",
