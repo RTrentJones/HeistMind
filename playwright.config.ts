@@ -25,6 +25,7 @@ const extraHTTPHeaders = env.vercelBypass
 export default defineConfig({
   testDir: './e2e/specs',
   globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
   outputDir: './e2e/.results',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
