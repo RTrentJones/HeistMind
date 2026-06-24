@@ -558,29 +558,22 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           export TARGET_SCHEMA="${{ matrix.environment }}"
-          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
           echo "🚀 Deploying migrations to the '$TARGET_SCHEMA' schema..."
 
-          DB_URL="$SUPABASE_DB_URL"
-          if [ -z "$DB_URL" ]; then
-            REGION=$(supabase projects list -o json 2>/dev/null \
-              | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null)
-            [ -n "$REGION" ] && DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
-          fi
-
-          if [ -n "$DB_URL" ] && psql "$DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
+          if [ -n "$SUPABASE_DB_URL" ] && psql "$SUPABASE_DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
             # Idempotent migrations (IF NOT EXISTS / CREATE OR REPLACE / DROP … IF EXISTS), applied
             # per schema — bypasses the global history so BOTH env schemas get populated.
             for f in $(ls supabase/migrations/[0-9][0-9][0-9][0-9][0-9]_*.sql | sort); do
               echo "  → $(basename "$f")"
               { echo "SET heistmind.target_schema = '$TARGET_SCHEMA';"; cat "$f"; } \
-                | psql "$DB_URL" -v ON_ERROR_STOP=1 -q
+                | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q
             done
             echo "✅ Migrations applied to the '$TARGET_SCHEMA' schema."
           else
-            echo "⚠️  No reachable session-pooler connection — falling back to 'supabase db push'"
-            echo "    (migrates the development schema only). To populate '$TARGET_SCHEMA', add a"
-            echo "    SUPABASE_DB_URL secret: Settings → Database → Connection string → URI (Session)."
+            echo "⚠️  SUPABASE_DB_URL not set or unreachable — falling back to 'supabase db push'"
+            echo "    (migrates the development schema only, due to the global migration history)."
+            echo "    To populate the '$TARGET_SCHEMA' schema, add a SUPABASE_DB_URL secret:"
+            echo "    Supabase → Settings → Database → Connection string → URI (Session mode)."
             supabase db push --password "$SUPABASE_DB_PASSWORD"
           fi
 
