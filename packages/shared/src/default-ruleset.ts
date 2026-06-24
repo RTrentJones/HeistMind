@@ -75,8 +75,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'Old Marrow', description: 'A back-alley surgeon who asks no questions.' },
       ],
       equipment: ['blade', 'armor', 'large-weapon'],
-      attributes: { force: 2, cunning: 0, nerve: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Clash: 1 },
     },
     {
       id: 'harpoon',
@@ -97,8 +97,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'Tully', description: 'A dockside gunsmith who works on credit.' },
       ],
       equipment: ['pistol', 'large-weapon', 'climbing-gear'],
-      attributes: { cunning: 1, force: 1, nerve: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Track: 1 },
     },
     {
       id: 'brewer',
@@ -119,8 +119,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'Brace', description: 'A scrap-dealer who finds anything, eventually.' },
       ],
       equipment: ['burglar-rig', 'subterfuge-tools', 'documents'],
-      attributes: { cunning: 2, force: 0, nerve: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Rig: 1 },
     },
     {
       id: 'eel',
@@ -141,8 +141,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'The Gull', description: 'A smuggler who runs the low tunnels.' },
       ],
       equipment: ['blade', 'burglar-rig', 'climbing-gear'],
-      attributes: { force: 1, cunning: 1, nerve: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Skulk: 1 },
     },
     {
       id: 'mask',
@@ -163,8 +163,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'Den', description: 'A forger who can make anyone anyone.' },
       ],
       equipment: ['fine-clothes', 'subterfuge-tools', 'documents'],
-      attributes: { nerve: 2, cunning: 0, force: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Coax: 1 },
     },
     {
       id: 'weaver',
@@ -185,8 +185,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'Rooke', description: 'A go-between with a hand in every faction.' },
       ],
       equipment: ['documents', 'fine-clothes', 'subterfuge-tools'],
-      attributes: { cunning: 1, nerve: 1, force: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Mingle: 1 },
     },
     {
       id: 'medium',
@@ -207,8 +207,8 @@ export const DEFAULT_RULESET: RulesetContent = {
         { name: 'Ashk', description: 'A relic-dealer trading in saltglass and worse.' },
       ],
       equipment: ['spirit-mask', 'documents', 'subterfuge-tools'],
-      attributes: { nerve: 2, cunning: 0, force: 0 },
-      skills: {},
+      attributes: {},
+      skills: { Channel: 1 },
     },
   ],
 
@@ -724,34 +724,11 @@ export const DEFAULT_RULESET: RulesetContent = {
   stress: { max: 9, traumaMax: 4 },
 
   characterCreation: {
-    pointBuy: {
-      totalPoints: 7,
-      // Identity cost map → points spent = sum of attribute ratings (preserves the wizard's
-      // "/ 7 points spent" budget). Attributes cap at 4; creation caps them at 3 (below).
-      attributeCosts: { 1: 1, 2: 2, 3: 3, 4: 4 },
-      skillCosts: { 1: 1, 2: 2 },
-    },
+    // Per-action ratings (FitD): rate the 12 actions 0–3; attributes are derived (count of an
+    // attribute's actions rated ≥ 1). Each playbook seeds one starting dot; assign 4 more, none
+    // above 2 at creation (raise to 3 later via advancement).
+    actionRatings: { points: 4, maxAtCreation: 2, max: 3 },
     abilityChoices: 2,
-    restrictions: [
-      {
-        field: 'attributes.cunning',
-        condition: 'max',
-        value: 3,
-        message: 'Cunning cannot exceed 3 at character creation (raise it later with advancement).',
-      },
-      {
-        field: 'attributes.force',
-        condition: 'max',
-        value: 3,
-        message: 'Force cannot exceed 3 at character creation (raise it later with advancement).',
-      },
-      {
-        field: 'attributes.nerve',
-        condition: 'max',
-        value: 3,
-        message: 'Nerve cannot exceed 3 at character creation (raise it later with advancement).',
-      },
-    ],
     steps: [
       {
         id: 'playbook',
@@ -762,8 +739,9 @@ export const DEFAULT_RULESET: RulesetContent = {
       },
       {
         id: 'action-ratings',
-        name: 'Assign Attributes',
-        description: 'Spend your starting points across Cunning, Force, and Nerve.',
+        name: 'Assign Action Ratings',
+        description:
+          'Rate your actions (0–3). Your attribute ratings are the count of actions you have a dot in.',
         order: 2,
         required: true,
       },

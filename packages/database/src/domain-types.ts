@@ -238,6 +238,22 @@ export interface CreationRules {
    * seeded `startingAbilities`). Defaults to `playbook.startingAbilities.length`, else 1.
    */
   abilityChoices?: number;
+  /**
+   * Opt-in: rate the individual ACTIONS (the entries in each `AttributeDefinition.skills`)
+   * 0..`max`, stored in `CharacterData.skills`; attributes become DERIVED (count of an
+   * attribute's actions rated ≥ 1). When present the wizard/engine use action-rating mode;
+   * when absent they fall back to attribute point-buy (`pointBuy`).
+   */
+  actionRatings?: ActionRatingRules;
+}
+
+export interface ActionRatingRules {
+  /** Action dots to assign at creation, on top of the playbook's seeded starting dots. */
+  points: number;
+  /** Max rating any single action may have at creation (BitD: 2). */
+  maxAtCreation: number;
+  /** Absolute cap on an action rating (BitD: 3). Defaults to the attribute's maxValue or 3. */
+  max?: number;
 }
 
 export interface CreationStep {
