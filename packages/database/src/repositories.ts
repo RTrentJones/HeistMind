@@ -8,6 +8,8 @@ import {
   GamePlayer,
   Character,
   Invitation,
+  Roll,
+  CreateRollData,
   CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
@@ -233,6 +235,12 @@ export interface Activity {
 // REPOSITORY FACTORY
 // ===========================
 
+/** Append-only dice-roll log, scoped per game (the play-by-post centerpiece). */
+export interface RollRepository {
+  create(userId: string, data: CreateRollData): Promise<Result<Roll>>;
+  findByGame(gameId: string, limit?: number): Promise<Result<Roll[]>>;
+}
+
 export interface DatabaseRepositories {
   profiles: ProfileRepository;
   rulesets: RulesetRepository;
@@ -240,6 +248,7 @@ export interface DatabaseRepositories {
   gamePlayers: GamePlayerRepository;
   characters: CharacterRepository;
   invitations: InvitationRepository;
+  rolls: RollRepository;
   gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
 }

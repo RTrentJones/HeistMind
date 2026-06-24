@@ -15,6 +15,8 @@ import {
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { RollPanel } from '@/features/rolls/components/RollPanel';
+import { RollLog } from '@/features/rolls/components/RollLog';
 
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
@@ -24,6 +26,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   const [characters, setCharacters] = useState<Character[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rollKey, setRollKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -118,6 +121,19 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
             ))}
           </Stack>
         )}
+
+        <Heading level='h2' variant='primary'>
+          Roll Log
+        </Heading>
+        <Card variant='outline'>
+          <Stack direction='column' gap='md'>
+            <Text variant='muted' size='sm'>
+              Fortune / GM roll
+            </Text>
+            <RollPanel gameId={gameId} onRolled={() => setRollKey(k => k + 1)} />
+          </Stack>
+        </Card>
+        <RollLog gameId={gameId} refreshKey={rollKey} />
       </Stack>
     </Container>
   );
