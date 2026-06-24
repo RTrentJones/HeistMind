@@ -775,16 +775,89 @@ export const DEFAULT_RULESET: RulesetContent = {
         required: false,
       },
       {
-        // One identity step (the wizard's IdentityStep renders heritage + background + vice
-        // together as free text). Example values for Brackwater: heritage — Harbor-born,
-        // Isle-blood, Highlander, Marshfolk, Far-traveler; background — Labor, Trade, Academic,
-        // Military, Underworld, Highborn, Cult; vice — Devotion, Wager, Excess, Duty, Indulgence,
-        // Oblivion, the Strange.
-        id: 'identity',
-        name: 'Heritage, Background & Vice',
-        description: 'Where they come from, the life they left, and the habit that steadies them.',
+        // Heritage/background/vice are single-field option steps; the wizard's IdentityStep renders
+        // each option list as selectable cards (it falls back to free text for a generic ruleset
+        // that defines a single combined "identity" step instead).
+        id: 'heritage',
+        name: 'Heritage',
+        description: 'Where in the drowned cities do you hail from?',
         order: 4,
         required: false,
+        options: [
+          {
+            id: 'harbor-born',
+            name: 'Harbor-born',
+            description: 'Raised on the wharves of Brackwater itself.',
+          },
+          {
+            id: 'isle-blood',
+            name: 'Isle-blood',
+            description: 'From the scattered isles beyond the storm-wall.',
+          },
+          {
+            id: 'highlander',
+            name: 'Highlander',
+            description: 'From the dry uplands, far from the tide.',
+          },
+          {
+            id: 'marshfolk',
+            name: 'Marshfolk',
+            description: 'From the saltmarsh villages and their old ways.',
+          },
+          {
+            id: 'far-traveler',
+            name: 'Far-traveler',
+            description: 'A foreigner who washed up and stayed.',
+          },
+        ],
+      },
+      {
+        id: 'background',
+        name: 'Background',
+        description: 'What life did you leave behind for the crew?',
+        order: 5,
+        required: false,
+        options: [
+          { id: 'labor', name: 'Labor', description: 'Docks, factories, and the working trades.' },
+          { id: 'trade', name: 'Trade', description: 'Merchants, clerks, and shopkeeps.' },
+          {
+            id: 'academic',
+            name: 'Academic',
+            description: 'Scholars, students, and the lettered.',
+          },
+          { id: 'military', name: 'Military', description: 'Soldiers, watch, and harbor patrol.' },
+          { id: 'underworld', name: 'Underworld', description: 'Gangs, smugglers, and thieves.' },
+          { id: 'highborn', name: 'Highborn', description: 'The fallen or wayward gentry.' },
+          { id: 'cult', name: 'Cult', description: 'The faithful of drowned gods and the Tide.' },
+        ],
+      },
+      {
+        id: 'vice',
+        name: 'Vice',
+        description: 'What habit steadies your nerves between jobs?',
+        order: 6,
+        required: false,
+        options: [
+          {
+            id: 'devotion',
+            name: 'Devotion',
+            description: 'Faith, ritual, and the comfort of belief.',
+          },
+          { id: 'wager', name: 'Wager', description: 'Cards, dice, and the long odds.' },
+          { id: 'excess', name: 'Excess', description: 'Fine things and lavish comforts.' },
+          { id: 'duty', name: 'Duty', description: 'An obligation you cannot let go.' },
+          {
+            id: 'indulgence',
+            name: 'Indulgence',
+            description: 'Company, pleasure, and the senses.',
+          },
+          { id: 'oblivion', name: 'Oblivion', description: 'Drink, smoke, and forgetting.' },
+          {
+            id: 'strange',
+            name: 'The Strange',
+            description: 'Forbidden lore and the call of the deep.',
+          },
+        ],
       },
       {
         id: 'crew-ties',

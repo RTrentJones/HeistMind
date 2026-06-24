@@ -21,8 +21,10 @@ export function WizardStep({ step, ruleset }: { step: WizardStepMeta; ruleset: R
       return <AttributesStep />;
     case 'abilities':
       return <AbilitiesStep />;
-    case 'identity':
-      return <IdentityStep />;
+    case 'identity': {
+      const full = ruleset.content.characterCreation?.steps?.find(s => s.id === step.id);
+      return <IdentityStep step={full} />;
+    }
     case 'review':
       return <ReviewStep />;
     default: {

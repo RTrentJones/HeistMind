@@ -28,10 +28,7 @@ export function AuthHeader() {
     <Header>
       <HeaderBrand>
         <Heading level='h1' variant='default' as='h1'>
-          <Text as='span' variant='accent'>
-            Heist
-          </Text>
-          Mind
+          <span className='text-brand-primary'>Heist</span>Mind
         </Heading>
       </HeaderBrand>
 

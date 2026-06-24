@@ -62,10 +62,12 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     await gmPage.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(gmPage.getByText(/\/ 7 points spent/)).toBeVisible();
 
-    // 6. Abilities step: tier badges render (full fixture's abilities carry a `tier`).
+    // 6. Abilities step: leads with the Razor's roster (both Tier 1); reveal the other roles to
+    //    see the Tier 2 ability too. Tier badges render (full fixture's abilities carry a `tier`).
     await gmPage.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(gmPage.getByText('Tier 2', { exact: true })).toBeVisible();
     await expect(gmPage.getByText('Tier 1', { exact: true }).first()).toBeVisible();
+    await gmPage.getByRole('button', { name: /Show \d+ more abilities/ }).click();
+    await expect(gmPage.getByText('Tier 2', { exact: true })).toBeVisible();
 
     // 7. The custom `crew-ties` step falls through to the generic ChoiceStep (its options).
     await gmPage.getByRole('button', { name: 'Next', exact: true }).click();
