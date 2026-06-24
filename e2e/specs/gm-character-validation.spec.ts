@@ -36,6 +36,9 @@ test.describe('GM: character validity', () => {
     // The Razor seeds Battle-Born → 1 of 2 chosen (abilityChoices: 2).
     await expect(gmPage.getByText('1 of 2 chosen')).toBeVisible();
 
+    // Ghost Step / Sharpshot aren't in the Razor's roster — reveal the other roles' abilities.
+    await gmPage.getByRole('button', { name: /Show \d+ more abilities/ }).click();
+
     // Ghost Step is Tier 2 and not in the Razor's roster → locked at creation.
     await expect(gmPage.getByRole('button', { name: /Ghost Step/ })).toHaveAttribute(
       'aria-disabled',
