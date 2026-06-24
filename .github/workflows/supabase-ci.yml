@@ -476,11 +476,25 @@ jobs:
         run: |
           echo "🔐 Validating deployment credentials..."
 
-          # Enhanced validation
-          if [[ ! "$SUPABASE_ACCESS_TOKEN" =~ ^sbp_ ]]; then
-            echo "❌ Access token has invalid format"
+          # Diagnostics only — GitHub masks secret VALUES in logs but not their lengths.
+          # A length of 0 means the secret isn't reaching this job (scope/visibility), not a
+          # bad token; a full length that still fails the prefix check points at a hidden char.
+          TOKEN_TRIMMED="$(printf '%s' "$SUPABASE_ACCESS_TOKEN" | tr -d '[:space:]')"
+          echo "  access token: raw length=${#SUPABASE_ACCESS_TOKEN}, trimmed length=${#TOKEN_TRIMMED}"
+          echo "  project id length=${#SUPABASE_PROJECT_ID}, db password length=${#SUPABASE_DB_PASSWORD}"
+
+          if [ -z "$TOKEN_TRIMMED" ]; then
+            echo "❌ SUPABASE_ACCESS_TOKEN is empty in this job — the secret is unset or not visible to this scope."
             exit 1
           fi
+
+          # Don't hard-gate on the 'sbp_' prefix here — the 'supabase link' step below is the
+          # authoritative validator (it actually authenticates). A brittle prefix check was
+          # producing false 'invalid format' failures on a token the user confirmed is correct.
+          case "$TOKEN_TRIMMED" in
+            sbp_*) echo "✅ Access token format looks right (sbp_…)";;
+            *) echo "⚠️  Access token doesn't start with 'sbp_' — letting 'supabase link' validate it definitively.";;
+          esac
 
           echo "✅ Credentials validated"
 
