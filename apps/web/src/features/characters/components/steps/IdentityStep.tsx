@@ -16,27 +16,27 @@ export function IdentityStep() {
   );
 
   return (
-    <div className="flex flex-col gap-[18px]" style={{ maxWidth: 480 }}>
+    <div className='flex flex-col gap-[18px]' style={{ maxWidth: 480 }}>
       <Input
-        label="Heritage"
-        placeholder="Akoros, Iruvia, the Dagger Isles…"
+        label='Heritage'
+        placeholder='e.g. where they were born or raised'
         value={heritage}
         onChange={e => setField('heritage', e.target.value)}
-        helpText="Where they come from and how they were raised."
+        helpText='Where they come from and how they were raised.'
       />
       <Input
-        label="Background"
-        placeholder="Academic, Labor, Military, Underworld…"
+        label='Background'
+        placeholder='e.g. the trade or life they came from'
         value={background}
         onChange={e => setField('background', e.target.value)}
-        helpText="The life they led before the crew found them."
+        helpText='The life they led before the crew found them.'
       />
       <Input
-        label="Vice"
-        placeholder="Faith, Gambling, Luxury, Stupor…"
+        label='Vice'
+        placeholder='e.g. how they unwind between jobs'
         value={vice}
         onChange={e => setField('vice', e.target.value)}
-        helpText="How they blow off stress when the score is done."
+        helpText='How they blow off stress when the score is done.'
       />
     </div>
   );

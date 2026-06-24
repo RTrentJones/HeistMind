@@ -59,10 +59,12 @@ export function calculateStressLevel(
   current: number,
   max: number
 ): 'low' | 'medium' | 'high' | 'critical' {
-  if (max <= 0) throw new Error('Max value must be greater than zero');
-  if (current < 0) throw new Error('Current value cannot be negative');
+  // Degrade gracefully rather than throw — this runs in render paths (e.g. the attribute dot
+  // allocator), where a 0/empty track is legitimate and an exception would crash the page.
+  if (max <= 0) return 'low';
+  const safeCurrent = Math.max(0, current);
 
-  const percentage = (current / max) * 100;
+  const percentage = (safeCurrent / max) * 100;
   if (percentage < STRESS_THRESHOLDS.LOW) return 'low';
   if (percentage < STRESS_THRESHOLDS.MEDIUM) return 'medium';
   if (percentage < STRESS_THRESHOLDS.HIGH) return 'high';
