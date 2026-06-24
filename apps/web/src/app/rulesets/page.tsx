@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Ruleset } from '@heist-mind/database';
 import {
@@ -15,27 +15,28 @@ import {
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { LoadDefaultRulesetButton } from '@/features/rulesets/components/LoadDefaultRulesetButton';
 
 export default function RulesetsPage() {
   const { user, isAuthenticated } = useAuth();
   const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadRulesets = useCallback(() => {
     const userId = user?.id;
     if (!userId) return;
-    let active = true;
+    setError(null);
     getRepositories()
       .rulesets.findByCreator(userId)
       .then(result => {
-        if (!active) return;
         if (!result.success) setError(result.error?.message ?? 'Failed to load rulesets');
         else setRulesets(result.data);
       });
-    return () => {
-      active = false;
-    };
   }, [user?.id]);
+
+  useEffect(() => {
+    loadRulesets();
+  }, [loadRulesets]);
 
   if (!isAuthenticated) {
     return (
@@ -52,9 +53,12 @@ export default function RulesetsPage() {
           <Heading level='h1' variant='hero'>
             Rulesets
           </Heading>
-          <Button asChild variant='ember'>
-            <Link href='/rulesets/new'>Upload ruleset</Link>
-          </Button>
+          <Stack direction='row' gap='sm' align='center'>
+            <LoadDefaultRulesetButton variant='outline' onLoaded={loadRulesets} />
+            <Button asChild variant='ember'>
+              <Link href='/rulesets/new'>Upload ruleset</Link>
+            </Button>
+          </Stack>
         </Stack>
 
         {error && <ErrorDisplay title="Couldn't load rulesets" message={error} />}
@@ -62,7 +66,13 @@ export default function RulesetsPage() {
         {rulesets === null ? (
           <LoadingSpinner />
         ) : rulesets.length === 0 ? (
-          <Text variant='muted'>No rulesets yet. Upload one to get started.</Text>
+          <Stack direction='column' gap='sm' align='start'>
+            <Text variant='muted'>
+              No rulesets yet. New here? Load the built-in starter ruleset to start playing right
+              away, or upload your own.
+            </Text>
+            <LoadDefaultRulesetButton onLoaded={loadRulesets} />
+          </Stack>
         ) : (
           <Stack direction='column' gap='md'>
             {rulesets.map(rs => (
