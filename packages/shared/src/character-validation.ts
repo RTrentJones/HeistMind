@@ -10,6 +10,7 @@ export {
   abilityChoiceLimit,
   isAbilityUnlocked,
   stressBounds,
+  harmBounds,
   advancementCost,
   stepKind,
   usesActionRatings,

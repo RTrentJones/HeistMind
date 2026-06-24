@@ -11,7 +11,9 @@ import {
   rulesetActions,
   actionDotsSpent,
   deriveAttributes,
+  harmBounds,
   DEFAULT_STRESS,
+  DEFAULT_HARM,
 } from './character-rules';
 
 /** An action-rating ruleset: two attributes with 2 actions each; playbook seeds one dot. */
@@ -613,5 +615,38 @@ describe('action ratings', () => {
     });
     expect(codes(r)).not.toContain('ATTR_OVER_CAP');
     expect(codes(r)).not.toContain('POINTBUY_OVER');
+  });
+});
+
+describe('harm', () => {
+  it('harmBounds defaults to BitD (2/2/1) and honors a ruleset override', () => {
+    expect(harmBounds(ruleset())).toEqual(DEFAULT_HARM);
+    expect(harmBounds(ruleset({ harm: { lesser: 3, moderate: 2, severe: 1 } }))).toEqual({
+      lesser: 3,
+      moderate: 2,
+      severe: 1,
+    });
+  });
+
+  it('allows harm within bounds and ignores an absent harm track', () => {
+    expect(validateCharacter(ruleset(), character(), { mode: 'live' }).isValid).toBe(true);
+    const ok = validateCharacter(
+      ruleset(),
+      character({ harm: { lesser: ['Scraped'], moderate: ['Winded'], severe: [] } }),
+      { mode: 'live' }
+    );
+    expect(ok.isValid).toBe(true);
+  });
+
+  it('blocks exceeding a harm level (both modes)', () => {
+    const overSevere = character({
+      harm: { lesser: [], moderate: [], severe: ['Gutted', 'Broken'] },
+    });
+    expect(codes(validateCharacter(ruleset(), overSevere, { mode: 'live' }))).toContain(
+      'HARM_OVER'
+    );
+    expect(codes(validateCharacter(ruleset(), overSevere, { mode: 'creation' }))).toContain(
+      'HARM_OVER'
+    );
   });
 });
