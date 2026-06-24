@@ -486,6 +486,9 @@ jobs:
 
       - name: Create pre-deployment backup
         if: matrix.environment == 'production'
+        # Best-effort: Supabase has its own automatic backups, so a failure here (e.g. the
+        # management API rejecting `db dump --remote`) must NOT block the migration deploy.
+        continue-on-error: true
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -516,10 +519,12 @@ jobs:
 
       - name: Upload backup artifact
         if: matrix.environment == 'production'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: database-backup-${{ github.run_number }}
           path: '*.sql'
+          if-no-files-found: ignore
           retention-days: 30
 
       - name: Link Supabase project
