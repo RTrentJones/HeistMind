@@ -674,29 +674,35 @@ export const DEFAULT_RULESET: RulesetContent = {
   },
 
   advancement: {
+    // XP tracks (FitD): mark XP into the playbook track (end-of-session triggers) and the three
+    // attribute tracks (when you push/resist with that attribute). A full track is cleared to take
+    // an advance — the playbook track buys a special ability; an attribute track buys an action dot.
+    xpTracks: { playbook: 8, attribute: 6 },
     xpTriggers: [
       {
         id: 'desperate',
         name: 'Desperate Action',
-        description: 'Mark 1 XP when you roll a desperate action.',
+        description: 'Mark 1 playbook XP when you rolled a desperate action.',
         value: 1,
       },
       {
         id: 'edge',
         name: 'Played to Your Strengths',
-        description: 'Mark XP when you tackled a tough obstacle with Cunning, Force, or Nerve.',
+        description:
+          'Mark 1 playbook XP when you tackled a tough obstacle with Cunning, Force, or Nerve.',
         value: 1,
       },
       {
         id: 'identity',
         name: 'Expressed Who You Are',
-        description: 'Mark XP when you expressed your heritage, background, or beliefs.',
+        description: 'Mark 1 playbook XP when you expressed your heritage, background, or beliefs.',
         value: 1,
       },
       {
         id: 'vice',
         name: 'Struggled With a Flaw',
-        description: 'Mark XP when you struggled with your vice or a trauma during the job.',
+        description:
+          'Mark 1 playbook XP when you struggled with your vice or a trauma during the job.',
         value: 1,
       },
     ],
@@ -704,16 +710,17 @@ export const DEFAULT_RULESET: RulesetContent = {
       {
         id: 'buy-ability',
         name: 'New Special Ability',
-        description: 'Learn a new special ability from your playbook.',
+        description: 'Fill the playbook XP track, then clear it to learn a new special ability.',
         cost: 8,
         category: 'ability',
       },
       {
-        id: 'raise-attribute',
-        name: 'Raise an Attribute (+1)',
-        description: 'Increase one attribute rating by 1 (up to the maximum of 4).',
-        cost: 8,
-        category: 'attribute',
+        id: 'new-action-dot',
+        name: 'New Action Dot',
+        description:
+          "Fill an attribute XP track, then clear it to add a dot to one of that attribute's actions (up to 3).",
+        cost: 6,
+        category: 'skill',
       },
     ],
   },

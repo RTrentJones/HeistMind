@@ -14,6 +14,14 @@ import {
   harmBounds,
   loadLimit,
   loadUsed,
+  usesXpTracks,
+  xpTrackSize,
+  xpMarks,
+  xpTrackFull,
+  advanceTrack,
+  markXp,
+  clearXpTrack,
+  PLAYBOOK_TRACK,
   DEFAULT_STRESS,
   DEFAULT_HARM,
 } from './character-rules';
@@ -697,5 +705,100 @@ describe('loadout', () => {
 
   it('ignores an absent loadout', () => {
     expect(validateCharacter(ruleset(), character(), { mode: 'live' }).isValid).toBe(true);
+  });
+});
+
+describe('XP tracks', () => {
+  // An action-rating ruleset (Force owns Clash/Skulk) that opts into XP tracks.
+  const trackRs = () =>
+    actionRuleset({
+      advancement: {
+        xpTracks: { playbook: 8, attribute: 6 },
+        xpTriggers: [],
+        advancementOptions: [
+          { id: 'buy-ability', name: 'Ability', description: '', cost: 8, category: 'ability' },
+          { id: 'action-dot', name: 'Action dot', description: '', cost: 6, category: 'skill' },
+        ],
+      },
+    });
+
+  it('usesXpTracks reflects the opt-in', () => {
+    expect(usesXpTracks(trackRs())).toBe(true);
+    expect(usesXpTracks(actionRuleset())).toBe(false);
+  });
+
+  it('xpTrackSize: 0 without tracks, else playbook vs attribute size', () => {
+    expect(xpTrackSize(actionRuleset(), PLAYBOOK_TRACK)).toBe(0);
+    expect(xpTrackSize(trackRs(), PLAYBOOK_TRACK)).toBe(8);
+    expect(xpTrackSize(trackRs(), 'force')).toBe(6);
+  });
+
+  it('xpMarks reads playbook + attribute marks, defaulting to 0', () => {
+    expect(xpMarks(character(), PLAYBOOK_TRACK)).toBe(0);
+    expect(xpMarks(character(), 'force')).toBe(0);
+    const c = character({ xp: { playbook: 3, attributes: { force: 2 } } });
+    expect(xpMarks(c, PLAYBOOK_TRACK)).toBe(3);
+    expect(xpMarks(c, 'force')).toBe(2);
+    expect(xpMarks(c, 'cunning')).toBe(0);
+  });
+
+  it('xpTrackFull is true only at/over the track size (and false when not opted in)', () => {
+    const rs = trackRs();
+    expect(
+      xpTrackFull(rs, character({ xp: { playbook: 7, attributes: {} } }), PLAYBOOK_TRACK)
+    ).toBe(false);
+    expect(
+      xpTrackFull(rs, character({ xp: { playbook: 8, attributes: {} } }), PLAYBOOK_TRACK)
+    ).toBe(true);
+    expect(
+      xpTrackFull(rs, character({ xp: { playbook: 0, attributes: { force: 6 } } }), 'force')
+    ).toBe(true);
+    expect(xpTrackFull(actionRuleset(), character(), PLAYBOOK_TRACK)).toBe(false);
+  });
+
+  it('advanceTrack routes each advance type to its track', () => {
+    const rs = trackRs();
+    expect(advanceTrack(rs, { type: 'ability', target: 'x', cost: 0, description: '' })).toBe(
+      PLAYBOOK_TRACK
+    );
+    expect(advanceTrack(rs, { type: 'playbook', target: 'x', cost: 0, description: '' })).toBe(
+      PLAYBOOK_TRACK
+    );
+    expect(advanceTrack(rs, { type: 'attribute', target: 'force', cost: 0, description: '' })).toBe(
+      'force'
+    );
+    // skill → the attribute that owns the action…
+    expect(advanceTrack(rs, { type: 'skill', target: 'Clash', cost: 0, description: '' })).toBe(
+      'force'
+    );
+    // …or the playbook track when no attribute owns it.
+    expect(advanceTrack(rs, { type: 'skill', target: 'Unknown', cost: 0, description: '' })).toBe(
+      PLAYBOOK_TRACK
+    );
+  });
+
+  it('markXp adds marks, clamped to [0, size], from empty or existing state', () => {
+    const rs = trackRs();
+    // from empty (no xp yet)
+    expect(markXp(rs, character(), PLAYBOOK_TRACK, 2)).toEqual({ playbook: 2, attributes: {} });
+    expect(markXp(rs, character(), 'force', 1)).toEqual({ playbook: 0, attributes: { force: 1 } });
+    // clamp at the top
+    expect(
+      markXp(rs, character({ xp: { playbook: 7, attributes: {} } }), PLAYBOOK_TRACK, 5)
+    ).toEqual({ playbook: 8, attributes: {} });
+    // clamp at the bottom, preserving the other track
+    expect(
+      markXp(rs, character({ xp: { playbook: 4, attributes: { force: 1 } } }), 'force', -3)
+    ).toEqual({ playbook: 4, attributes: { force: 0 } });
+  });
+
+  it('clearXpTrack resets one track, preserving the rest (and tolerates absent xp)', () => {
+    expect(clearXpTrack(character(), PLAYBOOK_TRACK)).toEqual({ playbook: 0, attributes: {} });
+    const c = character({ xp: { playbook: 8, attributes: { force: 6, cunning: 2 } } });
+    expect(clearXpTrack(c, PLAYBOOK_TRACK)).toEqual({
+      playbook: 0,
+      attributes: { force: 6, cunning: 2 },
+    });
+    expect(clearXpTrack(c, 'force')).toEqual({ playbook: 8, attributes: { force: 0, cunning: 2 } });
   });
 });

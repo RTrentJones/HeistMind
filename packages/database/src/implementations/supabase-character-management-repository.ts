@@ -23,7 +23,15 @@ import { fromSupabaseCharacter } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
 import { SupabaseCharacterRepository } from './supabase-character-repository';
-import { validateCharacter, advancementCost } from '../character-rules';
+import {
+  validateCharacter,
+  advancementCost,
+  usesXpTracks,
+  xpTrackFull,
+  advanceTrack,
+  clearXpTrack,
+  PLAYBOOK_TRACK,
+} from '../character-rules';
 import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
 
 function newId(): string {
@@ -137,9 +145,23 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       if (!rs.success) return rs as Result<Character>;
       const ruleset = rs.data;
 
-      // Cost is resolved from the ruleset (trusted over the client-supplied cost).
+      // Two advancement economies. XP-track rulesets gate on a FULL track (then clear it); flat-pool
+      // rulesets gate on having enough pooled XP (then subtract the ruleset-resolved cost).
+      const trackMode = usesXpTracks(ruleset);
+      const track = advanceTrack(ruleset, adv);
       const cost = advancementCost(ruleset, adv);
-      if (cost > character.experiencePoints) {
+      if (trackMode) {
+        if (!xpTrackFull(ruleset, character.characterData, track)) {
+          const label = track === PLAYBOOK_TRACK ? 'playbook' : track;
+          return {
+            success: false,
+            error: {
+              message: `The ${label} XP track isn't full yet.`,
+              code: 'XP_TRACK_NOT_FULL',
+            },
+          };
+        }
+      } else if (cost > character.experiencePoints) {
         return {
           success: false,
           error: {
@@ -183,6 +205,9 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         next.playbook = adv.target;
       }
 
+      // Track-mode advances spend a full track: clear it (no pooled XP changes hands).
+      if (trackMode) next.xp = clearXpTrack(next, track);
+
       // Re-validate the resulting build (live invariants).
       const post = validateCharacter(ruleset, next, { mode: 'live' });
       if (!post.isValid) return failValidation<Character>(post);
@@ -191,14 +216,14 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         id: newId(),
         type: adv.type,
         description: adv.description,
-        cost, // positive = XP spent (awards use negative; see addExperience)
+        cost: trackMode ? 0 : cost, // positive = pooled XP spent (awards use negative; see addExperience)
         timestamp: new Date(),
       };
 
       const { data: row, error } = await this.db
         .from('characters')
         .update({
-          experience_points: character.experiencePoints - cost,
+          ...(trackMode ? {} : { experience_points: character.experiencePoints - cost }),
           character_data: next as unknown as Json,
           advancement_history: [...character.advancementHistory, record] as unknown as Json,
           ...(adv.type === 'playbook' ? { playbook_type: adv.target } : {}),
