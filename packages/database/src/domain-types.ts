@@ -247,6 +247,19 @@ export interface AdvancementRules {
   xpTriggers: XPTrigger[];
   advancementOptions: AdvancementOption[];
   playbookAdvancement?: PlaybookAdvancement[];
+  /**
+   * Opt-in: model advancement as BitD-style XP tracks rather than a flat XP pool. When present,
+   * the character marks XP into per-attribute tracks + a playbook track; an advancement is gated
+   * on its track being full (then the track is cleared) instead of on spending pooled XP.
+   */
+  xpTracks?: XpTrackRules;
+}
+
+export interface XpTrackRules {
+  /** Boxes in the playbook XP track (BitD: 8) — fills to unlock an ability/playbook advance. */
+  playbook: number;
+  /** Boxes in each attribute XP track (BitD: 6) — fills to unlock an action-dot/attribute advance. */
+  attribute: number;
 }
 
 export interface XPTrigger {
@@ -345,8 +358,17 @@ export interface CharacterData {
   coins: number;
   /** Coin saved toward retirement (separate from carried `coins`). */
   stash?: number;
+  /** BitD-style XP track marks (only when the ruleset opts into `advancement.xpTracks`). */
+  xp?: CharacterXp;
   contacts: CharacterContact[];
   custom: Record<string, any>;
+}
+
+export interface CharacterXp {
+  /** Marks in the playbook XP track. */
+  playbook: number;
+  /** Marks in each attribute XP track, keyed by attribute id. */
+  attributes: Record<string, number>;
 }
 
 export interface CharacterItem {

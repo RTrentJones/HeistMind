@@ -7,6 +7,11 @@ import {
   harmBounds,
   loadLimit,
   loadUsed,
+  usesXpTracks,
+  xpTrackSize,
+  xpMarks,
+  xpTrackFull,
+  PLAYBOOK_TRACK,
   type CharacterAdvancement,
   type CharacterData,
   type CharacterHarm,
@@ -135,6 +140,31 @@ export function CharacterEditor({
       target: abilityId,
       cost,
       description: `Learn ${name}`,
+    };
+    setSaving(true);
+    const r = await getRepositories().characterManagement.advanceCharacter(
+      character.id,
+      userId,
+      adv
+    );
+    setSaving(false);
+    if (!r.success) setError(r.error?.message ?? 'Advancement failed.');
+    else {
+      setError(null);
+      onSaved();
+    }
+  };
+
+  // Spend a full attribute XP track on an action dot (server gates on the track being full).
+  const advanceAction = async (action: string) => {
+    const userId = user?.id;
+    if (!userId) return;
+    const adv: CharacterAdvancement = {
+      type: 'skill',
+      target: action,
+      value: 1,
+      cost: 0,
+      description: `Add a dot to ${action}`,
     };
     setSaving(true);
     const r = await getRepositories().characterManagement.advanceCharacter(
@@ -461,14 +491,40 @@ export function CharacterEditor({
           </Stack>
         )}
 
-        {section === 'advancement' && (
-          <Stack direction='column' gap='md'>
-            <Stack direction='row' gap='sm' align='center'>
-              <Badge variant='gold'>{character.experiencePoints} XP available</Badge>
+        {section === 'advancement' &&
+          (usesXpTracks(content) ? (
+            <Stack direction='column' gap='md'>
+              <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+                <Badge
+                  variant={
+                    xpTrackFull(content, character.characterData, PLAYBOOK_TRACK) ? 'gold' : 'steel'
+                  }
+                >
+                  Playbook {xpMarks(character.characterData, PLAYBOOK_TRACK)}/
+                  {xpTrackSize(content, PLAYBOOK_TRACK)}
+                </Badge>
+                {content.attributes.map(a => (
+                  <Badge
+                    key={a.id}
+                    variant={xpTrackFull(content, character.characterData, a.id) ? 'gold' : 'steel'}
+                  >
+                    {a.name} {xpMarks(character.characterData, a.id)}/{xpTrackSize(content, a.id)}
+                  </Badge>
+                ))}
+              </Stack>
+              <Heading level='h3'>Special Abilities</Heading>
+              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <Heading level='h3'>Action Dots</Heading>
+              <ActionDotOptions character={character} onAdvance={advanceAction} saving={saving} />
             </Stack>
-            <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
-          </Stack>
-        )}
+          ) : (
+            <Stack direction='column' gap='md'>
+              <Stack direction='row' gap='sm' align='center'>
+                <Badge variant='gold'>{character.experiencePoints} XP available</Badge>
+              </Stack>
+              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+            </Stack>
+          ))}
       </Stack>
     </Card>
   );
@@ -505,11 +561,14 @@ function AdvancementOptions({
   }
 
   const requirementsMet = (option.requirements ?? []).every(r => owned.includes(r));
+  // Track rulesets gate ability buys on a full playbook track; flat rulesets gate on pooled XP.
+  const trackMode = usesXpTracks(content);
+  const playbookFull = xpTrackFull(content, character.characterData, PLAYBOOK_TRACK);
 
   return (
     <Stack direction='column' gap='sm'>
       <Text variant='muted' size='sm'>
-        {option.name} — {option.cost} XP each.
+        {option.name} — {trackMode ? 'clears a full playbook track' : `${option.cost} XP each`}.
       </Text>
       {buyable.map(ability => {
         const prereqKnown =
@@ -517,10 +576,12 @@ function AdvancementOptions({
           content.specialAbilities.some(a => a.id === ability.prerequisite);
         const prereqMet =
           !ability.prerequisite || !prereqKnown || owned.includes(ability.prerequisite);
-        const affordable = option.cost <= character.experiencePoints;
+        const affordable = trackMode ? playbookFull : option.cost <= character.experiencePoints;
         const disabled = saving || !prereqMet || !requirementsMet || !affordable;
         const reason = !affordable
-          ? `Need ${option.cost} XP`
+          ? trackMode
+            ? 'Fill the playbook XP track'
+            : `Need ${option.cost} XP`
           : !prereqMet
             ? `Requires ${ability.prerequisite}`
             : !requirementsMet
@@ -551,12 +612,67 @@ function AdvancementOptions({
                 disabled={disabled}
                 onClick={() => onBuy(ability.id, option.cost, ability.name)}
               >
-                Buy ({option.cost} XP)
+                {trackMode ? 'Take ability' : `Buy (${option.cost} XP)`}
               </Button>
             </Stack>
           </Card>
         );
       })}
+    </Stack>
+  );
+}
+
+/**
+ * Spend a full attribute XP track on a new action dot. Only attributes whose track has filled are
+ * shown; each of that attribute's actions can be bumped by 1 (server re-validates against the cap).
+ */
+function ActionDotOptions({
+  character,
+  onAdvance,
+  saving,
+}: {
+  character: CharacterWithDetails;
+  onAdvance: (action: string) => void;
+  saving: boolean;
+}) {
+  const content = character.ruleset.content;
+  const data = character.characterData;
+  const max = content.characterCreation?.actionRatings?.max ?? 3;
+  const ready = content.attributes.filter(a => xpTrackFull(content, data, a.id));
+
+  if (ready.length === 0) {
+    return (
+      <Text variant='muted' size='sm'>
+        Fill an attribute XP track to add an action dot.
+      </Text>
+    );
+  }
+
+  return (
+    <Stack direction='column' gap='sm'>
+      {ready.map(attr => (
+        <Card key={attr.id} variant='outline'>
+          <Text as='strong'>{attr.name} — pick an action to raise</Text>
+          <Stack direction='row' gap='sm' className='flex-wrap'>
+            {attr.skills.map(action => {
+              const rating = data.skills?.[action] ?? 0;
+              const atMax = rating >= max;
+              return (
+                <Button
+                  key={action}
+                  variant='outline'
+                  size='sm'
+                  disabled={saving || atMax}
+                  onClick={() => onAdvance(action)}
+                >
+                  {action} {rating}
+                  {atMax ? ' (max)' : ' → +1'}
+                </Button>
+              );
+            })}
+          </Stack>
+        </Card>
+      ))}
     </Stack>
   );
 }

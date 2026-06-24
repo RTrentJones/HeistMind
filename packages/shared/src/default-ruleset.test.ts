@@ -65,6 +65,13 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
     });
   });
 
+  it('advances via BitD XP tracks (playbook 8 / attribute 6) with ability + action-dot options', () => {
+    expect(DEFAULT_RULESET.advancement.xpTracks).toEqual({ playbook: 8, attribute: 6 });
+    const categories = DEFAULT_RULESET.advancement.advancementOptions.map(o => o.category);
+    expect(categories).toContain('ability'); // playbook track → a special ability
+    expect(categories).toContain('skill'); // attribute track → an action dot
+  });
+
   it('every playbook seeds exactly one starting action dot that is a real action', () => {
     for (const pb of DEFAULT_RULESET.playbooks) {
       const keys = Object.keys(pb.skills);

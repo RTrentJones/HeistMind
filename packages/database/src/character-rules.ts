@@ -8,6 +8,7 @@
 import type {
   RulesetContent,
   CharacterData,
+  CharacterXp,
   AbilityDefinition,
   PlaybookDefinition,
   CreationRestriction,
@@ -207,6 +208,71 @@ export function advancementCost(ruleset: RulesetContent, adv: CharacterAdvanceme
   const byId = options.find(o => o.id === adv.target);
   const byCategory = options.find(o => o.category === adv.type);
   return byId?.cost ?? byCategory?.cost ?? adv.cost;
+}
+
+// ----- XP tracks (BitD-style advancement; opt-in via `advancement.xpTracks`) -----------------
+
+/** The playbook-track id used for ability/playbook advances (attribute tracks key by attribute id). */
+export const PLAYBOOK_TRACK = 'playbook';
+const EMPTY_XP: CharacterXp = { playbook: 0, attributes: {} };
+
+/** Whether the ruleset advances via XP tracks (vs a flat XP pool). */
+export function usesXpTracks(ruleset: RulesetContent): boolean {
+  return !!ruleset.advancement?.xpTracks;
+}
+
+/** Box count of a track: `'playbook'` → the playbook track, else an attribute track. 0 if not opted in. */
+export function xpTrackSize(ruleset: RulesetContent, track: string): number {
+  const tracks = ruleset.advancement?.xpTracks;
+  if (!tracks) return 0;
+  return track === PLAYBOOK_TRACK ? tracks.playbook : tracks.attribute;
+}
+
+/** Current marks in a track. */
+export function xpMarks(data: CharacterData, track: string): number {
+  if (track === PLAYBOOK_TRACK) return data.xp?.playbook ?? 0;
+  return data.xp?.attributes?.[track] ?? 0;
+}
+
+/** Whether a track has filled (and so unlocks an advance). */
+export function xpTrackFull(ruleset: RulesetContent, data: CharacterData, track: string): boolean {
+  const size = xpTrackSize(ruleset, track);
+  return size > 0 && xpMarks(data, track) >= size;
+}
+
+/**
+ * The XP track an advancement draws from: ability/playbook advances clear the playbook track;
+ * attribute advances clear that attribute's track; an action-dot (`skill`) advance clears the
+ * track of the attribute that owns the action.
+ */
+export function advanceTrack(ruleset: RulesetContent, adv: CharacterAdvancement): string {
+  if (adv.type === 'attribute') return adv.target;
+  if (adv.type === 'skill') {
+    const owner = (ruleset.attributes ?? []).find(a => (a.skills ?? []).includes(adv.target));
+    return owner?.id ?? PLAYBOOK_TRACK;
+  }
+  return PLAYBOOK_TRACK;
+}
+
+/** New XP state with `delta` marks applied to a track, clamped to `[0, trackSize]`. */
+export function markXp(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  track: string,
+  delta: number
+): CharacterXp {
+  const xp = data.xp ?? EMPTY_XP;
+  const size = xpTrackSize(ruleset, track);
+  const next = Math.max(0, Math.min(size, xpMarks(data, track) + delta));
+  if (track === PLAYBOOK_TRACK) return { playbook: next, attributes: { ...xp.attributes } };
+  return { playbook: xp.playbook, attributes: { ...xp.attributes, [track]: next } };
+}
+
+/** New XP state with a track reset to 0 (called when an advance spends a full track). */
+export function clearXpTrack(data: CharacterData, track: string): CharacterXp {
+  const xp = data.xp ?? EMPTY_XP;
+  if (track === PLAYBOOK_TRACK) return { playbook: 0, attributes: { ...xp.attributes } };
+  return { playbook: xp.playbook, attributes: { ...xp.attributes, [track]: 0 } };
 }
 
 // ----- restriction evaluation ----------------------------------------------------------------
