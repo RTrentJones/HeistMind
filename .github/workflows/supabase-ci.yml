@@ -12,8 +12,8 @@ on:
     paths:
       - 'supabase/**'
       - 'packages/database/**'
-  # Manual trigger — required to deploy migrations to production (main), which is otherwise
-  # gated to keep prod deploys deliberate (Greenlight's explicit-promotion model).
+  # Manual trigger — for re-running a deploy or backfilling migrations on demand. Normal
+  # pushes to development/main already deploy automatically (see the deploy job's condition).
   workflow_dispatch:
 
 # Prevent concurrent deployments to the same environment
@@ -418,14 +418,14 @@ jobs:
     name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
     needs: [validate, security-scan]
-    # development → auto-deploy (Greenlight's develop→beta). main → production only via a
-    # manual workflow_dispatch, so prod migrations stay an explicit, deliberate promotion.
+    # Auto-deploy migrations alongside the code on BOTH branches: development → development
+    # schema, main → production schema. A change that needs a migration ships with it — no
+    # manual step. (workflow_dispatch is still available for a manual re-run/backfill.)
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
-      (github.ref == 'refs/heads/development' ||
-       (github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'))
+      (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main')
 
     # Use matrix for parallel deployments if needed
     strategy:
