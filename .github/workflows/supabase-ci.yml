@@ -562,16 +562,27 @@ jobs:
           echo "🚀 Deploying migrations to the '$TARGET_SCHEMA' schema..."
 
           # Resolve an IPv4 SESSION-POOLER connection (GitHub runners can't reach the IPv6-only
-          # direct host). Prefer a SUPABASE_DB_URL secret; otherwise auto-build it from the
-          # project's region (no extra secret needed). `|| true` keeps set -e from aborting.
+          # direct host). Try, in order: the SUPABASE_DB_URL secret; the pooler URL cached by the
+          # preceding `supabase link` (most reliable — no extra secret); a region-built URL.
+          # `|| VAR=""` keeps set -e from aborting on an empty/failed lookup.
           DB_URL="$SUPABASE_DB_URL"
+          if [ -z "$DB_URL" ] && [ -f supabase/.temp/pooler-url ]; then
+            # Cached pooler URL (force session mode :5432 — DDL + SET need it, not txn :6543).
+            DB_URL="$(sed 's/6543/5432/' supabase/.temp/pooler-url 2>/dev/null)" || DB_URL=""
+            [ -n "$DB_URL" ] && echo "ℹ️  Using the pooler URL cached by 'supabase link'." || true
+          fi
           if [ -z "$DB_URL" ]; then
-            REGION=$(supabase projects list -o json 2>/dev/null \
-              | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null) || REGION=""
+            REGION="$(supabase projects list -o json 2>/dev/null | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null)" || REGION=""
             if [ -n "$REGION" ]; then
               DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
               echo "ℹ️  Auto-built session-pooler URL (region ${REGION})."
             fi
+          fi
+
+          if [ -n "$DB_URL" ]; then
+            echo "🔎 Resolved connection: $(printf '%s' "$DB_URL" | sed -E 's#://[^@]*@#://***@#')"
+          else
+            echo "🔎 No DB_URL resolved. supabase/.temp: $(ls supabase/.temp/ 2>/dev/null | tr '\n' ' ')"
           fi
 
           if [ -n "$DB_URL" ] && psql "$DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
