@@ -61,6 +61,7 @@ test.describe('GM: action ratings (Brackwater)', () => {
     await next.click(); // Background
     await next.click(); // Vice
     await next.click(); // Crew Ties
+    await next.click(); // Confirm Crew Member (review)
     await expect(gmPage.getByRole('heading', { name: /Confirm Crew Member/i })).toBeVisible();
     await gmPage.getByRole('button', { name: 'Create character' }).click();
 
