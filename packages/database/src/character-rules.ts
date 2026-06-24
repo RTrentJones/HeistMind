@@ -77,6 +77,49 @@ function findPlaybook(ruleset: RulesetContent, playbookId: string): PlaybookDefi
   return ruleset.playbooks?.find(p => p.id === playbookId);
 }
 
+// ----- action ratings (the 12 FitD actions; attributes are derived) --------------------------
+
+/** Whether the ruleset rates individual ACTIONS (vs point-buying the 3 attributes). */
+export function usesActionRatings(ruleset: RulesetContent): boolean {
+  return !!ruleset.characterCreation?.actionRatings;
+}
+
+/** The distinct action ids defined by the ruleset = the union of each attribute's `skills`. */
+export function rulesetActions(ruleset: RulesetContent): string[] {
+  const seen = new Set<string>();
+  for (const attr of ruleset.attributes ?? []) for (const s of attr.skills ?? []) seen.add(s);
+  return [...seen];
+}
+
+/** Total action dots a character has assigned across the ruleset's actions (negatives ignored). */
+export function actionDotsSpent(ruleset: RulesetContent, data: CharacterData): number {
+  let total = 0;
+  for (const action of rulesetActions(ruleset)) total += Math.max(0, data.skills?.[action] ?? 0);
+  return total;
+}
+
+/** Derived attribute ratings: how many of each attribute's actions are rated ≥ 1 (for resistance). */
+export function deriveAttributes(
+  ruleset: RulesetContent,
+  data: CharacterData
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const attr of ruleset.attributes ?? []) {
+    out[attr.id] = (attr.skills ?? []).reduce(
+      (n, s) => n + ((data.skills?.[s] ?? 0) >= 1 ? 1 : 0),
+      0
+    );
+  }
+  return out;
+}
+
+/** Action dots the chosen playbook seeds (the floor; the player assigns `points` more on top). */
+function seededActionDots(ruleset: RulesetContent, playbookId: string): number {
+  const playbook = findPlaybook(ruleset, playbookId);
+  if (!playbook) return 0;
+  return Object.values(playbook.skills ?? {}).reduce((n, v) => n + Math.max(0, v), 0);
+}
+
 /** How many special abilities may be chosen at creation (counts seeded starting abilities). */
 export function abilityChoiceLimit(ruleset: RulesetContent, playbookId: string): number {
   const explicit = ruleset.characterCreation?.abilityChoices;
@@ -198,18 +241,42 @@ export function validateCharacter(
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
 
-  // Attribute caps + non-negative (both modes).
-  for (const attr of ruleset.attributes ?? []) {
-    const value = data.attributes[attr.id] ?? 0;
-    const max = attr.maxValue ?? DEFAULT_ATTR_MAX;
-    if (value < 0)
-      errors.push(
-        err(`attributes.${attr.id}`, 'ATTR_NEGATIVE', `${attr.name} cannot be negative.`)
-      );
-    if (value > max)
-      errors.push(
-        err(`attributes.${attr.id}`, 'ATTR_OVER_CAP', `${attr.name} cannot exceed ${max}.`)
-      );
+  const actionMode = usesActionRatings(ruleset);
+  const ar = ruleset.characterCreation?.actionRatings;
+
+  if (actionMode) {
+    // Per-ACTION caps (both modes); attributes are derived, so they need no cap check.
+    const max = ar?.max ?? DEFAULT_ATTR_MAX - 1; // BitD actions cap at 3
+    const creationMax = ar?.maxAtCreation ?? 2;
+    for (const action of rulesetActions(ruleset)) {
+      const value = data.skills?.[action] ?? 0;
+      if (value < 0)
+        errors.push(err(`skills.${action}`, 'ACTION_NEGATIVE', `${action} cannot be negative.`));
+      if (value > max)
+        errors.push(err(`skills.${action}`, 'ACTION_OVER_CAP', `${action} cannot exceed ${max}.`));
+      if (mode === 'creation' && value > creationMax)
+        errors.push(
+          err(
+            `skills.${action}`,
+            'ACTION_CREATION_CAP',
+            `${action} cannot exceed ${creationMax} at character creation.`
+          )
+        );
+    }
+  } else {
+    // Attribute caps + non-negative (both modes).
+    for (const attr of ruleset.attributes ?? []) {
+      const value = data.attributes[attr.id] ?? 0;
+      const max = attr.maxValue ?? DEFAULT_ATTR_MAX;
+      if (value < 0)
+        errors.push(
+          err(`attributes.${attr.id}`, 'ATTR_NEGATIVE', `${attr.name} cannot be negative.`)
+        );
+      if (value > max)
+        errors.push(
+          err(`attributes.${attr.id}`, 'ATTR_OVER_CAP', `${attr.name} cannot exceed ${max}.`)
+        );
+    }
   }
 
   // Prerequisites (both modes) + tier/lock (creation only).
@@ -245,16 +312,28 @@ export function validateCharacter(
     );
 
   if (mode === 'creation') {
-    // Point-buy budget.
-    const pointBuy = ruleset.characterCreation?.pointBuy;
-    if (pointBuy) {
-      const spent = pointBuySpent(ruleset, data.attributes);
-      if (spent > pointBuy.totalPoints)
+    if (actionMode) {
+      // Action-dot budget: the playbook's seeded dots + the ruleset's creation `points`.
+      const budget = seededActionDots(ruleset, data.playbook) + (ar?.points ?? 0);
+      const spent = actionDotsSpent(ruleset, data);
+      if (spent > budget)
         errors.push(
-          err('attributes', 'POINTBUY_OVER', `Spent ${spent} of ${pointBuy.totalPoints} points.`)
+          err('skills', 'ACTION_POINTS_OVER', `Assigned ${spent} of ${budget} action dots.`)
         );
-      else if (spent < pointBuy.totalPoints)
-        warnings.push(warn('attributes', `${pointBuy.totalPoints - spent} point(s) unspent.`));
+      else if (spent < budget)
+        warnings.push(warn('skills', `${budget - spent} action dot(s) unspent.`));
+    } else {
+      // Point-buy budget.
+      const pointBuy = ruleset.characterCreation?.pointBuy;
+      if (pointBuy) {
+        const spent = pointBuySpent(ruleset, data.attributes);
+        if (spent > pointBuy.totalPoints)
+          errors.push(
+            err('attributes', 'POINTBUY_OVER', `Spent ${spent} of ${pointBuy.totalPoints} points.`)
+          );
+        else if (spent < pointBuy.totalPoints)
+          warnings.push(warn('attributes', `${pointBuy.totalPoints - spent} point(s) unspent.`));
+      }
     }
 
     // Ability-choice count.
@@ -270,7 +349,10 @@ export function validateCharacter(
       const kind = stepKind(step.id);
       let satisfied = true;
       if (kind === 'playbook') satisfied = isNonEmpty(data.playbook);
-      else if (kind === 'attributes') satisfied = Object.values(data.attributes).some(v => v > 0);
+      else if (kind === 'attributes')
+        satisfied =
+          Object.values(data.attributes).some(v => v > 0) ||
+          Object.values(data.skills ?? {}).some(v => v > 0);
       else if (kind === 'choice') satisfied = isNonEmpty(data.custom?.[step.id]);
       // identity/abilities/review steps are not blocking here (name is enforced by the UI).
       if (!satisfied)

@@ -1,8 +1,9 @@
 'use client';
 
-import type { Ruleset } from '@heist-mind/database';
+import { usesActionRatings, type Ruleset } from '@heist-mind/database';
 import { stepKind, type WizardStepMeta } from '../lib/creation-steps';
 import { AbilitiesStep } from './steps/AbilitiesStep';
+import { ActionRatingsStep } from './steps/ActionRatingsStep';
 import { AttributesStep } from './steps/AttributesStep';
 import { ChoiceStep } from './steps/ChoiceStep';
 import { IdentityStep } from './steps/IdentityStep';
@@ -18,7 +19,7 @@ export function WizardStep({ step, ruleset }: { step: WizardStepMeta; ruleset: R
     case 'playbook':
       return <PlaybookStep />;
     case 'attributes':
-      return <AttributesStep />;
+      return usesActionRatings(ruleset.content) ? <ActionRatingsStep /> : <AttributesStep />;
     case 'abilities':
       return <AbilitiesStep />;
     case 'identity': {
