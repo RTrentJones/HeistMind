@@ -2,7 +2,7 @@
 
 import { useShallow } from 'zustand/react/shallow';
 import { pointBuySpent } from '@heist-mind/database';
-import { Badge, Card, StressTracker, Text } from '@heist-mind/ui';
+import { ActionDots, Badge, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 
 /**
@@ -60,12 +60,11 @@ export function AttributesStep() {
               {attr.description}
             </div>
           )}
-          <StressTracker
+          <ActionDots
             current={values[attr.id] ?? 0}
             max={Math.max(attr.maxValue ?? 4, 1)}
             interactive
-            showNumbers
-            showLabel={false}
+            variant='ember'
             size='lg'
             onChange={v => setAttribute(attr.id, v)}
           />

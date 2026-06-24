@@ -54,7 +54,11 @@ export default function RulesetsPage() {
             Rulesets
           </Heading>
           <Stack direction='row' gap='sm' align='center'>
-            <LoadDefaultRulesetButton variant='outline' onLoaded={loadRulesets} />
+            {/* Only in the header when the list is non-empty — the empty state has its own,
+                so the two don't show at once. */}
+            {rulesets !== null && rulesets.length > 0 && (
+              <LoadDefaultRulesetButton variant='outline' onLoaded={loadRulesets} />
+            )}
             <Button asChild variant='ember'>
               <Link href='/rulesets/new'>Upload ruleset</Link>
             </Button>

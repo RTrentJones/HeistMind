@@ -26,11 +26,7 @@ export default function HomePage() {
             {/* Hero Section */}
             <Stack gap='lg' align='center'>
               <Heading level='h1' variant='hero' animate>
-                Welcome to{' '}
-                <Text as='span' variant='accent'>
-                  Heist
-                </Text>
-                Mind
+                Welcome to <span className='text-brand-primary'>Heist</span>Mind
               </Heading>
 
               <Paragraph variant='lead' maxWidth='2xl' align='center' animate>

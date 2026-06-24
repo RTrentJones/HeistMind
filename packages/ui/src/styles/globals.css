@@ -29,9 +29,11 @@
   
   --color-foreground-primary: hsl(0 0% 98%);
   --color-foreground-secondary: hsl(240 5% 84.1%);
-  --color-foreground-muted: hsl(240 3.8% 46.1%);
-  --color-foreground-disabled: hsl(240 5% 64.9%);
-  
+  /* 46% L on the near-black bg failed WCAG AA for small text; 63.9% clears AA while staying clearly
+     "muted" (below secondary 84%). Used for sub-labels, help text, sheet section labels. */
+  --color-foreground-muted: hsl(240 5% 63.9%);
+  --color-foreground-disabled: hsl(240 5% 46.1%);
+
   --color-game-shadow: hsl(220.9 39.3% 11%);
   
   --color-border-primary: hsl(240 3.7% 15.9%);
@@ -80,9 +82,11 @@
   
   --color-foreground-primary: hsl(0 0% 98%);
   --color-foreground-secondary: hsl(240 5% 84.1%);
-  --color-foreground-muted: hsl(240 3.8% 46.1%);
-  --color-foreground-disabled: hsl(240 5% 64.9%);
-  
+  /* 46% L on the near-black bg failed WCAG AA for small text; 63.9% clears AA while staying clearly
+     "muted" (below secondary 84%). Used for sub-labels, help text, sheet section labels. */
+  --color-foreground-muted: hsl(240 5% 63.9%);
+  --color-foreground-disabled: hsl(240 5% 46.1%);
+
   --color-game-shadow: hsl(220.9 39.3% 11%);
   --color-game-whisper: hsl(240 4.8% 95.9%);
   
