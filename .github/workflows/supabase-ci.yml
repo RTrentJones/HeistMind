@@ -544,63 +544,45 @@ jobs:
             fi
           done
 
-      - name: Deploy migrations with monitoring
+      - name: Deploy migrations to the target schema
+        # schema-per-env in ONE project can't go through `supabase db push`: its migration history
+        # is global, so a migration applied to the development schema reads as "done" and never
+        # populates production. So we apply the SQL directly, per schema, over a SESSION-mode
+        # pooler connection (GitHub runners can't reach the IPv6-only direct host). Optional
+        # SUPABASE_DB_URL secret overrides the auto-built pooler URL; if neither connects we fall
+        # back to `db push` so the deploy never breaks (dev schema still migrates).
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          echo "🚀 Starting deployment to ${{ matrix.environment }}..."
-
-          # Set target schema
           export TARGET_SCHEMA="${{ matrix.environment }}"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+          echo "🚀 Deploying migrations to the '$TARGET_SCHEMA' schema..."
 
-          # Create monitoring file
-          DEPLOY_LOG="deployment-$(date +%s).log"
-
-          # Deploy with detailed logging
-          {
-            echo "=== Deployment started at $(date) ==="
-            echo "Target environment: ${{ matrix.environment }}"
-            echo "Target schema: $TARGET_SCHEMA"
-            echo "Commit: ${{ github.sha }}"
-            echo ""
-
-            # Create schema targeting migration
-            TEMP_MIGRATION="supabase/migrations/00000_set_schema.sql"
-            cat > "$TEMP_MIGRATION" << EOF
-          -- Deployment: ${{ github.sha }}
-          -- Environment: ${{ matrix.environment }}
-          -- Date: $(date)
-          DO \$\$
-          BEGIN
-              EXECUTE format('SET heistmind.target_schema = %L', '$TARGET_SCHEMA');
-              RAISE NOTICE 'Deploying to schema: %', '$TARGET_SCHEMA';
-          END\$\$;
-          EOF
-
-            # Deploy with timeout
-            timeout 600 supabase db push --password "$SUPABASE_DB_PASSWORD" 2>&1
-            DEPLOY_STATUS=$?
-
-            # Cleanup
-            rm -f "$TEMP_MIGRATION"
-
-            echo ""
-            echo "=== Deployment finished at $(date) ==="
-            echo "Exit status: $DEPLOY_STATUS"
-          } | tee "$DEPLOY_LOG"
-
-          # Check deployment status
-          if [ $DEPLOY_STATUS -ne 0 ]; then
-            echo "❌ Deployment failed!"
-            echo "### 📋 Deployment Log" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -50 "$DEPLOY_LOG" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit 1
+          DB_URL="$SUPABASE_DB_URL"
+          if [ -z "$DB_URL" ]; then
+            REGION=$(supabase projects list -o json 2>/dev/null \
+              | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null)
+            [ -n "$REGION" ] && DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
           fi
 
-          echo "✅ Deployment completed successfully"
+          if [ -n "$DB_URL" ] && psql "$DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
+            # Idempotent migrations (IF NOT EXISTS / CREATE OR REPLACE / DROP … IF EXISTS), applied
+            # per schema — bypasses the global history so BOTH env schemas get populated.
+            for f in $(ls supabase/migrations/[0-9][0-9][0-9][0-9][0-9]_*.sql | sort); do
+              echo "  → $(basename "$f")"
+              { echo "SET heistmind.target_schema = '$TARGET_SCHEMA';"; cat "$f"; } \
+                | psql "$DB_URL" -v ON_ERROR_STOP=1 -q
+            done
+            echo "✅ Migrations applied to the '$TARGET_SCHEMA' schema."
+          else
+            echo "⚠️  No reachable session-pooler connection — falling back to 'supabase db push'"
+            echo "    (migrates the development schema only). To populate '$TARGET_SCHEMA', add a"
+            echo "    SUPABASE_DB_URL secret: Settings → Database → Connection string → URI (Session)."
+            supabase db push --password "$SUPABASE_DB_PASSWORD"
+          fi
 
       # NOTE: no post-deploy "regenerate + commit types" step. It pushed to `main` as
       # github-actions[bot] (403 against branch protection) AND would diverge main from
