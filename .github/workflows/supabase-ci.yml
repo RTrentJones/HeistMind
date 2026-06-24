@@ -558,22 +558,34 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           export TARGET_SCHEMA="${{ matrix.environment }}"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
           echo "🚀 Deploying migrations to the '$TARGET_SCHEMA' schema..."
 
-          if [ -n "$SUPABASE_DB_URL" ] && psql "$SUPABASE_DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
+          # Resolve an IPv4 SESSION-POOLER connection (GitHub runners can't reach the IPv6-only
+          # direct host). Prefer a SUPABASE_DB_URL secret; otherwise auto-build it from the
+          # project's region (no extra secret needed). `|| true` keeps set -e from aborting.
+          DB_URL="$SUPABASE_DB_URL"
+          if [ -z "$DB_URL" ]; then
+            REGION=$(supabase projects list -o json 2>/dev/null \
+              | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null) || REGION=""
+            if [ -n "$REGION" ]; then
+              DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
+              echo "ℹ️  Auto-built session-pooler URL (region ${REGION})."
+            fi
+          fi
+
+          if [ -n "$DB_URL" ] && psql "$DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
             # Idempotent migrations (IF NOT EXISTS / CREATE OR REPLACE / DROP … IF EXISTS), applied
             # per schema — bypasses the global history so BOTH env schemas get populated.
             for f in $(ls supabase/migrations/[0-9][0-9][0-9][0-9][0-9]_*.sql | sort); do
               echo "  → $(basename "$f")"
               { echo "SET heistmind.target_schema = '$TARGET_SCHEMA';"; cat "$f"; } \
-                | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q
+                | psql "$DB_URL" -v ON_ERROR_STOP=1 -q
             done
             echo "✅ Migrations applied to the '$TARGET_SCHEMA' schema."
           else
-            echo "::warning::SUPABASE_DB_URL not set or unreachable — SKIPPING the migration deploy."
-            echo "⚠️  CI can only reach Supabase over the IPv4 SESSION POOLER — the direct DB"
-            echo "    connection is IPv6-only (free tier) and unreachable from GitHub runners, so"
-            echo "    'supabase db push' can't connect either. Add a SUPABASE_DB_URL secret"
+            echo "::warning::No reachable IPv4 pooler connection — SKIPPING the migration deploy."
+            echo "⚠️  Could not auto-detect the session-pooler URL. Add a SUPABASE_DB_URL secret"
             echo "    (Supabase → Settings → Database → Connection string → URI, Session mode) to"
             echo "    deploy migrations to the '$TARGET_SCHEMA' schema. No-op for now — already-"
             echo "    applied migrations are unaffected."
