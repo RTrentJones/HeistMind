@@ -100,7 +100,7 @@ test.describe('GM: character validity', () => {
     await gmPage.getByLabel('Add trauma').fill('Haunted');
     await gmPage.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(gmPage.getByText('Trauma (1/4)')).toBeVisible();
-    await gmPage.getByRole('button', { name: 'Save stress & trauma' }).click();
+    await gmPage.getByRole('button', { name: /Save stress/ }).click();
     await expect(gmPage.getByText('Haunted')).toBeVisible();
   });
 });
