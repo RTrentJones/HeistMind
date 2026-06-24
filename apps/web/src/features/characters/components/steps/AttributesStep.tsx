@@ -6,10 +6,12 @@ import { Badge, Card, StressTracker, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 
 /**
- * Attribute / action-rating allocator. One controllable `StressTracker` per
- * attribute (the DS dot allocator), driven by `ruleset.content.attributes` and
- * the optional point-buy budget. Dots beyond the affordable budget aren't rendered,
- * and the store also rejects any allocation past the budget/cap.
+ * Attribute / action-rating allocator. One controllable `StressTracker` per attribute (the DS
+ * dot allocator), driven by `ruleset.content.attributes`. The full rating track is shown (up to
+ * the attribute's `maxValue`); the store clamps any allocation past the point-buy budget or cap,
+ * and the "X / N points spent" badge signals the budget. (Rendering only the *affordable* dots
+ * could drop the track to 0 dots once the budget was spent, and a 0-length track crashed the
+ * StressTracker — so we always render the full track and clamp on change instead.)
  */
 export function AttributesStep() {
   const { content, attributes, values, pointBuy, setAttribute } = useCharacterCreationStore(
@@ -28,15 +30,6 @@ export function AttributesStep() {
 
   const spent = pointBuySpent(content, values);
   const over = pointBuy ? spent > pointBuy.totalPoints : false;
-
-  // Highest rating still affordable for one attribute, given the others (cumulative cost).
-  const reachable = (attrId: string, cap: number) => {
-    if (!pointBuy) return cap;
-    for (let r = cap; r >= 0; r--) {
-      if (pointBuySpent(content, { ...values, [attrId]: r }) <= pointBuy.totalPoints) return r;
-    }
-    return 0;
-  };
 
   return (
     <div className='flex flex-col gap-4'>
@@ -69,7 +62,7 @@ export function AttributesStep() {
           )}
           <StressTracker
             current={values[attr.id] ?? 0}
-            max={reachable(attr.id, attr.maxValue ?? 4)}
+            max={Math.max(attr.maxValue ?? 4, 1)}
             interactive
             showNumbers
             showLabel={false}
