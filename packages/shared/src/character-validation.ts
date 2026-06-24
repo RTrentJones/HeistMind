@@ -11,6 +11,8 @@ export {
   isAbilityUnlocked,
   stressBounds,
   harmBounds,
+  loadLimit,
+  loadUsed,
   advancementCost,
   stepKind,
   usesActionRatings,

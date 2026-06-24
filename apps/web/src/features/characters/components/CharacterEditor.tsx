@@ -5,9 +5,12 @@ import {
   validateCharacter,
   stressBounds,
   harmBounds,
+  loadLimit,
+  loadUsed,
   type CharacterAdvancement,
   type CharacterData,
   type CharacterHarm,
+  type LoadLevel,
   type CharacterWithDetails,
 } from '@heist-mind/database';
 import {
@@ -27,7 +30,8 @@ const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 
-type Section = 'build' | 'stress' | 'advancement';
+type Section = 'build' | 'stress' | 'gear' | 'advancement';
+const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
 
 /**
  * Validity-gated character editor. Every save runs the same ruleset rules the server enforces
@@ -71,6 +75,35 @@ export function CharacterEditor({
   };
   const removeHarm = (level: keyof CharacterHarm, val: string) =>
     patch({ harm: { ...harm, [level]: harm[level].filter(x => x !== val) } });
+
+  const loadout = draft.loadout ?? { level: 'normal' as LoadLevel, items: [] };
+  const gearItems = content.equipment?.items ?? [];
+  const playbookContacts = content.playbooks.find(p => p.id === draft.playbook)?.contacts ?? [];
+  const toggleItem = (id: string) =>
+    patch({
+      loadout: {
+        ...loadout,
+        items: loadout.items.includes(id)
+          ? loadout.items.filter(x => x !== id)
+          : [...loadout.items, id],
+      },
+    });
+  const loadCap = loadLimit(content, loadout.level);
+  const loadCarried = loadUsed(content, draft);
+
+  const contactName = (rel: 'friend' | 'rival') =>
+    draft.contacts.find(c => c.relationship === rel)?.name ?? '';
+  const setContact = (rel: 'friend' | 'rival', name: string) => {
+    const others = draft.contacts.filter(c => c.relationship !== rel);
+    if (!name) {
+      patch({ contacts: others });
+      return;
+    }
+    const def = playbookContacts.find(c => c.name === name);
+    patch({
+      contacts: [...others, { name, description: def?.description ?? '', relationship: rel }],
+    });
+  };
 
   const saveBuild = async () => {
     const userId = user?.id;
@@ -129,6 +162,7 @@ export function CharacterEditor({
         <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
           {tab('build', 'Build')}
           {tab('stress', 'Stress & Trauma')}
+          {tab('gear', 'Gear')}
           {tab('advancement', 'Advancement')}
         </Stack>
 
@@ -309,6 +343,120 @@ export function CharacterEditor({
 
             <Button variant='ember' onClick={saveBuild} loading={saving}>
               Save stress, harm &amp; trauma
+            </Button>
+          </Stack>
+        )}
+
+        {section === 'gear' && (
+          <Stack direction='column' gap='md'>
+            <Heading level='h3'>Loadout</Heading>
+            <Text variant='muted' size='sm'>
+              Pick a load level, then check the gear you carry. Heavier loads carry more but draw
+              more notice.
+            </Text>
+            <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+              {LOAD_LEVELS.map(lvl => (
+                <Button
+                  key={lvl}
+                  variant={loadout.level === lvl ? 'ember' : 'outline'}
+                  size='sm'
+                  className='capitalize'
+                  onClick={() => patch({ loadout: { ...loadout, level: lvl } })}
+                >
+                  {lvl} ({loadLimit(content, lvl)})
+                </Button>
+              ))}
+              <Badge variant={loadCarried > loadCap ? 'stress-critical' : 'steel'}>
+                Load {loadCarried} / {loadCap}
+              </Badge>
+            </Stack>
+            {loadCarried > loadCap && (
+              <Alert variant='warning' size='sm'>
+                Over capacity — drop an item or raise your load level.
+              </Alert>
+            )}
+            {gearItems.length === 0 ? (
+              <Text variant='muted' size='sm'>
+                This ruleset defines no equipment.
+              </Text>
+            ) : (
+              <Stack direction='column' gap='xs'>
+                {gearItems.map(item => (
+                  <label key={item.id} className='flex cursor-pointer items-center gap-2.5'>
+                    <input
+                      type='checkbox'
+                      checked={loadout.items.includes(item.id)}
+                      onChange={() => toggleItem(item.id)}
+                    />
+                    <Text size='sm'>
+                      {item.name}
+                      <span className='text-foreground-muted'> · load {item.load}</span>
+                    </Text>
+                  </label>
+                ))}
+              </Stack>
+            )}
+
+            <Heading level='h3'>Coin</Heading>
+            <Stack direction='row' gap='sm' align='end' className='max-w-md'>
+              <Input
+                label='Coin (carried)'
+                type='number'
+                value={String(draft.coins ?? 0)}
+                onChange={e =>
+                  patch({ coins: Math.max(0, Math.floor(Number(e.target.value) || 0)) })
+                }
+              />
+              <Input
+                label='Stash'
+                type='number'
+                value={String(draft.stash ?? 0)}
+                onChange={e =>
+                  patch({ stash: Math.max(0, Math.floor(Number(e.target.value) || 0)) })
+                }
+              />
+            </Stack>
+
+            {playbookContacts.length > 0 && (
+              <>
+                <Heading level='h3'>Friends &amp; Rivals</Heading>
+                <Stack direction='row' gap='md' align='end' className='flex-wrap'>
+                  <label className='flex flex-col gap-1 text-sm'>
+                    Close friend
+                    <select
+                      className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
+                      value={contactName('friend')}
+                      onChange={e => setContact('friend', e.target.value)}
+                    >
+                      <option value=''>—</option>
+                      {playbookContacts.map(c => (
+                        <option key={c.name} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className='flex flex-col gap-1 text-sm'>
+                    Rival
+                    <select
+                      className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
+                      value={contactName('rival')}
+                      onChange={e => setContact('rival', e.target.value)}
+                    >
+                      <option value=''>—</option>
+                      {playbookContacts.map(c => (
+                        <option key={c.name} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </Stack>
+              </>
+            )}
+
+            <Button variant='ember' onClick={saveBuild} loading={saving}>
+              Save gear
             </Button>
           </Stack>
         )}
