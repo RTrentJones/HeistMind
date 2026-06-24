@@ -570,11 +570,13 @@ jobs:
             done
             echo "✅ Migrations applied to the '$TARGET_SCHEMA' schema."
           else
-            echo "⚠️  SUPABASE_DB_URL not set or unreachable — falling back to 'supabase db push'"
-            echo "    (migrates the development schema only, due to the global migration history)."
-            echo "    To populate the '$TARGET_SCHEMA' schema, add a SUPABASE_DB_URL secret:"
-            echo "    Supabase → Settings → Database → Connection string → URI (Session mode)."
-            supabase db push --password "$SUPABASE_DB_PASSWORD"
+            echo "::warning::SUPABASE_DB_URL not set or unreachable — SKIPPING the migration deploy."
+            echo "⚠️  CI can only reach Supabase over the IPv4 SESSION POOLER — the direct DB"
+            echo "    connection is IPv6-only (free tier) and unreachable from GitHub runners, so"
+            echo "    'supabase db push' can't connect either. Add a SUPABASE_DB_URL secret"
+            echo "    (Supabase → Settings → Database → Connection string → URI, Session mode) to"
+            echo "    deploy migrations to the '$TARGET_SCHEMA' schema. No-op for now — already-"
+            echo "    applied migrations are unaffected."
           fi
 
       # NOTE: no post-deploy "regenerate + commit types" step. It pushed to `main` as
