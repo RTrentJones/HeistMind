@@ -5,6 +5,9 @@ import {
   abilityChoiceLimit,
   isAbilityUnlocked,
   pointBuySpent,
+  usesActionRatings,
+  actionDotsSpent,
+  deriveAttributes,
   type Ruleset,
   type RulesetContent,
   type CharacterData,
@@ -69,6 +72,7 @@ interface CharacterCreationState extends LoadingState {
   setName: (name: string) => void;
   setPlaybook: (playbookId: string) => void;
   setAttribute: (attributeId: string, value: number) => void;
+  setActionRating: (actionId: string, value: number) => void;
   toggleAbility: (abilityId: string) => void;
   setIdentityField: (field: 'heritage' | 'background' | 'vice', value: string) => void;
   setCustom: (key: string, value: unknown) => void;
@@ -129,19 +133,24 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
         setName: name => set({ name }),
 
         setPlaybook: playbookId => {
-          const ruleset = get().ruleset;
-          const playbook = ruleset?.content.playbooks.find(p => p.id === playbookId);
-          set(state => ({
-            draft: {
+          const content = get().ruleset?.content;
+          const playbook = content?.playbooks.find(p => p.id === playbookId);
+          set(state => {
+            // Seed the allocator from the playbook's baseline. In action-rating mode the playbook
+            // seeds starting ACTION dots and attributes are DERIVED; otherwise seed attributes.
+            const skills = { ...(playbook?.skills ?? {}) };
+            const next: CharacterData = {
               ...state.draft,
               playbook: playbookId,
-              // Seed the allocator from the playbook's baseline (action ratings,
-              // skills, and starting abilities) — the player tunes from there.
-              attributes: { ...(playbook?.attributes ?? {}) },
-              skills: { ...(playbook?.skills ?? {}) },
+              skills,
               specialAbilities: [...(playbook?.startingAbilities ?? [])],
-            },
-          }));
+              attributes: { ...(playbook?.attributes ?? {}) },
+            };
+            if (content && usesActionRatings(content)) {
+              next.attributes = deriveAttributes(content, next);
+            }
+            return { draft: next };
+          });
         },
 
         setAttribute: (attributeId, value) =>
@@ -162,6 +171,35 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
               draft: {
                 ...state.draft,
                 attributes: { ...state.draft.attributes, [attributeId]: next },
+              },
+            };
+          }),
+
+        setActionRating: (actionId, value) =>
+          set(state => {
+            const content = state.ruleset?.content;
+            if (!content || !usesActionRatings(content)) return {};
+            const ar = content.characterCreation?.actionRatings;
+            // Creation cap = the lower of the action's absolute max and its at-creation cap.
+            const cap = Math.min(ar?.max ?? 3, ar?.maxAtCreation ?? 2);
+            // Action-dot budget = playbook's seeded dots + the ruleset's creation `points`.
+            const playbook = content.playbooks.find(p => p.id === state.draft.playbook);
+            const seeded = Object.values(playbook?.skills ?? {}).reduce(
+              (n, v) => n + Math.max(0, v),
+              0
+            );
+            const budget = seeded + (ar?.points ?? 0);
+            const others = actionDotsSpent(content, {
+              ...state.draft,
+              skills: { ...state.draft.skills, [actionId]: 0 },
+            });
+            const next = Math.max(0, Math.min(value, cap, budget - others));
+            const skills = { ...state.draft.skills, [actionId]: next };
+            return {
+              draft: {
+                ...state.draft,
+                skills,
+                attributes: deriveAttributes(content, { ...state.draft, skills }),
               },
             };
           }),

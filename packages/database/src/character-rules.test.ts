@@ -7,8 +7,43 @@ import {
   isAbilityUnlocked,
   stressBounds,
   advancementCost,
+  usesActionRatings,
+  rulesetActions,
+  actionDotsSpent,
+  deriveAttributes,
   DEFAULT_STRESS,
 } from './character-rules';
+
+/** An action-rating ruleset: two attributes with 2 actions each; playbook seeds one dot. */
+function actionRuleset(overrides: Partial<RulesetContent> = {}): RulesetContent {
+  return ruleset({
+    playbooks: [
+      {
+        id: 'razor',
+        name: 'The Razor',
+        description: '',
+        startingAbilities: [],
+        specialAbilities: [],
+        contacts: [],
+        equipment: [],
+        attributes: {},
+        skills: { Clash: 1 },
+      },
+    ],
+    attributes: [
+      { id: 'force', name: 'Force', description: '', skills: ['Clash', 'Skulk'] },
+      { id: 'cunning', name: 'Cunning', description: '', skills: ['Track', 'Rig'] },
+    ],
+    characterCreation: {
+      steps: [
+        { id: 'playbook', name: 'Playbook', description: '', order: 1, required: true },
+        { id: 'action-ratings', name: 'Actions', description: '', order: 2, required: true },
+      ],
+      actionRatings: { points: 2, maxAtCreation: 2, max: 3 },
+    },
+    ...overrides,
+  });
+}
 
 function ruleset(overrides: Partial<RulesetContent> = {}): RulesetContent {
   return {
@@ -501,5 +536,82 @@ describe('validateCharacter — live mode is looser than creation', () => {
     );
     expect(codes(r)).toContain('ATTR_OVER_CAP');
     expect(codes(r)).toContain('ABILITY_LOCKED');
+  });
+});
+
+describe('action ratings', () => {
+  it('usesActionRatings reflects the ruleset capability', () => {
+    expect(usesActionRatings(actionRuleset())).toBe(true);
+    expect(usesActionRatings(ruleset())).toBe(false);
+  });
+
+  it('rulesetActions returns the distinct actions across attributes', () => {
+    expect(rulesetActions(actionRuleset()).sort()).toEqual(['Clash', 'Rig', 'Skulk', 'Track']);
+  });
+
+  it('actionDotsSpent sums action dots (ignoring negatives)', () => {
+    const rs = actionRuleset();
+    expect(actionDotsSpent(rs, character({ skills: { Clash: 2, Track: 1, Skulk: -3 } }))).toBe(3);
+  });
+
+  it('deriveAttributes counts actions rated >= 1 per attribute', () => {
+    const rs = actionRuleset();
+    const d = deriveAttributes(rs, character({ skills: { Clash: 2, Skulk: 1, Track: 1 } }));
+    expect(d).toEqual({ force: 2, cunning: 1 });
+  });
+
+  it('passes a legal action build (seeded 1 + 2 points = 3 dots, each <= 2)', () => {
+    const rs = actionRuleset();
+    const r = validateCharacter(rs, character({ skills: { Clash: 2, Track: 1 } }), {
+      mode: 'creation',
+    });
+    expect(r.isValid).toBe(true);
+    expect(r.errors).toHaveLength(0);
+  });
+
+  it('warns (does not block) when action dots are unspent', () => {
+    const rs = actionRuleset();
+    const r = validateCharacter(rs, character({ skills: { Clash: 1 } }), { mode: 'creation' });
+    expect(r.isValid).toBe(true);
+    expect(r.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('blocks an over-budget action spread', () => {
+    const rs = actionRuleset();
+    const r = validateCharacter(rs, character({ skills: { Clash: 2, Track: 1, Rig: 1 } }), {
+      mode: 'creation',
+    });
+    expect(codes(r)).toContain('ACTION_POINTS_OVER');
+  });
+
+  it('blocks an action above the at-creation cap, but allows it live (advancement)', () => {
+    const rs = actionRuleset();
+    const atCreation = validateCharacter(rs, character({ skills: { Clash: 3 } }), {
+      mode: 'creation',
+    });
+    expect(codes(atCreation)).toContain('ACTION_CREATION_CAP');
+    const live = validateCharacter(rs, character({ skills: { Clash: 3 } }), { mode: 'live' });
+    expect(codes(live)).not.toContain('ACTION_CREATION_CAP');
+    expect(codes(live)).not.toContain('ACTION_OVER_CAP');
+  });
+
+  it('blocks an action above the absolute max and a negative action (both modes)', () => {
+    const rs = actionRuleset();
+    expect(
+      codes(validateCharacter(rs, character({ skills: { Clash: 4 } }), { mode: 'live' }))
+    ).toContain('ACTION_OVER_CAP');
+    expect(
+      codes(validateCharacter(rs, character({ skills: { Clash: -1 } }), { mode: 'live' }))
+    ).toContain('ACTION_NEGATIVE');
+  });
+
+  it('does not run attribute point-buy/cap checks in action mode', () => {
+    const rs = actionRuleset();
+    // A high derived attribute is fine; no ATTR_OVER_CAP / POINTBUY_OVER.
+    const r = validateCharacter(rs, character({ skills: { Clash: 1, Track: 1 } }), {
+      mode: 'creation',
+    });
+    expect(codes(r)).not.toContain('ATTR_OVER_CAP');
+    expect(codes(r)).not.toContain('POINTBUY_OVER');
   });
 });
