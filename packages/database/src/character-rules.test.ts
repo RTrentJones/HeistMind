@@ -12,6 +12,8 @@ import {
   actionDotsSpent,
   deriveAttributes,
   harmBounds,
+  loadLimit,
+  loadUsed,
   DEFAULT_STRESS,
   DEFAULT_HARM,
 } from './character-rules';
@@ -648,5 +650,52 @@ describe('harm', () => {
     expect(codes(validateCharacter(ruleset(), overSevere, { mode: 'creation' }))).toContain(
       'HARM_OVER'
     );
+  });
+});
+
+describe('loadout', () => {
+  const loadRs = () =>
+    ruleset({
+      equipment: {
+        loadCapacity: { light: 3, normal: 5, heavy: 6 },
+        items: [
+          { id: 'blade', name: 'Blade', description: '', load: 1, category: 'w' },
+          { id: 'armor', name: 'Armor', description: '', load: 2, category: 'g' },
+        ],
+        categories: [],
+      },
+    });
+
+  it('loadLimit uses the ruleset capacity, else BitD defaults', () => {
+    expect(loadLimit(loadRs(), 'light')).toBe(3);
+    expect(loadLimit(ruleset(), 'heavy')).toBe(6);
+  });
+
+  it('loadUsed sums carried item loads', () => {
+    expect(
+      loadUsed(loadRs(), character({ loadout: { level: 'normal', items: ['blade', 'armor'] } }))
+    ).toBe(3);
+  });
+
+  it('allows load within the level limit and blocks over it', () => {
+    expect(
+      validateCharacter(
+        loadRs(),
+        character({ loadout: { level: 'light', items: ['blade', 'armor'] } }),
+        {
+          mode: 'live',
+        }
+      ).isValid
+    ).toBe(true);
+    const over = validateCharacter(
+      loadRs(),
+      character({ loadout: { level: 'light', items: ['blade', 'armor', 'blade'] } }),
+      { mode: 'live' }
+    );
+    expect(codes(over)).toContain('LOAD_OVER');
+  });
+
+  it('ignores an absent loadout', () => {
+    expect(validateCharacter(ruleset(), character(), { mode: 'live' }).isValid).toBe(true);
   });
 });

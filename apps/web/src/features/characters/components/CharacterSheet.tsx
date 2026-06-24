@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import {
   stressBounds,
   harmBounds,
+  loadLimit,
+  loadUsed,
   usesActionRatings,
   rulesetActions,
   type CharacterWithDetails,
@@ -234,6 +236,59 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           )}
         </Stack>
       </Card>
+
+      {(() => {
+        const content = character.ruleset.content;
+        const data = character.characterData;
+        const loadout = data?.loadout;
+        const itemsById = new Map((content.equipment?.items ?? []).map(i => [i.id, i]));
+        const carried = (loadout?.items ?? [])
+          .map(id => itemsById.get(id)?.name ?? id)
+          .filter(Boolean);
+        const friend = data?.contacts?.find(c => c.relationship === 'friend')?.name;
+        const rival = data?.contacts?.find(c => c.relationship === 'rival')?.name;
+        const hasGear =
+          loadout || (data?.coins ?? 0) > 0 || (data?.stash ?? 0) > 0 || friend || rival;
+        if (!hasGear) return null;
+        return (
+          <Card variant='outline'>
+            <Stack direction='column' gap='md'>
+              <Heading level='h3'>Gear &amp; Coin</Heading>
+              <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+                {loadout && (
+                  <Badge variant='steel' className='capitalize'>
+                    {loadout.level} load · {loadUsed(content, data)}/
+                    {loadLimit(content, loadout.level)}
+                  </Badge>
+                )}
+                <Badge variant='gold'>{data?.coins ?? 0} coin</Badge>
+                {(data?.stash ?? 0) > 0 && <Badge variant='gold'>{data.stash} stash</Badge>}
+              </Stack>
+              {carried.length > 0 && (
+                <div>
+                  <Text as='strong'>Carried</Text>
+                  <Stack direction='row' gap='sm' className='flex-wrap'>
+                    {carried.map(n => (
+                      <Badge key={n} variant='steel'>
+                        {n}
+                      </Badge>
+                    ))}
+                  </Stack>
+                </div>
+              )}
+              {(friend || rival) && (
+                <div>
+                  <Text as='strong'>Friends &amp; Rivals</Text>
+                  <Stack direction='row' gap='sm' className='flex-wrap'>
+                    {friend && <Badge variant='success'>Friend: {friend}</Badge>}
+                    {rival && <Badge variant='stress-critical'>Rival: {rival}</Badge>}
+                  </Stack>
+                </div>
+              )}
+            </Stack>
+          </Card>
+        );
+      })()}
 
       <Card variant='outline'>
         <Stack direction='column' gap='md'>

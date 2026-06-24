@@ -340,7 +340,11 @@ export interface CharacterData {
   trauma: string[];
   /** Harm entries per level (each a short description). Bounded by the ruleset's `harm` rules. */
   harm?: CharacterHarm;
+  /** Chosen load level + the items carried this score (item ids from the ruleset). */
+  loadout?: CharacterLoadout;
   coins: number;
+  /** Coin saved toward retirement (separate from carried `coins`). */
+  stash?: number;
   contacts: CharacterContact[];
   custom: Record<string, any>;
 }
@@ -352,6 +356,14 @@ export interface CharacterItem {
   load?: number;
   quality?: number;
   equipped: boolean;
+}
+
+export type LoadLevel = 'light' | 'normal' | 'heavy';
+
+export interface CharacterLoadout {
+  level: LoadLevel;
+  /** Item ids (from `RulesetContent.equipment.items`) marked as carried. */
+  items: string[];
 }
 
 export interface CharacterHarm {

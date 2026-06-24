@@ -13,6 +13,7 @@ import type {
   CreationRestriction,
   StressRules,
   HarmRules,
+  LoadLevel,
   ValidationError,
 } from './domain-types';
 import type { ValidationResult, ValidationWarning, CharacterAdvancement } from './repositories';
@@ -183,6 +184,20 @@ export function harmBounds(ruleset: RulesetContent): HarmRules {
   return ruleset.harm ?? DEFAULT_HARM;
 }
 
+/** BitD default load capacities, used when a ruleset omits `equipment.loadCapacity`. */
+const DEFAULT_LOAD: Record<LoadLevel, number> = { light: 3, normal: 5, heavy: 6 };
+
+/** Carry limit for a load level (ruleset's `equipment.loadCapacity`, else BitD defaults). */
+export function loadLimit(ruleset: RulesetContent, level: LoadLevel): number {
+  return ruleset.equipment?.loadCapacity?.[level] ?? DEFAULT_LOAD[level];
+}
+
+/** Total load of a character's carried items (summed from the ruleset's item loads). */
+export function loadUsed(ruleset: RulesetContent, data: CharacterData): number {
+  const byId = new Map((ruleset.equipment?.items ?? []).map(i => [i.id, i.load ?? 0]));
+  return (data.loadout?.items ?? []).reduce((n, id) => n + (byId.get(id) ?? 0), 0);
+}
+
 /**
  * The XP cost of an advancement, resolved from the ruleset (trusted over a client-supplied cost).
  * Matches an advancement option by id (`adv.target`) or, failing that, by category (`adv.type`).
@@ -329,6 +344,20 @@ export function validateCharacter(
           err(`harm.${level}`, 'HARM_OVER', `Too much ${level} harm (max ${harm[level]}).`)
         );
     }
+  }
+
+  // Load: carried items can't exceed the chosen load level's capacity (both modes).
+  if (data.loadout) {
+    const used = loadUsed(ruleset, data);
+    const limit = loadLimit(ruleset, data.loadout.level);
+    if (used > limit)
+      errors.push(
+        err(
+          'loadout',
+          'LOAD_OVER',
+          `Carrying ${used} load exceeds the ${data.loadout.level} limit of ${limit}.`
+        )
+      );
   }
 
   if (mode === 'creation') {
