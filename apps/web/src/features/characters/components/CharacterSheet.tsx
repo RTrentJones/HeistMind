@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { stressBounds, harmBounds, type CharacterWithDetails } from '@heist-mind/database';
+import {
+  stressBounds,
+  harmBounds,
+  usesActionRatings,
+  rulesetActions,
+  type CharacterWithDetails,
+} from '@heist-mind/database';
 import {
   Badge,
   Button,
@@ -19,6 +25,8 @@ import {
 const EMPTY_HARM = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { RollPanel } from '@/features/rolls/components/RollPanel';
+import { RollLog } from '@/features/rolls/components/RollLog';
 import { CharacterEditor } from './CharacterEditor';
 
 /** View a character and modify it (rename, award XP, and edit the validated build). */
@@ -31,6 +39,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [showEditor, setShowEditor] = useState(false);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [rollKey, setRollKey] = useState(0);
 
   const load = async () => {
     const result = await getRepositories().characters.findWithDetails(characterId);
@@ -223,6 +232,30 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               </Stack>
             </div>
           )}
+        </Stack>
+      </Card>
+
+      <Card variant='outline'>
+        <Stack direction='column' gap='md'>
+          <Heading level='h3'>Dice</Heading>
+          {usesActionRatings(character.ruleset.content) ? (
+            <RollPanel
+              gameId={character.gameId}
+              characterId={character.id}
+              actions={rulesetActions(character.ruleset.content).map(name => ({
+                name,
+                rating: character.characterData?.skills?.[name] ?? 0,
+              }))}
+              onRolled={() => setRollKey(k => k + 1)}
+            />
+          ) : (
+            <RollPanel
+              gameId={character.gameId}
+              characterId={character.id}
+              onRolled={() => setRollKey(k => k + 1)}
+            />
+          )}
+          <RollLog gameId={character.gameId} refreshKey={rollKey} />
         </Stack>
       </Card>
 

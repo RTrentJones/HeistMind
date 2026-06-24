@@ -1,6 +1,8 @@
 // HeistMind Domain Types
 // Database-agnostic types for application use
 
+import type { RollKind, RollOutcome } from './dice';
+
 // ===========================
 // CORE DOMAIN ENTITIES
 // ===========================
@@ -81,6 +83,37 @@ export interface Character {
   adaptations: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** A persisted dice roll — the per-game, play-by-post roll log. */
+export interface Roll {
+  id: string;
+  gameId: string;
+  characterId: string | null;
+  userId: string;
+  kind: RollKind;
+  label: string | null;
+  dice: number;
+  results: number[];
+  outcome: RollOutcome;
+  position: string | null;
+  effect: string | null;
+  note: string | null;
+  createdAt: Date;
+}
+
+export interface CreateRollData {
+  gameId: string;
+  characterId?: string;
+  kind: RollKind;
+  label?: string;
+  dice: number;
+  results: number[];
+  /** When true the roll took the LOWEST of the dice (rating 0); drives the outcome recompute. */
+  zeroDice?: boolean;
+  position?: string;
+  effect?: string;
+  note?: string;
 }
 
 export interface Invitation {

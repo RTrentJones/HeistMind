@@ -10,6 +10,9 @@ export * from './repositories';
 // Re-export the pure character-validity rules (shared by the web UI + the DB layer)
 export * from './character-rules';
 
+// Re-export the pure dice resolution (shared by the web UI + the roll repository)
+export * from './dice';
+
 // Re-export authentication types and interfaces
 export * from './auth-types';
 

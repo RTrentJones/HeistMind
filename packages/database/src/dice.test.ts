@@ -1,0 +1,38 @@
+import { describe, it, expect } from 'vitest';
+import { rollOutcome, diceForRating } from './dice';
+
+describe('rollOutcome', () => {
+  it('an empty roll is a bad outcome', () => {
+    expect(rollOutcome([])).toBe('bad');
+  });
+
+  it('takes the highest die: 6=success, 4-5=partial, 1-3=bad', () => {
+    expect(rollOutcome([1, 6, 3])).toBe('success');
+    expect(rollOutcome([2, 4, 1])).toBe('partial');
+    expect(rollOutcome([5, 2])).toBe('partial');
+    expect(rollOutcome([1, 3, 2])).toBe('bad');
+  });
+
+  it('two or more 6s is a critical', () => {
+    expect(rollOutcome([6, 6, 2])).toBe('crit');
+    expect(rollOutcome([6, 6, 6])).toBe('crit');
+    expect(rollOutcome([6, 5])).toBe('success'); // a single 6 is not a crit
+  });
+
+  it('zero-dice takes the LOWEST and never crits', () => {
+    expect(rollOutcome([6, 6], { zeroDice: true })).toBe('success'); // both 6 → low is 6
+    expect(rollOutcome([6, 4], { zeroDice: true })).toBe('partial'); // low is 4
+    expect(rollOutcome([6, 1], { zeroDice: true })).toBe('bad'); // low is 1
+  });
+});
+
+describe('diceForRating', () => {
+  it('rating 0 rolls two dice, take lowest', () => {
+    expect(diceForRating(0)).toEqual({ count: 2, zeroDice: true });
+    expect(diceForRating(-1)).toEqual({ count: 2, zeroDice: true });
+  });
+  it('a positive rating rolls that many dice', () => {
+    expect(diceForRating(3)).toEqual({ count: 3, zeroDice: false });
+    expect(diceForRating(1)).toEqual({ count: 1, zeroDice: false });
+  });
+});
