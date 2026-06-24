@@ -576,23 +576,30 @@ jobs:
           echo "🚀 Deploying migrations to the '$TARGET_SCHEMA' schema..."
 
           # Resolve an IPv4 SESSION-POOLER connection (GitHub runners can't reach the IPv6-only
-          # direct host). Try, in order: the SUPABASE_DB_URL secret; the pooler URL cached by the
-          # preceding `supabase link` (most reliable — no extra secret); a region-built URL.
+          # direct host). Try, in order: the SUPABASE_DB_URL secret (override); the Management API
+          # (authoritative — returns the exact pooler db_host, e.g. the aws-1 vs aws-0 cluster,
+          # which is NOT guessable from the region alone); a region-built URL as a last resort.
           # `|| VAR=""` keeps set -e from aborting on an empty/failed lookup.
           DB_URL="$SUPABASE_DB_URL"
-          if [ -z "$DB_URL" ] && [ -f supabase/.temp/pooler-url ]; then
-            # Cached pooler URL (force session mode :5432 — DDL + SET need it, not txn :6543).
-            DB_URL="$(sed 's/6543/5432/' supabase/.temp/pooler-url 2>/dev/null)" || DB_URL=""
-            [ -n "$DB_URL" ] && echo "ℹ️  Using the pooler URL cached by 'supabase link'." || true
+          if [ -z "$DB_URL" ] && [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_PROJECT_ID" ]; then
+            # Ask the Management API for the real pooler host, then force SESSION mode (:5432 — DDL
+            # + the per-schema SET need it, not the txn-mode :6543 the API returns). No extra secret.
+            POOLER_JSON="$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/config/database/pooler" 2>/dev/null)" || POOLER_JSON=""
+            POOLER_HOST="$(printf '%s' "$POOLER_JSON" | python3 -c "import sys,json;d=json.load(sys.stdin);items=d if isinstance(d,list) else [d];print(next((i.get('db_host','') for i in items if i.get('db_host')),''))" 2>/dev/null)" || POOLER_HOST=""
+            if [ -n "$POOLER_HOST" ]; then
+              DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@${POOLER_HOST}:5432/postgres"
+              echo "ℹ️  Pooler host from the Management API: ${POOLER_HOST} (session mode :5432)."
+            fi
           fi
           if [ -z "$DB_URL" ] && [ -n "$SUPABASE_PROJECT_ID" ]; then
-            # Auto-detect the project's region; fall back to the known region for this project
-            # (the RTrentJones.dev wrapper pins it to us-east-1). PROJECT_ID + region + PGPASSWORD
-            # fully determine the IPv4 session-pooler endpoint — no extra secret to set.
-            REGION="$(supabase projects list -o json 2>/dev/null | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null)" || REGION=""
-            REGION="${REGION:-us-east-1}"
-            DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
-            echo "ℹ️  Session-pooler URL built for region ${REGION}."
+            # Last-resort guess if the API lookup failed. Region is pinned to us-east-1 by the
+            # RTrentJones.dev wrapper; try the aws-1 cluster (this project) then aws-0.
+            for CL in aws-1 aws-0; do
+              CAND="postgresql://postgres.${SUPABASE_PROJECT_ID}@${CL}-us-east-1.pooler.supabase.com:5432/postgres"
+              if psql "$CAND" -c 'SELECT 1' >/dev/null 2>&1; then
+                DB_URL="$CAND"; echo "ℹ️  Session-pooler URL guessed (${CL}-us-east-1)."; break
+              fi
+            done
           fi
 
           # Creds-guard: skip cleanly ONLY when there's genuinely no connection material (forks /
