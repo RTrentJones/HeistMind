@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import {
   validateCharacter,
   stressBounds,
+  harmBounds,
   type CharacterAdvancement,
   type CharacterData,
+  type CharacterHarm,
   type CharacterWithDetails,
 } from '@heist-mind/database';
 import {
@@ -13,12 +15,15 @@ import {
   Badge,
   Button,
   Card,
+  HarmTracker,
   Heading,
   Input,
   Stack,
   StressTracker,
   Text,
 } from '@heist-mind/ui';
+
+const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 
@@ -44,6 +49,7 @@ export function CharacterEditor({
   const [section, setSection] = useState<Section>('build');
   const [draft, setDraft] = useState<CharacterData>(() => structuredClone(character.characterData));
   const [traumaInput, setTraumaInput] = useState('');
+  const [harmInput, setHarmInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +60,17 @@ export function CharacterEditor({
   }, [character.id, character.updatedAt]);
 
   const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
+
+  const harm = draft.harm ?? EMPTY_HARM;
+  const hb = harmBounds(content);
+  const addHarm = (level: keyof CharacterHarm) => {
+    const t = harmInput.trim();
+    if (!t || harm[level].length >= hb[level]) return;
+    patch({ harm: { ...harm, [level]: [...harm[level], t] } });
+    setHarmInput('');
+  };
+  const removeHarm = (level: keyof CharacterHarm, val: string) =>
+    patch({ harm: { ...harm, [level]: harm[level].filter(x => x !== val) } });
 
   const saveBuild = async () => {
     const userId = user?.id;
@@ -236,8 +253,62 @@ export function CharacterEditor({
               </Button>
             </Stack>
 
+            <Heading level='h3'>Harm</Heading>
+            <HarmTracker harm={harm} bounds={hb} />
+            {(['severe', 'moderate', 'lesser'] as const).map(level =>
+              harm[level].length > 0 ? (
+                <Stack key={level} direction='row' gap='sm' align='center' className='flex-wrap'>
+                  <Text size='sm' className='w-20 capitalize'>
+                    {level}
+                  </Text>
+                  {harm[level].map(h => (
+                    <Badge key={h} variant='stress-critical'>
+                      {h}
+                      <button
+                        type='button'
+                        aria-label={`Remove ${h}`}
+                        className='ml-1.5 cursor-pointer'
+                        onClick={() => removeHarm(level, h)}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </Stack>
+              ) : null
+            )}
+            <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+              <Input
+                label='Add harm'
+                value={harmInput}
+                onChange={e => setHarmInput(e.target.value)}
+                placeholder='Battered, Shaken, Impaled…'
+              />
+              <Button
+                variant='outline'
+                disabled={!harmInput.trim()}
+                onClick={() => addHarm('lesser')}
+              >
+                + Lesser
+              </Button>
+              <Button
+                variant='outline'
+                disabled={!harmInput.trim()}
+                onClick={() => addHarm('moderate')}
+              >
+                + Moderate
+              </Button>
+              <Button
+                variant='outline'
+                disabled={!harmInput.trim()}
+                onClick={() => addHarm('severe')}
+              >
+                + Severe
+              </Button>
+            </Stack>
+
             <Button variant='ember' onClick={saveBuild} loading={saving}>
-              Save stress &amp; trauma
+              Save stress, harm &amp; trauma
             </Button>
           </Stack>
         )}

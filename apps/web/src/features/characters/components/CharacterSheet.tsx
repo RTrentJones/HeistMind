@@ -1,18 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { CharacterWithDetails } from '@heist-mind/database';
+import { stressBounds, harmBounds, type CharacterWithDetails } from '@heist-mind/database';
 import {
   Badge,
   Button,
   Card,
   ErrorDisplay,
+  HarmTracker,
   Heading,
   Input,
   LoadingSpinner,
   Stack,
+  StressTracker,
   Text,
 } from '@heist-mind/ui';
+
+const EMPTY_HARM = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { CharacterEditor } from './CharacterEditor';
@@ -77,6 +81,23 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     setSaving(false);
     if (result.success) await load();
     else setError(result.error?.message ?? 'Failed to add XP');
+  };
+
+  // Live stress: clicking the tracker on the sheet face saves immediately (no "Edit build" needed).
+  const setStress = async (v: number) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    const max = stressBounds(character.ruleset.content).max;
+    const characterData = { ...character.characterData, stress: Math.max(0, Math.min(v, max)) };
+    setSaving(true);
+    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
+      characterId,
+      userId,
+      { characterData }
+    );
+    setSaving(false);
+    if (r.success) await load();
+    else setError(r.error?.message ?? 'Failed to save stress');
   };
 
   if (loading) return <LoadingSpinner />;
@@ -171,6 +192,40 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           </div>
         </Stack>
       </Card>
+
+      <Card variant='outline'>
+        <Stack direction='column' gap='md'>
+          <Heading level='h3'>Condition</Heading>
+          <StressTracker
+            current={character.characterData?.stress ?? 0}
+            max={stressBounds(character.ruleset.content).max}
+            interactive
+            showNumbers
+            size='lg'
+            onChange={v => void setStress(v)}
+          />
+          <div>
+            <Text as='strong'>Harm</Text>
+            <HarmTracker
+              harm={character.characterData?.harm ?? EMPTY_HARM}
+              bounds={harmBounds(character.ruleset.content)}
+            />
+          </div>
+          {(character.characterData?.trauma?.length ?? 0) > 0 && (
+            <div>
+              <Text as='strong'>Trauma</Text>
+              <Stack direction='row' gap='sm' className='flex-wrap'>
+                {character.characterData.trauma.map(t => (
+                  <Badge key={t} variant='stress-critical'>
+                    {t}
+                  </Badge>
+                ))}
+              </Stack>
+            </div>
+          )}
+        </Stack>
+      </Card>
+
       {showEditor && <CharacterEditor character={character} onSaved={() => void load()} />}
     </Stack>
   );

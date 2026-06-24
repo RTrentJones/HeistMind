@@ -129,11 +129,19 @@ export interface RulesetContent {
   characterCreation: CreationRules;
   /** Stress/trauma bounds. Optional; defaults to BitD `{ max: 9, traumaMax: 4 }` when absent. */
   stress?: StressRules;
+  /** Harm-track box counts per level. Optional; defaults to BitD `{ lesser:2, moderate:2, severe:1 }`. */
+  harm?: HarmRules;
 }
 
 export interface StressRules {
   max: number;
   traumaMax: number;
+}
+
+export interface HarmRules {
+  lesser: number;
+  moderate: number;
+  severe: number;
 }
 
 export interface PlaybookDefinition {
@@ -297,6 +305,8 @@ export interface CharacterData {
   items: CharacterItem[];
   stress: number;
   trauma: string[];
+  /** Harm entries per level (each a short description). Bounded by the ruleset's `harm` rules. */
+  harm?: CharacterHarm;
   coins: number;
   contacts: CharacterContact[];
   custom: Record<string, any>;
@@ -309,6 +319,15 @@ export interface CharacterItem {
   load?: number;
   quality?: number;
   equipped: boolean;
+}
+
+export interface CharacterHarm {
+  /** Level 1 — lesser harm (reduced effect). */
+  lesser: string[];
+  /** Level 2 — moderate harm (reduced effect / -1d). */
+  moderate: string[];
+  /** Level 3 — severe harm (need help to act). */
+  severe: string[];
 }
 
 export interface CharacterContact {

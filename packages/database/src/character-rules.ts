@@ -12,6 +12,7 @@ import type {
   PlaybookDefinition,
   CreationRestriction,
   StressRules,
+  HarmRules,
   ValidationError,
 } from './domain-types';
 import type { ValidationResult, ValidationWarning, CharacterAdvancement } from './repositories';
@@ -174,6 +175,14 @@ export function stressBounds(ruleset: RulesetContent): StressRules {
   return ruleset.stress ?? DEFAULT_STRESS;
 }
 
+/** BitD harm-track box counts, used when a ruleset omits `harm`. */
+export const DEFAULT_HARM: HarmRules = { lesser: 2, moderate: 2, severe: 1 };
+
+/** Harm-track box counts, defaulting to BitD values when the ruleset omits `harm`. */
+export function harmBounds(ruleset: RulesetContent): HarmRules {
+  return ruleset.harm ?? DEFAULT_HARM;
+}
+
 /**
  * The XP cost of an advancement, resolved from the ruleset (trusted over a client-supplied cost).
  * Matches an advancement option by id (`adv.target`) or, failing that, by category (`adv.type`).
@@ -310,6 +319,17 @@ export function validateCharacter(
     errors.push(
       err('trauma', 'TRAUMA_OVER', `A character can hold at most ${bounds.traumaMax} trauma.`)
     );
+
+  // Harm-track bounds (both modes), if the character tracks harm.
+  if (data.harm) {
+    const harm = harmBounds(ruleset);
+    for (const level of ['lesser', 'moderate', 'severe'] as const) {
+      if ((data.harm[level]?.length ?? 0) > harm[level])
+        errors.push(
+          err(`harm.${level}`, 'HARM_OVER', `Too much ${level} harm (max ${harm[level]}).`)
+        );
+    }
+  }
 
   if (mode === 'creation') {
     if (actionMode) {
