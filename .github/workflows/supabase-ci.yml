@@ -585,21 +585,34 @@ jobs:
             DB_URL="$(sed 's/6543/5432/' supabase/.temp/pooler-url 2>/dev/null)" || DB_URL=""
             [ -n "$DB_URL" ] && echo "ℹ️  Using the pooler URL cached by 'supabase link'." || true
           fi
-          if [ -z "$DB_URL" ]; then
+          if [ -z "$DB_URL" ] && [ -n "$SUPABASE_PROJECT_ID" ]; then
+            # Auto-detect the project's region; fall back to the known region for this project
+            # (the RTrentJones.dev wrapper pins it to us-east-1). PROJECT_ID + region + PGPASSWORD
+            # fully determine the IPv4 session-pooler endpoint — no extra secret to set.
             REGION="$(supabase projects list -o json 2>/dev/null | python3 -c "import sys,json; print(next((p.get('region','') for p in json.load(sys.stdin) if p.get('id')=='$SUPABASE_PROJECT_ID'), ''))" 2>/dev/null)" || REGION=""
-            if [ -n "$REGION" ]; then
-              DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
-              echo "ℹ️  Auto-built session-pooler URL (region ${REGION})."
-            fi
+            REGION="${REGION:-us-east-1}"
+            DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}@aws-0-${REGION}.pooler.supabase.com:5432/postgres"
+            echo "ℹ️  Session-pooler URL built for region ${REGION}."
           fi
 
-          if [ -n "$DB_URL" ]; then
-            echo "🔎 Resolved connection: $(printf '%s' "$DB_URL" | sed -E 's#://[^@]*@#://***@#')"
+          # Creds-guard: skip cleanly ONLY when there's genuinely no connection material (forks /
+          # secret-less runs). With a project id + password present we MUST connect — a failure
+          # there is real (wrong password, unreachable pooler), so surface it loudly rather than
+          # skipping into a false-green.
+          if [ -z "$DB_URL" ] || [ -z "$PGPASSWORD" ]; then
+            echo "::warning::No Supabase DB credentials available — SKIPPING the migration deploy (creds-guard)."
+            echo "⚠️  Set SUPABASE_PROJECT_ID + SUPABASE_DB_PASSWORD (or SUPABASE_DB_URL) to deploy"
+            echo "    migrations to the '$TARGET_SCHEMA' schema. No-op for now."
           else
-            echo "🔎 No DB_URL resolved. supabase/.temp: $(ls supabase/.temp/ 2>/dev/null | tr '\n' ' ')"
-          fi
-
-          if [ -n "$DB_URL" ] && psql "$DB_URL" -c 'SELECT 1' >/dev/null 2>&1; then
+            echo "🔎 Resolved connection: $(printf '%s' "$DB_URL" | sed -E 's#://[^@]*@#://***@#')"
+            # Probe first, capturing stderr so a bad password / unreachable host is reported
+            # instead of silently swallowed.
+            if ! PROBE="$(psql "$DB_URL" -c 'SELECT 1' 2>&1)"; then
+              echo "❌ Could not connect to the session pooler for the '$TARGET_SCHEMA' schema:"
+              printf '%s\n' "$PROBE" | sed -E 's/postgres\.[A-Za-z0-9]+/postgres.***/g; s/^/    /'
+              echo "    (Check SUPABASE_DB_PASSWORD, or set SUPABASE_DB_URL to the Session-mode URI.)"
+              exit 1
+            fi
             # Idempotent migrations (IF NOT EXISTS / CREATE OR REPLACE / DROP … IF EXISTS), applied
             # per schema — bypasses the global history so BOTH env schemas get populated.
             for f in $(ls supabase/migrations/[0-9][0-9][0-9][0-9][0-9]_*.sql | sort); do
@@ -608,12 +621,6 @@ jobs:
                 | psql "$DB_URL" -v ON_ERROR_STOP=1 -q
             done
             echo "✅ Migrations applied to the '$TARGET_SCHEMA' schema."
-          else
-            echo "::warning::No reachable IPv4 pooler connection — SKIPPING the migration deploy."
-            echo "⚠️  Could not auto-detect the session-pooler URL. Add a SUPABASE_DB_URL secret"
-            echo "    (Supabase → Settings → Database → Connection string → URI, Session mode) to"
-            echo "    deploy migrations to the '$TARGET_SCHEMA' schema. No-op for now — already-"
-            echo "    applied migrations are unaffected."
           fi
 
       # NOTE: no post-deploy "regenerate + commit types" step. It pushed to `main` as
