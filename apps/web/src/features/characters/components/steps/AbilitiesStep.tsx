@@ -98,6 +98,14 @@ export function AbilitiesStep() {
         >
           {ab.description}
         </div>
+        {ab.rules && (
+          <div
+            className='text-foreground-muted'
+            style={{ fontSize: 12, marginTop: 6, lineHeight: 1.5 }}
+          >
+            {ab.rules}
+          </div>
+        )}
         {reason && (
           <div className='text-foreground-muted' style={{ fontSize: 12, marginTop: 6 }}>
             {reason}

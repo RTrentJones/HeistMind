@@ -209,7 +209,10 @@ export interface SkillDefinition {
 export interface AbilityDefinition {
   id: string;
   name: string;
+  /** A short, evocative one-liner (shown on cards). */
   description: string;
+  /** Full, resolvable rules text — the exact mechanical effect (shown in an expandable detail). */
+  rules?: string;
   prerequisite?: string;
   tier?: number;
   category?: string;

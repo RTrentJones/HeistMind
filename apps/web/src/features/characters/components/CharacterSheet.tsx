@@ -214,23 +214,39 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               )}
             </Stack>
           </div>
+        </Stack>
+      </Card>
 
-          <div>
-            <Text as='strong'>Special Abilities</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {abilities.length > 0 ? (
-                abilities.map(a => (
-                  <Badge key={a} variant='success'>
-                    {a}
-                  </Badge>
-                ))
-              ) : (
-                <Text variant='muted' size='sm'>
-                  None chosen.
-                </Text>
-              )}
+      {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
+      <Card variant='outline'>
+        <Stack direction='column' gap='md'>
+          <Heading level='h3'>Special Abilities</Heading>
+          {abilities.length > 0 ? (
+            <Stack direction='column' gap='xs'>
+              {abilities.map(id => {
+                const def = character.ruleset.content.specialAbilities?.find(a => a.id === id);
+                return (
+                  <details key={id} className='rounded-md border border-border-primary px-3 py-2'>
+                    <summary className='cursor-pointer'>
+                      <span className='font-display'>{def?.name ?? id}</span>
+                      {def?.tier != null && (
+                        <Badge variant='gold' size='sm' className='ml-2'>
+                          Tier {def.tier}
+                        </Badge>
+                      )}
+                    </summary>
+                    <Text variant='muted' size='sm' className='mt-2'>
+                      {def?.rules ?? def?.description ?? 'No rules text for this ability.'}
+                    </Text>
+                  </details>
+                );
+              })}
             </Stack>
-          </div>
+          ) : (
+            <Text variant='muted' size='sm'>
+              None chosen.
+            </Text>
+          )}
         </Stack>
       </Card>
 
