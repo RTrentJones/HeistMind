@@ -29,7 +29,7 @@ Counts: 1 fixed · S1 ×2 · S2 ×16 · S3 ×23 · S4 ×2.
 - **fix:** Made the empty pip self-delineating — recessed `bg-background-primary` fill + contrasting
   `border-border-secondary` ring (the ring is the load-bearing cue in light mode, the recessed
   fill in dark) — and moved the Card `default` hover off the pip token to `hover:bg-background-elevated`.
-- **status:** fixed @<sha-of-this-PR>
+- **status:** fixed @24aaa96
 
 ---
 
