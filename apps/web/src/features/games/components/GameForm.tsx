@@ -55,7 +55,15 @@ export function GameForm() {
     });
     setSubmitting(false);
     if (!created.success) {
-      setError(created.error?.message ?? 'Failed to create campaign');
+      // A game name is unique per creator; translate the raw constraint error to a clear prompt.
+      const raw = created.error?.message ?? '';
+      const duplicate =
+        created.error?.code === '23505' || /duplicate|already exists|unique/i.test(raw);
+      setError(
+        duplicate
+          ? `You already have a campaign named “${name.trim()}”. Pick a different name.`
+          : raw || 'Failed to create campaign'
+      );
       return;
     }
     router.push(`/games/${created.data.id}`);
