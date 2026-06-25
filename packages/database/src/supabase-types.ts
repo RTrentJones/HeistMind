@@ -81,6 +81,53 @@ export type Database = {
           },
         ]
       }
+      clocks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          filled: number
+          game_id: string
+          id: string
+          linked_id: string | null
+          linked_type: string | null
+          name: string
+          segments: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          filled?: number
+          game_id: string
+          id?: string
+          linked_id?: string | null
+          linked_type?: string | null
+          name: string
+          segments?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          filled?: number
+          game_id?: string
+          id?: string
+          linked_id?: string | null
+          linked_type?: string | null
+          name?: string
+          segments?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clocks_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           game_id: string
@@ -363,11 +410,15 @@ export type Database = {
     }
     Functions: {
       get_user_game_role: {
-        Args: { game_id: string; user_id: string }
+        Args: { user_id: string; game_id: string }
         Returns: string
       }
       is_active_game_member: {
-        Args: { p_game_id: string; p_user_id: string }
+        Args: { p_user_id: string; p_game_id: string }
+        Returns: boolean
+      }
+      is_game_gm: {
+        Args: { p_user_id: string; p_game_id: string }
         Returns: boolean
       }
       is_game_master: {

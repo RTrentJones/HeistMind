@@ -10,6 +10,9 @@ import {
   Invitation,
   Roll,
   CreateRollData,
+  Clock,
+  CreateClockData,
+  UpdateClockData,
   CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
@@ -241,6 +244,14 @@ export interface RollRepository {
   findByGame(gameId: string, limit?: number): Promise<Result<Roll[]>>;
 }
 
+/** Per-game progress clocks. Members read; the game's GM creates / ticks / removes them. */
+export interface ClockRepository {
+  create(userId: string, data: CreateClockData): Promise<Result<Clock>>;
+  findByGame(gameId: string): Promise<Result<Clock[]>>;
+  update(id: string, data: UpdateClockData): Promise<Result<Clock>>;
+  delete(id: string): Promise<Result<void>>;
+}
+
 export interface DatabaseRepositories {
   profiles: ProfileRepository;
   rulesets: RulesetRepository;
@@ -249,6 +260,7 @@ export interface DatabaseRepositories {
   characters: CharacterRepository;
   invitations: InvitationRepository;
   rolls: RollRepository;
+  clocks: ClockRepository;
   gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
 }
