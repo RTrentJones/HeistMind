@@ -13,6 +13,9 @@ export * from './character-rules';
 // Re-export the pure dice resolution (shared by the web UI + the roll repository)
 export * from './dice';
 
+// Re-export the pure progress-clock rules (shared by the web UI + the clock repository)
+export * from './clocks';
+
 // Re-export authentication types and interfaces
 export * from './auth-types';
 

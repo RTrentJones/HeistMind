@@ -10,6 +10,8 @@ const base = createBaseConfig(__dirname, { environment: 'node' });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (base as any).test.coverage.thresholds = {
   '**/character-rules.ts': { lines: 100, functions: 100, statements: 100, branches: 88 },
+  '**/clocks.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
+  '**/dice.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/supabase-character-management-repository.ts': {
     lines: 85,
     functions: 85,
