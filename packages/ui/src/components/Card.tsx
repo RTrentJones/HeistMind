@@ -17,7 +17,9 @@ const cardVariants = cva(
         default: [
           'bg-background-secondary border-border-primary',
           'hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:border-border-secondary',
-          'hover:bg-background-tertiary hover:-translate-y-0.5',
+          // Hover lifts to `background-elevated`, not `background-tertiary` — the latter is the
+          // empty-pip fill, so the old value made empty pips vanish on hover (see StressTracker).
+          'hover:bg-background-elevated hover:-translate-y-0.5',
         ],
         glass: [
           'bg-background-glass backdrop-blur-md border-border-secondary',
