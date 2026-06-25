@@ -195,6 +195,36 @@ export interface UpdateCrewData {
   cohorts?: string[];
 }
 
+/** A city power. FitD bounds: tier 0–6, status −3 (at war) … +3 (allied). */
+export interface Faction {
+  id: string;
+  gameId: string;
+  name: string;
+  factionType: string | null;
+  tier: number;
+  status: number;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateFactionData {
+  gameId: string;
+  name: string;
+  factionType?: string;
+  tier?: number;
+  status?: number;
+}
+
+export interface UpdateFactionData {
+  name?: string;
+  factionType?: string;
+  tier?: number;
+  status?: number;
+  notes?: string;
+}
+
 export interface Invitation {
   id: string;
   gameId: string;
@@ -245,6 +275,16 @@ export interface RulesetContent {
   harm?: HarmRules;
   /** Optional crew-sheet content (crew types, crew abilities, available claims). */
   crew?: CrewRules;
+  /** Optional suggested factions the GM can seed into a campaign. */
+  factions?: FactionDefinition[];
+}
+
+/** A ruleset-suggested faction (the GM can add it to a campaign with one click). */
+export interface FactionDefinition {
+  name: string;
+  type?: string;
+  tier?: number;
+  description?: string;
 }
 
 /** Ruleset-level crew content: the types a crew can be, the crew abilities, and available claims. */

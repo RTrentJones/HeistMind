@@ -21,7 +21,8 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
 
   const load = async () => {
     const r = await getRepositories().clocks.findByGame(gameId);
-    if (r.success) setClocks(r.data);
+    // Faction project clocks live in the Factions panel; this panel shows the standalone ones.
+    if (r.success) setClocks(r.data.filter(c => !c.linkedType));
     else setError(r.error?.message ?? 'Failed to load clocks');
   };
 

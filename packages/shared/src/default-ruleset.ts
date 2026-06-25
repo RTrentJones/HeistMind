@@ -901,6 +901,40 @@ export const DEFAULT_RULESET: RulesetContent = {
     ],
   },
 
+  // Suggested factions — the city powers of Brackwater. The GM can seed any of these into a game.
+  factions: [
+    {
+      name: 'The Tidewatch',
+      type: 'Law',
+      tier: 4,
+      description: "Brackwater's drowned-canal constabulary — bribable, but it remembers.",
+    },
+    {
+      name: 'The Salt Cartel',
+      type: 'Trade',
+      tier: 3,
+      description: 'Merchant princes who own the docks, the warehouses, and the brine trade.',
+    },
+    {
+      name: 'The Pale Court',
+      type: 'Nobility',
+      tier: 5,
+      description: 'The old families behind the seawall, trading in secrets and old debts.',
+    },
+    {
+      name: 'The Gutter Kings',
+      type: 'Underworld',
+      tier: 2,
+      description: 'A rival crew running the lower tunnels and the night markets.',
+    },
+    {
+      name: 'The Drowned Choir',
+      type: 'Cult',
+      tier: 2,
+      description: 'Tide-touched cultists tending the restless dead beneath the waterline.',
+    },
+  ],
+
   characterCreation: {
     // Per-action ratings (FitD): rate the 12 actions 0–3; attributes are derived (count of an
     // attribute's actions rated ≥ 1). Each playbook seeds one starting dot; assign 4 more, none

@@ -11,6 +11,7 @@ import { SupabaseCharacterRepository } from './implementations/supabase-characte
 import { SupabaseRollRepository } from './implementations/supabase-roll-repository';
 import { SupabaseClockRepository } from './implementations/supabase-clock-repository';
 import { SupabaseCrewRepository } from './implementations/supabase-crew-repository';
+import { SupabaseFactionRepository } from './implementations/supabase-faction-repository';
 import { SupabaseCharacterManagementRepository } from './implementations/supabase-character-management-repository';
 import type { CoreSchema } from './implementations/result-helpers';
 import { SupabaseAuthService } from './implementations/supabase-auth-service';
@@ -105,6 +106,7 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
       rolls: new SupabaseRollRepository(this.client, schema),
       clocks: new SupabaseClockRepository(this.client, schema),
       crews: new SupabaseCrewRepository(this.client, schema),
+      factions: new SupabaseFactionRepository(this.client, schema),
       characterManagement: new SupabaseCharacterManagementRepository(this.client, schema),
       // Aggregate/invitation repositories are outside the current journey scope.
       invitations: {} as any, // Placeholder

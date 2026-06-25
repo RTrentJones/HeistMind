@@ -196,6 +196,53 @@ export type Database = {
           },
         ]
       }
+      factions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          faction_type: string | null
+          game_id: string
+          id: string
+          name: string
+          notes: string | null
+          status: number
+          tier: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          faction_type?: string | null
+          game_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: number
+          tier?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          faction_type?: string | null
+          game_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: number
+          tier?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           game_id: string
