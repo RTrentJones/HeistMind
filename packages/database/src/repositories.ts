@@ -16,6 +16,9 @@ import {
   Crew,
   CreateCrewData,
   UpdateCrewData,
+  Faction,
+  CreateFactionData,
+  UpdateFactionData,
   CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
@@ -262,6 +265,14 @@ export interface CrewRepository {
   update(id: string, data: UpdateCrewData): Promise<Result<Crew>>;
 }
 
+/** Per-game factions + status. Members read; the game's GM maintains them. */
+export interface FactionRepository {
+  findByGame(gameId: string): Promise<Result<Faction[]>>;
+  create(userId: string, data: CreateFactionData): Promise<Result<Faction>>;
+  update(id: string, data: UpdateFactionData): Promise<Result<Faction>>;
+  delete(id: string): Promise<Result<void>>;
+}
+
 export interface DatabaseRepositories {
   profiles: ProfileRepository;
   rulesets: RulesetRepository;
@@ -272,6 +283,7 @@ export interface DatabaseRepositories {
   rolls: RollRepository;
   clocks: ClockRepository;
   crews: CrewRepository;
+  factions: FactionRepository;
   gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
 }

@@ -84,6 +84,16 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
     }
   });
 
+  it('seeds suggested factions with names and in-range tiers', () => {
+    const factions = DEFAULT_RULESET.factions ?? [];
+    expect(factions.length >= 3).toBe(true);
+    for (const f of factions) {
+      expect(f.name, JSON.stringify(f)).toBeTruthy();
+      expect(f.tier ?? 0, f.name).toBeGreaterThanOrEqual(0);
+      expect(f.tier ?? 0, f.name).toBeLessThanOrEqual(6);
+    }
+  });
+
   it('every playbook seeds exactly one starting action dot that is a real action', () => {
     for (const pb of DEFAULT_RULESET.playbooks) {
       const keys = Object.keys(pb.skills);

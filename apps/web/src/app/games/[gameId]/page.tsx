@@ -19,6 +19,7 @@ import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
 import { CrewSheet } from '@/features/crews/components/CrewSheet';
+import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
 
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
@@ -140,6 +141,17 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         </Heading>
         <Card variant='outline'>
           <ClocksPanel gameId={gameId} isGm={game.createdBy === user?.id} />
+        </Card>
+
+        <Heading level='h2' variant='primary'>
+          Factions
+        </Heading>
+        <Card variant='outline'>
+          <FactionsPanel
+            gameId={gameId}
+            isGm={game.createdBy === user?.id}
+            suggestions={game.ruleset.content.factions}
+          />
         </Card>
 
         <Heading level='h2' variant='primary'>

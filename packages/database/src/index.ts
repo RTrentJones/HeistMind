@@ -19,6 +19,9 @@ export * from './clocks';
 // Re-export the pure crew-sheet bounds (shared by the web UI + the crew repository)
 export * from './crews';
 
+// Re-export the pure faction bounds (shared by the web UI + the faction repository)
+export * from './factions';
+
 // Re-export authentication types and interfaces
 export * from './auth-types';
 
