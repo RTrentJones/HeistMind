@@ -826,6 +826,81 @@ export const DEFAULT_RULESET: RulesetContent = {
   // in the trauma UI is a future enhancement; the schema tracks trauma as a count.)
   stress: { max: 9, traumaMax: 4 },
 
+  // Crew sheet: pick a crew type, take crew abilities, and stake claims over Brackwater's turf.
+  crew: {
+    types: [
+      {
+        id: 'shadows',
+        name: 'Shadows',
+        description: 'Burglary, sabotage, espionage, and the quiet theft of secrets.',
+      },
+      {
+        id: 'bravos',
+        name: 'Bravos',
+        description: 'Hired muscle: protection, intimidation, war, and open violence.',
+      },
+      {
+        id: 'tidewrights',
+        name: 'Tidewrights',
+        description: 'Smuggling and transport through the drowned canals and the deep tunnels.',
+      },
+      {
+        id: 'drowned-choir',
+        name: 'The Drowned Choir',
+        description: 'A cult tending the Tide-touched — relics, rites, and the restless dead.',
+      },
+      {
+        id: 'brewers-guild',
+        name: "Brewers' Guild",
+        description: 'The vice trade: drink, drugs, alchemical brews, and the dens that sell them.',
+      },
+    ],
+    abilities: [
+      {
+        id: 'crew-deadly',
+        name: 'Deadly',
+        description: 'Each crew member gains an extra action rating in a violent action.',
+      },
+      {
+        id: 'crew-shadows',
+        name: 'No Traces',
+        description: 'When you Lay Low after a quiet job, reduce heat by an extra amount.',
+      },
+      {
+        id: 'crew-network',
+        name: 'The Network',
+        description: 'You have an extra contact, and your contacts offer better information.',
+      },
+      {
+        id: 'crew-ghost-market',
+        name: 'Ghost Market',
+        description: 'You can buy and sell arcane goods and Tide-touched relics during downtime.',
+      },
+      {
+        id: 'crew-fortified',
+        name: 'Fortified',
+        description: 'Your lair is hidden and defended; reduce the threat of raids against it.',
+      },
+      {
+        id: 'crew-patron',
+        name: 'Patron',
+        description: 'A powerful faction backs you — call on them once per job for aid or cover.',
+      },
+    ],
+    claims: [
+      'Lair',
+      'Turf',
+      'Cover Operation',
+      'Informants',
+      'Eyes on the Docks',
+      'Protected Stash',
+      'Vice Den',
+      'Smuggling Route',
+      'Friends on the Watch',
+      'A Drowned Shrine',
+    ],
+  },
+
   characterCreation: {
     // Per-action ratings (FitD): rate the 12 actions 0–3; attributes are derived (count of an
     // attribute's actions rated ≥ 1). Each playbook seeds one starting dot; assign 4 more, none

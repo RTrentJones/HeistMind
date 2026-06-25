@@ -128,6 +128,74 @@ export type Database = {
           },
         ]
       }
+      crews: {
+        Row: {
+          claims: Json
+          cohorts: Json
+          coin: number
+          created_at: string | null
+          created_by: string | null
+          crew_abilities: string[]
+          crew_type: string | null
+          game_id: string
+          heat: number
+          hold: string
+          id: string
+          name: string | null
+          rep: number
+          tier: number
+          updated_at: string | null
+          vault: number
+          wanted: number
+        }
+        Insert: {
+          claims?: Json
+          cohorts?: Json
+          coin?: number
+          created_at?: string | null
+          created_by?: string | null
+          crew_abilities?: string[]
+          crew_type?: string | null
+          game_id: string
+          heat?: number
+          hold?: string
+          id?: string
+          name?: string | null
+          rep?: number
+          tier?: number
+          updated_at?: string | null
+          vault?: number
+          wanted?: number
+        }
+        Update: {
+          claims?: Json
+          cohorts?: Json
+          coin?: number
+          created_at?: string | null
+          created_by?: string | null
+          crew_abilities?: string[]
+          crew_type?: string | null
+          game_id?: string
+          heat?: number
+          hold?: string
+          id?: string
+          name?: string | null
+          rep?: number
+          tier?: number
+          updated_at?: string | null
+          vault?: number
+          wanted?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crews_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: true
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           game_id: string

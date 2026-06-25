@@ -149,6 +149,52 @@ export interface UpdateClockData {
   filled?: number;
 }
 
+/** The shared crew sheet — one per game. FitD bounds: tier 0–4, heat 0–9, wanted 0–4. */
+export interface Crew {
+  id: string;
+  gameId: string;
+  name: string | null;
+  crewType: string | null;
+  tier: number;
+  rep: number;
+  heat: number;
+  wanted: number;
+  hold: CrewHold;
+  coin: number;
+  vault: number;
+  crewAbilities: string[];
+  /** Held claims (names or ruleset claim ids). */
+  claims: string[];
+  /** Cohort descriptions (gangs / experts). */
+  cohorts: string[];
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type CrewHold = 'weak' | 'strong';
+
+export interface CreateCrewData {
+  gameId: string;
+  name?: string;
+  crewType?: string;
+}
+
+export interface UpdateCrewData {
+  name?: string;
+  crewType?: string;
+  tier?: number;
+  rep?: number;
+  heat?: number;
+  wanted?: number;
+  hold?: CrewHold;
+  coin?: number;
+  vault?: number;
+  crewAbilities?: string[];
+  claims?: string[];
+  cohorts?: string[];
+}
+
 export interface Invitation {
   id: string;
   gameId: string;
@@ -197,6 +243,29 @@ export interface RulesetContent {
   stress?: StressRules;
   /** Harm-track box counts per level. Optional; defaults to BitD `{ lesser:2, moderate:2, severe:1 }`. */
   harm?: HarmRules;
+  /** Optional crew-sheet content (crew types, crew abilities, available claims). */
+  crew?: CrewRules;
+}
+
+/** Ruleset-level crew content: the types a crew can be, the crew abilities, and available claims. */
+export interface CrewRules {
+  types: CrewTypeDefinition[];
+  abilities: CrewAbilityDefinition[];
+  claims?: string[];
+}
+
+export interface CrewTypeDefinition {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface CrewAbilityDefinition {
+  id: string;
+  name: string;
+  description: string;
+  /** Which crew type this ability belongs to (optional — shared abilities omit it). */
+  crewType?: string;
 }
 
 export interface StressRules {

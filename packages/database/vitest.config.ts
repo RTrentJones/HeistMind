@@ -11,6 +11,7 @@ const base = createBaseConfig(__dirname, { environment: 'node' });
 (base as any).test.coverage.thresholds = {
   '**/character-rules.ts': { lines: 100, functions: 100, statements: 100, branches: 88 },
   '**/clocks.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
+  '**/crews.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/dice.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/supabase-character-management-repository.ts': {
     lines: 85,
