@@ -175,26 +175,33 @@ const ActionDots: React.FC<ActionDotsProps> = ({
     lg: 'gap-2',
   };
 
+  // Empty pips must stay visible on ANY card surface, in both themes. The old empty style
+  // (`bg-background-tertiary border-border-primary`) collided two ways: the fill matched the
+  // Card `default`/`character` hover surface (also `background-tertiary`), and `border-primary`
+  // shares the exact lightness of `background-tertiary` in both themes — so the outline never
+  // delineated the pip. The fix makes the pip self-delineating: a recessed `background-primary`
+  // fill (a darker "well" in dark mode) plus a higher-contrast `border-secondary` ring (the
+  // load-bearing cue in light mode, where the recessed fill goes near-white).
   const variants = {
     default: {
       filled: 'bg-brand-primary border-brand-primary/60 shadow-lg shadow-brand-primary/20',
-      empty: 'bg-background-tertiary border-border-primary hover:border-border-secondary',
+      empty: 'bg-background-primary border-border-secondary hover:border-border-muted',
     },
     ember: {
       filled: 'bg-game-ember border-game-ember/60 shadow-lg shadow-game-ember/20',
-      empty: 'bg-background-tertiary border-border-primary hover:border-game-ember/40',
+      empty: 'bg-background-primary border-border-secondary hover:border-game-ember/60',
     },
     steel: {
       filled: 'bg-game-steel border-game-steel/60 shadow-lg shadow-game-steel/20',
-      empty: 'bg-background-tertiary border-border-primary hover:border-game-steel/40',
+      empty: 'bg-background-primary border-border-secondary hover:border-game-steel/60',
     },
     shadow: {
       filled: 'bg-game-shadow border-game-shadow/60 shadow-lg shadow-game-shadow/20',
-      empty: 'bg-background-tertiary border-border-primary hover:border-game-shadow/40',
+      empty: 'bg-background-primary border-border-secondary hover:border-game-shadow/60',
     },
     crimson: {
       filled: 'bg-game-crimson border-game-crimson/60 shadow-lg shadow-game-crimson/20',
-      empty: 'bg-background-tertiary border-border-primary hover:border-game-crimson/40',
+      empty: 'bg-background-primary border-border-secondary hover:border-game-crimson/60',
     },
   };
 

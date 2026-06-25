@@ -1,0 +1,95 @@
+---
+name: cx-map
+description: Maintain HeistMind's living CX map (every page + user flow, with notes) and its findings log, and use them to run user-validation walkthroughs and surface CX flaws / FitD-rule gaps. Use when changing any route, screen, flow, or user-facing copy (update the map in lockstep), or when auditing the product for things to fix or improve.
+---
+
+# cx-map
+
+The single living reference for **what HeistMind does from a user's point of view**, and the
+discipline for keeping it true. It exists because the older `.memory-bank/` continuity docs went
+stale (they still describe a pre-launch app), and a stale CX doc is worse than none — it lies. This
+skill is the guard against that: it is the guide for **user validation** and for **discovering
+flaws to fix and gaps against the Forged-in-the-Dark (FitD) rules**.
+
+## Files this skill owns
+
+- **`CX-MAP.md`** (sibling) — the map: every route, the character-creation wizard, the campaign
+  panels, the GM/player roles, and the end-to-end journeys. Each section carries a
+  `_Last verified:_ <date> @ <short-sha>` marker.
+- **`FINDINGS.md`** (sibling) — the flaw / FitD-gap log: severity-scored, each with a concrete
+  location and a proposed fix, tracked from `open` to `fixed @<sha>`.
+
+These are plain Markdown — open them directly. The map is the stable reference; the findings log is
+the churn.
+
+## Live-update mandate (the core rule)
+
+**Any change that touches a route, screen, component, flow, or user-facing copy MUST update the
+matching section of `CX-MAP.md` in the same PR, and bump that section's `_Last verified:_` marker
+to the date + short SHA of the change.** Any issue discovered or fixed updates `FINDINGS.md`. The
+PR is not done until the map matches reality. This is what keeps the map from rotting — treat a map
+edit as part of the diff, like a test.
+
+When you finish a unit of UI work, ask: _did a user-visible thing change?_ If yes, the map changes
+too.
+
+## How to run a CX audit pass
+
+Walk each flow in `CX-MAP.md` through **two lenses**. Log everything genuine to `FINDINGS.md`;
+verify each finding against the actual code before logging — no speculation.
+
+**Lens 1 — UX heuristics**
+
+- Visibility of system status — does the user always know the current state and _why_ an action is
+  blocked (e.g. why "Next"/"Create" is disabled)?
+- FitD-terminology match — labels use the words a Blades GM/player expects.
+- User control & undo — every increment can be decremented; destructive actions confirm.
+- Consistency, error prevention, plain-language recovery copy (not raw Postgres/HTTP errors).
+- Recognition over recall; sensible empty / loading / error states.
+- **Persistence across reload** — this is an async play-by-post tool, so shared state must survive a
+  refresh and be visible to every player on load. Test the reload.
+- Responsive / mobile; accessibility (keyboard, focus order, ARIA, and **contrast** — the
+  hover-pip bug F1 is this class).
+- GM-vs-player affordances — is read-only obviously read-only? Can a player even join?
+
+**Lens 2 — FitD fidelity**
+Does each surfaced mechanic match the rules, and which expected play moves are missing? Probe:
+action roll **position/effect**, **resistance rolls + stress spend**, **devil's bargain**,
+**push-yourself**, **teamwork** (assist / lead group action / set up / protect), **downtime actions**
+(recover, acquire asset, long-term project, reduce heat, train, indulge vice + overindulgence),
+**flashbacks**, gather information, fortune rolls, clocks (incl. linked), crew XP/advancement +
+upgrades, faction status/clocks, harm healing + armor + **trauma conditions**, load → encounter
+limits.
+
+Parallelizing the sweep across areas (one agent per route/panel) is fine for breadth, but the
+person running the skill verifies each finding before it lands in the log.
+
+## Findings format
+
+Each entry in `FINDINGS.md` follows:
+
+```
+### F<n> — <one-line summary>
+- **severity:** S1 (blocker) | S2 (major) | S3 (minor) | S4 (polish)
+- **type:** CX-flaw | FitD-gap
+- **where:** <file:line or route/region>
+- **root cause:** <why it happens, citing code>
+- **fix:** <concrete proposed fix>
+- **status:** open | fixed @<sha>
+```
+
+Severity: **S1** core flow broken/blocked · **S2** major friction or a missing core rules move ·
+**S3** minor · **S4** polish.
+
+## User-validation checklist
+
+To validate (human tester or `gmPage`/`playerPage` Playwright), walk the journeys in `CX-MAP.md`
+end to end and, at each step, ask the Lens-1 questions above. The journeys are written as numbered
+steps for exactly this. Anything that makes you pause, second-guess, or hunt → a finding.
+
+## Shipping a fix
+
+Findings graduate into fixes through the existing **`deploy-verify-promote`** loop (sibling skill:
+`.claude/skills/deploy-verify-promote/SKILL.md`) — branch → PR to `development` (CI green) →
+promote to `main` → prod. When a fix lands, flip its finding to `fixed @<sha>` and update any
+affected `CX-MAP.md` section + its `_Last verified:_` marker.

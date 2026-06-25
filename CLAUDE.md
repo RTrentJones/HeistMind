@@ -103,7 +103,15 @@ Components wrap Radix UI primitives with Tailwind CSS 4 styling. Built with tsup
 
 ## Project Documentation
 
-The `.memory-bank/` directory contains project continuity docs (projectbrief.md, productContext.md, systemPatterns.md, techContext.md, activeContext.md, progress.md). These track architectural decisions, current sprint status, and domain context. Consult when onboarding to a new area.
+The `.memory-bank/` directory contains project continuity docs (projectbrief.md, productContext.md, systemPatterns.md, techContext.md, activeContext.md, progress.md). These track architectural decisions, current sprint status, and domain context. Consult when onboarding to a new area. (Note: several `.memory-bank/` files predate the FitD play features and are stale — trust the code and the CX map below over them.)
+
+## CX map (living page/flow doc)
+
+`.claude/skills/cx-map/` holds the **living CX map** (`CX-MAP.md` — every page + user flow) and the
+**findings log** (`FINDINGS.md` — CX flaws + FitD-rule gaps, severity-scored). Per the `cx-map`
+skill (`SKILL.md`), **update the map in the same PR whenever you change a route, screen, flow, or
+user-facing copy**, and log issues you find. It's the guide for user validation and for deciding
+what to fix next.
 
 ## Environment Variables
 
@@ -115,8 +123,9 @@ This repo uses Greenlight. Ship changes through the deploy-verify-promote skill:
 branch → change → deploy preview → `greenlight verify` → beta → verify → `greenlight promote` → prod → verify.
 
 Agentic kit:
+
 - Skill: `.claude/skills/deploy-verify-promote/SKILL.md` (the loop).
 - MCP servers: `.mcp.json` recommends the relevant providers — run `/mcp` to authenticate.
-    Vercel is OAuth; Supabase needs `SUPABASE_ACCESS_TOKEN` (+ `SUPABASE_PROJECT_REF`) in your env.
+  Vercel is OAuth; Supabase needs `SUPABASE_ACCESS_TOKEN` (+ `SUPABASE_PROJECT_REF`) in your env.
 - Best-practice skills (one-time, user scope):
-    `claude plugin marketplace add cloudflare/skills && claude plugin install cloudflare@cloudflare`
+  `claude plugin marketplace add cloudflare/skills && claude plugin install cloudflare@cloudflare`
