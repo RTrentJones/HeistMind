@@ -414,6 +414,12 @@ jobs:
 
           echo "✅ Security scan passed"
 
+      - name: Greenlight dangerous-SQL gate
+        # Greenlight's canonical pre-apply scan (DROP/TRUNCATE/DELETE- or UPDATE-without-WHERE → fail;
+        # lock-heavy ops warn). Runs in security-scan, which `deploy` needs: → a danger finding blocks
+        # the apply. Default mode (acknowledge an intentional op inline with `-- greenlight:allow`).
+        run: npx -y @rtrentjones/greenlight migrations scan ./supabase/migrations
+
   deploy:
     name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
