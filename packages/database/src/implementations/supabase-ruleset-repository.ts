@@ -9,7 +9,12 @@ import type {
   Result,
 } from '../domain-types';
 import type { RulesetRepository } from '../repositories';
-import { fromSupabaseRuleset, toSupabaseRulesetInsert } from '../adapters/ruleset-adapter';
+import type { UpdateRulesetData } from '../domain-types';
+import {
+  fromSupabaseRuleset,
+  toSupabaseRulesetInsert,
+  toSupabaseRulesetUpdate,
+} from '../adapters/ruleset-adapter';
 import { failFromError, failFromCatch, NO_ROWS, type CoreSchema } from './result-helpers';
 
 export class SupabaseRulesetRepository implements RulesetRepository {
@@ -72,8 +77,21 @@ export class SupabaseRulesetRepository implements RulesetRepository {
   async findWithDetails(): Promise<Result<RulesetWithDetails | null>> {
     throw new Error('SupabaseRulesetRepository.findWithDetails not implemented');
   }
-  async update(): Promise<Result<Ruleset>> {
-    throw new Error('SupabaseRulesetRepository.update not implemented');
+  // Update a ruleset's mutable fields (used to refresh a stale starter to the latest content).
+  // RLS (`rulesets_update_policy`) restricts this to the owner; `_userId` is kept for the interface.
+  async update(id: string, _userId: string, data: UpdateRulesetData): Promise<Result<Ruleset>> {
+    try {
+      const { data: row, error } = await this.db
+        .from('rulesets')
+        .update(toSupabaseRulesetUpdate(data))
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseRuleset(row) };
+    } catch (e) {
+      return failFromCatch(e);
+    }
   }
   async delete(): Promise<Result<void>> {
     throw new Error('SupabaseRulesetRepository.delete not implemented');
