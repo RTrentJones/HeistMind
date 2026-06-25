@@ -69,7 +69,8 @@ test.describe('GM: XP tracks + advancement (Brackwater)', () => {
     // The gate lifts: take the first buyable ability (Duelist) — it clears the playbook track.
     await expect(gmPage.getByText('Fill the playbook XP track')).toHaveCount(0);
     await gmPage.getByRole('button', { name: 'Take ability' }).first().click();
-    await expect(gmPage.getByText('knife-duelist')).toBeVisible({ timeout: 10_000 });
+    // The sheet's ability list shows the ability's name (Duelist), not its id.
+    await expect(gmPage.getByText('Duelist', { exact: true })).toBeVisible({ timeout: 10_000 });
     // Track cleared after spending it.
     await expect(gmPage.getByText('Full — ready to advance')).toHaveCount(0);
     await expect(gmPage.getByText('Playbook 0/8')).toBeVisible();

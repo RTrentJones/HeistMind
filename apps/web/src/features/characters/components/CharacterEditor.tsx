@@ -600,6 +600,16 @@ function AdvancementOptions({
                 <Text variant='muted' size='sm'>
                   {ability.description}
                 </Text>
+                {ability.rules && (
+                  <details className='mt-1'>
+                    <summary className='cursor-pointer text-xs text-foreground-muted'>
+                      Rules
+                    </summary>
+                    <Text variant='muted' size='sm' className='mt-1'>
+                      {ability.rules}
+                    </Text>
+                  </details>
+                )}
                 {reason && (
                   <Text variant='muted' size='sm'>
                     {reason}

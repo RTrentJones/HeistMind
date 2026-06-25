@@ -81,6 +81,15 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
     }
   });
 
+  it('every special ability ships resolvable rules text (fuller than its one-liner)', () => {
+    for (const ability of DEFAULT_RULESET.specialAbilities) {
+      expect(ability.rules, ability.id).toBeTruthy();
+      expect((ability.rules ?? '').trim().length, ability.id).toBeGreaterThan(20);
+      // The rules text is the full mechanical effect — not a copy of the short description.
+      expect(ability.rules, ability.id).not.toBe(ability.description);
+    }
+  });
+
   it('every playbook ability id resolves to a defined special ability', () => {
     for (const pb of DEFAULT_RULESET.playbooks) {
       for (const id of [...pb.startingAbilities, ...pb.specialAbilities]) {
