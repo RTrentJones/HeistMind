@@ -18,6 +18,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
+import { CrewSheet } from '@/features/crews/components/CrewSheet';
 
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
@@ -122,6 +123,17 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
             ))}
           </Stack>
         )}
+
+        <Heading level='h2' variant='primary'>
+          Crew
+        </Heading>
+        <Card variant='outline'>
+          <CrewSheet
+            gameId={gameId}
+            isGm={game.createdBy === user?.id}
+            crewRules={game.ruleset.content.crew}
+          />
+        </Card>
 
         <Heading level='h2' variant='primary'>
           Clocks

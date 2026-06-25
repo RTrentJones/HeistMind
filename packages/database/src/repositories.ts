@@ -13,6 +13,9 @@ import {
   Clock,
   CreateClockData,
   UpdateClockData,
+  Crew,
+  CreateCrewData,
+  UpdateCrewData,
   CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
@@ -252,6 +255,13 @@ export interface ClockRepository {
   delete(id: string): Promise<Result<void>>;
 }
 
+/** The one shared crew sheet per game. Members read; the game's GM maintains it. */
+export interface CrewRepository {
+  findByGame(gameId: string): Promise<Result<Crew | null>>;
+  create(userId: string, data: CreateCrewData): Promise<Result<Crew>>;
+  update(id: string, data: UpdateCrewData): Promise<Result<Crew>>;
+}
+
 export interface DatabaseRepositories {
   profiles: ProfileRepository;
   rulesets: RulesetRepository;
@@ -261,6 +271,7 @@ export interface DatabaseRepositories {
   invitations: InvitationRepository;
   rolls: RollRepository;
   clocks: ClockRepository;
+  crews: CrewRepository;
   gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
 }

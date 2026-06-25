@@ -72,6 +72,18 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
     expect(categories).toContain('skill'); // attribute track → an action dot
   });
 
+  it('ships crew content: types, crew abilities, and claims', () => {
+    const crew = DEFAULT_RULESET.crew;
+    expect(crew).toBeTruthy();
+    expect((crew?.types.length ?? 0) >= 3).toBe(true);
+    expect((crew?.abilities.length ?? 0) >= 3).toBe(true);
+    expect((crew?.claims?.length ?? 0) >= 3).toBe(true);
+    for (const t of crew?.types ?? []) {
+      expect(t.id, t.name).toBeTruthy();
+      expect(t.name, t.id).toBeTruthy();
+    }
+  });
+
   it('every playbook seeds exactly one starting action dot that is a real action', () => {
     for (const pb of DEFAULT_RULESET.playbooks) {
       const keys = Object.keys(pb.skills);
