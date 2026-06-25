@@ -10,6 +10,18 @@ export * from './repositories';
 // Re-export the pure character-validity rules (shared by the web UI + the DB layer)
 export * from './character-rules';
 
+// Re-export the pure dice resolution (shared by the web UI + the roll repository)
+export * from './dice';
+
+// Re-export the pure progress-clock rules (shared by the web UI + the clock repository)
+export * from './clocks';
+
+// Re-export the pure crew-sheet bounds (shared by the web UI + the crew repository)
+export * from './crews';
+
+// Re-export the pure faction bounds (shared by the web UI + the faction repository)
+export * from './factions';
+
 // Re-export authentication types and interfaces
 export * from './auth-types';
 

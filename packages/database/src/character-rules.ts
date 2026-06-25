@@ -8,10 +8,13 @@
 import type {
   RulesetContent,
   CharacterData,
+  CharacterXp,
   AbilityDefinition,
   PlaybookDefinition,
   CreationRestriction,
   StressRules,
+  HarmRules,
+  LoadLevel,
   ValidationError,
 } from './domain-types';
 import type { ValidationResult, ValidationWarning, CharacterAdvancement } from './repositories';
@@ -174,6 +177,28 @@ export function stressBounds(ruleset: RulesetContent): StressRules {
   return ruleset.stress ?? DEFAULT_STRESS;
 }
 
+/** BitD harm-track box counts, used when a ruleset omits `harm`. */
+export const DEFAULT_HARM: HarmRules = { lesser: 2, moderate: 2, severe: 1 };
+
+/** Harm-track box counts, defaulting to BitD values when the ruleset omits `harm`. */
+export function harmBounds(ruleset: RulesetContent): HarmRules {
+  return ruleset.harm ?? DEFAULT_HARM;
+}
+
+/** BitD default load capacities, used when a ruleset omits `equipment.loadCapacity`. */
+const DEFAULT_LOAD: Record<LoadLevel, number> = { light: 3, normal: 5, heavy: 6 };
+
+/** Carry limit for a load level (ruleset's `equipment.loadCapacity`, else BitD defaults). */
+export function loadLimit(ruleset: RulesetContent, level: LoadLevel): number {
+  return ruleset.equipment?.loadCapacity?.[level] ?? DEFAULT_LOAD[level];
+}
+
+/** Total load of a character's carried items (summed from the ruleset's item loads). */
+export function loadUsed(ruleset: RulesetContent, data: CharacterData): number {
+  const byId = new Map((ruleset.equipment?.items ?? []).map(i => [i.id, i.load ?? 0]));
+  return (data.loadout?.items ?? []).reduce((n, id) => n + (byId.get(id) ?? 0), 0);
+}
+
 /**
  * The XP cost of an advancement, resolved from the ruleset (trusted over a client-supplied cost).
  * Matches an advancement option by id (`adv.target`) or, failing that, by category (`adv.type`).
@@ -183,6 +208,71 @@ export function advancementCost(ruleset: RulesetContent, adv: CharacterAdvanceme
   const byId = options.find(o => o.id === adv.target);
   const byCategory = options.find(o => o.category === adv.type);
   return byId?.cost ?? byCategory?.cost ?? adv.cost;
+}
+
+// ----- XP tracks (BitD-style advancement; opt-in via `advancement.xpTracks`) -----------------
+
+/** The playbook-track id used for ability/playbook advances (attribute tracks key by attribute id). */
+export const PLAYBOOK_TRACK = 'playbook';
+const EMPTY_XP: CharacterXp = { playbook: 0, attributes: {} };
+
+/** Whether the ruleset advances via XP tracks (vs a flat XP pool). */
+export function usesXpTracks(ruleset: RulesetContent): boolean {
+  return !!ruleset.advancement?.xpTracks;
+}
+
+/** Box count of a track: `'playbook'` → the playbook track, else an attribute track. 0 if not opted in. */
+export function xpTrackSize(ruleset: RulesetContent, track: string): number {
+  const tracks = ruleset.advancement?.xpTracks;
+  if (!tracks) return 0;
+  return track === PLAYBOOK_TRACK ? tracks.playbook : tracks.attribute;
+}
+
+/** Current marks in a track. */
+export function xpMarks(data: CharacterData, track: string): number {
+  if (track === PLAYBOOK_TRACK) return data.xp?.playbook ?? 0;
+  return data.xp?.attributes?.[track] ?? 0;
+}
+
+/** Whether a track has filled (and so unlocks an advance). */
+export function xpTrackFull(ruleset: RulesetContent, data: CharacterData, track: string): boolean {
+  const size = xpTrackSize(ruleset, track);
+  return size > 0 && xpMarks(data, track) >= size;
+}
+
+/**
+ * The XP track an advancement draws from: ability/playbook advances clear the playbook track;
+ * attribute advances clear that attribute's track; an action-dot (`skill`) advance clears the
+ * track of the attribute that owns the action.
+ */
+export function advanceTrack(ruleset: RulesetContent, adv: CharacterAdvancement): string {
+  if (adv.type === 'attribute') return adv.target;
+  if (adv.type === 'skill') {
+    const owner = (ruleset.attributes ?? []).find(a => (a.skills ?? []).includes(adv.target));
+    return owner?.id ?? PLAYBOOK_TRACK;
+  }
+  return PLAYBOOK_TRACK;
+}
+
+/** New XP state with `delta` marks applied to a track, clamped to `[0, trackSize]`. */
+export function markXp(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  track: string,
+  delta: number
+): CharacterXp {
+  const xp = data.xp ?? EMPTY_XP;
+  const size = xpTrackSize(ruleset, track);
+  const next = Math.max(0, Math.min(size, xpMarks(data, track) + delta));
+  if (track === PLAYBOOK_TRACK) return { playbook: next, attributes: { ...xp.attributes } };
+  return { playbook: xp.playbook, attributes: { ...xp.attributes, [track]: next } };
+}
+
+/** New XP state with a track reset to 0 (called when an advance spends a full track). */
+export function clearXpTrack(data: CharacterData, track: string): CharacterXp {
+  const xp = data.xp ?? EMPTY_XP;
+  if (track === PLAYBOOK_TRACK) return { playbook: 0, attributes: { ...xp.attributes } };
+  return { playbook: xp.playbook, attributes: { ...xp.attributes, [track]: 0 } };
 }
 
 // ----- restriction evaluation ----------------------------------------------------------------
@@ -310,6 +400,31 @@ export function validateCharacter(
     errors.push(
       err('trauma', 'TRAUMA_OVER', `A character can hold at most ${bounds.traumaMax} trauma.`)
     );
+
+  // Harm-track bounds (both modes), if the character tracks harm.
+  if (data.harm) {
+    const harm = harmBounds(ruleset);
+    for (const level of ['lesser', 'moderate', 'severe'] as const) {
+      if ((data.harm[level]?.length ?? 0) > harm[level])
+        errors.push(
+          err(`harm.${level}`, 'HARM_OVER', `Too much ${level} harm (max ${harm[level]}).`)
+        );
+    }
+  }
+
+  // Load: carried items can't exceed the chosen load level's capacity (both modes).
+  if (data.loadout) {
+    const used = loadUsed(ruleset, data);
+    const limit = loadLimit(ruleset, data.loadout.level);
+    if (used > limit)
+      errors.push(
+        err(
+          'loadout',
+          'LOAD_OVER',
+          `Carrying ${used} load exceeds the ${data.loadout.level} limit of ${limit}.`
+        )
+      );
+  }
 
   if (mode === 'creation') {
     if (actionMode) {

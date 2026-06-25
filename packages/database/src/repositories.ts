@@ -8,6 +8,17 @@ import {
   GamePlayer,
   Character,
   Invitation,
+  Roll,
+  CreateRollData,
+  Clock,
+  CreateClockData,
+  UpdateClockData,
+  Crew,
+  CreateCrewData,
+  UpdateCrewData,
+  Faction,
+  CreateFactionData,
+  UpdateFactionData,
   CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
@@ -233,6 +244,35 @@ export interface Activity {
 // REPOSITORY FACTORY
 // ===========================
 
+/** Append-only dice-roll log, scoped per game (the play-by-post centerpiece). */
+export interface RollRepository {
+  create(userId: string, data: CreateRollData): Promise<Result<Roll>>;
+  findByGame(gameId: string, limit?: number): Promise<Result<Roll[]>>;
+}
+
+/** Per-game progress clocks. Members read; the game's GM creates / ticks / removes them. */
+export interface ClockRepository {
+  create(userId: string, data: CreateClockData): Promise<Result<Clock>>;
+  findByGame(gameId: string): Promise<Result<Clock[]>>;
+  update(id: string, data: UpdateClockData): Promise<Result<Clock>>;
+  delete(id: string): Promise<Result<void>>;
+}
+
+/** The one shared crew sheet per game. Members read; the game's GM maintains it. */
+export interface CrewRepository {
+  findByGame(gameId: string): Promise<Result<Crew | null>>;
+  create(userId: string, data: CreateCrewData): Promise<Result<Crew>>;
+  update(id: string, data: UpdateCrewData): Promise<Result<Crew>>;
+}
+
+/** Per-game factions + status. Members read; the game's GM maintains them. */
+export interface FactionRepository {
+  findByGame(gameId: string): Promise<Result<Faction[]>>;
+  create(userId: string, data: CreateFactionData): Promise<Result<Faction>>;
+  update(id: string, data: UpdateFactionData): Promise<Result<Faction>>;
+  delete(id: string): Promise<Result<void>>;
+}
+
 export interface DatabaseRepositories {
   profiles: ProfileRepository;
   rulesets: RulesetRepository;
@@ -240,6 +280,10 @@ export interface DatabaseRepositories {
   gamePlayers: GamePlayerRepository;
   characters: CharacterRepository;
   invitations: InvitationRepository;
+  rolls: RollRepository;
+  clocks: ClockRepository;
+  crews: CrewRepository;
+  factions: FactionRepository;
   gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
 }

@@ -1,20 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { CharacterWithDetails } from '@heist-mind/database';
+import {
+  stressBounds,
+  harmBounds,
+  loadLimit,
+  loadUsed,
+  usesActionRatings,
+  rulesetActions,
+  usesXpTracks,
+  xpTrackSize,
+  xpMarks,
+  xpTrackFull,
+  markXp,
+  PLAYBOOK_TRACK,
+  type CharacterWithDetails,
+} from '@heist-mind/database';
 import {
   Badge,
   Button,
   Card,
   ErrorDisplay,
+  HarmTracker,
   Heading,
   Input,
   LoadingSpinner,
   Stack,
+  StressTracker,
   Text,
 } from '@heist-mind/ui';
+
+const EMPTY_HARM = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { RollPanel } from '@/features/rolls/components/RollPanel';
+import { RollLog } from '@/features/rolls/components/RollLog';
 import { CharacterEditor } from './CharacterEditor';
 
 /** View a character and modify it (rename, award XP, and edit the validated build). */
@@ -27,6 +47,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [showEditor, setShowEditor] = useState(false);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [rollKey, setRollKey] = useState(0);
 
   const load = async () => {
     const result = await getRepositories().characters.findWithDetails(characterId);
@@ -79,6 +100,44 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     else setError(result.error?.message ?? 'Failed to add XP');
   };
 
+  // Live stress: clicking the tracker on the sheet face saves immediately (no "Edit build" needed).
+  const setStress = async (v: number) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    const max = stressBounds(character.ruleset.content).max;
+    const characterData = { ...character.characterData, stress: Math.max(0, Math.min(v, max)) };
+    setSaving(true);
+    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
+      characterId,
+      userId,
+      { characterData }
+    );
+    setSaving(false);
+    if (r.success) await load();
+    else setError(r.error?.message ?? 'Failed to save stress');
+  };
+
+  // Mark XP into a track (playbook or an attribute id). Sets the track to `value`, clamped, and
+  // saves through the same validated path — every player sees the marks on load (the async loop).
+  const setXp = async (track: string, value: number) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    const content = character.ruleset.content;
+    const current = xpMarks(character.characterData, track);
+    const target = Math.max(0, Math.min(value, xpTrackSize(content, track)));
+    if (target === current) return;
+    const xp = markXp(content, character.characterData, track, target - current);
+    setSaving(true);
+    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
+      characterId,
+      userId,
+      { characterData: { ...character.characterData, xp } }
+    );
+    setSaving(false);
+    if (r.success) await load();
+    else setError(r.error?.message ?? 'Failed to mark XP');
+  };
+
   if (loading) return <LoadingSpinner />;
   if (error || !character) {
     return <ErrorDisplay title="Couldn't load character" message={error ?? 'Unknown error'} />;
@@ -127,12 +186,15 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
             {character.ruleset.name} · {character.playbookType}
           </Text>
 
-          <Stack direction='row' gap='sm' align='center'>
-            <Badge variant='gold'>{character.experiencePoints} XP</Badge>
-            <Button variant='outline' size='sm' onClick={addXp} loading={saving}>
-              Add XP
-            </Button>
-          </Stack>
+          {/* Flat XP pool (point-buy rulesets); track rulesets show the Experience card below. */}
+          {!usesXpTracks(character.ruleset.content) && (
+            <Stack direction='row' gap='sm' align='center'>
+              <Badge variant='gold'>{character.experiencePoints} XP</Badge>
+              <Button variant='outline' size='sm' onClick={addXp} loading={saving}>
+                Add XP
+              </Button>
+            </Stack>
+          )}
 
           <div>
             <Text as='strong'>Attributes</Text>
@@ -152,25 +214,227 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               )}
             </Stack>
           </div>
-
-          <div>
-            <Text as='strong'>Special Abilities</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {abilities.length > 0 ? (
-                abilities.map(a => (
-                  <Badge key={a} variant='success'>
-                    {a}
-                  </Badge>
-                ))
-              ) : (
-                <Text variant='muted' size='sm'>
-                  None chosen.
-                </Text>
-              )}
-            </Stack>
-          </div>
         </Stack>
       </Card>
+
+      {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
+      <Card variant='outline'>
+        <Stack direction='column' gap='md'>
+          <Heading level='h3'>Special Abilities</Heading>
+          {abilities.length > 0 ? (
+            <Stack direction='column' gap='xs'>
+              {abilities.map(id => {
+                const def = character.ruleset.content.specialAbilities?.find(a => a.id === id);
+                return (
+                  <details key={id} className='rounded-md border border-border-primary px-3 py-2'>
+                    <summary className='cursor-pointer'>
+                      <span className='font-display'>{def?.name ?? id}</span>
+                      {def?.tier != null && (
+                        <Badge variant='gold' size='sm' className='ml-2'>
+                          Tier {def.tier}
+                        </Badge>
+                      )}
+                    </summary>
+                    <Text variant='muted' size='sm' className='mt-2'>
+                      {def?.rules ?? def?.description ?? 'No rules text for this ability.'}
+                    </Text>
+                  </details>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Text variant='muted' size='sm'>
+              None chosen.
+            </Text>
+          )}
+        </Stack>
+      </Card>
+
+      <Card variant='outline'>
+        <Stack direction='column' gap='md'>
+          <Heading level='h3'>Condition</Heading>
+          <StressTracker
+            current={character.characterData?.stress ?? 0}
+            max={stressBounds(character.ruleset.content).max}
+            interactive
+            showNumbers
+            size='lg'
+            onChange={v => void setStress(v)}
+          />
+          <div>
+            <Text as='strong'>Harm</Text>
+            <HarmTracker
+              harm={character.characterData?.harm ?? EMPTY_HARM}
+              bounds={harmBounds(character.ruleset.content)}
+            />
+          </div>
+          {(character.characterData?.trauma?.length ?? 0) > 0 && (
+            <div>
+              <Text as='strong'>Trauma</Text>
+              <Stack direction='row' gap='sm' className='flex-wrap'>
+                {character.characterData.trauma.map(t => (
+                  <Badge key={t} variant='stress-critical'>
+                    {t}
+                  </Badge>
+                ))}
+              </Stack>
+            </div>
+          )}
+        </Stack>
+      </Card>
+
+      {usesXpTracks(character.ruleset.content) &&
+        (() => {
+          const content = character.ruleset.content;
+          const data = character.characterData;
+          const triggers = content.advancement?.xpTriggers ?? [];
+          const pbFull = xpTrackFull(content, data, PLAYBOOK_TRACK);
+          return (
+            <Card variant='outline'>
+              <Stack direction='column' gap='md'>
+                <Heading level='h3'>Experience</Heading>
+                <Text variant='muted' size='sm'>
+                  Mark XP as you play. When a track fills, open{' '}
+                  <strong>Edit build → Advancement</strong> to clear it and take an advance.
+                </Text>
+
+                <div data-testid='xp-track-playbook'>
+                  <Stack direction='row' gap='sm' align='center'>
+                    <Text as='strong'>Playbook</Text>
+                    {pbFull && <Badge variant='gold'>Full — ready to advance</Badge>}
+                  </Stack>
+                  <StressTracker
+                    current={xpMarks(data, PLAYBOOK_TRACK)}
+                    max={xpTrackSize(content, PLAYBOOK_TRACK)}
+                    interactive
+                    showNumbers
+                    showLabel={false}
+                    onChange={v => void setXp(PLAYBOOK_TRACK, v)}
+                  />
+                </div>
+
+                {triggers.length > 0 && (
+                  <Stack direction='column' gap='xs'>
+                    {triggers.map(t => (
+                      <Stack key={t.id} direction='row' gap='sm' align='center' justify='between'>
+                        <Text variant='muted' size='sm'>
+                          {t.description}
+                        </Text>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          disabled={saving || pbFull}
+                          onClick={() =>
+                            void setXp(PLAYBOOK_TRACK, xpMarks(data, PLAYBOOK_TRACK) + t.value)
+                          }
+                        >
+                          +{t.value}
+                        </Button>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+
+                {content.attributes.map(attr => (
+                  <div key={attr.id} data-testid={`xp-track-${attr.id}`}>
+                    <Stack direction='row' gap='sm' align='center'>
+                      <Text as='strong'>{attr.name}</Text>
+                      {xpTrackFull(content, data, attr.id) && (
+                        <Badge variant='gold'>Full — ready to advance</Badge>
+                      )}
+                    </Stack>
+                    <StressTracker
+                      current={xpMarks(data, attr.id)}
+                      max={xpTrackSize(content, attr.id)}
+                      interactive
+                      showNumbers
+                      showLabel={false}
+                      onChange={v => void setXp(attr.id, v)}
+                    />
+                  </div>
+                ))}
+              </Stack>
+            </Card>
+          );
+        })()}
+
+      {(() => {
+        const content = character.ruleset.content;
+        const data = character.characterData;
+        const loadout = data?.loadout;
+        const itemsById = new Map((content.equipment?.items ?? []).map(i => [i.id, i]));
+        const carried = (loadout?.items ?? [])
+          .map(id => itemsById.get(id)?.name ?? id)
+          .filter(Boolean);
+        const friend = data?.contacts?.find(c => c.relationship === 'friend')?.name;
+        const rival = data?.contacts?.find(c => c.relationship === 'rival')?.name;
+        const hasGear =
+          loadout || (data?.coins ?? 0) > 0 || (data?.stash ?? 0) > 0 || friend || rival;
+        if (!hasGear) return null;
+        return (
+          <Card variant='outline'>
+            <Stack direction='column' gap='md'>
+              <Heading level='h3'>Gear &amp; Coin</Heading>
+              <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+                {loadout && (
+                  <Badge variant='steel' className='capitalize'>
+                    {loadout.level} load · {loadUsed(content, data)}/
+                    {loadLimit(content, loadout.level)}
+                  </Badge>
+                )}
+                <Badge variant='gold'>{data?.coins ?? 0} coin</Badge>
+                {(data?.stash ?? 0) > 0 && <Badge variant='gold'>{data.stash} stash</Badge>}
+              </Stack>
+              {carried.length > 0 && (
+                <div>
+                  <Text as='strong'>Carried</Text>
+                  <Stack direction='row' gap='sm' className='flex-wrap'>
+                    {carried.map(n => (
+                      <Badge key={n} variant='steel'>
+                        {n}
+                      </Badge>
+                    ))}
+                  </Stack>
+                </div>
+              )}
+              {(friend || rival) && (
+                <div>
+                  <Text as='strong'>Friends &amp; Rivals</Text>
+                  <Stack direction='row' gap='sm' className='flex-wrap'>
+                    {friend && <Badge variant='success'>Friend: {friend}</Badge>}
+                    {rival && <Badge variant='stress-critical'>Rival: {rival}</Badge>}
+                  </Stack>
+                </div>
+              )}
+            </Stack>
+          </Card>
+        );
+      })()}
+
+      <Card variant='outline'>
+        <Stack direction='column' gap='md'>
+          <Heading level='h3'>Dice</Heading>
+          {usesActionRatings(character.ruleset.content) ? (
+            <RollPanel
+              gameId={character.gameId}
+              characterId={character.id}
+              actions={rulesetActions(character.ruleset.content).map(name => ({
+                name,
+                rating: character.characterData?.skills?.[name] ?? 0,
+              }))}
+              onRolled={() => setRollKey(k => k + 1)}
+            />
+          ) : (
+            <RollPanel
+              gameId={character.gameId}
+              characterId={character.id}
+              onRolled={() => setRollKey(k => k + 1)}
+            />
+          )}
+          <RollLog gameId={character.gameId} refreshKey={rollKey} />
+        </Stack>
+      </Card>
+
       {showEditor && <CharacterEditor character={character} onSaved={() => void load()} />}
     </Stack>
   );

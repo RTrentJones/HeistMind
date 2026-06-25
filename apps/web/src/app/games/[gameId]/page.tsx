@@ -15,15 +15,21 @@ import {
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { RollPanel } from '@/features/rolls/components/RollPanel';
+import { RollLog } from '@/features/rolls/components/RollLog';
+import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
+import { CrewSheet } from '@/features/crews/components/CrewSheet';
+import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
 
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [game, setGame] = useState<GameWithDetails | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rollKey, setRollKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -118,6 +124,48 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
             ))}
           </Stack>
         )}
+
+        <Heading level='h2' variant='primary'>
+          Crew
+        </Heading>
+        <Card variant='outline'>
+          <CrewSheet
+            gameId={gameId}
+            isGm={game.createdBy === user?.id}
+            crewRules={game.ruleset.content.crew}
+          />
+        </Card>
+
+        <Heading level='h2' variant='primary'>
+          Clocks
+        </Heading>
+        <Card variant='outline'>
+          <ClocksPanel gameId={gameId} isGm={game.createdBy === user?.id} />
+        </Card>
+
+        <Heading level='h2' variant='primary'>
+          Factions
+        </Heading>
+        <Card variant='outline'>
+          <FactionsPanel
+            gameId={gameId}
+            isGm={game.createdBy === user?.id}
+            suggestions={game.ruleset.content.factions}
+          />
+        </Card>
+
+        <Heading level='h2' variant='primary'>
+          Roll Log
+        </Heading>
+        <Card variant='outline'>
+          <Stack direction='column' gap='md'>
+            <Text variant='muted' size='sm'>
+              Fortune / GM roll
+            </Text>
+            <RollPanel gameId={gameId} onRolled={() => setRollKey(k => k + 1)} />
+          </Stack>
+        </Card>
+        <RollLog gameId={gameId} refreshKey={rollKey} />
       </Stack>
     </Container>
   );

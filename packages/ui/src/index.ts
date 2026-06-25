@@ -110,6 +110,8 @@ export * from './components/ErrorFallbacks';
 
 // Game-specific components
 export * from './components/StressTracker';
+export * from './components/HarmTracker';
+export * from './components/Clock';
 
 // Styles - export path for manual import to prevent duplicate CSS
 // Import './styles/globals.css' in your app's main file only once

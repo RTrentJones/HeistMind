@@ -1,6 +1,8 @@
 // HeistMind Domain Types
 // Database-agnostic types for application use
 
+import type { RollKind, RollOutcome } from './dice';
+
 // ===========================
 // CORE DOMAIN ENTITIES
 // ===========================
@@ -83,6 +85,146 @@ export interface Character {
   updatedAt: Date;
 }
 
+/** A persisted dice roll — the per-game, play-by-post roll log. */
+export interface Roll {
+  id: string;
+  gameId: string;
+  characterId: string | null;
+  userId: string;
+  kind: RollKind;
+  label: string | null;
+  dice: number;
+  results: number[];
+  outcome: RollOutcome;
+  position: string | null;
+  effect: string | null;
+  note: string | null;
+  createdAt: Date;
+}
+
+export interface CreateRollData {
+  gameId: string;
+  characterId?: string;
+  kind: RollKind;
+  label?: string;
+  dice: number;
+  results: number[];
+  /** When true the roll took the LOWEST of the dice (rating 0); drives the outcome recompute. */
+  zeroDice?: boolean;
+  position?: string;
+  effect?: string;
+  note?: string;
+}
+
+/** A FitD progress clock: a named ring of `segments` (4/6/8/10/12) that fills as a situation develops. */
+export interface Clock {
+  id: string;
+  gameId: string;
+  name: string;
+  segments: ClockSegments;
+  filled: number;
+  /** Optional link to another campaign object (e.g. a faction project clock). */
+  linkedType: string | null;
+  linkedId: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** The legal segment counts for a FitD clock. */
+export type ClockSegments = 4 | 6 | 8 | 10 | 12;
+
+export interface CreateClockData {
+  gameId: string;
+  name: string;
+  segments: ClockSegments;
+  filled?: number;
+  linkedType?: string;
+  linkedId?: string;
+}
+
+export interface UpdateClockData {
+  name?: string;
+  segments?: ClockSegments;
+  filled?: number;
+}
+
+/** The shared crew sheet — one per game. FitD bounds: tier 0–4, heat 0–9, wanted 0–4. */
+export interface Crew {
+  id: string;
+  gameId: string;
+  name: string | null;
+  crewType: string | null;
+  tier: number;
+  rep: number;
+  heat: number;
+  wanted: number;
+  hold: CrewHold;
+  coin: number;
+  vault: number;
+  crewAbilities: string[];
+  /** Held claims (names or ruleset claim ids). */
+  claims: string[];
+  /** Cohort descriptions (gangs / experts). */
+  cohorts: string[];
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type CrewHold = 'weak' | 'strong';
+
+export interface CreateCrewData {
+  gameId: string;
+  name?: string;
+  crewType?: string;
+}
+
+export interface UpdateCrewData {
+  name?: string;
+  crewType?: string;
+  tier?: number;
+  rep?: number;
+  heat?: number;
+  wanted?: number;
+  hold?: CrewHold;
+  coin?: number;
+  vault?: number;
+  crewAbilities?: string[];
+  claims?: string[];
+  cohorts?: string[];
+}
+
+/** A city power. FitD bounds: tier 0–6, status −3 (at war) … +3 (allied). */
+export interface Faction {
+  id: string;
+  gameId: string;
+  name: string;
+  factionType: string | null;
+  tier: number;
+  status: number;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateFactionData {
+  gameId: string;
+  name: string;
+  factionType?: string;
+  tier?: number;
+  status?: number;
+}
+
+export interface UpdateFactionData {
+  name?: string;
+  factionType?: string;
+  tier?: number;
+  status?: number;
+  notes?: string;
+}
+
 export interface Invitation {
   id: string;
   gameId: string;
@@ -129,11 +271,52 @@ export interface RulesetContent {
   characterCreation: CreationRules;
   /** Stress/trauma bounds. Optional; defaults to BitD `{ max: 9, traumaMax: 4 }` when absent. */
   stress?: StressRules;
+  /** Harm-track box counts per level. Optional; defaults to BitD `{ lesser:2, moderate:2, severe:1 }`. */
+  harm?: HarmRules;
+  /** Optional crew-sheet content (crew types, crew abilities, available claims). */
+  crew?: CrewRules;
+  /** Optional suggested factions the GM can seed into a campaign. */
+  factions?: FactionDefinition[];
+}
+
+/** A ruleset-suggested faction (the GM can add it to a campaign with one click). */
+export interface FactionDefinition {
+  name: string;
+  type?: string;
+  tier?: number;
+  description?: string;
+}
+
+/** Ruleset-level crew content: the types a crew can be, the crew abilities, and available claims. */
+export interface CrewRules {
+  types: CrewTypeDefinition[];
+  abilities: CrewAbilityDefinition[];
+  claims?: string[];
+}
+
+export interface CrewTypeDefinition {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface CrewAbilityDefinition {
+  id: string;
+  name: string;
+  description: string;
+  /** Which crew type this ability belongs to (optional — shared abilities omit it). */
+  crewType?: string;
 }
 
 export interface StressRules {
   max: number;
   traumaMax: number;
+}
+
+export interface HarmRules {
+  lesser: number;
+  moderate: number;
+  severe: number;
 }
 
 export interface PlaybookDefinition {
@@ -168,7 +351,10 @@ export interface SkillDefinition {
 export interface AbilityDefinition {
   id: string;
   name: string;
+  /** A short, evocative one-liner (shown on cards). */
   description: string;
+  /** Full, resolvable rules text — the exact mechanical effect (shown in an expandable detail). */
+  rules?: string;
   prerequisite?: string;
   tier?: number;
   category?: string;
@@ -206,6 +392,19 @@ export interface AdvancementRules {
   xpTriggers: XPTrigger[];
   advancementOptions: AdvancementOption[];
   playbookAdvancement?: PlaybookAdvancement[];
+  /**
+   * Opt-in: model advancement as BitD-style XP tracks rather than a flat XP pool. When present,
+   * the character marks XP into per-attribute tracks + a playbook track; an advancement is gated
+   * on its track being full (then the track is cleared) instead of on spending pooled XP.
+   */
+  xpTracks?: XpTrackRules;
+}
+
+export interface XpTrackRules {
+  /** Boxes in the playbook XP track (BitD: 8) — fills to unlock an ability/playbook advance. */
+  playbook: number;
+  /** Boxes in each attribute XP track (BitD: 6) — fills to unlock an action-dot/attribute advance. */
+  attribute: number;
 }
 
 export interface XPTrigger {
@@ -297,9 +496,24 @@ export interface CharacterData {
   items: CharacterItem[];
   stress: number;
   trauma: string[];
+  /** Harm entries per level (each a short description). Bounded by the ruleset's `harm` rules. */
+  harm?: CharacterHarm;
+  /** Chosen load level + the items carried this score (item ids from the ruleset). */
+  loadout?: CharacterLoadout;
   coins: number;
+  /** Coin saved toward retirement (separate from carried `coins`). */
+  stash?: number;
+  /** BitD-style XP track marks (only when the ruleset opts into `advancement.xpTracks`). */
+  xp?: CharacterXp;
   contacts: CharacterContact[];
   custom: Record<string, any>;
+}
+
+export interface CharacterXp {
+  /** Marks in the playbook XP track. */
+  playbook: number;
+  /** Marks in each attribute XP track, keyed by attribute id. */
+  attributes: Record<string, number>;
 }
 
 export interface CharacterItem {
@@ -309,6 +523,23 @@ export interface CharacterItem {
   load?: number;
   quality?: number;
   equipped: boolean;
+}
+
+export type LoadLevel = 'light' | 'normal' | 'heavy';
+
+export interface CharacterLoadout {
+  level: LoadLevel;
+  /** Item ids (from `RulesetContent.equipment.items`) marked as carried. */
+  items: string[];
+}
+
+export interface CharacterHarm {
+  /** Level 1 — lesser harm (reduced effect). */
+  lesser: string[];
+  /** Level 2 — moderate harm (reduced effect / -1d). */
+  moderate: string[];
+  /** Level 3 — severe harm (need help to act). */
+  severe: string[];
 }
 
 export interface CharacterContact {

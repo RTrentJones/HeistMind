@@ -222,6 +222,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'knife',
       description: 'When you take harm, draw on grit — spend stress to shrug off the worst of it.',
+      rules:
+        'When you resist physical harm, take 1 less stress to do so (minimum 0). The first time you take harm in melee each score, you may resist it without spending any stress.',
     },
     {
       id: 'knife-bulwark',
@@ -229,6 +231,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'knife',
       description: 'Shield a teammate from a blow, taking or turning the harm, with extra effect.',
+      rules:
+        "When you protect a teammate from a blow, you may take the harm onto yourself (resisting it normally) or reduce its level by one. You resist consequences on a teammate's behalf with increased effect.",
     },
     {
       id: 'knife-duelist',
@@ -236,6 +240,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'knife',
       description: 'You can fight a group of lesser foes as though they were a single opponent.',
+      rules:
+        "In close combat you may treat a group of lesser foes as a single opponent — they don't gain increased scale against you, and you can cut through them as one action.",
     },
     {
       id: 'knife-captain',
@@ -243,6 +249,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'knife',
       description: 'When you lead a group action, spend stress to grant an ally a bonus die.',
+      rules:
+        'When you lead a group action, spend 1 stress to grant one participant a bonus die for their roll. (You still take 1 stress for each participant who rolls a 1–3, as normal.)',
     },
     {
       id: 'knife-packhorse',
@@ -250,6 +258,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'knife',
       description: 'Your heavy load limit is higher; you carry more gear without slowing down.',
+      rules:
+        'Your load limits increase: light 4, normal 6, heavy 9. You carry more gear without being slowed or marked as obviously armed.',
     },
     {
       id: 'knife-brutal',
@@ -257,6 +267,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'knife',
       description: 'When you use violence to frighten or coerce, you act with increased effect.',
+      rules:
+        'When you use violence or the threat of it to compel a target, you act with increased effect. When you Sway someone through fear, take a bonus die.',
     },
     {
       id: 'knife-hardy',
@@ -264,6 +276,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'knife',
       description: 'You heal from wounds faster and need less recovery to clear harm.',
+      rules:
+        'When you recover during downtime, fill an extra segment of your healing clock. Wounds close faster and you clear harm with less downtime.',
     },
 
     // --- The Harpoon ---
@@ -273,6 +287,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'harpoon',
       description: 'Take a careful shot to ignore cover and range; your aim finds the gap.',
+      rules:
+        'You may push yourself to make a ranged attack at extreme distance or to ignore cover — your aim finds the gap that others cannot.',
     },
     {
       id: 'harpoon-keen',
@@ -280,6 +296,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'harpoon',
       description: 'When you track a quarry or study a target, push yourself for increased effect.',
+      rules:
+        'When you track a quarry or study a target to learn its habits and defenses, you may push yourself to act with increased effect.',
     },
     {
       id: 'harpoon-wraithbane',
@@ -287,6 +305,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'harpoon',
       description: 'Your shots and strikes wound the Tide-touched as if they were living flesh.',
+      rules:
+        'Your attacks harm the Tide-touched as if they were living flesh, and you act with potency when you hunt or fight them.',
     },
     {
       id: 'harpoon-pathfinder',
@@ -294,6 +314,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'harpoon',
       description: "Quick, sharp reconnaissance reveals a target's defenses and weak points.",
+      rules:
+        "A short, sharp scouting action reveals a location's patrols, defenses, and weak points. Ask the GM one question about its security for free.",
     },
     {
       id: 'harpoon-diehard',
@@ -301,6 +323,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'harpoon',
       description: 'Resist harm with nerve rather than body; you simply refuse to fall.',
+      rules:
+        'You may resist physical harm by rolling Nerve instead of a physical attribute — you simply refuse to fall.',
     },
     {
       id: 'harpoon-quarry',
@@ -309,6 +333,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       category: 'harpoon',
       prerequisite: 'harpoon-deadeye',
       description: 'Mark a single target as your quarry to gain increased effect against them.',
+      rules:
+        'Name a single quarry. You act with increased effect against them until they are caught or killed, or until you name a new quarry during downtime.',
     },
     {
       id: 'harpoon-steady',
@@ -316,6 +342,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'harpoon',
       description: 'Your first action in a dangerous engagement gains a bonus die.',
+      rules:
+        'Your first action roll in a dangerous engagement gains a bonus die — you start cool, ready, and a step ahead.',
     },
 
     // --- The Brewer ---
@@ -325,6 +353,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'brewer',
       description: 'Between jobs you brew alchemical formulas — oils, fires, trances, and drugs.',
+      rules:
+        'During downtime you can brew alchemical formulas — oils, fires, trances, and drugs — with a single crafting action. You begin play knowing two such formulas.',
     },
     {
       id: 'brewer-sawbones',
@@ -332,6 +362,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'brewer',
       description: 'Treat the wounded; those in your care heal faster and recover more fully.',
+      rules:
+        "When you treat the wounded, add a segment to the patient's healing clock, and they may recover from harm that would otherwise be permanent.",
     },
     {
       id: 'brewer-gadgeteer',
@@ -339,6 +371,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'brewer',
       description: 'Build small sparkcraft devices and gadgets suited to the job at hand.',
+      rules:
+        'When you gather information for a job, you also build a small sparkcraft gadget suited to it. You and the GM define what it does together.',
     },
     {
       id: 'brewer-wardsmith',
@@ -346,6 +380,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'brewer',
       description: 'Craft wards and charms that turn aside the Tide-touched.',
+      rules:
+        'You can craft wards and charms that hold off the Tide-touched. A warded space or a worn charm grants potency or armor against spirits.',
     },
     {
       id: 'brewer-toxin',
@@ -353,6 +389,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'brewer',
       description: 'You are immune to one chosen toxin and can brew more of it at will.',
+      rules:
+        'Choose a toxin. You are immune to it, and you can brew more of it during downtime with a single crafting action.',
     },
     {
       id: 'brewer-irongut',
@@ -360,6 +398,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'brewer',
       description: 'Shrug off the effects of exhaustion, poison, and bad chems.',
+      rules:
+        'You roll with potency to resist the effects of exhaustion, poison, and bad chems — your gut shrugs off what would lay others low.',
     },
     {
       id: 'brewer-wrecker',
@@ -367,6 +407,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'brewer',
       description: 'When you sabotage a device, the failure strikes later, with hidden effect.',
+      rules:
+        'When you sabotage a device or mechanism, the failure is hidden and strikes at a moment of your choosing later — the target works until it is too late.',
     },
 
     // --- The Eel ---
@@ -376,6 +418,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'eel',
       description: 'When you bypass security measures, reduce their quality against you.',
+      rules:
+        'When you bypass security measures — locks, traps, patrols — treat their quality or magnitude as one lower against you.',
     },
     {
       id: 'eel-pounce',
@@ -383,6 +427,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'eel',
       description: 'Attacking from hiding or surprise grants you a bonus die.',
+      rules: 'When you attack from hiding or by surprise, take a bonus die to your roll.',
     },
     {
       id: 'eel-quick',
@@ -390,6 +435,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'eel',
       description: 'When chaos erupts, you act first; your reflexes outpace the room.',
+      rules:
+        "When there's a question of who acts first, it's you. Your reflexes outpace the room when chaos erupts.",
     },
     {
       id: 'eel-fade',
@@ -397,6 +444,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'eel',
       description: 'Briefly become as mist — slip through a gap, a grate, a closing door.',
+      rules:
+        'Push yourself to briefly become as mist and slip through a grate, a gap, or a closing door. The Tide-touched can still sense you while you fade.',
     },
     {
       id: 'eel-surefoot',
@@ -405,6 +454,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       category: 'eel',
       prerequisite: 'eel-quick',
       description: 'Push yourself for an extra burst of speed, climbing, or acrobatics.',
+      rules:
+        'When you push yourself for speed, climbing, or acrobatics, you also gain increased effect on that roll.',
     },
     {
       id: 'eel-catlike',
@@ -412,6 +463,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'eel',
       description: 'Gain a bonus die to skulk, climb, and slip locks unseen.',
+      rules:
+        'Take a bonus die when you move in stealth — skulking, climbing, or slipping locks unseen.',
     },
     {
       id: 'eel-daredevil',
@@ -419,6 +472,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'eel',
       description: 'When you take a desperate action, gain a bonus die and resist its fallout.',
+      rules:
+        'When you make a desperate action roll with reduced effect, take a bonus die — danger sharpens you rather than dulling you.',
     },
 
     // --- The Mask ---
@@ -428,6 +483,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'mask',
       description: 'Gain a bonus die when you deceive or charm your way to what you want.',
+      rules: 'Take a bonus die when you deceive or charm your way to what you want.',
     },
     {
       id: 'mask-read',
@@ -435,6 +491,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'mask',
       description: 'Study a person to learn what they want, fear, or are hiding.',
+      rules:
+        'When you study a person, ask the GM what they want, what they fear, or what they are hiding — and take a bonus die to act on the answer.',
     },
     {
       id: 'mask-mesmer',
@@ -442,6 +500,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'mask',
       description: 'Leave a mark with a false memory of your meeting.',
+      rules:
+        'After a conversation, you may leave the target with a false but plausible memory of the meeting. A strong-willed mark may resist to shake it off later.',
     },
     {
       id: 'mask-connected',
@@ -449,6 +509,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'mask',
       description: 'Earn a little extra coin on the side from your dealings each job.',
+      rules:
+        'During downtime you earn +1 coin from your side dealings — your contacts always owe you a little something.',
     },
     {
       id: 'mask-ghostvoice',
@@ -456,6 +518,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'mask',
       description: 'Speak with the Tide-touched calmly, without fear or harm.',
+      rules:
+        'You can speak with the Tide-touched without fear or harm, and they answer in kind — though not always truthfully.',
     },
     {
       id: 'mask-gambit',
@@ -463,6 +527,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'mask',
       description: 'Once per job, reroll a desperate action by playing the angles.',
+      rules:
+        'Once per score, when you make a desperate action roll, you may reroll it and take the better result — you played the angles.',
     },
     {
       id: 'mask-disguise',
@@ -470,6 +536,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'mask',
       description: 'Resist with nerve when a disguise or a lie is about to slip.',
+      rules:
+        'When a disguise or a lie is about to slip, you may resist the exposure by rolling Nerve — you sell it through sheer poise.',
     },
 
     // --- The Weaver ---
@@ -479,6 +547,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'weaver',
       description: "Protect an ally's resolve; when you lead, you take less stress doing it.",
+      rules:
+        'When you lead a group action or aid an ally, take 1 less stress to do so (minimum 0). You shield your crew from the worst of the pressure.',
     },
     {
       id: 'weaver-foresight',
@@ -486,6 +556,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'weaver',
       description: 'Gain an extra downtime activity to prepare a scheme.',
+      rules:
+        'You gain an extra downtime activity each downtime phase. It must be spent to set up or prepare a future scheme.',
     },
     {
       id: 'weaver-calculating',
@@ -493,6 +565,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'weaver',
       description: 'Improve the detail and effect of a plan you set in motion.',
+      rules:
+        'When you devise a plan and provide its detail, add one extra detail for free, or improve the effect of the engagement roll by one level.',
     },
     {
       id: 'weaver-web',
@@ -500,6 +574,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 2,
       category: 'weaver',
       description: "Turn a rival faction's move against them when you've laid the groundwork.",
+      rules:
+        'When a rival faction makes a move against you that you anticipated, you may turn it against them. The GM tells you what groundwork you must have laid for this to work.',
     },
     {
       id: 'weaver-fixer',
@@ -507,6 +583,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'weaver',
       description: 'Use contacts to reduce heat and smooth over entanglements.',
+      rules:
+        'During downtime you may call on your contacts to reduce heat or smooth over an entanglement, taking a Reduce Heat action with increased effect.',
     },
     {
       id: 'weaver-pact',
@@ -515,6 +593,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       category: 'weaver',
       prerequisite: 'weaver-mastermind',
       description: 'Bind a Tide-touched to a bargain, sealed in saltglass.',
+      rules:
+        'Through ritual you can bind a Tide-touched to a bargain sealed in saltglass. It must keep the letter of the deal — and will exploit every gap in your wording.',
     },
     {
       id: 'weaver-ironnerve',
@@ -522,6 +602,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'weaver',
       description: 'Endure confinement, interrogation, and pressure without breaking.',
+      rules:
+        'You roll with potency to resist confinement, interrogation, and pressure. You simply do not break.',
     },
 
     // --- The Medium ---
@@ -531,6 +613,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'medium',
       description: 'Perform rituals to call, question, and bargain with the Tide-touched.',
+      rules:
+        'Through ritual you can call, question, and bargain with the Tide-touched. The ritual takes time and risks drawing their attention or worse.',
     },
     {
       id: 'medium-compel',
@@ -538,6 +622,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'medium',
       description: 'Briefly command a nearby spirit to act on your word.',
+      rules:
+        'Take 2 stress to briefly compel a nearby spirit to obey a short command. A powerful spirit may resist your will.',
     },
     {
       id: 'medium-tempest',
@@ -546,6 +632,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       category: 'medium',
       prerequisite: 'medium-commune',
       description: 'Channel raw storm and brine through yourself, at a cost.',
+      rules:
+        "Channel raw storm and brine through yourself to attack or defend with great force. Take 2 stress and suffer level-2 harm ('Drained') unless you resist.",
     },
     {
       id: 'medium-ironwill',
@@ -553,6 +641,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'medium',
       description: 'Terror cannot break you; resist fear with cold focus.',
+      rules:
+        'You are immune to the terror of the Tide-touched. When you resist a fear or madness consequence, roll with potency.',
     },
     {
       id: 'medium-veiledmind',
@@ -560,6 +650,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'medium',
       description: 'Your thoughts are shrouded, and you sense the uncanny nearby.',
+      rules:
+        'Your mind is shrouded from spirits and mind-readers, and you sense the presence of the Tide-touched when they are near.',
     },
     {
       id: 'medium-strange',
@@ -567,6 +659,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       tier: 1,
       category: 'medium',
       description: 'Devise strange arcane methods, designs, and apparatus.',
+      rules:
+        'During downtime you can craft strange arcane designs and apparatus — spirit traps, attuned devices, and stranger things — with a single crafting action.',
     },
     {
       id: 'medium-deathsdoor',
@@ -575,6 +669,8 @@ export const DEFAULT_RULESET: RulesetContent = {
       category: 'medium',
       prerequisite: 'medium-commune',
       description: 'When you are near death, draw power from the Tide to act once more.',
+      rules:
+        'When you are taken down by harm, you may draw on the Tide to keep acting briefly. At the end of the scene you suffer level-3 harm or worse unless you get help.',
     },
   ],
 
@@ -674,29 +770,35 @@ export const DEFAULT_RULESET: RulesetContent = {
   },
 
   advancement: {
+    // XP tracks (FitD): mark XP into the playbook track (end-of-session triggers) and the three
+    // attribute tracks (when you push/resist with that attribute). A full track is cleared to take
+    // an advance — the playbook track buys a special ability; an attribute track buys an action dot.
+    xpTracks: { playbook: 8, attribute: 6 },
     xpTriggers: [
       {
         id: 'desperate',
         name: 'Desperate Action',
-        description: 'Mark 1 XP when you roll a desperate action.',
+        description: 'Mark 1 playbook XP when you rolled a desperate action.',
         value: 1,
       },
       {
         id: 'edge',
         name: 'Played to Your Strengths',
-        description: 'Mark XP when you tackled a tough obstacle with Cunning, Force, or Nerve.',
+        description:
+          'Mark 1 playbook XP when you tackled a tough obstacle with Cunning, Force, or Nerve.',
         value: 1,
       },
       {
         id: 'identity',
         name: 'Expressed Who You Are',
-        description: 'Mark XP when you expressed your heritage, background, or beliefs.',
+        description: 'Mark 1 playbook XP when you expressed your heritage, background, or beliefs.',
         value: 1,
       },
       {
         id: 'vice',
         name: 'Struggled With a Flaw',
-        description: 'Mark XP when you struggled with your vice or a trauma during the job.',
+        description:
+          'Mark 1 playbook XP when you struggled with your vice or a trauma during the job.',
         value: 1,
       },
     ],
@@ -704,16 +806,17 @@ export const DEFAULT_RULESET: RulesetContent = {
       {
         id: 'buy-ability',
         name: 'New Special Ability',
-        description: 'Learn a new special ability from your playbook.',
+        description: 'Fill the playbook XP track, then clear it to learn a new special ability.',
         cost: 8,
         category: 'ability',
       },
       {
-        id: 'raise-attribute',
-        name: 'Raise an Attribute (+1)',
-        description: 'Increase one attribute rating by 1 (up to the maximum of 4).',
-        cost: 8,
-        category: 'attribute',
+        id: 'new-action-dot',
+        name: 'New Action Dot',
+        description:
+          "Fill an attribute XP track, then clear it to add a dot to one of that attribute's actions (up to 3).",
+        cost: 6,
+        category: 'skill',
       },
     ],
   },
@@ -722,6 +825,115 @@ export const DEFAULT_RULESET: RulesetContent = {
   // Wary, Rash, Tender, Brittle, Cruel — fill traumaMax and the character retires. (Naming them
   // in the trauma UI is a future enhancement; the schema tracks trauma as a count.)
   stress: { max: 9, traumaMax: 4 },
+
+  // Crew sheet: pick a crew type, take crew abilities, and stake claims over Brackwater's turf.
+  crew: {
+    types: [
+      {
+        id: 'shadows',
+        name: 'Shadows',
+        description: 'Burglary, sabotage, espionage, and the quiet theft of secrets.',
+      },
+      {
+        id: 'bravos',
+        name: 'Bravos',
+        description: 'Hired muscle: protection, intimidation, war, and open violence.',
+      },
+      {
+        id: 'tidewrights',
+        name: 'Tidewrights',
+        description: 'Smuggling and transport through the drowned canals and the deep tunnels.',
+      },
+      {
+        id: 'drowned-choir',
+        name: 'The Drowned Choir',
+        description: 'A cult tending the Tide-touched — relics, rites, and the restless dead.',
+      },
+      {
+        id: 'brewers-guild',
+        name: "Brewers' Guild",
+        description: 'The vice trade: drink, drugs, alchemical brews, and the dens that sell them.',
+      },
+    ],
+    abilities: [
+      {
+        id: 'crew-deadly',
+        name: 'Deadly',
+        description: 'Each crew member gains an extra action rating in a violent action.',
+      },
+      {
+        id: 'crew-shadows',
+        name: 'No Traces',
+        description: 'When you Lay Low after a quiet job, reduce heat by an extra amount.',
+      },
+      {
+        id: 'crew-network',
+        name: 'The Network',
+        description: 'You have an extra contact, and your contacts offer better information.',
+      },
+      {
+        id: 'crew-ghost-market',
+        name: 'Ghost Market',
+        description: 'You can buy and sell arcane goods and Tide-touched relics during downtime.',
+      },
+      {
+        id: 'crew-fortified',
+        name: 'Fortified',
+        description: 'Your lair is hidden and defended; reduce the threat of raids against it.',
+      },
+      {
+        id: 'crew-patron',
+        name: 'Patron',
+        description: 'A powerful faction backs you — call on them once per job for aid or cover.',
+      },
+    ],
+    claims: [
+      'Lair',
+      'Turf',
+      'Cover Operation',
+      'Informants',
+      'Eyes on the Docks',
+      'Protected Stash',
+      'Vice Den',
+      'Smuggling Route',
+      'Friends on the Watch',
+      'A Drowned Shrine',
+    ],
+  },
+
+  // Suggested factions — the city powers of Brackwater. The GM can seed any of these into a game.
+  factions: [
+    {
+      name: 'The Tidewatch',
+      type: 'Law',
+      tier: 4,
+      description: "Brackwater's drowned-canal constabulary — bribable, but it remembers.",
+    },
+    {
+      name: 'The Salt Cartel',
+      type: 'Trade',
+      tier: 3,
+      description: 'Merchant princes who own the docks, the warehouses, and the brine trade.',
+    },
+    {
+      name: 'The Pale Court',
+      type: 'Nobility',
+      tier: 5,
+      description: 'The old families behind the seawall, trading in secrets and old debts.',
+    },
+    {
+      name: 'The Gutter Kings',
+      type: 'Underworld',
+      tier: 2,
+      description: 'A rival crew running the lower tunnels and the night markets.',
+    },
+    {
+      name: 'The Drowned Choir',
+      type: 'Cult',
+      tier: 2,
+      description: 'Tide-touched cultists tending the restless dead beneath the waterline.',
+    },
+  ],
 
   characterCreation: {
     // Per-action ratings (FitD): rate the 12 actions 0–3; attributes are derived (count of an

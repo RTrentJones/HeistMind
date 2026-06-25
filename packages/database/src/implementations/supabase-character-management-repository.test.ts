@@ -362,6 +362,96 @@ describe('advanceCharacter', () => {
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error.code).toBe('VALIDATION');
   });
+
+  // --- XP-track economy (opt-in via advancement.xpTracks) -------------------------------------
+
+  function trackContent() {
+    return content({
+      attributes: [{ id: 'grit', name: 'Grit', description: '', skills: ['Wreck'], maxValue: 4 }],
+      advancement: {
+        xpTracks: { playbook: 8, attribute: 6 },
+        xpTriggers: [],
+        advancementOptions: [
+          { id: 'buy-ability', name: 'Buy', description: '', cost: 8, category: 'ability' },
+          { id: 'action-dot', name: 'Dot', description: '', cost: 6, category: 'skill' },
+        ],
+      },
+    });
+  }
+
+  it('rejects a track-mode advance when the track is not full', async () => {
+    const { repo } = repoWith({
+      characters: {
+        data: charRow({ character_data: charData({ xp: { playbook: 3, attributes: {} } }) }),
+        error: null,
+      },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(trackContent()), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'ability',
+      target: 'sharpshot',
+      cost: 8,
+      description: 'x',
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.code).toBe('XP_TRACK_NOT_FULL');
+  });
+
+  it('a full playbook track buys an ability, clears the track, and spends no pooled XP', async () => {
+    const { repo, lastUpdate } = repoWith({
+      characters: {
+        data: charRow({
+          experience_points: 0,
+          character_data: charData({ xp: { playbook: 8, attributes: {} } }),
+        }),
+        error: null,
+      },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(trackContent()), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'ability',
+      target: 'sharpshot',
+      cost: 8,
+      description: 'Learn Sharpshot',
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.characterData.specialAbilities).toContain('sharpshot');
+      expect(r.data.characterData.xp?.playbook).toBe(0); // track cleared
+    }
+    // No pooled XP changes hands in track mode.
+    expect(lastUpdate()?.data.experience_points).toBeUndefined();
+    expect(lastUpdate()?.data.character_data.xp.playbook).toBe(0);
+  });
+
+  it('a full attribute track buys an action dot and clears that track', async () => {
+    const { repo, lastUpdate } = repoWith({
+      characters: {
+        data: charRow({
+          character_data: charData({ xp: { playbook: 2, attributes: { grit: 6 } } }),
+        }),
+        error: null,
+      },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(trackContent()), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'skill',
+      target: 'Wreck',
+      value: 1,
+      cost: 6,
+      description: 'Add a dot to Wreck',
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.characterData.skills.Wreck).toBe(1);
+      expect(r.data.characterData.xp?.attributes.grit).toBe(0); // the grit track cleared
+      expect(r.data.characterData.xp?.playbook).toBe(2); // the playbook track untouched
+    }
+    expect(lastUpdate()?.data.character_data.xp.attributes.grit).toBe(0);
+  });
 });
 
 describe('validateCharacterAgainstRuleset', () => {

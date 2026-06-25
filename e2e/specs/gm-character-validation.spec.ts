@@ -93,14 +93,15 @@ test.describe('GM: character validity', () => {
     // Buy the first available ability → XP spent, ability learned.
     await gmPage.getByRole('button', { name: 'Buy (2 XP)' }).first().click();
     await expect(gmPage.getByText('0 XP available')).toBeVisible();
-    await expect(gmPage.getByText('ghost-step')).toBeVisible(); // shown on the sheet's ability list
+    // Shown on the sheet's ability list by name (not id).
+    await expect(gmPage.getByText('Ghost Step', { exact: true })).toBeVisible();
 
     // --- Stress: trauma is bounded and persists. ---
     await gmPage.getByRole('button', { name: 'Stress & Trauma' }).click();
     await gmPage.getByLabel('Add trauma').fill('Haunted');
     await gmPage.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(gmPage.getByText('Trauma (1/4)')).toBeVisible();
-    await gmPage.getByRole('button', { name: 'Save stress & trauma' }).click();
+    await gmPage.getByRole('button', { name: /Save stress/ }).click();
     await expect(gmPage.getByText('Haunted')).toBeVisible();
   });
 });

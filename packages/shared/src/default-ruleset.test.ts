@@ -65,12 +65,50 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
     });
   });
 
+  it('advances via BitD XP tracks (playbook 8 / attribute 6) with ability + action-dot options', () => {
+    expect(DEFAULT_RULESET.advancement.xpTracks).toEqual({ playbook: 8, attribute: 6 });
+    const categories = DEFAULT_RULESET.advancement.advancementOptions.map(o => o.category);
+    expect(categories).toContain('ability'); // playbook track → a special ability
+    expect(categories).toContain('skill'); // attribute track → an action dot
+  });
+
+  it('ships crew content: types, crew abilities, and claims', () => {
+    const crew = DEFAULT_RULESET.crew;
+    expect(crew).toBeTruthy();
+    expect((crew?.types.length ?? 0) >= 3).toBe(true);
+    expect((crew?.abilities.length ?? 0) >= 3).toBe(true);
+    expect((crew?.claims?.length ?? 0) >= 3).toBe(true);
+    for (const t of crew?.types ?? []) {
+      expect(t.id, t.name).toBeTruthy();
+      expect(t.name, t.id).toBeTruthy();
+    }
+  });
+
+  it('seeds suggested factions with names and in-range tiers', () => {
+    const factions = DEFAULT_RULESET.factions ?? [];
+    expect(factions.length >= 3).toBe(true);
+    for (const f of factions) {
+      expect(f.name, JSON.stringify(f)).toBeTruthy();
+      expect(f.tier ?? 0, f.name).toBeGreaterThanOrEqual(0);
+      expect(f.tier ?? 0, f.name).toBeLessThanOrEqual(6);
+    }
+  });
+
   it('every playbook seeds exactly one starting action dot that is a real action', () => {
     for (const pb of DEFAULT_RULESET.playbooks) {
       const keys = Object.keys(pb.skills);
       expect(keys, pb.id).toHaveLength(1);
       expect(ACTIONS).toContain(keys[0]);
       expect(pb.skills[keys[0]!]).toBe(1);
+    }
+  });
+
+  it('every special ability ships resolvable rules text (fuller than its one-liner)', () => {
+    for (const ability of DEFAULT_RULESET.specialAbilities) {
+      expect(ability.rules, ability.id).toBeTruthy();
+      expect((ability.rules ?? '').trim().length, ability.id).toBeGreaterThan(20);
+      // The rules text is the full mechanical effect — not a copy of the short description.
+      expect(ability.rules, ability.id).not.toBe(ability.description);
     }
   });
 
