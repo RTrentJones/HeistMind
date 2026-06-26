@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0B0F19"/>
+  <defs>
+    <linearGradient id="clock-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7"/><stop offset="100%" stop-color="#6D28D9"/></linearGradient>
+    <linearGradient id="center-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#64748B"/><stop offset="100%" stop-color="#334155"/></linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="204" fill="none" stroke="#1E293B" stroke-width="72"/>
+  <path d="M 256 52 A 204 204 0 1 1 52 256" fill="none" stroke="url(#clock-grad)" stroke-width="72"/>
+  <rect x="240.0" y="0" width="32" height="512" fill="#0B0F19"/>
+  <rect x="0" y="240.0" width="512" height="32" fill="#0B0F19"/>
+  <circle cx="256" cy="256" r="144" fill="url(#center-grad)"/>
+  <path d="M 256 126 A 64 64 0 0 0 201 222 L 186 370 A 16 16 0 0 0 202 386 L 310 386 A 16 16 0 0 0 326 370 L 311 222 A 64 64 0 0 0 256 126 Z" fill="#0B0F19"/>
+</svg>
