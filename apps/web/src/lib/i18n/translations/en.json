@@ -45,6 +45,7 @@
     "documentation": "Documentation",
     "home": "Home",
     "games": "Games",
+    "campaigns": "Campaigns",
     "characters": "Characters",
     "rulesets": "Rulesets",
     "profile": "Profile",
@@ -141,6 +142,9 @@
         "customRulesets": "Custom Rulesets",
         "totalPlayers": "Total Players"
       }
+    },
+    "languageSwitcher": {
+      "label": "Language"
     }
   },
   "auth": {
@@ -199,12 +203,42 @@
         ],
         "cta": "Find Your Crew"
       }
+    },
+    "header": {
+      "signIn": "Sign In",
+      "signUpDiscord": "Sign Up with Discord",
+      "signOut": "Sign Out",
+      "welcomeUser": "Welcome, {{name}}"
     }
   },
   "pages": {
     "home": {
       "title": "HeistMind - Forged in the Dark Platform",
       "description": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
+    },
+    "landing": {
+      "hero": {
+        "welcomePrefix": "Welcome to ",
+        "lead": "The ultimate character management platform for Forged in the Dark tabletop RPGs. Create, manage, and advance your scoundrels across multiple campaigns."
+      },
+      "features": {
+        "creation": {
+          "title": "Dynamic Character Creation",
+          "body": "Build characters using any Forged in the Dark ruleset. Upload custom rules or use community-created content."
+        },
+        "management": {
+          "title": "Multi-Game Management",
+          "body": "Organize characters across multiple games and campaigns. Track advancement, stress, and relationships."
+        },
+        "collaboration": {
+          "title": "Seamless Collaboration",
+          "body": "Share characters with GMs, clone builds for new games, and collaborate on crew sheets and faction relationships."
+        }
+      },
+      "cta": {
+        "heading": "Ready to start your next heist?",
+        "body": "Sign up with Discord to begin managing your scoundrels and join the community."
+      }
     },
     "about": {
       "title": "About HeistMind",
