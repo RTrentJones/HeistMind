@@ -79,6 +79,9 @@ dist
 # Gatsby files
 .cache/
 public
+# ^ stray template rule (no Gatsby here). Don't let it swallow the Next.js static-assets dir —
+# favicons, manifest, PWA icons live there and must be tracked.
+!apps/web/public/
 
 # Storybook build outputs
 .out
