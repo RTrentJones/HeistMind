@@ -152,6 +152,25 @@
       "refreshed": "Refreshed your “{{name}}” starter to the latest content.",
       "refreshFailed": "Failed to refresh the starter ruleset.",
       "loadFailed": "Failed to load the starter ruleset."
+    },
+    "wizard": {
+      "nameLabel": "Character name",
+      "namePlaceholder": "e.g. Shadows McKenzie",
+      "nameHelp": "Required — shown on the character sheet.",
+      "createCharacter": "Create character",
+      "stepsLabel": "Creation steps",
+      "stepNumber": "STEP {{num}}",
+      "summary": {
+        "ariaLabel": "Character summary",
+        "noPlaybook": "No playbook",
+        "attributes": "Attributes",
+        "noPoints": "No points assigned.",
+        "abilities": "Abilities",
+        "noneChosen": "None chosen.",
+        "identity": "Identity",
+        "notSet": "Not set.",
+        "completion": "Completion"
+      }
     }
   },
   "auth": {

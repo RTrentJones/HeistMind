@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Ruleset } from '@heist-mind/database';
 import { Badge, Button, Heading, Input, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 import { WizardStep } from './WizardStep';
 import { WizardRail } from './layout/WizardRail';
 import { WizardSummary } from './layout/WizardSummary';
@@ -33,6 +34,7 @@ export function CharacterCreationWizard({
   onCancel,
 }: CharacterCreationWizardProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { steps, stepIndex, name, isLoading, init, setName, goNext, goBack, goToStep, submit } =
     useCharacterCreationStore(
       useShallow(s => ({
@@ -79,12 +81,12 @@ export function CharacterCreationWizard({
   const nameField = (
     <div style={{ maxWidth: 460 }}>
       <Input
-        label='Character name'
+        label={t('components.wizard.nameLabel')}
         required
-        placeholder='e.g. Shadows McKenzie'
+        placeholder={t('components.wizard.namePlaceholder')}
         value={name}
         onChange={e => setName(e.target.value)}
-        helpText='Required — shown on the character sheet.'
+        helpText={t('components.wizard.nameHelp')}
       />
     </div>
   );
@@ -121,19 +123,19 @@ export function CharacterCreationWizard({
       }}
     >
       <Button variant='ghost' onClick={onCancel ?? (() => router.back())}>
-        Cancel
+        {t('common.actions.cancel')}
       </Button>
       <div style={{ flex: 1 }} />
       <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
-        Back
+        {t('common.actions.back')}
       </Button>
       {isLast ? (
         <Button variant='ember' loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
-          Create character
+          {t('components.wizard.createCharacter')}
         </Button>
       ) : (
         <Button variant='default' disabled={!canAdvance} onClick={goNext}>
-          Next
+          {t('common.actions.next')}
         </Button>
       )}
     </footer>
@@ -172,7 +174,7 @@ export function CharacterCreationWizard({
         className='flex flex-wrap gap-2'
         style={{ marginBottom: 30 }}
         role='tablist'
-        aria-label='Creation steps'
+        aria-label={t('components.wizard.stepsLabel')}
       >
         {steps.map((s, i) => (
           <button
