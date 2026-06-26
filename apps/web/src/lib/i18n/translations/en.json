@@ -393,6 +393,27 @@
       "subtitle": "Import a Forged-in-the-Dark ruleset as JSON.",
       "authPrompt": "Please sign in to upload a ruleset.",
       "starterPrompt": "Don't have a ruleset? Start with the built-in one:"
+    },
+    "game": {
+      "loadFailed": "Failed to load game",
+      "notFound": "Game not found",
+      "unknownError": "Unknown error",
+      "hubLoadError": "Couldn't load campaign",
+      "newCharLoadError": "Couldn't load game",
+      "viewAuthPrompt": "Please sign in to view this campaign.",
+      "createCharAuthPrompt": "Please sign in to create a character.",
+      "characterAuthPrompt": "Please sign in to view this character.",
+      "charactersHeading": "Characters",
+      "createCharacter": "Create character",
+      "noCharacters": "No characters yet. Create the first one.",
+      "characterMeta": "{{playbook}} · {{xp}} XP",
+      "view": "View",
+      "crewHeading": "Crew",
+      "clocksHeading": "Clocks",
+      "factionsHeading": "Factions",
+      "rollLogHeading": "Roll Log",
+      "fortuneRoll": "Fortune / GM roll",
+      "backToCampaign": "← Back to campaign"
     }
   },
   "forms": {

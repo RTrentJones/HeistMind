@@ -15,6 +15,7 @@ import {
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { usePageTranslation } from '@/lib/i18n/hooks';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
@@ -24,6 +25,7 @@ import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
   const { isAuthenticated, user } = useAuth();
+  const { t } = usePageTranslation();
 
   const [game, setGame] = useState<GameWithDetails | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -42,8 +44,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
       if (!gameResult.success || !gameResult.data) {
         setError(
           gameResult.success
-            ? 'Game not found'
-            : (gameResult.error?.message ?? 'Failed to load game')
+            ? t('game.notFound')
+            : (gameResult.error?.message ?? t('game.loadFailed'))
         );
         setLoading(false);
         return;
@@ -57,12 +59,12 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
     return () => {
       active = false;
     };
-  }, [gameId]);
+  }, [gameId, t]);
 
   if (!isAuthenticated) {
     return (
       <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>Please sign in to view this campaign.</Text>
+        <Text variant='muted'>{t('game.viewAuthPrompt')}</Text>
       </Container>
     );
   }
@@ -76,7 +78,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   if (error || !game) {
     return (
       <Container maxWidth='md' padding='lg'>
-        <ErrorDisplay title="Couldn't load campaign" message={error ?? 'Unknown error'} />
+        <ErrorDisplay title={t('game.hubLoadError')} message={error ?? t('game.unknownError')} />
       </Container>
     );
   }
@@ -96,15 +98,15 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
 
         <Stack direction='row' justify='between' align='center'>
           <Heading level='h2' variant='primary'>
-            Characters
+            {t('game.charactersHeading')}
           </Heading>
           <Button asChild variant='ember'>
-            <Link href={`/games/${gameId}/characters/new`}>Create character</Link>
+            <Link href={`/games/${gameId}/characters/new`}>{t('game.createCharacter')}</Link>
           </Button>
         </Stack>
 
         {characters.length === 0 ? (
-          <Text variant='muted'>No characters yet. Create the first one.</Text>
+          <Text variant='muted'>{t('game.noCharacters')}</Text>
         ) : (
           <Stack direction='column' gap='md'>
             {characters.map(ch => (
@@ -113,11 +115,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
                   <div>
                     <Heading level='h3'>{ch.name}</Heading>
                     <Text variant='muted' size='sm'>
-                      {ch.playbookType} · {ch.experiencePoints} XP
+                      {t('game.characterMeta', {
+                        playbook: ch.playbookType,
+                        xp: ch.experiencePoints,
+                      })}
                     </Text>
                   </div>
                   <Button asChild variant='outline' size='sm'>
-                    <Link href={`/games/${gameId}/characters/${ch.id}`}>View</Link>
+                    <Link href={`/games/${gameId}/characters/${ch.id}`}>{t('game.view')}</Link>
                   </Button>
                 </Stack>
               </Card>
@@ -126,7 +131,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         )}
 
         <Heading level='h2' variant='primary'>
-          Crew
+          {t('game.crewHeading')}
         </Heading>
         <Card variant='outline'>
           <CrewSheet
@@ -137,14 +142,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         </Card>
 
         <Heading level='h2' variant='primary'>
-          Clocks
+          {t('game.clocksHeading')}
         </Heading>
         <Card variant='outline'>
           <ClocksPanel gameId={gameId} isGm={game.createdBy === user?.id} />
         </Card>
 
         <Heading level='h2' variant='primary'>
-          Factions
+          {t('game.factionsHeading')}
         </Heading>
         <Card variant='outline'>
           <FactionsPanel
@@ -155,12 +160,12 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         </Card>
 
         <Heading level='h2' variant='primary'>
-          Roll Log
+          {t('game.rollLogHeading')}
         </Heading>
         <Card variant='outline'>
           <Stack direction='column' gap='md'>
             <Text variant='muted' size='sm'>
-              Fortune / GM roll
+              {t('game.fortuneRoll')}
             </Text>
             <RollPanel gameId={gameId} onRolled={() => setRollKey(k => k + 1)} />
           </Stack>
