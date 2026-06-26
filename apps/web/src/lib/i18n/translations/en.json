@@ -171,6 +171,60 @@
         "notSet": "Not set.",
         "completion": "Completion"
       }
+    },
+    "steps": {
+      "common": {
+        "selected": "Selected"
+      },
+      "playbook": {
+        "empty": "This ruleset has no playbooks defined."
+      },
+      "actionRatings": {
+        "empty": "This ruleset has no actions defined.",
+        "actionDots": "{{spent}} / {{budget}} action dots"
+      },
+      "attributes": {
+        "empty": "This ruleset has no attributes defined.",
+        "pointsSpent": "{{spent}} / {{total}} points spent"
+      },
+      "abilities": {
+        "empty": "This ruleset has no special abilities defined.",
+        "requires": "Requires {{prerequisite}}",
+        "notAvailable": "Not available at creation",
+        "limitReached": "Limit of {{limit}} reached",
+        "tier": "Tier {{tier}}",
+        "locked": "Locked",
+        "chosen": "Chosen",
+        "countChosen": "{{count}} of {{limit}} chosen",
+        "playbookAbilities": " · {{playbook}}'s abilities",
+        "chooseRoleFirst": "Choose a crew role first to see its special abilities.",
+        "showMore": "Show {{count}} more abilities from other roles",
+        "hideMore": "Hide abilities from other roles"
+      },
+      "identity": {
+        "heritageLabel": "Heritage",
+        "heritagePlaceholder": "e.g. where they were born or raised",
+        "heritageHelp": "Where they come from and how they were raised.",
+        "backgroundLabel": "Background",
+        "backgroundPlaceholder": "e.g. the trade or life they came from",
+        "backgroundHelp": "The life they led before the crew found them.",
+        "viceLabel": "Vice",
+        "vicePlaceholder": "e.g. how they unwind between jobs",
+        "viceHelp": "How they blow off stress when the score is done."
+      },
+      "choice": {
+        "empty": "Nothing to choose for this step.",
+        "chooseToContinue": "Choose an option to continue."
+      },
+      "review": {
+        "noPlaybook": "No playbook chosen",
+        "attributes": "Attributes",
+        "noPoints": "No points assigned.",
+        "abilities": "Special Abilities",
+        "noneChosen": "None chosen.",
+        "identity": "Identity",
+        "identityNotSet": "Identity not set."
+      }
     }
   },
   "auth": {
