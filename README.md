@@ -31,7 +31,7 @@ heist-mind/
 │   ├── shared/                 # Shared utilities and types
 │   └── ui/                     # Component library
 ├── supabase/                   # Database schema and migrations
-└── .memory-bank/               # Project documentation
+└── .claude/skills/cx-map/      # Living product docs (status, CX map, findings)
 ```
 
 ## 🛠 Technology Stack
@@ -89,19 +89,20 @@ pnpm db:types         # Generate TypeScript types from schema
 
 ## 🌟 Key Features
 
+HeistMind targets **async, Discord-style play-by-post** FitD games — shared campaign state is
+DB-backed and loaded on view (no realtime required).
+
 ### For Game Masters
 
-- Upload and manage custom FitD rulesets
-- Create games with flexible rule configurations
-- Invite players via email or public codes
-- Monitor player activity and character progression
+- Upload and manage custom FitD rulesets (JSON), or load the bundled **Brackwater** starter
+- Run campaigns with a **crew sheet**, **progress clocks**, **factions**, and a shared **roll log**
+- Make fortune/GM rolls and advance clocks as a score unfolds
 
 ### For Players
 
-- Join games and create rule-based characters
-- Manage multiple characters across different games
-- Track XP, advancement, and character relationships
-- Intuitive wizard-based progression system
+- Build rule-driven characters with a guided wizard (playbook, action ratings, abilities, identity)
+- Play from a live character sheet: **stress**, **harm**, **XP tracks**, loadout, and action rolls
+- Everyone loads the latest shared campaign state on view (play-by-post)
 
 ## 🚀 Getting Started
 
@@ -132,18 +133,19 @@ pnpm db:types         # Generate TypeScript types from schema
 
 ## 📖 Documentation
 
-Comprehensive project documentation is available in the `.memory-bank/` directory:
+Living product docs are maintained in the **`cx-map` skill** (`.claude/skills/cx-map/`):
 
-- **Project Brief**: Core requirements and user stories
-- **Architecture**: Technical decisions and patterns
-- **Progress**: Current status and roadmap
-- **Sprint Planning**: Development phases and milestones
+- **`STATUS.md`** — what HeistMind is, what's built, architecture/constraints, and current plans
+- **`CX-MAP.md`** — every page and user flow (routes, character wizard, campaign panels, roles)
+- **`FINDINGS.md`** — known CX flaws + FitD-rule gaps (the backlog)
+
+Repo conventions, commands, and the deploy loop live in `CLAUDE.md`.
 
 ## 🔒 Security
 
 - **Row Level Security**: Multi-tenant data isolation
 - **Type Safety**: End-to-end TypeScript coverage
-- **Authentication**: Secure OAuth with Supabase Auth
+- **Authentication**: Discord OAuth via Supabase Auth
 - **Environment Separation**: Schema-based dev/prod isolation
 
 ## 🤝 Contributing

@@ -5,22 +5,25 @@ description: Maintain HeistMind's living CX map (every page + user flow, with no
 
 # cx-map
 
-The single living reference for **what HeistMind does from a user's point of view**, and the
-discipline for keeping it true. It exists because the older `.memory-bank/` continuity docs went
-stale (they still describe a pre-launch app), and a stale CX doc is worse than none — it lies. This
-skill is the guard against that: it is the guide for **user validation** and for **discovering
-flaws to fix and gaps against the Forged-in-the-Dark (FitD) rules**.
+The single living reference for **what HeistMind is and does** — from the user's point of view — and
+the discipline for keeping it true. It is the central home for product knowledge, **replacing the
+retired Cline `.memory-bank/`** (a memory bank that drifted so far out of date it described a
+pre-launch app — a stale doc is worse than none, because it lies). This skill is the guide for
+**user validation** and for **discovering flaws to fix and gaps against the Forged-in-the-Dark
+(FitD) rules**.
 
 ## Files this skill owns
 
+- **`STATUS.md`** (sibling) — what HeistMind is, what's built, the architecture/constraints worth
+  knowing, and current plans. The product-state doc the memory bank used to (badly) hold.
 - **`CX-MAP.md`** (sibling) — the map: every route, the character-creation wizard, the campaign
   panels, the GM/player roles, and the end-to-end journeys. Each section carries a
   `_Last verified:_ <date> @ <short-sha>` marker.
 - **`FINDINGS.md`** (sibling) — the flaw / FitD-gap log: severity-scored, each with a concrete
-  location and a proposed fix, tracked from `open` to `fixed @<sha>`.
+  location and a proposed fix, tracked from `open` to `fixed @<sha>`. The de-facto backlog.
 
-These are plain Markdown — open them directly. The map is the stable reference; the findings log is
-the churn.
+These are plain Markdown — open them directly. `STATUS.md` + `CX-MAP.md` are the stable reference;
+`FINDINGS.md` is the churn.
 
 ## Live-update mandate (the core rule)
 
