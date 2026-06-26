@@ -20,7 +20,7 @@ test.describe('GM: refresh the starter ruleset', () => {
 
     // First load creates the copy.
     await gmPage
-      .getByRole('button', { name: /Load the Brackwater starter ruleset/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
       .first()
       .click();
     await expect(gmPage.getByRole('heading', { name: 'Brackwater' })).toBeVisible({
@@ -29,10 +29,10 @@ test.describe('GM: refresh the starter ruleset', () => {
 
     // Reloading refreshes the existing copy to the latest content (no duplicate-name dead end).
     await gmPage
-      .getByRole('button', { name: /Load the Brackwater starter ruleset/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
       .first()
       .click();
-    await expect(gmPage.getByText(/Refreshed your .* starter to the latest content/)).toBeVisible({
+    await expect(gmPage.getByText(/Refreshed your .* to the latest content/)).toBeVisible({
       timeout: 10_000,
     });
   });

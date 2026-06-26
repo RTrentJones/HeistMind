@@ -19,7 +19,7 @@ test.describe('GM: ability rules text (Brackwater)', () => {
   test('shows rules inline in the wizard and expandable on the sheet', async ({ gmPage }) => {
     await gmPage.goto('/rulesets');
     await gmPage
-      .getByRole('button', { name: /Load the Brackwater starter ruleset/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
       .first()
       .click();
     await expect(gmPage.getByRole('heading', { name: 'Brackwater' })).toBeVisible({

@@ -21,7 +21,7 @@ test.describe('GM: crew sheet', () => {
   }) => {
     await gmPage.goto('/rulesets');
     await gmPage
-      .getByRole('button', { name: /Load the Brackwater starter ruleset/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
       .first()
       .click();
     await expect(gmPage.getByRole('heading', { name: 'Brackwater' })).toBeVisible({
