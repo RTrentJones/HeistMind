@@ -145,6 +145,13 @@
     },
     "languageSwitcher": {
       "label": "Language"
+    },
+    "starterRuleset": {
+      "loadCta": "Load the {{name}} starter ruleset",
+      "signInRequired": "You must be signed in to load the starter ruleset.",
+      "refreshed": "Refreshed your “{{name}}” starter to the latest content.",
+      "refreshFailed": "Failed to refresh the starter ruleset.",
+      "loadFailed": "Failed to load the starter ruleset."
     }
   },
   "auth": {
@@ -209,6 +216,15 @@
       "signUpDiscord": "Sign Up with Discord",
       "signOut": "Sign Out",
       "welcomeUser": "Welcome, {{name}}"
+    },
+    "callback": {
+      "completingTitle": "Completing Sign In",
+      "waiting": "Waiting for Discord authentication to complete...",
+      "processing": "Supabase is processing your OAuth tokens automatically",
+      "failedTitle": "Authentication Failed",
+      "redirecting": "Redirecting you back...",
+      "failed": "Authentication failed. Please try again.",
+      "timeout": "Authentication timeout. Please try again."
     }
   },
   "pages": {
@@ -293,6 +309,17 @@
       "loadFailed": "Failed to load rulesets",
       "empty": "No rulesets yet. New here? Load the built-in starter ruleset to start playing right away, or upload your own.",
       "createGame": "Create game"
+    },
+    "createGame": {
+      "title": "Create a Campaign",
+      "subtitle": "Spin up a new game from one of your rulesets.",
+      "authPrompt": "Please sign in to create a campaign."
+    },
+    "uploadRuleset": {
+      "title": "Upload a Ruleset",
+      "subtitle": "Import a Forged-in-the-Dark ruleset as JSON.",
+      "authPrompt": "Please sign in to upload a ruleset.",
+      "starterPrompt": "Don't have a ruleset? Start with the built-in one:"
     }
   },
   "forms": {
@@ -323,6 +350,22 @@
       "passwordsDoNotMatch": "Passwords do not match",
       "usernameTooShort": "Username must be at least 3 characters",
       "usernameInvalid": "Username can only contain letters, numbers, and underscores"
+    },
+    "gameForm": {
+      "nameLabel": "Campaign name",
+      "namePlaceholder": "e.g. The Lampblack Job",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional",
+      "rulesetLabel": "Ruleset",
+      "createCta": "Create campaign",
+      "needRuleset": "Upload a ruleset first, then create a campaign.",
+      "errorTitle": "Couldn't create campaign",
+      "signInRequired": "You must be signed in.",
+      "pickRuleset": "Pick a ruleset first.",
+      "nameRequired": "Give your campaign a name.",
+      "duplicate": "You already have a campaign named “{{name}}”. Pick a different name.",
+      "createFailed": "Failed to create campaign",
+      "loadRulesetsFailed": "Failed to load rulesets"
     }
   },
   "errors": {

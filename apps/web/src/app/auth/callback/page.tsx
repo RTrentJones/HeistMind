@@ -14,11 +14,13 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useAuthTranslation } from '@/lib/i18n/hooks';
 
 export default function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
+  const { t } = useAuthTranslation();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function AuthCallback() {
 
     if (errorParam) {
       console.error('OAuth error from URL:', errorParam, errorDescription);
-      setError(errorDescription || 'Authentication failed. Please try again.');
+      setError(errorDescription || t('callback.failed'));
       setTimeout(() => {
         router.push('/?error=auth_failed');
       }, 2000);
@@ -39,7 +41,7 @@ export default function AuthCallback() {
     const timeout = setTimeout(() => {
       if (!isAuthenticated) {
         console.warn('OAuth callback timeout - auth state did not change');
-        setError('Authentication timeout. Please try again.');
+        setError(t('callback.timeout'));
         setTimeout(() => {
           router.push('/?error=auth_timeout');
         }, 2000);
@@ -47,7 +49,7 @@ export default function AuthCallback() {
     }, 15000); // 15 second timeout
 
     return () => clearTimeout(timeout);
-  }, [searchParams, router, isAuthenticated]);
+  }, [searchParams, router, isAuthenticated, t]);
 
   useEffect(() => {
     // Redirect when authentication succeeds
@@ -66,13 +68,13 @@ export default function AuthCallback() {
               <ErrorDisplay
                 variant='default'
                 layout='centered'
-                title='Authentication Failed'
+                title={t('callback.failedTitle')}
                 message={error}
                 size='md'
                 animate
               >
                 <Text size='sm' variant='muted'>
-                  Redirecting you back...
+                  {t('callback.redirecting')}
                 </Text>
               </ErrorDisplay>
             ) : (
@@ -86,13 +88,13 @@ export default function AuthCallback() {
 
                 <Stack gap='sm' align='center'>
                   <Heading level='h2' variant='primary'>
-                    Completing Sign In
+                    {t('callback.completingTitle')}
                   </Heading>
 
-                  <Text variant='secondary'>Waiting for Discord authentication to complete...</Text>
+                  <Text variant='secondary'>{t('callback.waiting')}</Text>
 
                   <Text size='xs' variant='muted'>
-                    Supabase is processing your OAuth tokens automatically
+                    {t('callback.processing')}
                   </Text>
                 </Stack>
               </Stack>

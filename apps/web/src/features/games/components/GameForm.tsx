@@ -6,11 +6,13 @@ import type { Ruleset } from '@heist-mind/database';
 import { Button, ErrorDisplay, Input, LoadingSpinner, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /** Create a campaign from one of the GM's rulesets. */
 export function GameForm() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const preselect = useSearchParams().get('ruleset') ?? '';
 
   const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
@@ -29,7 +31,7 @@ export function GameForm() {
       .then(result => {
         if (!active) return;
         if (!result.success) {
-          setError(result.error?.message ?? 'Failed to load rulesets');
+          setError(result.error?.message ?? t('forms.gameForm.loadRulesetsFailed'));
           return;
         }
         setRulesets(result.data);
@@ -38,14 +40,14 @@ export function GameForm() {
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user?.id, t]);
 
   const onSubmit = async () => {
     setError(null);
     const userId = user?.id;
-    if (!userId) return setError('You must be signed in.');
-    if (!rulesetId) return setError('Pick a ruleset first.');
-    if (!name.trim()) return setError('Give your campaign a name.');
+    if (!userId) return setError(t('forms.gameForm.signInRequired'));
+    if (!rulesetId) return setError(t('forms.gameForm.pickRuleset'));
+    if (!name.trim()) return setError(t('forms.gameForm.nameRequired'));
 
     setSubmitting(true);
     const created = await getRepositories().games.create(userId, {
@@ -61,8 +63,8 @@ export function GameForm() {
         created.error?.code === '23505' || /duplicate|already exists|unique/i.test(raw);
       setError(
         duplicate
-          ? `You already have a campaign named “${name.trim()}”. Pick a different name.`
-          : raw || 'Failed to create campaign'
+          ? t('forms.gameForm.duplicate', { name: name.trim() })
+          : raw || t('forms.gameForm.createFailed')
       );
       return;
     }
@@ -71,31 +73,31 @@ export function GameForm() {
 
   if (rulesets === null) return <LoadingSpinner />;
   if (rulesets.length === 0) {
-    return <Text variant='muted'>Upload a ruleset first, then create a campaign.</Text>;
+    return <Text variant='muted'>{t('forms.gameForm.needRuleset')}</Text>;
   }
 
   return (
     <Stack direction='column' gap='md'>
       <Input
-        label='Campaign name'
+        label={t('forms.gameForm.nameLabel')}
         required
         value={name}
         onChange={e => setName(e.target.value)}
-        placeholder='e.g. The Lampblack Job'
+        placeholder={t('forms.gameForm.namePlaceholder')}
       />
       <Input
-        label='Description'
+        label={t('forms.gameForm.descriptionLabel')}
         value={description}
         onChange={e => setDescription(e.target.value)}
-        placeholder='Optional'
+        placeholder={t('forms.gameForm.descriptionPlaceholder')}
       />
       <div>
         <label htmlFor='ruleset-select' className='mb-2 block text-foreground-secondary'>
-          Ruleset
+          {t('forms.gameForm.rulesetLabel')}
         </label>
         <select
           id='ruleset-select'
-          aria-label='Ruleset'
+          aria-label={t('forms.gameForm.rulesetLabel')}
           value={rulesetId}
           onChange={e => setRulesetId(e.target.value)}
           className='w-full rounded-lg border border-border-primary bg-background-tertiary px-3 py-2 text-foreground-primary'
@@ -108,10 +110,10 @@ export function GameForm() {
         </select>
       </div>
 
-      {error && <ErrorDisplay title="Couldn't create campaign" message={error} />}
+      {error && <ErrorDisplay title={t('forms.gameForm.errorTitle')} message={error} />}
 
       <Button variant='ember' onClick={onSubmit} loading={submitting}>
-        Create campaign
+        {t('forms.gameForm.createCta')}
       </Button>
     </Stack>
   );
