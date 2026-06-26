@@ -284,6 +284,15 @@
         "joinGame": "Join a Game",
         "uploadRuleset": "Upload Ruleset"
       }
+    },
+    "rulesets": {
+      "title": "Rulesets",
+      "authPrompt": "Please sign in to view your rulesets.",
+      "uploadCta": "Upload ruleset",
+      "loadError": "Couldn't load rulesets",
+      "loadFailed": "Failed to load rulesets",
+      "empty": "No rulesets yet. New here? Load the built-in starter ruleset to start playing right away, or upload your own.",
+      "createGame": "Create game"
     }
   },
   "forms": {
