@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Cinzel, Playfair_Display } from 'next/font/google';
 import './globals.css';
-import { I18nProvider } from '@/lib/i18n/provider';
+import { Providers } from './providers';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -11,6 +11,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+});
+
+// Display fonts for the heist identity. The design system's `.font-display` token references the
+// Cinzel / Playfair Display families; the web app self-hosts them here (next/font) and maps the
+// token to these CSS vars in globals.css, so headings render in-brand instead of the serif fallback.
+const cinzel = Cinzel({
+  variable: '--font-cinzel',
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: '--font-playfair',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 // Canonical base for metadata (canonical link, OG/Twitter URLs, sitemap). Driven by SITE_URL
@@ -53,8 +68,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <I18nProvider>{children}</I18nProvider>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${playfairDisplay.variable} antialiased`}
+      >
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

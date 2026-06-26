@@ -2,3 +2,14 @@
 
 /* Import UI package styles */
 @import "@heist-mind/ui/styles";
+
+/*
+ * The design system's `.font-display` token hardcodes the `'Cinzel', 'Playfair Display'` family
+ * names. The web app self-hosts those fonts via next/font (layout.tsx), which exposes them as the
+ * `--font-cinzel` / `--font-playfair` CSS variables on <body>. Map the token to those vars here —
+ * declared after the DS import so it wins the cascade — so headings render in-brand instead of the
+ * serif fallback. The literal names stay as a final fallback.
+ */
+.font-display {
+  font-family: var(--font-cinzel), var(--font-playfair), 'Cinzel', 'Playfair Display', serif;
+}
