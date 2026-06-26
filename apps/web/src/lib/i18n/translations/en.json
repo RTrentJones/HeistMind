@@ -439,10 +439,26 @@
       "duplicate": "You already have a campaign named “{{name}}”. Pick a different name.",
       "createFailed": "Failed to create campaign",
       "loadRulesetsFailed": "Failed to load rulesets"
+    },
+    "rulesetUpload": {
+      "fileLabel": "Upload a ruleset JSON file",
+      "fileAria": "Ruleset JSON file",
+      "pasteLabel": "…or paste ruleset JSON",
+      "pasteAria": "Ruleset JSON",
+      "invalidTitle": "That ruleset isn't valid",
+      "uploadCta": "Upload ruleset",
+      "metadataNote": "The name and version come from the file's metadata.",
+      "signInRequired": "You must be signed in to upload a ruleset.",
+      "saveFailed": "Failed to save the ruleset."
     }
   },
   "errors": {
     "general": "Something went wrong. Please try again.",
+    "boundary": {
+      "title": "Something went wrong",
+      "fallback": "An unexpected error occurred",
+      "tryAgain": "Try Again"
+    },
     "network": "Network error. Please check your connection.",
     "unauthorized": "You are not authorized to perform this action.",
     "notFound": "The requested resource was not found.",

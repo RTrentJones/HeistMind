@@ -7,11 +7,13 @@ import { Button, Card, ErrorDisplay, Heading, Stack, Text, Textarea } from '@hei
 import { parseAndValidateRuleset } from '@heist-mind/shared';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /** Upload (file or paste) → validate → persist a ruleset, then go to the list. */
 export function RulesetUpload() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [raw, setRaw] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +34,7 @@ export function RulesetUpload() {
     }
     const userId = user?.id;
     if (!userId) {
-      setErrors(['You must be signed in to upload a ruleset.']);
+      setErrors([t('forms.rulesetUpload.signInRequired')]);
       return;
     }
 
@@ -46,7 +48,7 @@ export function RulesetUpload() {
     setSubmitting(false);
 
     if (!created.success) {
-      setErrors([created.error?.message ?? 'Failed to save the ruleset.']);
+      setErrors([created.error?.message ?? t('forms.rulesetUpload.saveFailed')]);
       return;
     }
     router.push('/rulesets');
@@ -78,37 +80,37 @@ export function RulesetUpload() {
 
       <div>
         <label htmlFor='ruleset-file' className='mb-2 block text-foreground-secondary'>
-          Upload a ruleset JSON file
+          {t('forms.rulesetUpload.fileLabel')}
         </label>
         <input
           id='ruleset-file'
           type='file'
           accept='application/json,.json'
           onChange={onFile}
-          aria-label='Ruleset JSON file'
+          aria-label={t('forms.rulesetUpload.fileAria')}
           className='block w-full text-foreground-secondary'
         />
       </div>
 
       <Textarea
-        label='…or paste ruleset JSON'
+        label={t('forms.rulesetUpload.pasteLabel')}
         value={raw}
         onChange={e => setRaw(e.target.value)}
         rows={14}
         placeholder='{ "metadata": { "name": "…" }, "playbooks": [ … ], … }'
-        aria-label='Ruleset JSON'
+        aria-label={t('forms.rulesetUpload.pasteAria')}
       />
 
       {errors.length > 0 && (
-        <ErrorDisplay title="That ruleset isn't valid" message={errors.join(' • ')} />
+        <ErrorDisplay title={t('forms.rulesetUpload.invalidTitle')} message={errors.join(' • ')} />
       )}
 
       <Stack direction='row' gap='sm' align='center'>
         <Button variant='ember' onClick={onSubmit} loading={submitting} disabled={!raw.trim()}>
-          Upload ruleset
+          {t('forms.rulesetUpload.uploadCta')}
         </Button>
         <Text variant='muted' size='sm'>
-          The name and version come from the file&apos;s metadata.
+          {t('forms.rulesetUpload.metadataNote')}
         </Text>
       </Stack>
     </Stack>
