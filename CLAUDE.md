@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HeistMind is a game management platform for Blades in the Dark and other Forged in the Dark (FitD) tabletop RPG systems. Game Masters upload custom FitD rulesets, create games, and invite players. Players join games, create rule-based characters, and manage progression. Multi-tenant data isolation is enforced via Supabase Row Level Security.
+HeistMind is a management platform for Blades in the Dark and other Forged in the Dark (FitD) tabletop RPG systems, aimed at **async, Discord-style play-by-post** games. Game Masters upload custom FitD rulesets and run campaigns; players build rule-driven characters and play through shared, DB-backed campaign state (rolls, clocks, crew, factions) loaded on view. Auth is Discord OAuth; multi-tenant isolation is enforced via per-environment Postgres schemas + Supabase Row Level Security. (A first-class player invite/join flow is not yet built — see `cx-map` `FINDINGS.md`.)
 
 ## Monorepo Structure
 
@@ -101,17 +101,20 @@ Components wrap Radix UI primitives with Tailwind CSS 4 styling. Built with tsup
 - **Imports**: ESLint enforced ordering (builtin → external → internal), no import cycles
 - **React**: Strict hooks rules, jsx-a11y accessibility enforcement
 
-## Project Documentation
+## Project knowledge (living docs)
 
-The `.memory-bank/` directory contains project continuity docs (projectbrief.md, productContext.md, systemPatterns.md, techContext.md, activeContext.md, progress.md). These track architectural decisions, current sprint status, and domain context. Consult when onboarding to a new area. (Note: several `.memory-bank/` files predate the FitD play features and are stale — trust the code and the CX map below over them.)
+The **`cx-map` skill** (`.claude/skills/cx-map/`) is the central home for product knowledge. It
+**replaces the old Cline `.memory-bank/`** (removed — it had gone badly stale, describing a
+pre-launch app). Four plain-Markdown files, kept current via the skill:
 
-## CX map (living page/flow doc)
+- `STATUS.md` — what HeistMind is, what's built, architecture/constraints worth knowing, current plans.
+- `CX-MAP.md` — every page + user flow (routes, the character wizard, campaign panels, roles, journeys).
+- `FINDINGS.md` — severity-scored CX flaws + FitD-rule gaps (the de-facto backlog).
+- `SKILL.md` — the maintenance + audit discipline.
 
-`.claude/skills/cx-map/` holds the **living CX map** (`CX-MAP.md` — every page + user flow) and the
-**findings log** (`FINDINGS.md` — CX flaws + FitD-rule gaps, severity-scored). Per the `cx-map`
-skill (`SKILL.md`), **update the map in the same PR whenever you change a route, screen, flow, or
-user-facing copy**, and log issues you find. It's the guide for user validation and for deciding
-what to fix next.
+**Live-update rule:** whenever you change a route, screen, flow, or user-facing copy, update the
+matching `CX-MAP.md` section (and bump its `_Last verified:_` marker) in the same PR, and log any
+issue you find in `FINDINGS.md`. It's the guide for user validation and for deciding what to fix next.
 
 ## Environment Variables
 
