@@ -158,6 +158,12 @@ export function CrewSheet({
         : [...crew.crewAbilities, id],
     });
 
+  // Optional ruleset resource pools (gambits / dungeon hoard / supplies). Reads the current value
+  // from `crew.resources` (defaulting to the pool's startsAt), and writes the single pool back.
+  const pools = crewRules?.resourcePools ?? [];
+  const setResource = (poolId: string, value: number) =>
+    save({ resources: { ...crew.resources, [poolId]: value } });
+
   return (
     <Stack direction='column' gap='md'>
       {error && (
@@ -190,6 +196,53 @@ export function CrewSheet({
         {stat('Coin', 'coin', crew.coin)}
         {stat('Vault', 'vault', crew.vault)}
       </Stack>
+
+      {pools.length > 0 && (
+        <div>
+          <Text as='strong'>Resources</Text>
+          <Stack direction='row' gap='lg' className='mt-1 flex-wrap'>
+            {pools.map(pool => {
+              const value = crew.resources[pool.id] ?? pool.startsAt ?? 0;
+              return (
+                <Stack key={pool.id} direction='column' gap='xs' align='center'>
+                  <Text size='sm' className='font-display' title={pool.description}>
+                    {pool.name}
+                  </Text>
+                  <Stack direction='row' gap='xs' align='center'>
+                    {isGm && (
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        aria-label={`Decrease ${pool.name}`}
+                        disabled={busy || value <= 0}
+                        onClick={() => setResource(pool.id, value - 1)}
+                      >
+                        −
+                      </Button>
+                    )}
+                    <Badge variant='steel'>
+                      <span data-testid={`crew-resource-${pool.id}`}>
+                        {value}/{pool.max}
+                      </span>
+                    </Badge>
+                    {isGm && (
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        aria-label={`Increase ${pool.name}`}
+                        disabled={busy || value >= pool.max}
+                        onClick={() => setResource(pool.id, value + 1)}
+                      >
+                        +
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+              );
+            })}
+          </Stack>
+        </div>
+      )}
 
       {crewRules?.abilities && crewRules.abilities.length > 0 && (
         <div>

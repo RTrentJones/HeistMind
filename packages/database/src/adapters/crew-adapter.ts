@@ -12,6 +12,16 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 }
 
+/** A pool-id → numeric-value map; ignores any non-numeric entries from older/hand-edited rows. */
+function asNumberRecord(value: unknown): Record<string, number> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
+  return out;
+}
+
 export function fromSupabaseCrew(row: CrewRow): Crew {
   return {
     id: row.id,
@@ -28,6 +38,7 @@ export function fromSupabaseCrew(row: CrewRow): Crew {
     crewAbilities: (row.crew_abilities as string[] | null) ?? [],
     claims: asStringArray(row.claims),
     cohorts: asStringArray(row.cohorts),
+    resources: asNumberRecord(row.resources),
     createdBy: row.created_by ?? null,
     createdAt: parseSupabaseDate(row.created_at),
     updatedAt: parseSupabaseDate(row.updated_at),
@@ -58,5 +69,6 @@ export function toSupabaseCrewUpdate(data: UpdateCrewData, nowIso: string): Crew
   if (data.crewAbilities !== undefined) update.crew_abilities = data.crewAbilities;
   if (data.claims !== undefined) update.claims = data.claims;
   if (data.cohorts !== undefined) update.cohorts = data.cohorts;
+  if (data.resources !== undefined) update.resources = data.resources;
   return update;
 }

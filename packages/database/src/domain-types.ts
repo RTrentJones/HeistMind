@@ -167,6 +167,8 @@ export interface Crew {
   claims: string[];
   /** Cohort descriptions (gangs / experts). */
   cohorts: string[];
+  /** Current value of each ruleset resource pool, keyed by pool id (defaults to `{}` when unused). */
+  resources: Record<string, number>;
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -193,6 +195,7 @@ export interface UpdateCrewData {
   crewAbilities?: string[];
   claims?: string[];
   cohorts?: string[];
+  resources?: Record<string, number>;
 }
 
 /** A city power. FitD bounds: tier 0–6, status −3 (at war) … +3 (allied). */
@@ -292,6 +295,22 @@ export interface CrewRules {
   types: CrewTypeDefinition[];
   abilities: CrewAbilityDefinition[];
   claims?: string[];
+  /**
+   * Optional named resource tracks on the crew sheet (e.g. Scum & Villainy "gambits", a Wicked Ones
+   * dungeon hoard, squad supplies). Absent for BitD/Brackwater-style crews, which render unchanged.
+   */
+  resourcePools?: CrewResourcePool[];
+}
+
+/** A named crew-level resource track (gambits / hoard / supplies). All optional, additive content. */
+export interface CrewResourcePool {
+  id: string;
+  name: string;
+  description?: string;
+  /** Track ceiling. */
+  max: number;
+  /** Starting value for a fresh crew (defaults to 0). */
+  startsAt?: number;
 }
 
 export interface CrewTypeDefinition {

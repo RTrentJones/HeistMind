@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, type ChangeEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, ErrorDisplay, Stack, Text, Textarea } from '@heist-mind/ui';
+import { Button, Card, ErrorDisplay, Heading, Stack, Text, Textarea } from '@heist-mind/ui';
 import { parseAndValidateRuleset } from '@heist-mind/shared';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
@@ -53,6 +54,28 @@ export function RulesetUpload() {
 
   return (
     <Stack direction='column' gap='lg'>
+      <Card variant='outline'>
+        <Stack direction='column' gap='xs'>
+          <Heading level='h3'>Not sure where to start?</Heading>
+          <Text variant='muted' size='sm'>
+            The easiest path is to add a{' '}
+            <Link href='/rulesets' className='underline'>
+              starter ruleset
+            </Link>{' '}
+            and edit your copy — no JSON required.
+          </Text>
+          <Text variant='muted' size='sm'>
+            A ruleset is a JSON object with: <code>metadata</code> (name, version, author,
+            description, system), a non-empty <code>playbooks</code> array (each with an{' '}
+            <code>id</code> and <code>name</code>), a non-empty <code>attributes</code> array, and a{' '}
+            <code>characterCreation</code> object with a <code>steps</code> array. Optional:{' '}
+            <code>specialAbilities</code>, <code>equipment</code>, <code>advancement</code>,{' '}
+            <code>crew</code>, <code>factions</code>, and <code>stress</code>/<code>harm</code>{' '}
+            bounds (these default to Blades-in-the-Dark values when omitted).
+          </Text>
+        </Stack>
+      </Card>
+
       <div>
         <label htmlFor='ruleset-file' className='mb-2 block text-foreground-secondary'>
           Upload a ruleset JSON file
