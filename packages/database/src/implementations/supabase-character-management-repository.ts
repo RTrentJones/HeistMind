@@ -208,6 +208,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         };
       }
 
+      // The campaign's crew gates what an advance may take (a veteran upgrade opens cross-playbook
+      // picks) and raises the bounds the result is validated against (Mastery/Deadly/Mule).
+      const crew = await this.crewForGame(character.gameId);
+
       // Apply the effect to a cloned build.
       const next: CharacterData = structuredClone(character.characterData);
       if (adv.type === 'attribute')
@@ -220,6 +224,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
             success: false,
             error: { message: 'Ability already known.', code: 'DUPLICATE_ABILITY' },
           };
+        // Advancement is the BitD "veteran" path: a played character may reach beyond its starting
+        // playbook (subject to the option's own `requirements`/prereqs, checked above). So we don't
+        // re-apply creation's roster/tier gate here — crew context instead RAISES the live bounds the
+        // result is validated against (Mastery action cap, Deadly dots, Mule load) just below.
         next.specialAbilities = [...next.specialAbilities, adv.target];
       } else if (adv.type === 'playbook') {
         next.playbook = adv.target;
@@ -229,7 +237,6 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       if (trackMode) next.xp = clearXpTrack(next, track);
 
       // Re-validate the resulting build (live invariants), in the crew's context.
-      const crew = await this.crewForGame(character.gameId);
       const post = validateCharacter(ruleset, next, { mode: 'live', crew });
       if (!post.isValid) return failValidation<Character>(post);
 
