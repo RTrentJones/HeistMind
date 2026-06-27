@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { diceForRating, resistanceStress, stressBounds } from '@heist-mind/database';
-import { Alert, Badge, Button, Stack, Text } from '@heist-mind/ui';
+import { Alert, Badge, Button, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -162,6 +162,10 @@ export function RollPanel({
     onRolled?.();
   };
 
+  // Rating-0 actions roll 2 dice and take the lowest — surface that so it doesn't read as a bug.
+  const isZeroDiceAction =
+    mode === 'action' && (actions?.find(a => a.name === action)?.rating ?? 1) <= 0;
+
   return (
     <Stack direction='column' gap='sm'>
       {error && (
@@ -218,6 +222,28 @@ export function RollPanel({
               <option value='standard'>{t('components.rollPanel.effect.standard')}</option>
               <option value='great'>{t('components.rollPanel.effect.great')}</option>
             </select>
+            <Tooltip
+              variant='dark'
+              size='lg'
+              content={
+                <div className='space-y-1'>
+                  <div className='font-semibold'>{t('components.rollPanel.positionHelpTitle')}</div>
+                  <div className='text-xs opacity-90'>{t('components.rollPanel.positionHelp')}</div>
+                  <div className='pt-1 font-semibold'>
+                    {t('components.rollPanel.effectHelpTitle')}
+                  </div>
+                  <div className='text-xs opacity-90'>{t('components.rollPanel.effectHelp')}</div>
+                </div>
+              }
+            >
+              <span
+                tabIndex={0}
+                className='cursor-help text-xs text-foreground-muted'
+                aria-label={t('components.rollPanel.helpAria')}
+              >
+                ⓘ
+              </span>
+            </Tooltip>
           </>
         )}
         {mode === 'fortune' && (
@@ -254,6 +280,11 @@ export function RollPanel({
             : t('components.rollPanel.rollButton')}
         </Button>
       </Stack>
+      {isZeroDiceAction && (
+        <Text size='sm' variant='muted'>
+          {t('components.rollPanel.zeroDiceHint')}
+        </Text>
+      )}
       {last && (
         <Stack direction='row' gap='sm' align='center'>
           {last.stress != null ? (

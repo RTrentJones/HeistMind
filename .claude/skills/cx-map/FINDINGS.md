@@ -129,7 +129,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `RollLog` shows bare results; `Roll` has no `zeroDice` field to persist it.
 - **root cause:** A rating-0 roll shows two dice with no "take lowest" note — reads as a bug.
 - **fix:** Annotate zero-dice rolls in panel + log ("2d, take lowest"); persist `zeroDice` on `Roll`.
-- **status:** open
+- **status:** partially resolved (PR #59) — the panel now shows a hint when a rating-0 action is
+  selected ("No rating in this action — roll 2 dice and take the lowest."). Persisting `zeroDice` on
+  the `Roll` + annotating it in the log is still open.
 
 ### F8 — Position/effect dropdowns are unexplained jargon
 
@@ -138,7 +140,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   help text.
 - **root cause:** New FitD players can't choose meaningfully without the definitions.
 - **fix:** Inline tooltip/legend defining position (safety) and effect (impact).
-- **status:** open
+- **status:** resolved (PR #59) — an ⓘ `Tooltip` beside the effect select defines position
+  (Controlled → Risky → Desperate) and effect (Limited → Standard → Great).
 
 ### F9 — Push-yourself & Devil's Bargain (+1d) not modeled
 

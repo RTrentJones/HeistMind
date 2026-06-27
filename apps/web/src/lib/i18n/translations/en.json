@@ -373,7 +373,13 @@
         "limited": "Limited",
         "standard": "Standard",
         "great": "Great"
-      }
+      },
+      "helpAria": "What do position and effect mean?",
+      "positionHelpTitle": "Position — how exposed you are",
+      "positionHelp": "Controlled (act on your terms) → Risky (the default) → Desperate (worst position, worst consequences).",
+      "effectHelpTitle": "Effect — how much you accomplish",
+      "effectHelp": "Limited (a partial result) → Standard → Great (more than usual).",
+      "zeroDiceHint": "No rating in this action — roll 2 dice and take the lowest."
     },
     "rollLog": {
       "empty": "No rolls yet.",
