@@ -75,7 +75,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['blade', 'armor', 'heavy-blade'],
       attributes: {},
-      skills: { Skirmish: 1 },
+      skills: { Skirmish: 2, Command: 1 },
     },
     {
       id: 'hound',
@@ -97,7 +97,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['pistol', 'fine-rifle', 'spyglass'],
       attributes: {},
-      skills: { Hunt: 1 },
+      skills: { Hunt: 2, Survey: 1 },
     },
     {
       id: 'leech',
@@ -119,7 +119,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['tinkering-tools', 'alchemy-kit', 'documents'],
       attributes: {},
-      skills: { Tinker: 1 },
+      skills: { Tinker: 2, Wreck: 1 },
     },
     {
       id: 'lurk',
@@ -141,7 +141,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['burglary-gear', 'climbing-gear', 'blade'],
       attributes: {},
-      skills: { Prowl: 1 },
+      skills: { Prowl: 2, Finesse: 1 },
     },
     {
       id: 'slide',
@@ -163,7 +163,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['fine-clothes', 'disguise-kit', 'documents'],
       attributes: {},
-      skills: { Consort: 1 },
+      skills: { Consort: 2, Sway: 1 },
     },
     {
       id: 'spider',
@@ -185,7 +185,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['fine-clothes', 'documents', 'subterfuge-supplies'],
       attributes: {},
-      skills: { Study: 1 },
+      skills: { Study: 2, Consort: 1 },
     },
     {
       id: 'whisper',
@@ -210,7 +210,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       equipment: ['arcane-implements', 'spirit-mask', 'documents'],
       attributes: {},
-      skills: { Attune: 1 },
+      skills: { Attune: 2, Study: 1 },
     },
   ],
 
@@ -259,6 +259,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         'Your load limits are increased by 2. The maximum you can carry is raised accordingly.',
       tier: 1,
       category: 'cutter',
+      effects: { loadCapacity: { light: 5, normal: 7, heavy: 8 } },
     },
     {
       id: 'cutter-savage',
@@ -831,7 +832,10 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
   },
 
   characterCreation: {
-    actionRatings: { points: 7, maxAtCreation: 2, max: 3 },
+    // BitD creation: the playbook pre-places 3 action dots (seeded per playbook above), and the
+    // player assigns 4 more (max 2 in any action at creation) — 7 total. Action ratings cap at 3
+    // (4 only via the crew's "Mastery" upgrade — see crew abilities). https://bladesinthedark.com/character-creation
+    actionRatings: { points: 4, maxAtCreation: 2, max: 3 },
     abilityChoices: 1,
     steps: [
       {
@@ -873,6 +877,17 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
   },
 
   stress: { max: 9, traumaMax: 4 },
+  // The 8 canonical BitD trauma conditions; the validator enforces trauma ∈ this set.
+  traumaConditions: [
+    'Cold',
+    'Haunted',
+    'Obsessed',
+    'Paranoid',
+    'Reckless',
+    'Soft',
+    'Unstable',
+    'Vicious',
+  ],
   harm: { lesser: 2, moderate: 2, severe: 1 },
 
   crew: {
@@ -892,7 +907,21 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       {
         id: 'crew-deadly',
         name: 'Deadly',
-        description: 'Each crew member gains an action dot in a chosen attribute.',
+        description: 'Each crew member gains an action dot in a chosen action.',
+        effects: { bonusActionDots: 1 },
+      },
+      {
+        id: 'crew-mastery',
+        name: 'Mastery',
+        description:
+          'Crew members may advance an action rating to 4 (instead of the usual cap of 3).',
+        effects: { actionMax: 4 },
+      },
+      {
+        id: 'crew-veteran',
+        name: 'Veteran',
+        description: 'A crew member may take a special ability from a different playbook.',
+        effects: { veteran: 1 },
       },
       {
         id: 'crew-no-traces',

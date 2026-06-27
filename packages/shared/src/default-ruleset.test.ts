@@ -15,15 +15,13 @@ const ACTIONS = rulesetActions(DEFAULT_RULESET);
 const abilityIds = new Set(DEFAULT_RULESET.specialAbilities.map(a => a.id));
 
 /**
- * A legal creation-time action spread for a playbook: raise the playbook's seeded action to 2,
- * then add 1 to three other actions = 5 dots total (seeded 1 + the ruleset's 4 creation points),
- * none above the at-creation cap of 2.
+ * A legal creation-time action spread: the playbook's 3 pre-placed dots (seeded) + 4 assigned dots
+ * spread one-each across other actions = 7 dots total (BitD), none above the at-creation cap of 2.
  */
 function legalSkills(playbookId: string): Record<string, number> {
   const pb = DEFAULT_RULESET.playbooks.find(p => p.id === playbookId)!;
-  const seeded = Object.keys(pb.skills)[0]!;
-  const others = ACTIONS.filter(a => a !== seeded).slice(0, 3);
-  const skills: Record<string, number> = { [seeded]: 2 };
+  const skills: Record<string, number> = { ...pb.skills };
+  const others = ACTIONS.filter(a => !(a in skills)).slice(0, 4);
   for (const a of others) skills[a] = 1;
   return skills;
 }
@@ -94,12 +92,15 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
     }
   });
 
-  it('every playbook seeds exactly one starting action dot that is a real action', () => {
+  it('every playbook pre-places 3 starting action dots in real actions (max 2 each)', () => {
     for (const pb of DEFAULT_RULESET.playbooks) {
-      const keys = Object.keys(pb.skills);
-      expect(keys, pb.id).toHaveLength(1);
-      expect(ACTIONS).toContain(keys[0]);
-      expect(pb.skills[keys[0]!]).toBe(1);
+      const entries = Object.entries(pb.skills);
+      const total = entries.reduce((n, [, v]) => n + v, 0);
+      expect(total, pb.id).toBe(3); // BitD: playbook pre-places 3 dots
+      for (const [action, v] of entries) {
+        expect(ACTIONS, `${pb.id}:${action}`).toContain(action);
+        expect(v, `${pb.id}:${action}`).toBeLessThanOrEqual(2);
+      }
     }
   });
 
@@ -125,22 +126,22 @@ describe('DEFAULT_RULESET (Brackwater starter)', () => {
 
   // The real guard: a minimal legal build for EVERY playbook validates at creation, and its
   // derived attributes match the action spread.
-  it.each(DEFAULT_RULESET.playbooks.map(p => [p.id, p.specialAbilities.slice(0, 2)] as const))(
+  it.each(DEFAULT_RULESET.playbooks.map(p => [p.id, p.startingAbilities] as const))(
     'builds a valid creation-time character for "%s"',
     (playbookId, abilities) => {
       const data = buildCharacter(playbookId, [...abilities]);
       const result = validateCharacter(DEFAULT_RULESET, data, { mode: 'creation' });
       expect(result.errors, JSON.stringify(result.errors)).toEqual([]);
       expect(result.isValid).toBe(true);
-      // 5 dots assigned (seeded 1 + 4 points), and attributes are derived (each touched attr ≥ 1).
-      expect(actionDotsSpent(DEFAULT_RULESET, data)).toBe(5);
+      // 7 dots (seeded 3 + 4 points), one starting ability, attributes derived (each touched attr ≥ 1).
+      expect(actionDotsSpent(DEFAULT_RULESET, data)).toBe(7);
       expect(Object.values(data.attributes).some(v => v > 0)).toBe(true);
     }
   );
 
   it('rejects an over-budget action spread', () => {
     const skills = legalSkills('knife');
-    // Add a 6th dot beyond the 5-dot budget.
+    // Add an 8th dot beyond the 7-dot budget.
     const extra = ACTIONS.find(a => !(a in skills))!;
     skills[extra] = 1;
     const result = validateCharacter(

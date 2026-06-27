@@ -67,7 +67,7 @@ export const WICKED_ONES: RulesetContent = {
       contacts: [{ name: 'A pit of lesser brutes', description: 'They follow the biggest.' }],
       equipment: ['great-club', 'trophy-hide', 'chains'],
       attributes: {},
-      skills: { Smash: 1 },
+      skills: { Smash: 2, Scrap: 1 },
     },
     {
       id: 'sneak',
@@ -84,7 +84,7 @@ export const WICKED_ONES: RulesetContent = {
       contacts: [{ name: 'A goblin black-market', description: 'Buys and sells anything shiny.' }],
       equipment: ['poison-dagger', 'trap-kit', 'climbing-claws'],
       attributes: {},
-      skills: { Skulk: 1 },
+      skills: { Skulk: 2, Scout: 1 },
     },
     {
       id: 'shaman',
@@ -101,7 +101,7 @@ export const WICKED_ONES: RulesetContent = {
       contacts: [{ name: 'A whispering idol', description: 'Demands offerings, grants power.' }],
       equipment: ['bone-totem', 'ritual-supplies', 'cursed-relic'],
       attributes: {},
-      skills: { Channel: 1 },
+      skills: { Channel: 2, Consort: 1 },
     },
     {
       id: 'warlord',
@@ -118,7 +118,7 @@ export const WICKED_ONES: RulesetContent = {
       contacts: [{ name: 'A pack of minions', description: 'Loyal so long as you win.' }],
       equipment: ['cruel-blade', 'warhorn', 'banner'],
       attributes: {},
-      skills: { Command: 1 },
+      skills: { Command: 2, Sway: 1 },
     },
     {
       id: 'breaker',
@@ -135,7 +135,7 @@ export const WICKED_ONES: RulesetContent = {
       contacts: [{ name: 'A scrap-warren', description: 'Endless junk to plunder for parts.' }],
       equipment: ['tool-rig', 'blast-charges', 'salvage'],
       attributes: {},
-      skills: { Tinker: 1 },
+      skills: { Tinker: 2, Scavenge: 1 },
     },
   ],
 
@@ -526,7 +526,9 @@ export const WICKED_ONES: RulesetContent = {
   },
 
   characterCreation: {
-    actionRatings: { points: 7, maxAtCreation: 2, max: 3 },
+    // Playbooks pre-place 3 action dots (seeded above); the player assigns 4 more, max 2 at
+    // creation — 7 total. Actions cap at 3 (4 via the dungeon's mastery upgrade).
+    actionRatings: { points: 4, maxAtCreation: 2, max: 3 },
     abilityChoices: 1,
     steps: [
       {

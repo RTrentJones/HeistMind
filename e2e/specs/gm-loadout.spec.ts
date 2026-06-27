@@ -41,7 +41,8 @@ test.describe('GM: loadout, coin & contacts (Brackwater)', () => {
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
     await next.click(); // → action ratings (leave at the seeded spread)
     await next.click(); // → special abilities
-    await gmPage.getByText('Bulwark', { exact: true }).click();
+    // One ability at creation (BitD); swap the seeded Scarred for Bulwark.
+    await gmPage.getByRole('button', { name: /Bulwark/ }).click();
     await next.click(); // → Heritage
     await next.click(); // → Background
     await next.click(); // → Vice

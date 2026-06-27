@@ -39,24 +39,25 @@ test.describe('GM: action ratings (Brackwater)', () => {
     // → Assign Action Ratings (NOT attribute point-buy).
     await gmPage.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(gmPage.getByRole('heading', { name: 'Assign Action Ratings' })).toBeVisible();
-    // Budget = playbook's 1 seeded dot + 4 creation points = 5.
-    await expect(gmPage.getByText(/\/ 5 action dots/)).toBeVisible();
-    // Derived attributes start from the seeded Clash (Force) dot.
+    // Budget = playbook's 3 seeded dots (Clash 2 + Marshal 1) + 4 creation points = 7 (BitD-canon).
+    await expect(gmPage.getByText(/\/ 7 action dots/)).toBeVisible();
+    // Cunning has no seeded actions (the knife seeds Clash + Marshal), so it derives 0 to start.
     await expect(gmPage.getByText('Cunning 0')).toBeVisible();
 
     // Assign two Cunning actions (the first dot of the first two actions, Track + Examine) →
-    // derived Cunning becomes 2, and the budget spend rises to 3.
+    // derived Cunning becomes 2, and the spend rises to 5 (3 seeded + 2 assigned).
     const dots = gmPage.locator('button.rounded-full');
     await dots.nth(0).click();
     await dots.nth(2).click();
     await expect(gmPage.getByText('Cunning 2')).toBeVisible();
-    await expect(gmPage.getByText(/3 \/ 5 action dots/)).toBeVisible();
+    await expect(gmPage.getByText(/5 \/ 7 action dots/)).toBeVisible();
 
     // Abilities → identity steps → review → create (under-spent dots are a warning, not a block).
+    // BitD = exactly ONE ability at creation; the playbook seeds Scarred, clicking Bulwark SWAPS to it.
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
     await next.click();
-    await expect(gmPage.getByText(/of 2 chosen/i)).toBeVisible();
-    await gmPage.getByText('Bulwark', { exact: true }).click();
+    await expect(gmPage.getByText(/of 1 chosen/i)).toBeVisible();
+    await gmPage.getByRole('button', { name: /Bulwark/ }).click();
     await next.click(); // Heritage
     await next.click(); // Background
     await next.click(); // Vice

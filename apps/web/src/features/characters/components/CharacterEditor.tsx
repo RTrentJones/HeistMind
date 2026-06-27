@@ -5,7 +5,8 @@ import {
   validateCharacter,
   stressBounds,
   harmBounds,
-  loadLimit,
+  effectiveLoadLimit,
+  collectAbilityEffects,
   loadUsed,
   usesXpTracks,
   xpTrackSize,
@@ -17,6 +18,7 @@ import {
   type CharacterHarm,
   type LoadLevel,
   type CharacterWithDetails,
+  type CrewContext,
 } from '@heist-mind/database';
 import {
   Alert,
@@ -64,6 +66,23 @@ export function CharacterEditor({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // The campaign's crew, so level-ups validate in context: its abilities RAISE the live bounds —
+  // Mastery lifts the action cap (so a member can advance an action to 4), Deadly grants bonus dots,
+  // Mule raises load. Matches the server's crew-aware `advanceCharacter`/`updateCharacterWithValidation`.
+  const [crew, setCrew] = useState<CrewContext | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getRepositories()
+      .crews.findByGame(character.gameId)
+      .then(r => {
+        if (active && r.success && r.data)
+          setCrew({ crewAbilities: r.data.crewAbilities });
+      });
+    return () => {
+      active = false;
+    };
+  }, [character.gameId]);
+
   // Resync the editable draft whenever the character reloads (e.g. after an advancement),
   // keeping the active section. Saves persist, so clobbering unsaved edits here is acceptable.
   useEffect(() => {
@@ -95,7 +114,7 @@ export function CharacterEditor({
           : [...loadout.items, id],
       },
     });
-  const loadCap = loadLimit(content, loadout.level);
+  const loadCap = effectiveLoadLimit(content, draft, loadout.level, crew);
   const loadCarried = loadUsed(content, draft);
 
   const contactName = (rel: 'friend' | 'rival') =>
@@ -115,7 +134,7 @@ export function CharacterEditor({
   const saveBuild = async () => {
     const userId = user?.id;
     if (!userId) return;
-    const result = validateCharacter(content, draft, { mode: 'live' });
+    const result = validateCharacter(content, draft, { mode: 'live', crew });
     if (!result.isValid) {
       setError(result.errors.map(e => e.message).join(' '));
       return;
@@ -402,7 +421,7 @@ export function CharacterEditor({
                 >
                   {t('components.characterEditor.loadLevelOption', {
                     level: lvl,
-                    limit: loadLimit(content, lvl),
+                    limit: effectiveLoadLimit(content, draft, lvl, crew),
                   })}
                 </Button>
               ))}
@@ -529,7 +548,12 @@ export function CharacterEditor({
               <Heading level='h3'>{t('components.characterEditor.specialAbilities')}</Heading>
               <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
               <Heading level='h3'>{t('components.characterEditor.actionDots')}</Heading>
-              <ActionDotOptions character={character} onAdvance={advanceAction} saving={saving} />
+              <ActionDotOptions
+                character={character}
+                crew={crew}
+                onAdvance={advanceAction}
+                saving={saving}
+              />
             </Stack>
           ) : (
             <Stack direction='column' gap='md'>
@@ -661,17 +685,24 @@ function AdvancementOptions({
  */
 function ActionDotOptions({
   character,
+  crew,
   onAdvance,
   saving,
 }: {
   character: CharacterWithDetails;
+  crew: CrewContext | null;
   onAdvance: (action: string) => void;
   saving: boolean;
 }) {
   const { t } = useTranslation();
   const content = character.ruleset.content;
   const data = character.characterData;
-  const max = content.characterCreation?.actionRatings?.max ?? 3;
+  // Action rating caps at the ruleset's max (BitD: 3), RAISED to the crew's effective cap when it
+  // holds a Mastery-style upgrade (→ 4) — so a member of a Mastery crew can buy the 4th dot.
+  const max = Math.max(
+    content.characterCreation?.actionRatings?.max ?? 3,
+    collectAbilityEffects(content, data, crew).actionMax
+  );
   const ready = content.attributes.filter(a => xpTrackFull(content, data, a.id));
 
   if (ready.length === 0) {

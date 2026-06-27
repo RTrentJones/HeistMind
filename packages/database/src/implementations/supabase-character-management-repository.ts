@@ -31,6 +31,7 @@ import {
   advanceTrack,
   clearXpTrack,
   PLAYBOOK_TRACK,
+  type CrewContext,
 } from '../character-rules';
 import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
 
@@ -81,6 +82,20 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
     return { success: true, data: fromSupabaseRuleset(rsRow).content };
   }
 
+  /**
+   * The campaign's crew context (its held abilities) for crew-aware validation — Mastery raises the
+   * action cap, Deadly grants a bonus dot, a veteran upgrade opens cross-playbook abilities. Null
+   * when the campaign has no crew yet (the character then validates against the ruleset alone).
+   */
+  private async crewForGame(gameId: string): Promise<CrewContext | null> {
+    const { data } = await this.db
+      .from('crews')
+      .select('crew_abilities')
+      .eq('game_id', gameId)
+      .maybeSingle();
+    return data ? { crewAbilities: (data.crew_abilities as string[] | null) ?? [] } : null;
+  }
+
   async createCharacterWithValidation(
     userId: string,
     data: CreateCharacterData
@@ -89,7 +104,11 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       const ruleset = await this.rulesetForGame(data.gameId);
       if (!ruleset.success) return ruleset;
 
-      const result = validateCharacter(ruleset.data, data.characterData, { mode: 'creation' });
+      const crew = await this.crewForGame(data.gameId);
+      const result = validateCharacter(ruleset.data, data.characterData, {
+        mode: 'creation',
+        crew,
+      });
       if (!result.isValid) return failValidation<CharacterWithDetails>(result);
 
       const created = await this.characters.create(userId, data);
@@ -118,7 +137,8 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       const ruleset = await this.rulesetForGame(current.data.gameId);
       if (!ruleset.success) return ruleset as Result<Character>;
 
-      const result = validateCharacter(ruleset.data, nextData, { mode: 'live' });
+      const crew = await this.crewForGame(current.data.gameId);
+      const result = validateCharacter(ruleset.data, nextData, { mode: 'live', crew });
       if (!result.isValid) return failValidation<Character>(result);
 
       return this.characters.update(characterId, userId, data);
@@ -188,6 +208,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         };
       }
 
+      // The campaign's crew gates what an advance may take (a veteran upgrade opens cross-playbook
+      // picks) and raises the bounds the result is validated against (Mastery/Deadly/Mule).
+      const crew = await this.crewForGame(character.gameId);
+
       // Apply the effect to a cloned build.
       const next: CharacterData = structuredClone(character.characterData);
       if (adv.type === 'attribute')
@@ -200,6 +224,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
             success: false,
             error: { message: 'Ability already known.', code: 'DUPLICATE_ABILITY' },
           };
+        // Advancement is the BitD "veteran" path: a played character may reach beyond its starting
+        // playbook (subject to the option's own `requirements`/prereqs, checked above). So we don't
+        // re-apply creation's roster/tier gate here — crew context instead RAISES the live bounds the
+        // result is validated against (Mastery action cap, Deadly dots, Mule load) just below.
         next.specialAbilities = [...next.specialAbilities, adv.target];
       } else if (adv.type === 'playbook') {
         next.playbook = adv.target;
@@ -208,8 +236,8 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       // Track-mode advances spend a full track: clear it (no pooled XP changes hands).
       if (trackMode) next.xp = clearXpTrack(next, track);
 
-      // Re-validate the resulting build (live invariants).
-      const post = validateCharacter(ruleset, next, { mode: 'live' });
+      // Re-validate the resulting build (live invariants), in the crew's context.
+      const post = validateCharacter(ruleset, next, { mode: 'live', crew });
       if (!post.isValid) return failValidation<Character>(post);
 
       const record: AdvancementRecord = {
@@ -247,10 +275,11 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       const rs = await this.rulesetForGame(current.data.gameId);
       if (!rs.success) return rs as Result<ValidationResult>;
 
+      const crew = await this.crewForGame(current.data.gameId);
       // Success carries the result even when the character is invalid.
       return {
         success: true,
-        data: validateCharacter(rs.data, current.data.characterData, { mode: 'live' }),
+        data: validateCharacter(rs.data, current.data.characterData, { mode: 'live', crew }),
       };
     } catch (e) {
       return failFromCatch(e);

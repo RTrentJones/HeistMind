@@ -28,7 +28,14 @@ The full FitD play loop shipped across 9 phases (see the completed plan in §Pla
 - **Characters:** per-action ratings (12 actions) with **derived attributes**, special abilities
   with rules text, identity (heritage/background/vice), loadout/stash, coin.
 - **In-play:** live stress (9) + trauma (4), harm (2/2/1), **XP tracks** (playbook + attribute) with
-  mark-XP and spend-advance; **indulge vice** (MVP downtime) clears stress.
+  mark-XP and spend-advance; **indulge vice** rolls your lowest attribute and clears the highest die
+  (with overindulge), per BitD.
+- **BitD rules accuracy** (`feat/bitd-rules-accuracy` branch, SRD-grounded): 7 starting action dots
+  (3 seeded + 4), exactly 1 ability (a radio-style **swap** in the wizard, not a stack), enforced
+  trauma sets; **crew-aware validation** — the campaign crew raises the action cap (Mastery→4), the
+  action-dot budget (Deadly), load (Mule), and opens veteran cross-playbook picks. This applies to the
+  **editor's level-ups too, not just creation** (the editor loads the crew so a Mastery member can buy
+  the 4th dot). Heat→wanted cascade; hardened ruleset upload. See FINDINGS F54.
 - **Dice:** async roller (`dice.ts` `rollOutcome` — crit/success/partial/bad, 0-dice take-lowest) with
   **resistance rolls** (`resistanceStress` = `6 − highest die`), persisted to a per-campaign **roll
   log** (the async-play centerpiece) that now shows who + when and annotates resistance/downtime.
@@ -102,4 +109,4 @@ the audit, not a sprint board:
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-06-26 @ 69180e1
+_Last verified:_ 2026-06-27 @ 2535b31
