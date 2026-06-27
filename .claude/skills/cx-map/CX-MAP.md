@@ -96,7 +96,9 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
   (`apps/web/src/features/characters/components/CharacterCreationWizard.tsx`) → `WizardStep`
   dispatcher → step components (see **Wizard** below). Layouts: `?layout=single` (default) or
   `?layout=rail` (step rail + live summary).
-- **Actions:** name; step through Back/Next or step badges; Create on the final step.
+- **Actions:** name; step through Back/Next or step badges; Create on the final step. A disabled
+  Next/Create now shows the blocking reason in the footer (`stepError` → e.g. "Can't continue yet —
+  Assigned 8 of 7 action dots.").
 - **State:** `useCharacterCreationStore`
   (`apps/web/src/features/characters/stores/character-creation-store.ts`) persists draft to
   localStorage (auto-resume); the large `ruleset` object is re-supplied on mount, not persisted.

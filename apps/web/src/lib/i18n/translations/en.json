@@ -169,6 +169,7 @@
       "nameHelp": "Required — shown on the character sheet.",
       "createCharacter": "Create character",
       "stepsLabel": "Creation steps",
+      "cantContinue": "Can't continue yet —",
       "stepNumber": "STEP {{num}}",
       "summary": {
         "ariaLabel": "Character summary",

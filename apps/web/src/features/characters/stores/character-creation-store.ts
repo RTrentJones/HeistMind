@@ -84,6 +84,8 @@ interface CharacterCreationState extends LoadingState {
 
   // Validation + submit
   isStepValid: (index: number) => boolean;
+  /** The first blocking validation message for a step (so the footer can say *why* Next is off). */
+  stepError: (index: number) => string | null;
   canSubmit: () => boolean;
   submit: () => Promise<string | null>;
 }
@@ -265,6 +267,22 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
             return isValid && name.trim().length > 0 && draft.playbook.length > 0;
           // Other steps gate only on errors that belong to that step.
           return !errors.some(e => errorBelongsToStep(e.field, kind, step.id));
+        },
+
+        stepError: index => {
+          const { steps, draft, ruleset } = get();
+          const step = steps[index];
+          const content = ruleset?.content;
+          if (!step || !content) return null;
+          const kind = stepKind(step.id);
+          const { errors } = validateCharacter(content, draft, { mode: 'creation' });
+          // Review gates on the whole build — surface the first error anywhere so the user knows
+          // what to go fix. Other steps surface only the first error that belongs to that step.
+          const e =
+            kind === 'review'
+              ? errors[0]
+              : errors.find(er => errorBelongsToStep(er.field, kind, step.id));
+          return e?.message ?? null;
         },
 
         canSubmit: () => {

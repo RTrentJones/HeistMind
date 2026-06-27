@@ -59,6 +59,8 @@ export function CharacterCreationWizard({
   const stepValidity = useCharacterCreationStore(
     useShallow(s => s.steps.map((_, i) => s.isStepValid(i)))
   );
+  // The blocking reason for the current step, so a disabled Next/Create can say *why*.
+  const blockingReason = useCharacterCreationStore(s => s.stepError(stepIndex));
 
   useEffect(() => {
     init(ruleset, gameId);
@@ -125,7 +127,13 @@ export function CharacterCreationWizard({
       <Button variant='ghost' onClick={onCancel ?? (() => router.back())}>
         {t('common.actions.cancel')}
       </Button>
-      <div style={{ flex: 1 }} />
+      {!canAdvance && blockingReason ? (
+        <Text size='sm' role='status' className='min-w-0 flex-1 truncate text-semantic-warning'>
+          {t('components.wizard.cantContinue')} {blockingReason}
+        </Text>
+      ) : (
+        <div style={{ flex: 1 }} />
+      )}
       <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
         {t('common.actions.back')}
       </Button>

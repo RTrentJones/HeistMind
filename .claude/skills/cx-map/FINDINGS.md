@@ -98,7 +98,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   error/code (`POINTBUY_OVER`, `ACTION_POINTS_OVER`, incomplete step) is never surfaced as copy.
 - **fix:** Render the first blocking validation message inline near the footer / step
   ("You've spent 8/7 action dots — reduce one to continue").
-- **status:** open
+- **status:** resolved (PR #59) — a `stepError(index)` store selector returns the first blocking
+  validation message for the current step (whole-build for review); the wizard footer shows it next
+  to a disabled Next/Create in `text-semantic-warning` with an i18n'd "Can't continue yet —" lead-in
+  (e.g. "Can't continue yet — Assigned 8 of 7 action dots.").
 
 ### F5 — Roll log doesn't say who rolled
 
