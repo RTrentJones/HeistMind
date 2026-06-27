@@ -39,7 +39,9 @@ export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
         <Stack justify='center' align='center' className='min-h-screen'>
           <Stack gap='md' align='center'>
             <StatusIcon status='loading' size='xl' icon='⚡' animation='pulse' />
-            <Text variant='secondary'>Preparing the shadows...</Text>
+            {/* Rendered before <I18nextProvider> mounts, so read off the i18n instance directly
+                (initialized to English) rather than the useTranslation hook. */}
+            <Text variant='secondary'>{i18n.t('common.loading.preparingShadows')}</Text>
           </Stack>
         </Stack>
       </Section>

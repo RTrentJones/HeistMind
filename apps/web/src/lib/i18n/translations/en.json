@@ -35,7 +35,8 @@
       "gatheringCrew": "Gathering your crew...",
       "consultingCharts": "Consulting the charts...",
       "readingShadows": "Reading the shadows...",
-      "forgingDocuments": "Forging documents..."
+      "forgingDocuments": "Forging documents...",
+      "preparingShadows": "Preparing the shadows..."
     }
   },
   "navigation": {
@@ -353,7 +354,23 @@
       "resistLabel": "Resisted attribute",
       "rollButton": "Roll",
       "resistButton": "Resist",
-      "stressTaken": "{{count}} stress"
+      "stressTaken": "{{count}} stress",
+      "outcome": {
+        "crit": "Critical!",
+        "success": "Success",
+        "partial": "Partial",
+        "bad": "Bad outcome"
+      },
+      "position": {
+        "controlled": "Controlled",
+        "risky": "Risky",
+        "desperate": "Desperate"
+      },
+      "effect": {
+        "limited": "Limited",
+        "standard": "Standard",
+        "great": "Great"
+      }
     },
     "rollLog": {
       "empty": "No rolls yet.",
@@ -740,7 +757,11 @@
       "uploadCta": "Upload ruleset",
       "metadataNote": "The name and version come from the file's metadata.",
       "signInRequired": "You must be signed in to upload a ruleset.",
-      "saveFailed": "Failed to save the ruleset."
+      "saveFailed": "Failed to save the ruleset.",
+      "startHeading": "Not sure where to start?",
+      "starterHintPrefix": "The easiest path is to add a",
+      "starterHintLink": "starter ruleset",
+      "starterHintSuffix": "and edit your copy — no JSON required."
     }
   },
   "errors": {

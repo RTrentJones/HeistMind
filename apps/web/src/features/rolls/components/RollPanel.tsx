@@ -20,11 +20,12 @@ const OUTCOME_VARIANT = {
   partial: 'warning',
   bad: 'stress-critical',
 } as const;
-const OUTCOME_LABEL = {
-  crit: 'Critical!',
-  success: 'Success',
-  partial: 'Partial',
-  bad: 'Bad outcome',
+// Static (non-template) keys so they stay in the typed TranslationKey union.
+const OUTCOME_KEY = {
+  crit: 'components.rollPanel.outcome.crit',
+  success: 'components.rollPanel.outcome.success',
+  partial: 'components.rollPanel.outcome.partial',
+  bad: 'components.rollPanel.outcome.bad',
 } as const;
 
 // BitD fallback attributes for resistance when a ruleset has no action ratings to draw on. Without
@@ -79,7 +80,7 @@ export function RollPanel({
   const [effect, setEffect] = useState('standard');
   const [rolling, setRolling] = useState(false);
   const [last, setLast] = useState<{
-    outcome: keyof typeof OUTCOME_LABEL;
+    outcome: keyof typeof OUTCOME_KEY;
     results: number[];
     stress?: number;
   } | null>(null);
@@ -203,9 +204,9 @@ export function RollPanel({
               value={position}
               onChange={e => setPosition(e.target.value)}
             >
-              <option value='controlled'>Controlled</option>
-              <option value='risky'>Risky</option>
-              <option value='desperate'>Desperate</option>
+              <option value='controlled'>{t('components.rollPanel.position.controlled')}</option>
+              <option value='risky'>{t('components.rollPanel.position.risky')}</option>
+              <option value='desperate'>{t('components.rollPanel.position.desperate')}</option>
             </select>
             <select
               aria-label={t('components.rollPanel.effectLabel')}
@@ -213,9 +214,9 @@ export function RollPanel({
               value={effect}
               onChange={e => setEffect(e.target.value)}
             >
-              <option value='limited'>Limited</option>
-              <option value='standard'>Standard</option>
-              <option value='great'>Great</option>
+              <option value='limited'>{t('components.rollPanel.effect.limited')}</option>
+              <option value='standard'>{t('components.rollPanel.effect.standard')}</option>
+              <option value='great'>{t('components.rollPanel.effect.great')}</option>
             </select>
           </>
         )}
@@ -260,7 +261,7 @@ export function RollPanel({
               {t('components.rollPanel.stressTaken', { count: last.stress })}
             </Badge>
           ) : (
-            <Badge variant={OUTCOME_VARIANT[last.outcome]}>{OUTCOME_LABEL[last.outcome]}</Badge>
+            <Badge variant={OUTCOME_VARIANT[last.outcome]}>{t(OUTCOME_KEY[last.outcome])}</Badge>
           )}
           <Text variant='muted' size='sm'>
             [{last.results.join(', ')}]

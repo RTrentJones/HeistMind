@@ -58,13 +58,13 @@ export function RulesetUpload() {
     <Stack direction='column' gap='lg'>
       <Card variant='outline'>
         <Stack direction='column' gap='xs'>
-          <Heading level='h3'>Not sure where to start?</Heading>
+          <Heading level='h3'>{t('forms.rulesetUpload.startHeading')}</Heading>
           <Text variant='muted' size='sm'>
-            The easiest path is to add a{' '}
+            {t('forms.rulesetUpload.starterHintPrefix')}{' '}
             <Link href='/rulesets' className='underline'>
-              starter ruleset
+              {t('forms.rulesetUpload.starterHintLink')}
             </Link>{' '}
-            and edit your copy — no JSON required.
+            {t('forms.rulesetUpload.starterHintSuffix')}
           </Text>
           <Text variant='muted' size='sm'>
             A ruleset is a JSON object with: <code>metadata</code> (name, version, author,
