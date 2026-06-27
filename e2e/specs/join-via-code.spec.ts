@@ -17,12 +17,7 @@ test.describe('Join via invite code', () => {
     );
   });
 
-  // fixme: this caught a real A1 gap (see FINDINGS F53). Redemption + the redirect work, but the
-  // joined player cannot OPEN the campaign: GameDetailPage → games.findWithDetails reads the
-  // ruleset with `.single()`, and the rulesets SELECT RLS is `created_by = auth.uid() OR is_public`
-  // — a member is neither, so the read errors and the hub shows a load error instead of the
-  // campaign. Un-fixme once members can read their campaign's ruleset (RLS fix).
-  test.fixme('a GM generates a code and a second account joins with it', async ({
+  test('a GM generates a code and a second account joins with it', async ({
     gmPage,
     playerPage,
   }) => {
