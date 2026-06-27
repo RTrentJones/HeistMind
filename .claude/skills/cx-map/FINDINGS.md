@@ -66,7 +66,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   and it never appears in their own list — so the core async-multiplayer loop has no front door.
 - **fix:** Add an "Invite players" affordance for the GM (shareable link / join code) and a player
   join + "campaigns I'm in" path (query `GamePlayer` memberships, not just `findByCreator`).
-- **status:** open
+- **status:** resolved (PR #59) — `SupabaseInvitationRepository` + `redeem_invite_code` RPC; the
+  `/games` hub now lists created **and** joined campaigns with a join-via-code box, and GMs get an
+  `InviteCodeSection` code generator. Targeted + public codes. (First-class targeted-invite inbox
+  still thin — see F-followups.)
 
 ### F3 — Resistance rolls (spend stress to resist a consequence) not implemented
 
@@ -77,7 +80,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   (`6 − highest die`) logic; nothing to resist against is captured on a roll.
 - **fix:** Resistance mode in `RollPanel` (pick attribute → roll → auto-cost `6 − high` → deduct
   stress); store the consequence + attribute on the `Roll`.
-- **status:** open
+- **status:** resolved (PR #59) — `dice.resistanceStress` (`6 − highest die`, empty ⇒ 6, floored at
+  0; unit-tested to 100%); `RollPanel` Resistance mode picks the attribute, rolls, deducts stress via
+  `updateCharacterWithValidation`, persists `kind='resistance'`; the log annotates "resisted — N
+  stress". (Free-text consequence capture not yet stored — minor follow-up.)
 
 ---
 
@@ -101,7 +107,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   results, position/effect, outcome; never resolves `characterId`/`userId`.
 - **root cause:** In an async shared feed, "who acted" is essential context and it's simply absent.
 - **fix:** Resolve and show the character name (or player/"GM" for fortune rolls) per entry.
-- **status:** open
+- **status:** resolved (PR #59) — `RollLog` resolves `characterId → name` via `characters.findByGame`
+  and shows it per entry (fortune → "Fortune", GM otherwise).
 
 ### F6 — Roll log has no timestamps
 
@@ -109,7 +116,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **where:** `RollLog.tsx:42–56` — `Roll.createdAt` exists but is never displayed.
 - **root cause:** A play-by-post log spanning days/weeks needs chronological anchors.
 - **fix:** Show `createdAt` (relative or short absolute) on each entry.
-- **status:** open
+- **status:** resolved (PR #59) — each entry shows a relative time ("just now / 5m / 3h / 2d ago")
+  with the absolute timestamp in a `Tooltip` on a `<time>` element.
 
 ### F7 — Zero-dice rolls (rating 0) aren't explained
 
@@ -193,7 +201,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   stress (indulge vice) — doesn't exist.
 - **fix:** A downtime panel; start with the highest-value actions (indulge vice → clear stress;
   recover → healing clock; reduce heat).
-- **status:** open
+- **status:** partially resolved (PR #59, MVP) — "Indulge vice" on the character sheet clears stress
+  to 0 and logs a `kind='downtime'` feed entry (rendered with a neutral badge, no dice). The rest of
+  the downtime menu (recover/acquire/long-term project/reduce heat/train) is still open.
 
 ### F16 — Flashbacks not modeled
 
@@ -285,15 +295,19 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **F29** · CX · Required name field has no visual required indicator.
   `CharacterCreationWizard.tsx:83` → asterisk/marker. **open**
 - **F30** · FitD · Clock completion isn't visually indicated; 4/4 looks like 3/4. `clockComplete()`
-  in `clocks.ts` is never called by `ClocksPanel.tsx` → render a complete state. **open**
+  in `clocks.ts` is never called by `ClocksPanel.tsx` → render a complete state. **fixed @4b7343e
+  (PR #59)** — full clocks show a "Complete" badge + glow.
 - **F31** · CX · Roll-log shows `risky/` (trailing slash, empty effect) when position is set but
-  effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **open**
+  effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **fixed @4b7343e
+  (PR #59)** — position/effect now joined with a slash only when both are present.
 - **F32** · CX · Game `state` (draft/recruiting/active/paused/completed) is shown as a badge with no
   legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **open**
 - **F33** · CX · Crew `hold` (strong/weak) shown + toggle with no explanation. `CrewSheet.tsx:172–182`
-  → tooltip. **open**
+  → tooltip. **fixed @4b7343e (PR #59)** — hold has an explanatory tooltip (strong = stable, weak =
+  one setback from breaking up).
 - **F34** · CX · Faction tier (0–6) and status (−3..+3) caps aren't labelled; buttons just disable at
-  the ends. `FactionsPanel.tsx:190–246` → show "Tier x/6", a status legend. **open**
+  the ends. `FactionsPanel.tsx:190–246` → show "Tier x/6", a status legend. **fixed @4b7343e
+  (PR #59)** — tier now labelled "Tier n/6" and status carries a −3..+3 legend tooltip.
 - **F35** · CX · Ruleset upload gave no schema/example guidance; validation errors assumed JSON
   fluency. Added a guidance card outlining the required/optional shape + pointing to the starter
   catalog as the no-JSON path. `RulesetUpload.tsx`. **fixed @69180e1**

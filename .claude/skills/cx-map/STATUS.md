@@ -28,9 +28,13 @@ The full FitD play loop shipped across 9 phases (see the completed plan in §Pla
 - **Characters:** per-action ratings (12 actions) with **derived attributes**, special abilities
   with rules text, identity (heritage/background/vice), loadout/stash, coin.
 - **In-play:** live stress (9) + trauma (4), harm (2/2/1), **XP tracks** (playbook + attribute) with
-  mark-XP and spend-advance.
-- **Dice:** async roller (`dice.ts` `rollOutcome` — crit/success/partial/bad, 0-dice take-lowest),
-  persisted to a per-campaign **roll log** (the async-play centerpiece).
+  mark-XP and spend-advance; **indulge vice** (MVP downtime) clears stress.
+- **Dice:** async roller (`dice.ts` `rollOutcome` — crit/success/partial/bad, 0-dice take-lowest) with
+  **resistance rolls** (`resistanceStress` = `6 − highest die`), persisted to a per-campaign **roll
+  log** (the async-play centerpiece) that now shows who + when and annotates resistance/downtime.
+- **Multiplayer:** GMs generate **join codes** (targeted + public) and players **join by code**; the
+  `/games` hub lists created + joined campaigns. (Backend: `SupabaseInvitationRepository` +
+  `redeem_invite_code` RPC, `00010_invite_redeem.sql`.)
 - **Campaign objects:** progress **clocks** (4/6/8/10/12), a **crew sheet** (type, tier, rep, heat,
   wanted, hold, abilities, claims, cohorts, coin/vault), and **factions** (tier, status −3..+3,
   project clocks).
@@ -62,14 +66,16 @@ bundled **Brackwater** starter opts into full FitD mode.
   tables.
 - **Rulesets are snapshots.** Loading a ruleset copies its content into the DB row; it does not track
   the bundle afterward. Reloading the starter refreshes it. See `ruleset-content-is-a-snapshot`.
-- **i18n is available but not pervasive.** An i18next scaffold exists (`apps/web/src/lib/i18n/`:
-  provider/hooks/server + `translations/en.json`, wired via `I18nProvider` in the root layout), but
-  only ~5 of ~32 screens use it and there is **no** lint rule enforcing it — most UI ships plain
-  strings. The old memory-bank "localize every string, ESLint-enforced" mandate was never in force;
-  treat i18n as optional today and don't cite that mandate as reality.
+- **i18n is being restored (PR #59).** The i18next scaffold (`apps/web/src/lib/i18n/`:
+  provider/hooks/server + `translations/en.json`, wired via `I18nProvider` in the root layout) is now
+  used across the public surface, auth, the character wizard/sheet/editor, the campaign panels
+  (rolls/clocks/crew/factions), and the ruleset catalog — English-only, translation-ready, with a
+  file-gated `LanguageSwitcher`. The `t` functions are memoized (`useCallback`) so they're effect-safe.
+  **Still pending in PR #59:** the `no-literal-string` ESLint gate that prevents re-rot. Until that
+  lands, new UI must still be wired by hand.
 - **Design language.** FitD-themed tokens in `packages/ui/src/styles/globals.css`
-  (`game-ember`/`game-crimson` = stress/danger, `game-gold` = XP, `game-steel`); dark-first palette
-  (a light palette is defined but the theme toggle isn't wired — see `FINDINGS.md` F20).
+  (`game-ember`/`game-crimson` = stress/danger, `game-gold` = XP, `game-steel`); the `ThemeProvider`
+  + display fonts are now mounted (PR #59 foundation), so the light/dark toggle is reachable.
 
 ## Plans
 
@@ -78,10 +84,11 @@ the audit, not a sprint board:
 
 - **`FINDINGS.md` is the backlog** — severity-scored CX flaws + FitD gaps from Audit 1. Its
   closing "themes worth a dedicated pass" section is the de-facto roadmap. Highest-leverage clusters:
-  1. **Async shared feed** (F2 join/invite, F5 who-rolled, F6 timestamps, F7 zero-dice) — the
-     multiplayer loop's missing front door + context.
-  2. **The roll loop** (F3 resistance, F8 position/effect help, F9 push/devil's-bargain, F10
-     teamwork, F16 flashbacks, F52 consequences) — the substance of Blades play.
+  1. **Async shared feed** — F2 join/invite, F5 who-rolled, F6 timestamps **resolved (PR #59)**; F7
+     zero-dice still open. The multiplayer loop now has a front door + per-entry context.
+  2. **The roll loop** — F3 resistance **resolved (PR #59)**; F8 position/effect help, F9
+     push/devil's-bargain, F10 teamwork, F16 flashbacks, F52 consequences still open — the substance
+     of Blades play. Downtime: indulge-vice (stress clear) shipped (PR #59); F15 rest still open.
   3. **Progression** (F17 crew rep→tier, F18 crew XP, F19 heat→wanted, F50 ability gating).
   4. **Explainability** (cheap help text for opaque-but-present mechanics).
 - **Deferred (separate future plan):** realtime presence / live multiplayer via Supabase Realtime.
