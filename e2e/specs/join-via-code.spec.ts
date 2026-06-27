@@ -46,6 +46,7 @@ test.describe('Join via invite code', () => {
     await expect(playerPage.getByRole('heading', { name: campaignName })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(playerPage.getByText('Player').first()).toBeVisible();
+    // exact: the username "e2e-player" makes a substring match collide with the header welcome line.
+    await expect(playerPage.getByText('Player', { exact: true }).first()).toBeVisible();
   });
 });

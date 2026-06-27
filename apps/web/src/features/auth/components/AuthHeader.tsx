@@ -55,8 +55,7 @@ export function AuthHeader() {
             <Button asChild variant='ghost' size='sm'>
               <Link href='/rulesets'>{t('navigation.rulesets')}</Link>
             </Button>
-            {/* The welcome line is the first thing to drop on a narrow header. */}
-            <Text size='sm' variant='muted' className='hidden sm:block'>
+            <Text size='sm' variant='muted'>
               {t('auth.header.welcomeUser', {
                 name: user.profile?.displayName || user.email || '',
               })}
