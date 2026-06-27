@@ -317,7 +317,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **F37** · CX · No first-run onboarding: a new signed-in user with no rulesets/games gets no guided
   next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open**
 - **F38** · CX · Landing doesn't convey the async play-by-post value prop or FitD specifics.
-  `app/page.tsx:28–34` → messaging + an "async play" feature. **open**
+  `app/page.tsx:28–34` → messaging + an "async play" feature. **fixed (PR #59)** — hero + the three
+  feature cards + CTA now lead with async, Discord-style play-by-post (rulesets, shared rolls/clocks/
+  crews, join codes, downtime); copy stays in the existing `pages.landing.*` keys.
 - **F39** · CX · Auth-gated pages show sparse "Please sign in" text with no CTA. `games/page.tsx`,
   `rulesets/page.tsx`, `games/new` → styled empty state + Sign-in button. **open**
 - **F40** · CX · Auth-callback errors auto-redirect after ~2s (hard to read) and home doesn't surface

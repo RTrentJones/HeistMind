@@ -71,8 +71,8 @@ bundled **Brackwater** starter opts into full FitD mode.
   used across the public surface, auth, the character wizard/sheet/editor, the campaign panels
   (rolls/clocks/crew/factions), and the ruleset catalog — English-only, translation-ready, with a
   file-gated `LanguageSwitcher`. The `t` functions are memoized (`useCallback`) so they're effect-safe.
-  **Still pending in PR #59:** the `no-literal-string` ESLint gate that prevents re-rot. Until that
-  lands, new UI must still be wired by hand.
+  An ESLint `no-literal-string` gate (`eslint-plugin-i18next`, `jsx-text-only`) now enforces this on
+  `apps/web/src/**` — hardcoded JSX copy fails CI, so the system can't silently rot again.
 - **Design language.** FitD-themed tokens in `packages/ui/src/styles/globals.css`
   (`game-ember`/`game-crimson` = stress/danger, `game-gold` = XP, `game-steel`); the `ThemeProvider`
   + display fonts are now mounted (PR #59 foundation), so the light/dark toggle is reachable.

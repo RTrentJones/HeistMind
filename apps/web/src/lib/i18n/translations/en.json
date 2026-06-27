@@ -580,25 +580,25 @@
     "landing": {
       "hero": {
         "welcomePrefix": "Welcome to ",
-        "lead": "The ultimate character management platform for Forged in the Dark tabletop RPGs. Create, manage, and advance your scoundrels across multiple campaigns."
+        "lead": "Run Forged in the Dark campaigns as async, Discord-style play-by-post — Game Masters upload custom rulesets, players build scoundrels and play through shared rolls, clocks, and crews. No session to schedule."
       },
       "features": {
         "creation": {
-          "title": "Dynamic Character Creation",
-          "body": "Build characters using any Forged in the Dark ruleset. Upload custom rules or use community-created content."
+          "title": "Rule-Driven Characters",
+          "body": "Build scoundrels against any Forged in the Dark ruleset. Upload your own or load a starter system, and the character sheet follows its rules."
         },
         "management": {
-          "title": "Multi-Game Management",
-          "body": "Organize characters across multiple games and campaigns. Track advancement, stress, and relationships."
+          "title": "Shared Campaign State",
+          "body": "Rolls, clocks, crew, and factions live in one always-current campaign. Every player sees the latest on view — days or weeks apart."
         },
         "collaboration": {
-          "title": "Seamless Collaboration",
-          "body": "Share characters with GMs, clone builds for new games, and collaborate on crew sheets and faction relationships."
+          "title": "Play-by-Post Together",
+          "body": "Invite players with a join code, resist consequences, take downtime, and move the story forward in a shared feed — no scheduled session required."
         }
       },
       "cta": {
         "heading": "Ready to start your next heist?",
-        "body": "Sign up with Discord to begin managing your scoundrels and join the community."
+        "body": "Sign in with Discord to spin up a campaign or join one with a code — then run your crew play-by-post."
       }
     },
     "about": {
