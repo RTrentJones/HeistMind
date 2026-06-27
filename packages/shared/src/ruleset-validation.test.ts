@@ -70,6 +70,42 @@ describe('validateRulesetContent', () => {
     });
     expect(result.ok).toBe(false);
   });
+
+  it('rejects a playbook referencing an unknown ability id', () => {
+    const result = validateRulesetContent({
+      ...validContent,
+      specialAbilities: [{ id: 'real', name: 'Real' }],
+      playbooks: [{ id: 'cutter', name: 'Cutter', description: '', startingAbilities: ['ghost'] }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.some(e => e.includes('unknown ability'))).toBe(true);
+  });
+
+  it('rejects an action claimed by two attributes', () => {
+    const result = validateRulesetContent({
+      ...validContent,
+      attributes: [
+        { id: 'a', name: 'A', description: '', skills: ['Hunt'] },
+        { id: 'b', name: 'B', description: '', skills: ['Hunt'] },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.errors.some(e => e.includes('more than one attribute'))).toBe(true);
+  });
+
+  it('rejects maxAtCreation greater than max', () => {
+    const result = validateRulesetContent({
+      ...validContent,
+      characterCreation: { steps: [], actionRatings: { points: 4, maxAtCreation: 3, max: 2 } },
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a non-string traumaConditions entry', () => {
+    const result = validateRulesetContent({ ...validContent, traumaConditions: ['Cold', 5] });
+    expect(result.ok).toBe(false);
+  });
 });
 
 describe('parseAndValidateRuleset', () => {
