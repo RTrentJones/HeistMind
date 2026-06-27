@@ -81,10 +81,11 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
   }
 
   return (
-    <main>
+    // The app shell provides the <main> landmark; this is just the wizard's container.
+    <div>
       <Suspense fallback={null}>
         <WizardWithLayout game={game} gameId={gameId} />
       </Suspense>
-    </main>
+    </div>
   );
 }

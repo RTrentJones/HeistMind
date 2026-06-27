@@ -50,7 +50,14 @@
     "characters": "Characters",
     "rulesets": "Rulesets",
     "profile": "Profile",
-    "settings": "Settings"
+    "settings": "Settings",
+    "skipToMain": "Skip to main content",
+    "breadcrumbLabel": "Breadcrumb",
+    "campaign": "Campaign",
+    "character": "Character",
+    "newCampaign": "New campaign",
+    "newCharacter": "New character",
+    "uploadRuleset": "Upload ruleset"
   },
   "components": {
     "header": {

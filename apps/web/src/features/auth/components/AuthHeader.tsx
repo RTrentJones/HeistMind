@@ -2,7 +2,16 @@
 
 import Link from 'next/link';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
-import { Button, Header, HeaderBrand, HeaderActions, Heading, Text, Stack } from '@heist-mind/ui';
+import {
+  Button,
+  Header,
+  HeaderBrand,
+  HeaderActions,
+  Heading,
+  Text,
+  Stack,
+  ThemeToggle,
+} from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { LanguageSwitcher } from '@/shared/components/LanguageSwitcher';
 
@@ -35,17 +44,19 @@ export function AuthHeader() {
         </Heading>
       </HeaderBrand>
 
-      <HeaderActions>
+      <HeaderActions className='flex-wrap justify-end'>
         <LanguageSwitcher />
+        <ThemeToggle />
         {isAuthenticated && user ? (
-          <Stack direction='row' gap='md' align='center'>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap justify-end'>
             <Button asChild variant='ghost' size='sm'>
               <Link href='/games'>{t('navigation.campaigns')}</Link>
             </Button>
             <Button asChild variant='ghost' size='sm'>
               <Link href='/rulesets'>{t('navigation.rulesets')}</Link>
             </Button>
-            <Text size='sm' variant='muted'>
+            {/* The welcome line is the first thing to drop on a narrow header. */}
+            <Text size='sm' variant='muted' className='hidden sm:block'>
               {t('auth.header.welcomeUser', {
                 name: user.profile?.displayName || user.email || '',
               })}
@@ -55,7 +66,7 @@ export function AuthHeader() {
             </Button>
           </Stack>
         ) : (
-          <Stack direction='row' gap='sm' align='center'>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap justify-end'>
             <Button variant='ghost' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
               {t('auth.header.signIn')}
             </Button>

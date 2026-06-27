@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Cinzel, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { AppShell } from '@/shared/components/AppShell';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -71,7 +72,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${playfairDisplay.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
       </body>
     </html>
   );
