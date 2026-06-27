@@ -33,8 +33,10 @@ The full FitD play loop shipped across 9 phases (see the completed plan in §Pla
   **resistance rolls** (`resistanceStress` = `6 − highest die`), persisted to a per-campaign **roll
   log** (the async-play centerpiece) that now shows who + when and annotates resistance/downtime.
 - **Multiplayer:** GMs generate **join codes** (targeted + public) and players **join by code**; the
-  `/games` hub lists created + joined campaigns. (Backend: `SupabaseInvitationRepository` +
-  `redeem_invite_code` RPC, `00010_invite_redeem.sql`.)
+  `/games` hub lists created + joined campaigns. A joined member can open the campaign — `00011`
+  extended the rulesets RLS so members can read their campaign's ruleset (F53). Verified end-to-end
+  by `e2e/specs/join-via-code.spec.ts`. (Backend: `SupabaseInvitationRepository` +
+  `redeem_invite_code` RPC, `00010`/`00011`.)
 - **Campaign objects:** progress **clocks** (4/6/8/10/12), a **crew sheet** (type, tier, rep, heat,
   wanted, hold, abilities, claims, cohorts, coin/vault), and **factions** (tier, status −3..+3,
   project clocks).

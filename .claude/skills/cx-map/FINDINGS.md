@@ -102,11 +102,11 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   policy with an `EXISTS (… games JOIN game_players … status = 'active' …)` clause (single-DO-block
   per-env migration, mind the 00004 recursion lesson), or have `findWithDetails` fetch the ruleset
   through a SECURITY DEFINER path for members. Security-sensitive — verify on the local Supabase stack.
-- **status:** fix in PR #59 (`supabase/migrations/00011_ruleset_member_read.sql`) — a SECURITY
-  DEFINER `user_can_access_ruleset` helper (active member of a game using the ruleset, bypassing RLS
-  like 00004's `is_active_game_member`) extends the rulesets SELECT policy with an additive OR clause.
-  `join-via-code.spec.ts` un-fixme'd so CI's local-Supabase E2E verifies the end-to-end join → open
-  flow. Mark resolved once that run is green.
+- **status:** resolved (PR #59, @a893e71) — `00011_ruleset_member_read.sql` adds a SECURITY DEFINER
+  `user_can_access_ruleset` helper (active member of a game using the ruleset, bypassing RLS like
+  00004's `is_active_game_member`) and extends the rulesets SELECT policy with an additive OR clause.
+  **Verified end-to-end:** `join-via-code.spec.ts` (un-fixme'd) passes on CI's local-Supabase E2E —
+  a second account redeems a code, opens the campaign, and sees it badged as Player.
 
 ---
 
