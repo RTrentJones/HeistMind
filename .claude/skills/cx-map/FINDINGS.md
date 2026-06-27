@@ -85,6 +85,26 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `updateCharacterWithValidation`, persists `kind='resistance'`; the log annotates "resisted — N
   stress". (Free-text consequence capture not yet stored — minor follow-up.)
 
+### F53 — A joined player can't open the campaign (ruleset RLS blocks the hub load)
+
+- **severity:** S1 · **type:** CX-flaw / bug · **(verified — caught by `join-via-code.spec.ts`)**
+- **where:** `packages/database/src/implementations/supabase-game-repository.ts` `findWithDetails`
+  (the ruleset read, ~L126–131) + the `rulesets` SELECT RLS in `supabase/migrations/00002_core_schema.sql:556`
+  (`created_by = auth.uid() OR is_public = true`).
+- **root cause:** Redeeming an invite code adds an **active** `game_players` row and redirects the
+  player to `/games/[id]` (both work). But `GameDetailPage` → `games.findWithDetails` then reads the
+  campaign's ruleset with `.single()`. The joined member is neither the ruleset's creator nor is the
+  ruleset public, so the `rulesets` RLS returns no row → `.single()` errors → `findWithDetails` fails
+  → the hub renders a load error instead of the campaign. **The A1 join flow is end-to-end broken: you
+  can join, but you can't use the campaign.** (The `games` SELECT RLS already allows active members, so
+  the game row itself is readable — only the ruleset read fails.)
+- **fix:** Let an active game member read their campaign's ruleset. Extend the `rulesets` SELECT
+  policy with an `EXISTS (… games JOIN game_players … status = 'active' …)` clause (single-DO-block
+  per-env migration, mind the 00004 recursion lesson), or have `findWithDetails` fetch the ruleset
+  through a SECURITY DEFINER path for members. Security-sensitive — verify on the local Supabase stack.
+- **status:** open — `e2e/specs/join-via-code.spec.ts` is written and `test.fixme`'d against this;
+  un-fixme when fixed.
+
 ---
 
 ## S2 — major
