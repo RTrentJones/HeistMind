@@ -23,7 +23,7 @@ test.describe('GM: refresh the starter ruleset', () => {
       .getByRole('button', { name: /Add Brackwater to my rulesets/i })
       .first()
       .click();
-    await expect(gmPage.getByRole('heading', { name: 'Brackwater' })).toBeVisible({
+    await expect(gmPage.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
       timeout: 30_000,
     });
 

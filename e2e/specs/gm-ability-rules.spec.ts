@@ -22,7 +22,7 @@ test.describe('GM: ability rules text (Brackwater)', () => {
       .getByRole('button', { name: /Add Brackwater to my rulesets/i })
       .first()
       .click();
-    await expect(gmPage.getByRole('heading', { name: 'Brackwater' })).toBeVisible({
+    await expect(gmPage.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
       timeout: 30_000,
     });
     const ruleset = { name: 'Brackwater', version: '1.0.0', optionLabel: 'Brackwater (v1.0.0)' };
