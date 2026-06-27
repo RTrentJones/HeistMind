@@ -16,12 +16,13 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
-import { useAuth } from '@/features/auth/stores/auth-store';
+import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { LoadBuiltinRulesetButton } from '@/features/rulesets/components/LoadBuiltinRulesetButton';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 export default function RulesetsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { signInWithProvider } = useAuthActions();
   const { t } = useTranslation();
   const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +44,28 @@ export default function RulesetsPage() {
     loadRulesets();
   }, [loadRulesets]);
 
+  const handleSignIn = async () => {
+    try {
+      await signInWithProvider('discord');
+    } catch (err) {
+      console.error('Sign in failed:', err);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('pages.rulesetsCatalog.authPrompt')}</Text>
+        <Card variant='outline'>
+          <Stack direction='column' gap='md' align='start'>
+            <Heading level='h2' variant='hero'>
+              {t('pages.rulesetsCatalog.authHeading')}
+            </Heading>
+            <Text variant='muted'>{t('pages.rulesetsCatalog.authPrompt')}</Text>
+            <Button variant='default' onClick={handleSignIn} loading={isLoading}>
+              {t('pages.rulesetsCatalog.signInCta')}
+            </Button>
+          </Stack>
+        </Card>
       </Container>
     );
   }

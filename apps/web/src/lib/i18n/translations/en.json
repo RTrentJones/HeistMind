@@ -570,7 +570,9 @@
   "pages": {
     "rulesetsCatalog": {
       "loadFailed": "Failed to load rulesets",
-      "authPrompt": "Please sign in to view your rulesets.",
+      "authHeading": "Sign in to manage rulesets",
+      "authPrompt": "Sign in with Discord to add a starter system or upload your own Forged in the Dark ruleset.",
+      "signInCta": "Sign in with Discord",
       "title": "Rulesets",
       "uploadCta": "Upload ruleset",
       "loadError": "Couldn't load rulesets",
@@ -675,7 +677,9 @@
     },
     "gamesList": {
       "title": "Campaigns",
-      "authPrompt": "Please sign in to view your campaigns.",
+      "authHeading": "Sign in to run your heists",
+      "authPrompt": "Sign in with Discord to create campaigns, join with an invite code, and play through your crew's shared rolls, clocks, and factions.",
+      "signInCta": "Sign in with Discord",
       "newCampaign": "New campaign",
       "loadError": "Couldn't load campaigns",
       "loadFailed": "Failed to load campaigns",

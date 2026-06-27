@@ -17,11 +17,12 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
-import { useAuth } from '@/features/auth/stores/auth-store';
+import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 
 export default function GamesPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { signInWithProvider } = useAuthActions();
   const { t } = usePageTranslation();
   const router = useRouter();
   const [created, setCreated] = useState<Game[] | null>(null);
@@ -69,10 +70,28 @@ export default function GamesPage() {
     }
   };
 
+  const handleSignIn = async () => {
+    try {
+      await signInWithProvider('discord');
+    } catch (err) {
+      console.error('Sign in failed:', err);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('gamesList.authPrompt')}</Text>
+        <Card variant='outline'>
+          <Stack direction='column' gap='md' align='start'>
+            <Heading level='h2' variant='primary'>
+              {t('gamesList.authHeading')}
+            </Heading>
+            <Text variant='muted'>{t('gamesList.authPrompt')}</Text>
+            <Button variant='default' onClick={handleSignIn} loading={isLoading}>
+              {t('gamesList.signInCta')}
+            </Button>
+          </Stack>
+        </Card>
       </Container>
     );
   }

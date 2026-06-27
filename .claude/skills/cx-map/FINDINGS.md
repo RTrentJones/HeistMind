@@ -327,7 +327,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   feature cards + CTA now lead with async, Discord-style play-by-post (rulesets, shared rolls/clocks/
   crews, join codes, downtime); copy stays in the existing `pages.landing.*` keys.
 - **F39** · CX · Auth-gated pages show sparse "Please sign in" text with no CTA. `games/page.tsx`,
-  `rulesets/page.tsx`, `games/new` → styled empty state + Sign-in button. **open**
+  `rulesets/page.tsx`, `games/new` → styled empty state + Sign-in button. **fixed @PR59 (games +
+  rulesets)** — the auth gate is now a `Card` with a heading, a value-prop line, and a "Sign in with
+  Discord" button (`signInWithProvider('discord')`); `games/new` still bare.
 - **F40** · CX · Auth-callback errors auto-redirect after ~2s (hard to read) and home doesn't surface
   `?error=auth_failed`. `auth/callback/page.tsx:29–46` → longer/explicit retry + a home banner.
   **open**
