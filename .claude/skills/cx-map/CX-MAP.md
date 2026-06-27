@@ -68,7 +68,9 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 - **Components:**
   - Characters list (cards → character sheet) + "Create character".
   - `CrewSheet` (`apps/web/src/features/crews/components/CrewSheet.tsx`) — crew type, tier, rep,
-    heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable.
+    heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. Also renders any
+    **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
+    threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
@@ -104,25 +106,34 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 - **CX intent:** the common in-play taps (stress, harm, XP, roll) are one-tap on the sheet, not
   buried behind "Edit build"; edits persist across reload.
 
-### `/rulesets` — Ruleset list
+### `/rulesets` — Ruleset list + built-in catalog
 
 - **File:** `apps/web/src/app/rulesets/page.tsx`
-- **Components:** `Card` per ruleset (name, version, "Create game"); `LoadDefaultRulesetButton`
-  (`apps/web/src/features/rulesets/components/LoadDefaultRulesetButton.tsx`).
-- **Actions:** upload a ruleset; create a game from one; **Load the Brackwater starter** (creates a
-  copy, or **refreshes** an existing copy to the latest bundled content — see
-  `ruleset-content-is-a-snapshot` memory).
+- **Components:** a **"Starter rulesets" catalog** card mapping over `BUILTIN_RULESETS`
+  (`packages/shared/src/builtin-rulesets/`), each with a tier + license badge, a blurb, an
+  attribution notice where required, and a `LoadBuiltinRulesetButton`
+  (`apps/web/src/features/rulesets/components/LoadBuiltinRulesetButton.tsx`); then a `Card` per
+  owned ruleset (name, version, "Create game").
+- **Built-ins shipped:** **Brackwater** (original starter), **Blades in the Dark** (CC BY 3.0, with
+  attribution), **Wicked Ones** (CC0). All are action-rating FitD rulesets; Wicked Ones models the
+  dungeon as the crew type and uses crew **resource pools** (hoard + threat).
+- **Actions:** add any built-in (creates an editable copy, or **refreshes** an existing copy to the
+  latest bundled content — see `ruleset-content-is-a-snapshot` memory); create a game from a ruleset;
+  upload your own. Button copy is **"Add &lt;name&gt; to my rulesets"** with a clarifying tooltip
+  (was the ambiguous "Load … starter" — F36).
 - **Nav:** → `/rulesets/new`, → `/games/new?ruleset=<id>`.
+- `LoadDefaultRulesetButton` remains as a thin back-compat wrapper over `LoadBuiltinRulesetButton`.
 
 ### `/rulesets/new` — Upload ruleset
 
 - **File:** `apps/web/src/app/rulesets/new/page.tsx`
-- **Components:** `RulesetUpload` (`apps/web/src/features/rulesets/components/RulesetUpload.tsx`) +
-  `LoadDefaultRulesetButton`.
+- **Components:** `RulesetUpload` (`apps/web/src/features/rulesets/components/RulesetUpload.tsx`).
 - **Actions:** upload a `.json` file or paste JSON; validate + save. Validation errors list inline.
+  A **guidance card** (F35) outlines the required/optional JSON shape and points to the starter
+  catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-25 @ 01594f7
+_Last verified:_ 2026-06-26 @ 69180e1
 
 ---
 
@@ -161,7 +172,8 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
 
 ### J1 — GM: set up a game from scratch
 
-1. Sign in (`/`). 2. `/rulesets` → **Load the Brackwater starter** (or upload via `/rulesets/new`).
+1. Sign in (`/`). 2. `/rulesets` → **add a starter ruleset** from the catalog (Brackwater, Blades in
+   the Dark, or Wicked Ones), or upload your own via `/rulesets/new`.
 2. **Create game** from the ruleset card → `/games/new`. 4. Name + description + ruleset → Create.
 3. On `/games/[gameId]`: set up the crew (`CrewSheet`), create clocks (`ClocksPanel`), seed factions
    (`FactionsPanel`). 6. Share the campaign with players _(out of app today — see FINDINGS for the
@@ -185,4 +197,4 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
 1. On the character sheet, mark XP (tracks fill). 2. When the playbook track fills, spend an advance
    (action dot or ability). 3. Sheet updates; track resets.
 
-_Last verified:_ 2026-06-25 @ 01594f7
+_Last verified:_ 2026-06-26 @ 69180e1

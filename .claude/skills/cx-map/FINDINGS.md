@@ -9,7 +9,7 @@ the campaign panels (crew/clocks/factions/rolls), through the UX + FitD lenses i
 Findings the maintainer personally re-checked against source are tagged **(verified)**; the rest are
 from the audit pass with a cited location and should be re-confirmed before fixing.
 
-Counts: 1 fixed · S1 ×2 · S2 ×16 · S3 ×23 · S4 ×2.
+Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 
 ---
 
@@ -30,6 +30,26 @@ Counts: 1 fixed · S1 ×2 · S2 ×16 · S3 ×23 · S4 ×2.
   `border-border-secondary` ring (the ring is the load-bearing cue in light mode, the recessed
   fill in dark) — and moved the Card `default` hover off the pip token to `hover:bg-background-elevated`.
 - **status:** fixed @24aaa96
+
+### F36 — Ambiguous "Load … starter ruleset" label
+
+- **severity:** S3 · **type:** CX-flaw
+- **where:** the ruleset load button + `/rulesets` page
+- **root cause:** "Load the Brackwater starter ruleset" didn't say it creates an editable copy you
+  own; "load" reads as download/open.
+- **fix:** Generalized `LoadDefaultRulesetButton` → `LoadBuiltinRulesetButton({ builtin })` driving a
+  built-in catalog; label is now "Add &lt;name&gt; to my rulesets" with a clarifying tooltip.
+- **status:** fixed @69180e1
+
+### F35 — Ruleset upload lacked schema/example guidance
+
+- **severity:** S3 · **type:** CX-flaw
+- **where:** `apps/web/src/features/rulesets/components/RulesetUpload.tsx`
+- **root cause:** The upload form assumed JSON fluency; no outline of the expected shape, no easier
+  path for non-authors.
+- **fix:** Added a guidance card describing the required/optional `RulesetContent` fields and steering
+  users to add a starter from the catalog and edit their copy (no JSON required).
+- **status:** fixed @69180e1
 
 ---
 
@@ -274,12 +294,12 @@ Counts: 1 fixed · S1 ×2 · S2 ×16 · S3 ×23 · S4 ×2.
   → tooltip. **open**
 - **F34** · CX · Faction tier (0–6) and status (−3..+3) caps aren't labelled; buttons just disable at
   the ends. `FactionsPanel.tsx:190–246` → show "Tier x/6", a status legend. **open**
-- **F35** · CX · Ruleset upload gives no schema/example guidance; validation errors assume JSON
-  fluency. `rulesets/new/page.tsx:16–21`, `RulesetUpload.tsx:70–81` → a schema/example helper +
-  friendlier messages. **open**
-- **F36** · CX · "Load the Brackwater starter ruleset" label is ambiguous (load? download? copy?).
-  `LoadDefaultRulesetButton.tsx:85–86` → "Add the Brackwater starter to my rulesets" + tooltip.
-  **open**
+- **F35** · CX · Ruleset upload gave no schema/example guidance; validation errors assumed JSON
+  fluency. Added a guidance card outlining the required/optional shape + pointing to the starter
+  catalog as the no-JSON path. `RulesetUpload.tsx`. **fixed @69180e1**
+- **F36** · CX · "Load the Brackwater starter ruleset" label was ambiguous (load? download? copy?).
+  Now "Add &lt;name&gt; to my rulesets" with a clarifying tooltip, across the whole built-in catalog.
+  `LoadBuiltinRulesetButton.tsx`. **fixed @69180e1**
 - **F37** · CX · No first-run onboarding: a new signed-in user with no rulesets/games gets no guided
   next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open**
 - **F38** · CX · Landing doesn't convey the async play-by-post value prop or FitD specifics.
@@ -320,6 +340,16 @@ Counts: 1 fixed · S1 ×2 · S2 ×16 · S3 ×23 · S4 ×2.
 - **F52** · CX · No post-roll consequence scaffolding (a partial/bad result doesn't prompt the GM to
   tick a clock / add heat / harm). `RollPanel.tsx:149–155` → a "consequences" quick-action card
   linked to the roll. **open**
+- **F55** · scope · Popular FitD games not yet offered as built-ins because the engine can't model
+  their distinctive mechanics. The built-in catalog (`packages/shared/src/builtin-rulesets/`) ships
+  Brackwater + Blades in the Dark (drop-in) + Wicked Ones (dungeon-as-crew + `crew.resourcePools`).
+  Deferred, each needing real engine work: **Scum & Villainy / Beam Saber** (ship/mech as crew type
+  works, but they're Evil Hat-protected content → need original reskins + the gambit pool, already
+  enabled by `resourcePools`); **Band of Blades** (a Legion _roster_ of many soldiers — breaks the
+  one-crew/one-PC model); **Girl by Moonlight** (transformation/eclipse + promises — no
+  `CharacterData`/roll-loop home); **The Wildsea** (non-FitD dice: count 6s, no position/effect);
+  **Slugblaster** (Style/Stuff/Bull token economy). The major-gap items co-require open roll-loop
+  findings (F3, F9, F10, F14, F15). Treat each as its own future epic, not a data-only add. **open**
 
 ---
 

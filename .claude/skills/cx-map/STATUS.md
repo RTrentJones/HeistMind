@@ -40,6 +40,14 @@ The full FitD play loop shipped across 9 phases (see the completed plan in §Pla
 Every FitD mechanic is **opt-in via ruleset config**, so older point-buy rulesets keep working; the
 bundled **Brackwater** starter opts into full FitD mode.
 
+- **Built-in ruleset catalog.** `/rulesets` now offers a one-click catalog (`BUILTIN_RULESETS` in
+  `packages/shared/src/builtin-rulesets/`): **Brackwater** (original), **Blades in the Dark**
+  (CC BY 3.0, with attribution), and **Wicked Ones** (CC0). Each loads as an editable, owned copy.
+  Built-ins are type-checked TS constants. An additive, optional `crew.resourcePools` field (the one
+  engine change) backs Wicked Ones' dungeon hoard/threat tracks and pre-positions ship/mech "gambit"
+  pools. Licensing rationale + the deferred games (S&V, Band of Blades, Girl by Moonlight, Wildsea,
+  Slugblaster) are logged in `FINDINGS.md` F55.
+
 ## Architecture & constraints worth knowing
 
 - **Async play-by-post, no realtime.** All shared state is DB-backed and loaded on view; there is
@@ -68,7 +76,7 @@ bundled **Brackwater** starter opts into full FitD mode.
 **The 9-phase "real FitD play-by-post tool" plan is complete and in prod.** What's next is driven by
 the audit, not a sprint board:
 
-- **`FINDINGS.md` is the backlog** — 54 severity-scored CX flaws + FitD gaps from Audit 1. Its
+- **`FINDINGS.md` is the backlog** — severity-scored CX flaws + FitD gaps from Audit 1. Its
   closing "themes worth a dedicated pass" section is the de-facto roadmap. Highest-leverage clusters:
   1. **Async shared feed** (F2 join/invite, F5 who-rolled, F6 timestamps, F7 zero-dice) — the
      multiplayer loop's missing front door + context.
@@ -82,4 +90,4 @@ the audit, not a sprint board:
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-06-25 @ 9a818ea
+_Last verified:_ 2026-06-26 @ 69180e1
