@@ -21,6 +21,17 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 
 ---
 
+## App shell
+
+Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
+mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand, Campaigns/Rulesets
+nav, `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
+focus-revealed **skip-to-main** link, and the `<main id="main-content">` landmark. The header wraps
+(`flex-wrap`) instead of overflowing on mobile. The shell steps aside on `/` (marketing hero owns its
+header) and `/auth/*` (transient callback), which render their own full-screen layouts.
+
+---
+
 ## Routes
 
 ### `/` — Home / landing
@@ -42,14 +53,18 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 - **Actions:** none (automatic). Shows a loading state, or an error on failure/timeout.
 - **Nav:** → `/` on success; → `/?error=auth_failed` on failure.
 
-### `/games` — Campaign list
+### `/games` — Campaign hub (created + joined)
 
 - **File:** `apps/web/src/app/games/page.tsx`
-- **Purpose:** lists the user's campaigns.
-- **Components:** `Card` per game (name, description, state badge); "New campaign" button.
-- **Actions:** open a campaign; create a new one.
+- **Purpose:** lists campaigns the user **created** (GM) _and_ those they've **joined** (Player), in
+  one list with a per-card role badge (`findByCreator` + `games.findByPlayer`).
+- **Components:** `Card` per game (name, description, state badge, GM/Player role badge); "New
+  campaign" button; a **join-via-code** box (`invitations.joinViaCode` → `redeem_invite_code` RPC);
+  `InviteCodeSection` (`features/games/components/`) — GM-only join-code generator.
+- **Actions:** open a campaign; create a new one; **join a campaign by code**; (GM) **generate an
+  invite/join code**.
 - **Nav:** → `/games/new`, → `/games/[gameId]`.
-- **Role:** auth-gated.
+- **Role:** auth-gated. Targeted + public codes; ownership/role gating via RLS + `gamePlayers`.
 
 ### `/games/new` — Create campaign
 
@@ -75,8 +90,12 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
     status (−3..+3) and their project clocks. GM-editable.
-  - `RollPanel` + `RollLog` (`apps/web/src/features/rolls/components/`) — fortune/GM rolls and the
-    reverse-chron, DB-backed roll log (the async-play centerpiece; every player sees it on load).
+  - `RollPanel` + `RollLog` (`apps/web/src/features/rolls/components/`) — action / fortune / GM **and
+    resistance** rolls. Resistance mode picks the resisted attribute, rolls, and deducts `6 − highest
+    die` stress from the character. The `RollLog` is the reverse-chron, DB-backed feed (the async-play
+    centerpiece; every player sees it on load), now showing **who** (character name; "Fortune"/"GM")
+    and **when** (relative time + timestamp tooltip), annotating resistance ("resisted — N stress")
+    and downtime (neutral badge, no dice).
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -88,7 +107,9 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
   (`apps/web/src/features/characters/components/CharacterCreationWizard.tsx`) → `WizardStep`
   dispatcher → step components (see **Wizard** below). Layouts: `?layout=single` (default) or
   `?layout=rail` (step rail + live summary).
-- **Actions:** name; step through Back/Next or step badges; Create on the final step.
+- **Actions:** name; step through Back/Next or step badges; Create on the final step. A disabled
+  Next/Create now shows the blocking reason in the footer (`stepError` → e.g. "Can't continue yet —
+  Assigned 8 of 7 action dots.").
 - **State:** `useCharacterCreationStore`
   (`apps/web/src/features/characters/stores/character-creation-store.ts`) persists draft to
   localStorage (auto-resume); the large `ruleset` object is re-supplied on mount, not persisted.
@@ -102,9 +123,12 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
   gear/loadout, special abilities (expandable rules), identity, contacts, coin/load; plus a
   character-scoped `RollPanel` + `RollLog`. `CharacterEditor`
   (`apps/web/src/features/characters/components/CharacterEditor.tsx`) for deeper build edits.
-- **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; roll an action; edit build.
-- **CX intent:** the common in-play taps (stress, harm, XP, roll) are one-tap on the sheet, not
-  buried behind "Edit build"; edits persist across reload.
+- **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; roll an action **or
+  resist** (stress applies live to the `StressTracker`); **Indulge vice** (downtime) to clear stress
+  to 0, logged to the feed; edit build.
+- **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
+  the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
+  stress-release half of the FitD pressure loop (MVP downtime).
 
 ### `/rulesets` — Ruleset list + built-in catalog
 
@@ -133,7 +157,7 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
   catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-26 @ 69180e1
+_Last verified:_ 2026-06-27 @ d9d7d49
 
 ---
 
@@ -176,25 +200,28 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
    the Dark, or Wicked Ones), or upload your own via `/rulesets/new`.
 2. **Create game** from the ruleset card → `/games/new`. 4. Name + description + ruleset → Create.
 3. On `/games/[gameId]`: set up the crew (`CrewSheet`), create clocks (`ClocksPanel`), seed factions
-   (`FactionsPanel`). 6. Share the campaign with players _(out of app today — see FINDINGS for the
-   join-flow gap)_.
+   (`FactionsPanel`). 6. **Invite players** — on `/games`, generate a join code (`InviteCodeSection`)
+   and share it.
 
-### J2 — Player: create a character and join
+### J2 — Player: join a campaign, create a character
 
-1. Sign in. 2. Open the campaign (`/games/[gameId]`). 3. **Create character** → wizard (playbook →
-   ratings → abilities → identity → review → Create). 4. Land back on the hub; the character appears.
-2. Open the character sheet to play.
+1. Sign in. 2. On `/games`, **paste the join code** into the join box (`invitations.joinViaCode`) →
+   the campaign appears in your list with a Player badge. 3. Open it (`/games/[gameId]`). 4. **Create
+   character** → wizard (playbook → ratings → abilities → identity → review → Create). 5. Land back on
+   the hub; open the character sheet to play.
 
-### J3 — GM: run a score (dice + clocks)
+### J3 — GM + players: run a score (dice + resist + clocks)
 
 1. On the hub, create/seed clocks for obstacles. 2. Players roll actions from their sheets
-   (`RollPanel`: action → rating → roll → logged). 3. GM makes fortune/GM rolls from the hub
-   `RollPanel`. 4. All rolls land in `RollLog` (every player sees on reload). 5. GM ticks clocks as
-   consequences land; adjusts crew heat/rep. 6. End of score: award XP on character sheets.
+   (`RollPanel`: action → rating → roll → logged). 3. When a consequence lands, the player **resists**
+   (`RollPanel` resistance mode → `6 − highest die` stress applied live). 4. GM makes fortune/GM rolls
+   from the hub `RollPanel`. 5. All rolls land in `RollLog` with who + when (every player sees on
+   reload). 6. GM ticks clocks; adjusts crew heat/rep. 7. Between scores, players **indulge vice**
+   (downtime) to clear stress. 8. End of score: award XP on character sheets.
 
 ### J4 — Player: level up
 
 1. On the character sheet, mark XP (tracks fill). 2. When the playbook track fills, spend an advance
    (action dot or ability). 3. Sheet updates; track resets.
 
-_Last verified:_ 2026-06-26 @ 69180e1
+_Last verified:_ 2026-06-27 @ 4b7343e

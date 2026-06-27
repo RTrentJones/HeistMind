@@ -5,6 +5,7 @@ import { Button, Stack, Text } from '@heist-mind/ui';
 import { BUILTIN_RULESETS, type BuiltinRuleset } from '@heist-mind/shared';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * One-click "add a built-in ruleset to my rulesets". Creates a copy owned by the signed-in GM via
@@ -23,6 +24,7 @@ export function LoadBuiltinRulesetButton({
   onLoaded?: () => void;
 }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { content } = builtin;
@@ -30,7 +32,7 @@ export function LoadBuiltinRulesetButton({
   const onClick = async () => {
     const userId = user?.id;
     if (!userId) {
-      setMessage('You must be signed in to add a ruleset.');
+      setMessage(t('components.builtinRuleset.signInRequired'));
       return;
     }
     setMessage(null);
@@ -68,17 +70,17 @@ export function LoadBuiltinRulesetButton({
         });
         setLoading(false);
         if (updated.success) {
-          setMessage(`Refreshed your “${content.metadata.name}” copy to the latest content.`);
+          setMessage(t('components.builtinRuleset.refreshed', { name: content.metadata.name }));
           onLoaded?.();
         } else {
-          setMessage(updated.error?.message ?? 'Failed to refresh the ruleset.');
+          setMessage(updated.error?.message ?? t('components.builtinRuleset.refreshFailed'));
         }
         return;
       }
     }
 
     setLoading(false);
-    setMessage(raw || 'Failed to add the ruleset.');
+    setMessage(raw || t('components.builtinRuleset.addFailed'));
   };
 
   return (
@@ -87,9 +89,9 @@ export function LoadBuiltinRulesetButton({
         variant={variant}
         onClick={onClick}
         loading={loading}
-        title={`Creates an editable copy of ${content.metadata.name} in your rulesets.`}
+        title={t('components.builtinRuleset.addTitle', { name: content.metadata.name })}
       >
-        {`Add ${content.metadata.name} to my rulesets`}
+        {t('components.builtinRuleset.addCta', { name: content.metadata.name })}
       </Button>
       {message && (
         <Text variant='muted' size='sm'>

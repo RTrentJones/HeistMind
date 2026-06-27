@@ -35,7 +35,8 @@
       "gatheringCrew": "Gathering your crew...",
       "consultingCharts": "Consulting the charts...",
       "readingShadows": "Reading the shadows...",
-      "forgingDocuments": "Forging documents..."
+      "forgingDocuments": "Forging documents...",
+      "preparingShadows": "Preparing the shadows..."
     }
   },
   "navigation": {
@@ -45,10 +46,18 @@
     "documentation": "Documentation",
     "home": "Home",
     "games": "Games",
+    "campaigns": "Campaigns",
     "characters": "Characters",
     "rulesets": "Rulesets",
     "profile": "Profile",
-    "settings": "Settings"
+    "settings": "Settings",
+    "skipToMain": "Skip to main content",
+    "breadcrumbLabel": "Breadcrumb",
+    "campaign": "Campaign",
+    "character": "Character",
+    "newCampaign": "New campaign",
+    "newCharacter": "New character",
+    "uploadRuleset": "Upload ruleset"
   },
   "components": {
     "header": {
@@ -141,6 +150,355 @@
         "customRulesets": "Custom Rulesets",
         "totalPlayers": "Total Players"
       }
+    },
+    "languageSwitcher": {
+      "label": "Language"
+    },
+    "starterRuleset": {
+      "loadCta": "Load the {{name}} starter ruleset",
+      "signInRequired": "You must be signed in to load the starter ruleset.",
+      "refreshed": "Refreshed your “{{name}}” starter to the latest content.",
+      "refreshFailed": "Failed to refresh the starter ruleset.",
+      "loadFailed": "Failed to load the starter ruleset."
+    },
+    "inviteSection": {
+      "title": "Invite players",
+      "description": "Share a join code so players can add themselves to this campaign.",
+      "generate": "Create a join code",
+      "generateFailed": "Couldn't create a join code.",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "noCodes": "No active join codes yet."
+    },
+    "wizard": {
+      "nameLabel": "Character name",
+      "namePlaceholder": "e.g. Shadows McKenzie",
+      "nameHelp": "Required — shown on the character sheet.",
+      "createCharacter": "Create character",
+      "stepsLabel": "Creation steps",
+      "cantContinue": "Can't continue yet —",
+      "stepNumber": "STEP {{num}}",
+      "summary": {
+        "ariaLabel": "Character summary",
+        "noPlaybook": "No playbook",
+        "attributes": "Attributes",
+        "noPoints": "No points assigned.",
+        "abilities": "Abilities",
+        "noneChosen": "None chosen.",
+        "identity": "Identity",
+        "notSet": "Not set.",
+        "completion": "Completion"
+      }
+    },
+    "steps": {
+      "common": {
+        "selected": "Selected"
+      },
+      "playbook": {
+        "empty": "This ruleset has no playbooks defined."
+      },
+      "actionRatings": {
+        "empty": "This ruleset has no actions defined.",
+        "actionDots": "{{spent}} / {{budget}} action dots"
+      },
+      "attributes": {
+        "empty": "This ruleset has no attributes defined.",
+        "pointsSpent": "{{spent}} / {{total}} points spent"
+      },
+      "abilities": {
+        "empty": "This ruleset has no special abilities defined.",
+        "requires": "Requires {{prerequisite}}",
+        "notAvailable": "Not available at creation",
+        "limitReached": "Limit of {{limit}} reached",
+        "tier": "Tier {{tier}}",
+        "locked": "Locked",
+        "chosen": "Chosen",
+        "countChosen": "{{count}} of {{limit}} chosen",
+        "playbookAbilities": " · {{playbook}}'s abilities",
+        "chooseRoleFirst": "Choose a crew role first to see its special abilities.",
+        "showMore": "Show {{count}} more abilities from other roles",
+        "hideMore": "Hide abilities from other roles"
+      },
+      "identity": {
+        "heritageLabel": "Heritage",
+        "heritagePlaceholder": "e.g. where they were born or raised",
+        "heritageHelp": "Where they come from and how they were raised.",
+        "backgroundLabel": "Background",
+        "backgroundPlaceholder": "e.g. the trade or life they came from",
+        "backgroundHelp": "The life they led before the crew found them.",
+        "viceLabel": "Vice",
+        "vicePlaceholder": "e.g. how they unwind between jobs",
+        "viceHelp": "How they blow off stress when the score is done."
+      },
+      "choice": {
+        "empty": "Nothing to choose for this step.",
+        "chooseToContinue": "Choose an option to continue."
+      },
+      "review": {
+        "noPlaybook": "No playbook chosen",
+        "attributes": "Attributes",
+        "noPoints": "No points assigned.",
+        "abilities": "Special Abilities",
+        "noneChosen": "None chosen.",
+        "identity": "Identity",
+        "identityNotSet": "Identity not set."
+      }
+    },
+    "characterSheet": {
+      "notFound": "Character not found",
+      "loadFailed": "Failed to load",
+      "saveNameFailed": "Failed to save name",
+      "addXpFailed": "Failed to add XP",
+      "saveStressFailed": "Failed to save stress",
+      "markXpFailed": "Failed to mark XP",
+      "loadError": "Couldn't load character",
+      "unknownError": "Unknown error",
+      "nameLabel": "Name",
+      "editBuild": "Edit build",
+      "closeEditor": "Close editor",
+      "xpBadge": "{{xp}} XP",
+      "addXp": "Add XP",
+      "attributes": "Attributes",
+      "noPoints": "No points assigned.",
+      "specialAbilities": "Special Abilities",
+      "tier": "Tier {{tier}}",
+      "noRulesText": "No rules text for this ability.",
+      "noneChosen": "None chosen.",
+      "condition": "Condition",
+      "harm": "Harm",
+      "trauma": "Trauma",
+      "experience": "Experience",
+      "markXpPre": "Mark XP as you play. When a track fills, open ",
+      "markXpBold": "Edit build → Advancement",
+      "markXpPost": " to clear it and take an advance.",
+      "playbook": "Playbook",
+      "fullReadyToAdvance": "Full — ready to advance",
+      "gearAndCoin": "Gear & Coin",
+      "loadBadge": "{{level}} load · {{used}}/{{limit}}",
+      "coin": "{{coins}} coin",
+      "stash": "{{stash}} stash",
+      "carried": "Carried",
+      "friendsRivals": "Friends & Rivals",
+      "friend": "Friend: {{name}}",
+      "rival": "Rival: {{name}}",
+      "dice": "Dice"
+    },
+    "characterEditor": {
+      "tabBuild": "Build",
+      "tabStress": "Stress & Trauma",
+      "tabGear": "Gear",
+      "tabAdvancement": "Advancement",
+      "saveFailed": "Save failed.",
+      "advancementFailed": "Advancement failed.",
+      "identity": "Identity",
+      "heritage": "Heritage",
+      "background": "Background",
+      "vice": "Vice",
+      "attributes": "Attributes",
+      "attributesNote": "Bounded by each attribute's cap. Raising attributes during play is done through Advancement.",
+      "saveBuild": "Save build",
+      "stress": "Stress",
+      "stressMaxed": "Stress is maxed — take a trauma.",
+      "traumaHeading": "Trauma ({{count}}/{{max}})",
+      "none": "None.",
+      "remove": "Remove {{name}}",
+      "addTrauma": "Add trauma",
+      "traumaPlaceholder": "Cold, Haunted, Reckless…",
+      "add": "Add",
+      "harm": "Harm",
+      "addHarm": "Add harm",
+      "harmPlaceholder": "Battered, Shaken, Impaled…",
+      "addLesser": "+ Lesser",
+      "addModerate": "+ Moderate",
+      "addSevere": "+ Severe",
+      "saveStress": "Save stress, harm & trauma",
+      "loadout": "Loadout",
+      "loadoutNote": "Pick a load level, then check the gear you carry. Heavier loads carry more but draw more notice.",
+      "loadLevelOption": "{{level}} ({{limit}})",
+      "loadBadge": "Load {{carried}} / {{cap}}",
+      "overCapacity": "Over capacity — drop an item or raise your load level.",
+      "noEquipment": "This ruleset defines no equipment.",
+      "itemLoad": " · load {{load}}",
+      "coin": "Coin",
+      "coinLabel": "Coin (carried)",
+      "stash": "Stash",
+      "friendsRivals": "Friends & Rivals",
+      "closeFriend": "Close friend",
+      "rival": "Rival",
+      "saveGear": "Save gear",
+      "playbookTrack": "Playbook {{marks}}/{{size}}",
+      "specialAbilities": "Special Abilities",
+      "actionDots": "Action Dots",
+      "xpAvailable": "{{xp}} XP available",
+      "noAbilityAdvancements": "This ruleset defines no ability advancements.",
+      "allLearned": "All special abilities have been learned.",
+      "optionTrack": "{{name}} — clears a full playbook track.",
+      "optionFlat": "{{name}} — {{cost}} XP each.",
+      "fillTrack": "Fill the playbook XP track",
+      "needXp": "Need {{cost}} XP",
+      "requires": "Requires {{prerequisite}}",
+      "requiresAll": "Requires {{requirements}}",
+      "tier": "Tier {{tier}}",
+      "rules": "Rules",
+      "takeAbility": "Take ability",
+      "buyAbility": "Buy ({{cost}} XP)",
+      "fillTrackForDot": "Fill an attribute XP track to add an action dot.",
+      "pickAction": "{{name}} — pick an action to raise",
+      "maxSuffix": " (max)",
+      "incrementSuffix": " → +1"
+    },
+    "rollPanel": {
+      "rollFailed": "Roll failed.",
+      "modeLabel": "Roll type",
+      "mode": {
+        "action": "Action",
+        "fortune": "Fortune",
+        "resistance": "Resistance"
+      },
+      "actionLabel": "Action",
+      "positionLabel": "Position",
+      "effectLabel": "Effect",
+      "fortuneLabel": "Fortune dice",
+      "resistLabel": "Resisted attribute",
+      "rollButton": "Roll",
+      "resistButton": "Resist",
+      "stressTaken": "{{count}} stress",
+      "diceCount": "{{count}}d",
+      "diceSuffix": "({{count}}d)",
+      "outcome": {
+        "crit": "Critical!",
+        "success": "Success",
+        "partial": "Partial",
+        "bad": "Bad outcome"
+      },
+      "position": {
+        "controlled": "Controlled",
+        "risky": "Risky",
+        "desperate": "Desperate"
+      },
+      "effect": {
+        "limited": "Limited",
+        "standard": "Standard",
+        "great": "Great"
+      },
+      "helpAria": "What do position and effect mean?",
+      "positionHelpTitle": "Position — how exposed you are",
+      "positionHelp": "Controlled (act on your terms) → Risky (the default) → Desperate (worst position, worst consequences).",
+      "effectHelpTitle": "Effect — how much you accomplish",
+      "effectHelp": "Limited (a partial result) → Standard → Great (more than usual).",
+      "zeroDiceHint": "No rating in this action — roll 2 dice and take the lowest."
+    },
+    "rollLog": {
+      "empty": "No rolls yet.",
+      "justNow": "just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "unknownPlayer": "Unknown",
+      "fortune": "Fortune",
+      "gm": "GM",
+      "resisted": "resisted — {{count}} stress",
+      "downtime": "Downtime"
+    },
+    "clocksPanel": {
+      "loadFailed": "Failed to load clocks",
+      "createFailed": "Failed to create clock",
+      "updateFailed": "Failed to update clock",
+      "removeFailed": "Failed to remove clock",
+      "empty": "No clocks yet.",
+      "emptyGmHint": " Add one below to track a developing situation.",
+      "reduceAria": "Reduce {{name}}",
+      "advanceAria": "Advance {{name}}",
+      "removeAria": "Remove {{name}}",
+      "complete": "Complete",
+      "remove": "Remove",
+      "newClockLabel": "New clock",
+      "newClockPlaceholder": "e.g. The Alarm",
+      "segments": "Segments",
+      "addClock": "Add clock"
+    },
+    "crewSheet": {
+      "loadFailed": "Failed to load the crew",
+      "createFailed": "Failed to create the crew",
+      "updateFailed": "Failed to update the crew",
+      "loading": "Loading crew…",
+      "emptyPlayer": "No crew sheet yet.",
+      "startPrompt": "Start the crew sheet — pick a crew type.",
+      "crewType": "Crew type",
+      "createCrew": "Create crew",
+      "decreaseAria": "Decrease {{label}}",
+      "increaseAria": "Increase {{label}}",
+      "tier": "Tier",
+      "rep": "Rep",
+      "heat": "Heat",
+      "wanted": "Wanted",
+      "coin": "Coin",
+      "vault": "Vault",
+      "holdLabel": "Hold: {{value}}",
+      "holdStrong": "strong",
+      "holdWeak": "weak",
+      "toggleHold": "Toggle hold",
+      "holdTooltipTitle": "Crew hold",
+      "holdTooltipStrong": "Strong hold: the crew is stable — a setback knocks it down to weak hold, not apart.",
+      "holdTooltipWeak": "Weak hold: the crew is shaky — another setback can break it up entirely.",
+      "resources": "Resources",
+      "crewAbilities": "Crew Abilities",
+      "noneTaken": "None taken.",
+      "claims": "Claims",
+      "noneHeld": "None held.",
+      "removeClaimAria": "Remove claim {{claim}}",
+      "addClaim": "Add claim",
+      "cohorts": "Cohorts",
+      "noneCohorts": "None.",
+      "removeCohortAria": "Remove cohort {{cohort}}",
+      "addCohort": "Add cohort",
+      "addCohortPlaceholder": "e.g. A gang of dockhands",
+      "add": "Add"
+    },
+    "factionsPanel": {
+      "loadFailed": "Failed to load factions",
+      "addFailed": "Failed to add faction",
+      "updateFailed": "Update failed",
+      "empty": "No factions yet.",
+      "emptyGmHint": " Seed one of the city powers below.",
+      "addFaction": "Add faction",
+      "tierOption": "Tier {{tier}}",
+      "remove": "Remove",
+      "removeAria": "Remove {{name}}",
+      "tier": "Tier",
+      "tierMax": "/6",
+      "lowerTierAria": "Lower {{name}} tier",
+      "raiseTierAria": "Raise {{name}} tier",
+      "status": "Status",
+      "statusLegendTitle": "Faction status (−3 to +3)",
+      "statusLegendScale": "−3 War · −2/−1 Hostile · 0 Neutral · +1/+2 Friendly · +3 Allied",
+      "statusLegendAria": "Faction status scale",
+      "lowerStatusAria": "Lower {{name}} status",
+      "raiseStatusAria": "Raise {{name}} status",
+      "reduceClockAria": "Reduce {{name}}",
+      "advanceClockAria": "Advance {{name}}",
+      "removeClockAria": "Remove {{name}}",
+      "projectClockLabel": "Project clock for {{name}}",
+      "projectClockPlaceholder": "e.g. Hunt the crew",
+      "segments": "Segments",
+      "addClockForAria": "Add clock for {{name}}",
+      "addClock": "Add clock"
+    },
+    "downtime": {
+      "indulgeVice": {
+        "action": "Indulge vice (clear stress)",
+        "viceLabel": "Vice: {{vice}}",
+        "logLabel": "Indulged vice — cleared {{count}} stress",
+        "failed": "Couldn't clear stress"
+      }
+    },
+    "builtinRuleset": {
+      "signInRequired": "You must be signed in to add a ruleset.",
+      "refreshed": "Refreshed your “{{name}}” copy to the latest content.",
+      "refreshFailed": "Failed to refresh the ruleset.",
+      "addFailed": "Failed to add the ruleset.",
+      "addTitle": "Creates an editable copy of {{name}} in your rulesets.",
+      "addCta": "Add {{name}} to my rulesets"
     }
   },
   "auth": {
@@ -199,12 +557,65 @@
         ],
         "cta": "Find Your Crew"
       }
+    },
+    "header": {
+      "signIn": "Sign In",
+      "signUpDiscord": "Sign Up with Discord",
+      "signOut": "Sign Out",
+      "welcomeUser": "Welcome, {{name}}"
+    },
+    "callback": {
+      "completingTitle": "Completing Sign In",
+      "waiting": "Waiting for Discord authentication to complete...",
+      "processing": "Supabase is processing your OAuth tokens automatically",
+      "failedTitle": "Authentication Failed",
+      "redirecting": "Redirecting you back...",
+      "failed": "Authentication failed. Please try again.",
+      "timeout": "Authentication timeout. Please try again."
     }
   },
   "pages": {
+    "rulesetsCatalog": {
+      "loadFailed": "Failed to load rulesets",
+      "authHeading": "Sign in to manage rulesets",
+      "authPrompt": "Sign in with Discord to add a starter system or upload your own Forged in the Dark ruleset.",
+      "signInCta": "Sign in with Discord",
+      "title": "Rulesets",
+      "uploadCta": "Upload ruleset",
+      "loadError": "Couldn't load rulesets",
+      "starterHeading": "Starter rulesets",
+      "starterDescription": "New here? Add a ready-made system to start playing right away — each one becomes an editable copy in your rulesets that you can reskin freely.",
+      "empty": "No rulesets of your own yet. Add a starter above, or upload your own.",
+      "createGame": "Create game",
+      "versionPrefix": "v"
+    },
     "home": {
       "title": "HeistMind - Forged in the Dark Platform",
       "description": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
+    },
+    "landing": {
+      "hero": {
+        "welcomePrefix": "Welcome to ",
+        "lead": "Run Forged in the Dark campaigns as async, Discord-style play-by-post — Game Masters upload custom rulesets, players build scoundrels and play through shared rolls, clocks, and crews. No session to schedule."
+      },
+      "features": {
+        "creation": {
+          "title": "Rule-Driven Characters",
+          "body": "Build scoundrels against any Forged in the Dark ruleset. Upload your own or load a starter system, and the character sheet follows its rules."
+        },
+        "management": {
+          "title": "Shared Campaign State",
+          "body": "Rolls, clocks, crew, and factions live in one always-current campaign. Every player sees the latest on view — days or weeks apart."
+        },
+        "collaboration": {
+          "title": "Play-by-Post Together",
+          "body": "Invite players with a join code, resist consequences, take downtime, and move the story forward in a shared feed — no scheduled session required."
+        }
+      },
+      "cta": {
+        "heading": "Ready to start your next heist?",
+        "body": "Sign in with Discord to spin up a campaign or join one with a code — then run your crew play-by-post."
+      }
     },
     "about": {
       "title": "About HeistMind",
@@ -250,6 +661,67 @@
         "joinGame": "Join a Game",
         "uploadRuleset": "Upload Ruleset"
       }
+    },
+    "rulesets": {
+      "title": "Rulesets",
+      "authPrompt": "Please sign in to view your rulesets.",
+      "uploadCta": "Upload ruleset",
+      "loadError": "Couldn't load rulesets",
+      "loadFailed": "Failed to load rulesets",
+      "empty": "No rulesets yet. New here? Load the built-in starter ruleset to start playing right away, or upload your own.",
+      "createGame": "Create game"
+    },
+    "createGame": {
+      "title": "Create a Campaign",
+      "subtitle": "Spin up a new game from one of your rulesets.",
+      "authPrompt": "Please sign in to create a campaign."
+    },
+    "uploadRuleset": {
+      "title": "Upload a Ruleset",
+      "subtitle": "Import a Forged-in-the-Dark ruleset as JSON.",
+      "authPrompt": "Please sign in to upload a ruleset.",
+      "starterPrompt": "Don't have a ruleset? Start with the built-in one:"
+    },
+    "gamesList": {
+      "title": "Campaigns",
+      "authHeading": "Sign in to run your heists",
+      "authPrompt": "Sign in with Discord to create campaigns, join with an invite code, and play through your crew's shared rolls, clocks, and factions.",
+      "signInCta": "Sign in with Discord",
+      "newCampaign": "New campaign",
+      "loadError": "Couldn't load campaigns",
+      "loadFailed": "Failed to load campaigns",
+      "empty": "No campaigns yet. Create one, or join one with an invite code.",
+      "yourCampaigns": "Your campaigns",
+      "joinedCampaigns": "Campaigns you've joined",
+      "open": "Open",
+      "gmBadge": "GM",
+      "playerBadge": "Player",
+      "joinTitle": "Join a campaign",
+      "codeLabel": "Invite code",
+      "joinPlaceholder": "Enter an invite code",
+      "joinCta": "Join",
+      "joinFailed": "Couldn't join — check the code and try again."
+    },
+    "game": {
+      "loadFailed": "Failed to load game",
+      "notFound": "Game not found",
+      "unknownError": "Unknown error",
+      "hubLoadError": "Couldn't load campaign",
+      "newCharLoadError": "Couldn't load game",
+      "viewAuthPrompt": "Please sign in to view this campaign.",
+      "createCharAuthPrompt": "Please sign in to create a character.",
+      "characterAuthPrompt": "Please sign in to view this character.",
+      "charactersHeading": "Characters",
+      "createCharacter": "Create character",
+      "noCharacters": "No characters yet. Create the first one.",
+      "characterMeta": "{{playbook}} · {{xp}} XP",
+      "view": "View",
+      "crewHeading": "Crew",
+      "clocksHeading": "Clocks",
+      "factionsHeading": "Factions",
+      "rollLogHeading": "Roll Log",
+      "fortuneRoll": "Fortune / GM roll",
+      "backToCampaign": "← Back to campaign"
     }
   },
   "forms": {
@@ -280,10 +752,47 @@
       "passwordsDoNotMatch": "Passwords do not match",
       "usernameTooShort": "Username must be at least 3 characters",
       "usernameInvalid": "Username can only contain letters, numbers, and underscores"
+    },
+    "gameForm": {
+      "nameLabel": "Campaign name",
+      "namePlaceholder": "e.g. The Lampblack Job",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional",
+      "rulesetLabel": "Ruleset",
+      "rulesetOption": "{{name}} (v{{version}})",
+      "createCta": "Create campaign",
+      "needRuleset": "Upload a ruleset first, then create a campaign.",
+      "errorTitle": "Couldn't create campaign",
+      "signInRequired": "You must be signed in.",
+      "pickRuleset": "Pick a ruleset first.",
+      "nameRequired": "Give your campaign a name.",
+      "duplicate": "You already have a campaign named “{{name}}”. Pick a different name.",
+      "createFailed": "Failed to create campaign",
+      "loadRulesetsFailed": "Failed to load rulesets"
+    },
+    "rulesetUpload": {
+      "fileLabel": "Upload a ruleset JSON file",
+      "fileAria": "Ruleset JSON file",
+      "pasteLabel": "…or paste ruleset JSON",
+      "pasteAria": "Ruleset JSON",
+      "invalidTitle": "That ruleset isn't valid",
+      "uploadCta": "Upload ruleset",
+      "metadataNote": "The name and version come from the file's metadata.",
+      "signInRequired": "You must be signed in to upload a ruleset.",
+      "saveFailed": "Failed to save the ruleset.",
+      "startHeading": "Not sure where to start?",
+      "starterHintPrefix": "The easiest path is to add a",
+      "starterHintLink": "starter ruleset",
+      "starterHintSuffix": "and edit your copy — no JSON required."
     }
   },
   "errors": {
     "general": "Something went wrong. Please try again.",
+    "boundary": {
+      "title": "Something went wrong",
+      "fallback": "An unexpected error occurred",
+      "tryAgain": "Try Again"
+    },
     "network": "Network error. Please check your connection.",
     "unauthorized": "You are not authorized to perform this action.",
     "notFound": "The requested resource was not found.",

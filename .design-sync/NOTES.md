@@ -25,7 +25,8 @@ Repo-specific gotchas for future syncs. Append as you learn things.
 - Two non-component showcase stories: `System/Theme System` (Theme.stories.tsx) and
   `System/Component Integration Test` (\_ComponentTest.stories.tsx) — no single export
   to pair; handle via titleMap/skip during the loop.
-- No stories (bundle-importable, no rich card): Alert, Textarea, ThemeToggle, ErrorFallbacks.
+- No stories (bundle-importable, no rich card): Alert, Textarea, ThemeToggle, ErrorFallbacks,
+  Clock, HarmTracker (the last two added 2026-06; exported from `index.ts`, no `.stories.tsx`).
 - Tooltip uses TooltipProvider + portals (overlay → likely cardMode "single").
 
 ## Solo-phase learnings (global fixes — all in config)
@@ -43,7 +44,10 @@ Repo-specific gotchas for future syncs. Append as you learn things.
 
 ## Re-sync risks
 
-- `packages/ui/src/index.ts` now exports `ThemeProvider` — a real source change beyond `.design-sync/`. If upstream removes/renames it, `cfg.provider` breaks (`[PROVIDER_UNEXPORTED]`).
+- `cfg.provider` depends on `ThemeProvider` being a bundle export. As of 2026-06 it's a **first-class
+  upstream export** (`export { ThemeProvider, type ThemeProviderProps } from './lib/theme'` in
+  `index.ts`) — the earlier manual `export { ThemeProvider }` workaround is no longer needed. If
+  upstream removes/renames it, `cfg.provider` breaks (`[PROVIDER_UNEXPORTED]`).
 - `PreviewRuntime` is a public bundle export (harmless no-op wrapper) — appears in `window.HeistMindUi`.
 - Display fonts depend on `packages/ui/.storybook/preview-head.html` (base64 woff2). If removed, `[FONT_MISSING]` returns and the oracle reverts to serif.
 - STORY_CAP: components grade the first 6 stories; tail stories are verified-by-upload. Raise `--max-stories` if tail variants need explicit checks.

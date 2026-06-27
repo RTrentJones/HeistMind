@@ -9,9 +9,10 @@ import {
   type Faction,
   type FactionDefinition,
 } from '@heist-mind/database';
-import { Alert, Badge, Button, Card, Clock, Input, Stack, Text } from '@heist-mind/ui';
+import { Alert, Badge, Button, Card, Clock, Input, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Factions + status for a campaign. The city's powers, with a tier and a status toward the crew
@@ -28,6 +29,7 @@ export function FactionsPanel({
   suggestions?: FactionDefinition[];
 }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [factions, setFactions] = useState<Faction[]>([]);
   const [clocks, setClocks] = useState<ClockType[]>([]);
   const [pick, setPick] = useState('');
@@ -41,7 +43,7 @@ export function FactionsPanel({
       repos.clocks.findByGame(gameId),
     ]);
     if (f.success) setFactions(f.data);
-    else setError(f.error?.message ?? 'Failed to load factions');
+    else setError(f.error?.message ?? t('components.factionsPanel.loadFailed'));
     if (c.success) setClocks(c.data);
   };
 
@@ -66,7 +68,7 @@ export function FactionsPanel({
       setPick('');
       setError(null);
       await load();
-    } else setError(r.error?.message ?? 'Failed to add faction');
+    } else setError(r.error?.message ?? t('components.factionsPanel.addFailed'));
   };
 
   const onChange = async () => {
@@ -85,7 +87,8 @@ export function FactionsPanel({
 
       {factions.length === 0 ? (
         <Text variant='muted' size='sm'>
-          No factions yet.{isGm ? ' Seed one of the city powers below.' : ''}
+          {t('components.factionsPanel.empty')}
+          {isGm ? t('components.factionsPanel.emptyGmHint') : ''}
         </Text>
       ) : (
         <Stack direction='column' gap='md'>
@@ -106,7 +109,7 @@ export function FactionsPanel({
       {isGm && available.length > 0 && (
         <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
           <label className='flex flex-col gap-1 text-sm'>
-            Add faction
+            {t('components.factionsPanel.addFaction')}
             <select
               className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
               value={pick}
@@ -116,13 +119,15 @@ export function FactionsPanel({
               {available.map(s => (
                 <option key={s.name} value={s.name}>
                   {s.name}
-                  {s.tier != null ? ` (Tier ${s.tier})` : ''}
+                  {s.tier != null
+                    ? ` (${t('components.factionsPanel.tierOption', { tier: s.tier })})`
+                    : ''}
                 </option>
               ))}
             </select>
           </label>
           <Button variant='ember' disabled={busy || !pick} onClick={addSuggested}>
-            Add faction
+            {t('components.factionsPanel.addFaction')}
           </Button>
         </Stack>
       )}
@@ -146,6 +151,7 @@ function FactionCard({
   onChange: () => Promise<void>;
   onError: (m: string) => void;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [clockName, setClockName] = useState('');
   const [segments, setSegments] = useState<ClockSegments>(4);
@@ -155,7 +161,7 @@ function FactionCard({
     const r = await fn();
     setBusy(false);
     if (r.success) await onChange();
-    else onError(r.error?.message ?? 'Update failed');
+    else onError(r.error?.message ?? t('components.factionsPanel.updateFailed'));
   };
 
   const repos = getRepositories();
@@ -174,23 +180,23 @@ function FactionCard({
             <Button
               variant='ghost'
               size='sm'
-              aria-label={`Remove ${faction.name}`}
+              aria-label={t('components.factionsPanel.removeAria', { name: faction.name })}
               disabled={busy}
               onClick={() => run(() => repos.factions.delete(faction.id))}
             >
-              Remove
+              {t('components.factionsPanel.remove')}
             </Button>
           )}
         </Stack>
 
         <Stack direction='row' gap='lg' align='center' className='flex-wrap'>
           <Stack direction='row' gap='xs' align='center'>
-            <Text size='sm'>Tier</Text>
+            <Text size='sm'>{t('components.factionsPanel.tier')}</Text>
             {isGm && (
               <Button
                 variant='outline'
                 size='sm'
-                aria-label={`Lower ${faction.name} tier`}
+                aria-label={t('components.factionsPanel.lowerTierAria', { name: faction.name })}
                 disabled={busy || faction.tier <= 0}
                 onClick={() => setTier(-1)}
               >
@@ -199,12 +205,13 @@ function FactionCard({
             )}
             <Badge variant='gold'>
               <span data-testid={`faction-tier-${faction.id}`}>{faction.tier}</span>
+              {t('components.factionsPanel.tierMax')}
             </Badge>
             {isGm && (
               <Button
                 variant='outline'
                 size='sm'
-                aria-label={`Raise ${faction.name} tier`}
+                aria-label={t('components.factionsPanel.raiseTierAria', { name: faction.name })}
                 disabled={busy || faction.tier >= 6}
                 onClick={() => setTier(1)}
               >
@@ -214,12 +221,34 @@ function FactionCard({
           </Stack>
 
           <Stack direction='row' gap='xs' align='center'>
-            <Text size='sm'>Status</Text>
+            <Text size='sm'>{t('components.factionsPanel.status')}</Text>
+            <Tooltip
+              variant='dark'
+              size='lg'
+              content={
+                <div className='space-y-1'>
+                  <div className='font-semibold'>
+                    {t('components.factionsPanel.statusLegendTitle')}
+                  </div>
+                  <div className='text-xs opacity-90'>
+                    {t('components.factionsPanel.statusLegendScale')}
+                  </div>
+                </div>
+              }
+            >
+              <span
+                tabIndex={0}
+                className='cursor-help text-xs text-foreground-muted'
+                aria-label={t('components.factionsPanel.statusLegendAria')}
+              >
+                ⓘ
+              </span>
+            </Tooltip>
             {isGm && (
               <Button
                 variant='outline'
                 size='sm'
-                aria-label={`Lower ${faction.name} status`}
+                aria-label={t('components.factionsPanel.lowerStatusAria', { name: faction.name })}
                 disabled={busy || faction.status <= -3}
                 onClick={() => setStatus(-1)}
               >
@@ -236,7 +265,7 @@ function FactionCard({
               <Button
                 variant='outline'
                 size='sm'
-                aria-label={`Raise ${faction.name} status`}
+                aria-label={t('components.factionsPanel.raiseStatusAria', { name: faction.name })}
                 disabled={busy || faction.status >= 3}
                 onClick={() => setStatus(1)}
               >
@@ -256,7 +285,7 @@ function FactionCard({
                     <Button
                       variant='outline'
                       size='sm'
-                      aria-label={`Reduce ${c.name}`}
+                      aria-label={t('components.factionsPanel.reduceClockAria', { name: c.name })}
                       disabled={busy || c.filled <= 0}
                       onClick={() => run(() => repos.clocks.update(c.id, { filled: c.filled - 1 }))}
                     >
@@ -265,7 +294,7 @@ function FactionCard({
                     <Button
                       variant='outline'
                       size='sm'
-                      aria-label={`Advance ${c.name}`}
+                      aria-label={t('components.factionsPanel.advanceClockAria', { name: c.name })}
                       disabled={busy || c.filled >= c.segments}
                       onClick={() => run(() => repos.clocks.update(c.id, { filled: c.filled + 1 }))}
                     >
@@ -274,7 +303,7 @@ function FactionCard({
                     <Button
                       variant='ghost'
                       size='sm'
-                      aria-label={`Remove ${c.name}`}
+                      aria-label={t('components.factionsPanel.removeClockAria', { name: c.name })}
                       disabled={busy}
                       onClick={() => run(() => repos.clocks.delete(c.id))}
                     >
@@ -290,13 +319,13 @@ function FactionCard({
         {isGm && (
           <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
             <Input
-              label={`Project clock for ${faction.name}`}
+              label={t('components.factionsPanel.projectClockLabel', { name: faction.name })}
               value={clockName}
               onChange={e => setClockName(e.target.value)}
-              placeholder='e.g. Hunt the crew'
+              placeholder={t('components.factionsPanel.projectClockPlaceholder')}
             />
             <label className='flex flex-col gap-1 text-sm'>
-              Segments
+              {t('components.factionsPanel.segments')}
               <select
                 className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
                 value={segments}
@@ -312,7 +341,7 @@ function FactionCard({
             <Button
               variant='outline'
               size='sm'
-              aria-label={`Add clock for ${faction.name}`}
+              aria-label={t('components.factionsPanel.addClockForAria', { name: faction.name })}
               disabled={busy || !clockName.trim() || !userId}
               onClick={() => {
                 const name = clockName.trim();
@@ -329,7 +358,7 @@ function FactionCard({
                 );
               }}
             >
-              Add clock
+              {t('components.factionsPanel.addClock')}
             </Button>
           </Stack>
         )}

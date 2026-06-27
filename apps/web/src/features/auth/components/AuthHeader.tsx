@@ -2,11 +2,23 @@
 
 import Link from 'next/link';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
-import { Button, Header, HeaderBrand, HeaderActions, Heading, Text, Stack } from '@heist-mind/ui';
+import {
+  Button,
+  Header,
+  HeaderBrand,
+  HeaderActions,
+  Heading,
+  Text,
+  Stack,
+  ThemeToggle,
+} from '@heist-mind/ui';
+import { useTranslation } from '@/lib/i18n/hooks';
+import { LanguageSwitcher } from '@/shared/components/LanguageSwitcher';
 
 export function AuthHeader() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { signInWithProvider, signOut } = useAuthActions();
+  const { t } = useTranslation();
 
   const handleDiscordSignIn = async () => {
     try {
@@ -32,29 +44,33 @@ export function AuthHeader() {
         </Heading>
       </HeaderBrand>
 
-      <HeaderActions>
+      <HeaderActions className='flex-wrap justify-end'>
+        <LanguageSwitcher />
+        <ThemeToggle />
         {isAuthenticated && user ? (
-          <Stack direction='row' gap='md' align='center'>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap justify-end'>
             <Button asChild variant='ghost' size='sm'>
-              <Link href='/games'>Campaigns</Link>
+              <Link href='/games'>{t('navigation.campaigns')}</Link>
             </Button>
             <Button asChild variant='ghost' size='sm'>
-              <Link href='/rulesets'>Rulesets</Link>
+              <Link href='/rulesets'>{t('navigation.rulesets')}</Link>
             </Button>
             <Text size='sm' variant='muted'>
-              Welcome, {user.profile?.displayName || user.email}
+              {t('auth.header.welcomeUser', {
+                name: user.profile?.displayName || user.email || '',
+              })}
             </Text>
             <Button variant='outline' size='sm' onClick={handleSignOut} loading={isLoading}>
-              Sign Out
+              {t('auth.header.signOut')}
             </Button>
           </Stack>
         ) : (
-          <Stack direction='row' gap='sm' align='center'>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap justify-end'>
             <Button variant='ghost' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
-              Sign In
+              {t('auth.header.signIn')}
             </Button>
             <Button variant='default' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
-              Sign Up with Discord
+              {t('auth.header.signUpDiscord')}
             </Button>
           </Stack>
         )}

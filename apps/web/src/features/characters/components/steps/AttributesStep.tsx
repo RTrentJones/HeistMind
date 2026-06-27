@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { pointBuySpent } from '@heist-mind/database';
 import { ActionDots, Badge, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Attribute / action-rating allocator. One controllable `StressTracker` per attribute (the DS
@@ -14,6 +15,7 @@ import { useCharacterCreationStore } from '../../stores/character-creation-store
  * StressTracker — so we always render the full track and clamp on change instead.)
  */
 export function AttributesStep() {
+  const { t } = useTranslation();
   const { content, attributes, values, pointBuy, setAttribute } = useCharacterCreationStore(
     useShallow(s => ({
       content: s.ruleset?.content ?? null,
@@ -25,7 +27,7 @@ export function AttributesStep() {
   );
 
   if (attributes.length === 0 || !content) {
-    return <Text variant='muted'>This ruleset has no attributes defined.</Text>;
+    return <Text variant='muted'>{t('components.steps.attributes.empty')}</Text>;
   }
 
   const spent = pointBuySpent(content, values);
@@ -36,7 +38,10 @@ export function AttributesStep() {
       {pointBuy && (
         <div>
           <Badge variant={over ? 'stress-critical' : 'steel'} size='lg'>
-            {spent} / {pointBuy.totalPoints} points spent
+            {t('components.steps.attributes.pointsSpent', {
+              spent,
+              total: pointBuy.totalPoints,
+            })}
           </Badge>
         </div>
       )}

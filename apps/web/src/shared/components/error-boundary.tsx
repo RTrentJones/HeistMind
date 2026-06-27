@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import i18n from '@/lib/i18n';
 import { errorHandler } from '../services/error-handler';
 
 interface Props {
@@ -76,15 +77,17 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className='flex flex-col items-center justify-center min-h-[200px] p-6 bg-red-50 border border-red-200 rounded-lg'>
-          <div className='text-red-600 text-lg font-semibold mb-2'>Something went wrong</div>
+          <div className='text-red-600 text-lg font-semibold mb-2'>
+            {i18n.t('boundary.title', { ns: 'errors' })}
+          </div>
           <div className='text-red-500 text-sm mb-4 text-center max-w-md'>
-            {this.state.error?.message || 'An unexpected error occurred'}
+            {this.state.error?.message || i18n.t('boundary.fallback', { ns: 'errors' })}
           </div>
           <button
             onClick={this.resetErrorBoundary}
             className='px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors'
           >
-            Try Again
+            {i18n.t('boundary.tryAgain', { ns: 'errors' })}
           </button>
         </div>
       );

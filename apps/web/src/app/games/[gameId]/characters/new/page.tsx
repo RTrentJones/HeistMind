@@ -7,6 +7,7 @@ import { Container, ErrorDisplay, LoadingSpinner, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
+import { usePageTranslation } from '@/lib/i18n/hooks';
 
 /** Wizard with the layout chosen by `?layout=rail` (default `single`). */
 function WizardWithLayout({ game, gameId }: { game: GameWithDetails; gameId: string }) {
@@ -17,6 +18,7 @@ function WizardWithLayout({ game, gameId }: { game: GameWithDetails; gameId: str
 export default function NewCharacterPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
   const { isAuthenticated } = useAuth();
+  const { t } = usePageTranslation();
 
   const [game, setGame] = useState<GameWithDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +34,9 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
       .then(result => {
         if (!active) return;
         if (!result.success) {
-          setError(result.error?.message ?? 'Failed to load game');
+          setError(result.error?.message ?? t('game.loadFailed'));
         } else if (!result.data) {
-          setError('Game not found');
+          setError(t('game.notFound'));
         } else {
           setGame(result.data);
         }
@@ -42,26 +44,26 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
       })
       .catch((e: unknown) => {
         if (!active) return;
-        setError(e instanceof Error ? e.message : 'Failed to load game');
+        setError(e instanceof Error ? e.message : t('game.loadFailed'));
         setLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [gameId]);
+  }, [gameId, t]);
 
   if (!isAuthenticated) {
     return (
-      <Container maxWidth="md" padding="lg">
-        <Text variant="muted">Please sign in to create a character.</Text>
+      <Container maxWidth='md' padding='lg'>
+        <Text variant='muted'>{t('game.createCharAuthPrompt')}</Text>
       </Container>
     );
   }
 
   if (loading) {
     return (
-      <Container maxWidth="md" padding="lg">
+      <Container maxWidth='md' padding='lg'>
         <LoadingSpinner />
       </Container>
     );
@@ -69,17 +71,21 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
 
   if (error || !game) {
     return (
-      <Container maxWidth="md" padding="lg">
-        <ErrorDisplay title="Couldn't load game" message={error ?? 'Unknown error'} />
+      <Container maxWidth='md' padding='lg'>
+        <ErrorDisplay
+          title={t('game.newCharLoadError')}
+          message={error ?? t('game.unknownError')}
+        />
       </Container>
     );
   }
 
   return (
-    <main>
+    // The app shell provides the <main> landmark; this is just the wizard's container.
+    <div>
       <Suspense fallback={null}>
         <WizardWithLayout game={game} gameId={gameId} />
       </Suspense>
-    </main>
+    </div>
   );
 }

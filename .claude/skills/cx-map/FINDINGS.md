@@ -66,7 +66,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   and it never appears in their own list — so the core async-multiplayer loop has no front door.
 - **fix:** Add an "Invite players" affordance for the GM (shareable link / join code) and a player
   join + "campaigns I'm in" path (query `GamePlayer` memberships, not just `findByCreator`).
-- **status:** open
+- **status:** resolved (PR #59) — `SupabaseInvitationRepository` + `redeem_invite_code` RPC; the
+  `/games` hub now lists created **and** joined campaigns with a join-via-code box, and GMs get an
+  `InviteCodeSection` code generator. Targeted + public codes. (First-class targeted-invite inbox
+  still thin — see F-followups.)
 
 ### F3 — Resistance rolls (spend stress to resist a consequence) not implemented
 
@@ -77,7 +80,33 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   (`6 − highest die`) logic; nothing to resist against is captured on a roll.
 - **fix:** Resistance mode in `RollPanel` (pick attribute → roll → auto-cost `6 − high` → deduct
   stress); store the consequence + attribute on the `Roll`.
-- **status:** open
+- **status:** resolved (PR #59) — `dice.resistanceStress` (`6 − highest die`, empty ⇒ 6, floored at
+  0; unit-tested to 100%); `RollPanel` Resistance mode picks the attribute, rolls, deducts stress via
+  `updateCharacterWithValidation`, persists `kind='resistance'`; the log annotates "resisted — N
+  stress". (Free-text consequence capture not yet stored — minor follow-up.)
+
+### F53 — A joined player can't open the campaign (ruleset RLS blocks the hub load)
+
+- **severity:** S1 · **type:** CX-flaw / bug · **(verified — caught by `join-via-code.spec.ts`)**
+- **where:** `packages/database/src/implementations/supabase-game-repository.ts` `findWithDetails`
+  (the ruleset read, ~L126–131) + the `rulesets` SELECT RLS in `supabase/migrations/00002_core_schema.sql:556`
+  (`created_by = auth.uid() OR is_public = true`).
+- **root cause:** Redeeming an invite code adds an **active** `game_players` row and redirects the
+  player to `/games/[id]` (both work). But `GameDetailPage` → `games.findWithDetails` then reads the
+  campaign's ruleset with `.single()`. The joined member is neither the ruleset's creator nor is the
+  ruleset public, so the `rulesets` RLS returns no row → `.single()` errors → `findWithDetails` fails
+  → the hub renders a load error instead of the campaign. **The A1 join flow is end-to-end broken: you
+  can join, but you can't use the campaign.** (The `games` SELECT RLS already allows active members, so
+  the game row itself is readable — only the ruleset read fails.)
+- **fix:** Let an active game member read their campaign's ruleset. Extend the `rulesets` SELECT
+  policy with an `EXISTS (… games JOIN game_players … status = 'active' …)` clause (single-DO-block
+  per-env migration, mind the 00004 recursion lesson), or have `findWithDetails` fetch the ruleset
+  through a SECURITY DEFINER path for members. Security-sensitive — verify on the local Supabase stack.
+- **status:** resolved (PR #59, @a893e71) — `00011_ruleset_member_read.sql` adds a SECURITY DEFINER
+  `user_can_access_ruleset` helper (active member of a game using the ruleset, bypassing RLS like
+  00004's `is_active_game_member`) and extends the rulesets SELECT policy with an additive OR clause.
+  **Verified end-to-end:** `join-via-code.spec.ts` (un-fixme'd) passes on CI's local-Supabase E2E —
+  a second account redeems a code, opens the campaign, and sees it badged as Player.
 
 ---
 
@@ -92,7 +121,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   error/code (`POINTBUY_OVER`, `ACTION_POINTS_OVER`, incomplete step) is never surfaced as copy.
 - **fix:** Render the first blocking validation message inline near the footer / step
   ("You've spent 8/7 action dots — reduce one to continue").
-- **status:** open
+- **status:** resolved (PR #59) — a `stepError(index)` store selector returns the first blocking
+  validation message for the current step (whole-build for review); the wizard footer shows it next
+  to a disabled Next/Create in `text-semantic-warning` with an i18n'd "Can't continue yet —" lead-in
+  (e.g. "Can't continue yet — Assigned 8 of 7 action dots.").
 
 ### F5 — Roll log doesn't say who rolled
 
@@ -101,7 +133,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   results, position/effect, outcome; never resolves `characterId`/`userId`.
 - **root cause:** In an async shared feed, "who acted" is essential context and it's simply absent.
 - **fix:** Resolve and show the character name (or player/"GM" for fortune rolls) per entry.
-- **status:** open
+- **status:** resolved (PR #59) — `RollLog` resolves `characterId → name` via `characters.findByGame`
+  and shows it per entry (fortune → "Fortune", GM otherwise).
 
 ### F6 — Roll log has no timestamps
 
@@ -109,7 +142,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **where:** `RollLog.tsx:42–56` — `Roll.createdAt` exists but is never displayed.
 - **root cause:** A play-by-post log spanning days/weeks needs chronological anchors.
 - **fix:** Show `createdAt` (relative or short absolute) on each entry.
-- **status:** open
+- **status:** resolved (PR #59) — each entry shows a relative time ("just now / 5m / 3h / 2d ago")
+  with the absolute timestamp in a `Tooltip` on a `<time>` element.
 
 ### F7 — Zero-dice rolls (rating 0) aren't explained
 
@@ -118,7 +152,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `RollLog` shows bare results; `Roll` has no `zeroDice` field to persist it.
 - **root cause:** A rating-0 roll shows two dice with no "take lowest" note — reads as a bug.
 - **fix:** Annotate zero-dice rolls in panel + log ("2d, take lowest"); persist `zeroDice` on `Roll`.
-- **status:** open
+- **status:** partially resolved (PR #59) — the panel now shows a hint when a rating-0 action is
+  selected ("No rating in this action — roll 2 dice and take the lowest."). Persisting `zeroDice` on
+  the `Roll` + annotating it in the log is still open.
 
 ### F8 — Position/effect dropdowns are unexplained jargon
 
@@ -127,7 +163,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   help text.
 - **root cause:** New FitD players can't choose meaningfully without the definitions.
 - **fix:** Inline tooltip/legend defining position (safety) and effect (impact).
-- **status:** open
+- **status:** resolved (PR #59) — an ⓘ `Tooltip` beside the effect select defines position
+  (Controlled → Risky → Desperate) and effect (Limited → Standard → Great).
 
 ### F9 — Push-yourself & Devil's Bargain (+1d) not modeled
 
@@ -193,7 +230,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   stress (indulge vice) — doesn't exist.
 - **fix:** A downtime panel; start with the highest-value actions (indulge vice → clear stress;
   recover → healing clock; reduce heat).
-- **status:** open
+- **status:** partially resolved (PR #59, MVP) — "Indulge vice" on the character sheet clears stress
+  to 0 and logs a `kind='downtime'` feed entry (rendered with a neutral badge, no dice). The rest of
+  the downtime menu (recover/acquire/long-term project/reduce heat/train) is still open.
 
 ### F16 — Flashbacks not modeled
 
@@ -243,7 +282,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   both themes regardless.)_
 - **fix:** Mount `ThemeProvider` in the root layout; add `ThemeToggle` to the header. Re-confirm the
   wiring before fixing.
-- **status:** open
+- **status:** resolved (PR #59) — `ThemeProvider` was mounted in the foundation; the DS `ThemeToggle`
+  (light/dark/system) now sits in the header (`AuthHeader`), so the light palette is reachable.
 
 ### F21 — Header/nav overflows on mobile
 
@@ -252,7 +292,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   with no responsive collapse.
 - **root cause:** Campaigns / Rulesets / username / sign-out wrap awkwardly under ~640px.
 - **fix:** Responsive collapse to a menu under a breakpoint.
-- **status:** open
+- **status:** resolved (PR #59) — `HeaderActions` + the action `Stack` now `flex-wrap justify-end`, so
+  the items reflow onto multiple rows under ~640px instead of overflowing.
 
 ### F22 — No breadcrumbs / secondary nav across deep routes
 
@@ -261,7 +302,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** games → campaign → character → sheet has no in-app way back up a level; users lean
   on the browser back button.
 - **fix:** Breadcrumb (or campaign-context sub-nav linking Crew/Clocks/Factions/Characters).
-- **status:** open
+- **status:** resolved (PR #59) — a path-derived `Breadcrumbs` component (in the new `AppShell`)
+  renders linked parent crumbs on deep routes (Campaigns → Campaign → Character / New character,
+  Rulesets → Upload ruleset); id segments relabel to their kind.
 
 ---
 
@@ -285,15 +328,19 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **F29** · CX · Required name field has no visual required indicator.
   `CharacterCreationWizard.tsx:83` → asterisk/marker. **open**
 - **F30** · FitD · Clock completion isn't visually indicated; 4/4 looks like 3/4. `clockComplete()`
-  in `clocks.ts` is never called by `ClocksPanel.tsx` → render a complete state. **open**
+  in `clocks.ts` is never called by `ClocksPanel.tsx` → render a complete state. **fixed @4b7343e
+  (PR #59)** — full clocks show a "Complete" badge + glow.
 - **F31** · CX · Roll-log shows `risky/` (trailing slash, empty effect) when position is set but
-  effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **open**
+  effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **fixed @4b7343e
+  (PR #59)** — position/effect now joined with a slash only when both are present.
 - **F32** · CX · Game `state` (draft/recruiting/active/paused/completed) is shown as a badge with no
   legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **open**
 - **F33** · CX · Crew `hold` (strong/weak) shown + toggle with no explanation. `CrewSheet.tsx:172–182`
-  → tooltip. **open**
+  → tooltip. **fixed @4b7343e (PR #59)** — hold has an explanatory tooltip (strong = stable, weak =
+  one setback from breaking up).
 - **F34** · CX · Faction tier (0–6) and status (−3..+3) caps aren't labelled; buttons just disable at
-  the ends. `FactionsPanel.tsx:190–246` → show "Tier x/6", a status legend. **open**
+  the ends. `FactionsPanel.tsx:190–246` → show "Tier x/6", a status legend. **fixed @4b7343e
+  (PR #59)** — tier now labelled "Tier n/6" and status carries a −3..+3 legend tooltip.
 - **F35** · CX · Ruleset upload gave no schema/example guidance; validation errors assumed JSON
   fluency. Added a guidance card outlining the required/optional shape + pointing to the starter
   catalog as the no-JSON path. `RulesetUpload.tsx`. **fixed @69180e1**
@@ -303,14 +350,19 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **F37** · CX · No first-run onboarding: a new signed-in user with no rulesets/games gets no guided
   next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open**
 - **F38** · CX · Landing doesn't convey the async play-by-post value prop or FitD specifics.
-  `app/page.tsx:28–34` → messaging + an "async play" feature. **open**
+  `app/page.tsx:28–34` → messaging + an "async play" feature. **fixed (PR #59)** — hero + the three
+  feature cards + CTA now lead with async, Discord-style play-by-post (rulesets, shared rolls/clocks/
+  crews, join codes, downtime); copy stays in the existing `pages.landing.*` keys.
 - **F39** · CX · Auth-gated pages show sparse "Please sign in" text with no CTA. `games/page.tsx`,
-  `rulesets/page.tsx`, `games/new` → styled empty state + Sign-in button. **open**
+  `rulesets/page.tsx`, `games/new` → styled empty state + Sign-in button. **fixed @PR59 (games +
+  rulesets)** — the auth gate is now a `Card` with a heading, a value-prop line, and a "Sign in with
+  Discord" button (`signInWithProvider('discord')`); `games/new` still bare.
 - **F40** · CX · Auth-callback errors auto-redirect after ~2s (hard to read) and home doesn't surface
   `?error=auth_failed`. `auth/callback/page.tsx:29–46` → longer/explicit retry + a home banner.
   **open**
 - **F41** · CX · No skip-to-main link; sticky header makes keyboard users tab through all nav.
-  `packages/ui/src/components/Header.tsx` → skip link + `id="main-content"`. **open**
+  `packages/ui/src/components/Header.tsx` → skip link + `id="main-content"`. **fixed @d9d7d49 (PR #59)**
+  — `AppShell` renders a focus-revealed skip link targeting the single `<main id="main-content">`.
 - **F42** · CX · Sheet doesn't distinguish GM vs player edit affordances (controls shown regardless;
   RLS blocks server-side, but the UI invites dead actions). `CharacterSheet.tsx`, `CharacterEditor.tsx`
   → gate interactive controls by role/ownership. **open**

@@ -25,3 +25,13 @@ export function rollOutcome(results: number[], opts: { zeroDice?: boolean } = {}
 export function diceForRating(rating: number): { count: number; zeroDice: boolean } {
   return rating <= 0 ? { count: 2, zeroDice: true } : { count: rating, zeroDice: false };
 }
+
+/**
+ * Stress taken when resisting a consequence (BitD "Armor 2" resistance roll): stress equals
+ * `6 − the HIGHEST die rolled`. Roll a 6 (or a crit) and you take 0 stress; the worst single die
+ * takes 5. A roll with **no dice** (empty) takes the full 6. Never returns less than 0.
+ */
+export function resistanceStress(results: number[]): number {
+  if (results.length === 0) return 6;
+  return Math.max(0, 6 - Math.max(...results));
+}

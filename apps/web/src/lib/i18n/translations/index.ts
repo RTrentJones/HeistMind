@@ -13,6 +13,13 @@ export const translations = {
   },
 };
 
+/**
+ * Languages that actually ship a message file. The language switcher is gated to this list, so it
+ * stays hidden while only English exists and auto-enables when an `es`/`fr`/`de` file is added to
+ * `translations` above — no UI change needed.
+ */
+export const AVAILABLE_LANGUAGES = Object.keys(translations) as Array<keyof typeof translations>;
+
 // Generate TypeScript types from English translations
 export type TranslationKeys = typeof en;
 export type NestedKeyOf<ObjectType extends object> = {
