@@ -108,6 +108,27 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   **Verified end-to-end:** `join-via-code.spec.ts` (un-fixme'd) passes on CI's local-Supabase E2E —
   a second account redeems a code, opens the campaign, and sees it badged as Player.
 
+### F54 — BitD rules-accuracy audit (rulesets, validation, loadout, crew-aware)
+
+- **severity:** S2 · **type:** FitD-accuracy · **(verified vs the SRD)**
+- **where:** `packages/shared/src/{default-ruleset,builtin-rulesets/*}.ts`,
+  `packages/database/src/{character-rules,dice,crews}.ts`, `…/ruleset-validation.ts`,
+  the character-management repository, and the sheet/editor/crew UI.
+- **root cause:** Audit (grounded on https://bladesinthedark.com/character-creation + /vice) found the
+  validation *engine* sound but several rules off: starting action dots gave 5 (Brackwater) / 8 (BitD
+  built-in) instead of **7**; 2 abilities at creation instead of **1**; trauma count-only; indulge-vice
+  cleared all stress with no roll/overindulge; no heat→wanted cascade; load-boosting abilities ignored;
+  shallow ruleset upload validation; crew never consulted (no Mastery cap, Deadly dot, or veteran).
+- **fix / status:** **resolved on the `feat/bitd-rules-accuracy` branch** (WS1–WS4 + WS5 core):
+  playbooks pre-place 3 dots + assign 4 = 7; exactly 1 starting ability; `traumaConditions` enforced;
+  indulge-vice rolls the lowest attribute (clears the highest die, flags overindulge); `applyHeat`
+  cascades heat 9 → +1 wanted; ability/crew `effects` raise effective load / action cap (Mastery 4) /
+  budget (Deadly) / veteran tier; the repository threads the campaign **crew** into every validation,
+  tolerating crew-granted extras as warnings when validated standalone; ruleset upload now cross-checks
+  ability/equipment refs + action↔attribute consistency. **Remaining follow-ups:** the grant-on-join
+  "crew benefit available" chooser UI, the editor item-roster filter, the trauma-checklist UI, and a
+  crew-grant e2e spec.
+
 ---
 
 ## S2 — major
@@ -191,7 +212,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** Abilities seeded from `playbook.startingAbilities` are removable like any other, so
   a character can be created missing its guaranteed ability.
 - **fix:** Lock starting abilities (disable removal, badge them "Starting").
-- **status:** open
+- **status:** resolved (BitD-accuracy branch) — `validateCharacter` now requires ≥1 ability at
+  creation when the playbook has a roster (`ABILITY_REQUIRED`); the seeded ability can't be removed
+  to zero. Brackwater `abilityChoices` 2→1 (BitD = exactly 1).
 
 ### F12 — Wizard never collects contacts (friends/rivals)
 
@@ -219,7 +242,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** Blades trauma is a fixed set (Cold, Haunted, Obsessed, Paranoid, Reckless, Soft,
   Unstable, Vicious) chosen, not typed; free text loses meaning + uniqueness.
 - **fix:** Enum the conditions; pick from a checklist (unique, up to `traumaMax`).
-- **status:** open
+- **status:** resolved (BitD-accuracy branch, validation) — rulesets carry `traumaConditions` (BitD's
+  8; Brackwater's reskinned 8) and `validateCharacter` enforces trauma ∈ the set + distinct
+  (`TRAUMA_UNKNOWN`/`TRAUMA_DUPLICATE`); lenient when a ruleset omits it. (Checklist UI still to wire.)
 
 ### F15 — Downtime actions entirely absent
 
