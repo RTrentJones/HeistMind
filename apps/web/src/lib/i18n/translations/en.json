@@ -489,6 +489,7 @@
         "action": "Indulge vice (clear stress)",
         "viceLabel": "Vice: {{vice}}",
         "logLabel": "Indulged vice — cleared {{count}} stress",
+        "overindulged": "Overindulged — you cleared more stress than you had. The GM picks a consequence: attract trouble, brag (+2 heat), go lost for a while, or get cut off by your purveyor.",
         "failed": "Couldn't clear stress"
       }
     },

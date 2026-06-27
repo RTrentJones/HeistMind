@@ -24,6 +24,7 @@ import {
   PLAYBOOK_TRACK,
   DEFAULT_STRESS,
   DEFAULT_HARM,
+  effectiveLoadLimit,
 } from './character-rules';
 
 /** An action-rating ruleset: two attributes with 2 actions each; playbook seeds one dot. */
@@ -105,7 +106,8 @@ function character(overrides: Partial<CharacterData> = {}): CharacterData {
     playbook: 'razor',
     attributes: {},
     skills: {},
-    specialAbilities: [],
+    // A created character always has its one starting ability (BitD: pick 1 at creation).
+    specialAbilities: ['battle-born'],
     items: [],
     stress: 0,
     trauma: [],
@@ -255,15 +257,54 @@ describe('validateCharacter — creation mode', () => {
     expect(codes(r)).toContain('ABILITY_LOCKED');
   });
 
-  it('blocks a tier-locked ability even when it has no prerequisite', () => {
+  it('tier-locks a cross-playbook ability: error in a campaign, warning standalone', () => {
     // ghost-step is tier 2, has no prerequisite, and is not in the Razor's roster.
     const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
-    const r = validateCharacter(rs, character({ specialAbilities: ['ghost-step'] }), {
+    const data = character({ specialAbilities: ['ghost-step'] });
+    // In a campaign (crew context) with no veteran grant → blocked.
+    const inCampaign = validateCharacter(rs, data, {
       mode: 'creation',
+      crew: { crewAbilities: [] },
     });
-    expect(r.errors.find(e => e.code === 'ABILITY_LOCKED')?.message).toMatch(
+    expect(inCampaign.errors.find(e => e.code === 'ABILITY_LOCKED')?.message).toMatch(
       /not available at character creation/
     );
+    // Standalone (no crew context) → can't verify a crew grant, so warn rather than block.
+    const standalone = validateCharacter(rs, data, { mode: 'creation' });
+    expect(standalone.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
+    expect(standalone.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('a crew veteran grant unlocks a tier-2 cross-playbook ability', () => {
+    const rs = ruleset({
+      characterCreation: { steps: [], abilityChoices: 5 },
+      crew: {
+        types: [],
+        abilities: [{ id: 'crew-vet', name: 'Veteran', description: '', effects: { veteran: 1 } }],
+      },
+    });
+    const r = validateCharacter(rs, character({ specialAbilities: ['ghost-step'] }), {
+      mode: 'creation',
+      crew: { crewAbilities: ['crew-vet'] },
+    });
+    expect(r.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
+  });
+
+  it('crew Mastery raises the action cap from 3 to 4', () => {
+    const rs = actionRuleset({
+      crew: {
+        types: [],
+        abilities: [
+          { id: 'crew-mastery', name: 'Mastery', description: '', effects: { actionMax: 4 } },
+        ],
+      },
+    });
+    // An action at 4 is over the base cap (3) without crew, legal with Mastery.
+    const at4 = character({ playbook: 'razor', skills: { Clash: 4 } });
+    expect(codes(validateCharacter(rs, at4))).toContain('ACTION_OVER_CAP');
+    expect(
+      codes(validateCharacter(rs, at4, { crew: { crewAbilities: ['crew-mastery'] } }))
+    ).not.toContain('ACTION_OVER_CAP');
   });
 
   it('blocks an incomplete required step', () => {
@@ -347,6 +388,50 @@ describe('validateCharacter — stress / trauma', () => {
       character({ trauma: ['a', 'b', 'c'] })
     );
     expect(codes(r)).toContain('TRAUMA_OVER');
+  });
+  it('blocks a trauma not in the ruleset’s named set, and duplicates', () => {
+    const rs = ruleset({ traumaConditions: ['Cold', 'Haunted'] });
+    expect(codes(validateCharacter(rs, character({ trauma: ['Spooked'] })))).toContain(
+      'TRAUMA_UNKNOWN'
+    );
+    expect(codes(validateCharacter(rs, character({ trauma: ['Cold', 'Cold'] })))).toContain(
+      'TRAUMA_DUPLICATE'
+    );
+    expect(validateCharacter(rs, character({ trauma: ['Cold'] })).isValid).toBe(true);
+  });
+  it('is lenient (count-only) when the ruleset names no trauma conditions', () => {
+    expect(validateCharacter(ruleset(), character({ trauma: ['anything'] })).isValid).toBe(true);
+  });
+});
+
+describe('effectiveLoadLimit — abilities raise carry capacity', () => {
+  it('a Mule-like ability raises the load limit; base holds without it', () => {
+    const rs = ruleset({
+      equipment: { loadCapacity: { light: 3, normal: 5, heavy: 6 }, items: [], categories: [] },
+      specialAbilities: [
+        {
+          id: 'mule',
+          name: 'Mule',
+          description: '',
+          effects: { loadCapacity: { light: 4, normal: 6, heavy: 9 } },
+        },
+      ],
+    });
+    expect(effectiveLoadLimit(rs, character({ specialAbilities: ['mule'] }), 'normal')).toBe(6);
+    expect(effectiveLoadLimit(rs, character({ specialAbilities: [] }), 'normal')).toBe(5);
+  });
+});
+
+describe('validateCharacter — one ability at creation (F11)', () => {
+  it('requires at least one special ability when the playbook has a roster', () => {
+    const r = validateCharacter(ruleset(), character({ specialAbilities: [] }), {
+      mode: 'creation',
+    });
+    expect(codes(r)).toContain('ABILITY_REQUIRED');
+  });
+  it('does not require an ability in live mode', () => {
+    const r = validateCharacter(ruleset(), character({ specialAbilities: [] }), { mode: 'live' });
+    expect(codes(r)).not.toContain('ABILITY_REQUIRED');
   });
 });
 

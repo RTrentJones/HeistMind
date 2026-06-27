@@ -18,6 +18,19 @@ function hasIdAndName(entry: unknown): boolean {
   return isObject(entry) && typeof entry.id === 'string' && typeof entry.name === 'string';
 }
 
+/** The string members of a value (when it's an array), else []. */
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+/** Collect the `id`s of array entries that have a string id (best-effort; for cross-reference checks). */
+function idsOf(value: unknown): Set<string> {
+  const out = new Set<string>();
+  if (Array.isArray(value))
+    for (const e of value) if (isObject(e) && typeof e.id === 'string') out.add(e.id);
+  return out;
+}
+
 /** Validate already-parsed JSON as `RulesetContent`. */
 export function validateRulesetContent(input: unknown): RulesetValidationResult {
   const errors: string[] = [];
@@ -93,6 +106,57 @@ export function validateRulesetContent(input: unknown): RulesetValidationResult 
       errors.push('stress must be an object with numeric max and traumaMax when present.');
     }
   }
+
+  // Cross-references — catch a structurally-valid but internally-inconsistent ruleset that would
+  // break the wizard or the rules engine (an unresolvable ability/item id, an action claimed by two
+  // attributes). Only run once the basics above hold and the referenced collection actually exists.
+  const abilityIds = idsOf(content.specialAbilities);
+  const itemIds = idsOf(isObject(content.equipment) ? content.equipment.items : undefined);
+
+  if (Array.isArray(content.attributes)) {
+    const owner = new Map<string, string>();
+    content.attributes.forEach((a, i) => {
+      if (!isObject(a)) return;
+      if (a.skills !== undefined && !Array.isArray(a.skills))
+        errors.push(`attributes[${i}].skills must be an array of action names.`);
+      for (const action of stringArray(a.skills)) {
+        const prev = owner.get(action);
+        if (prev !== undefined && prev !== a.id)
+          errors.push(`Action "${action}" belongs to more than one attribute.`);
+        owner.set(action, typeof a.id === 'string' ? a.id : String(i));
+      }
+    });
+  }
+
+  if (Array.isArray(content.playbooks)) {
+    content.playbooks.forEach((p, i) => {
+      if (!isObject(p)) return;
+      for (const field of ['startingAbilities', 'specialAbilities'] as const)
+        if (abilityIds.size > 0)
+          for (const id of stringArray(p[field]))
+            if (!abilityIds.has(id))
+              errors.push(`playbooks[${i}].${field} references unknown ability "${id}".`);
+      if (itemIds.size > 0)
+        for (const id of stringArray(p.equipment))
+          if (!itemIds.has(id))
+            errors.push(`playbooks[${i}].equipment references unknown item "${id}".`);
+    });
+  }
+
+  // Creation budget must be coherent: an action-rating ruleset needs sane maxAtCreation ≤ max.
+  if (isObject(creation) && isObject(creation.actionRatings)) {
+    const { max, maxAtCreation } = creation.actionRatings;
+    if (typeof maxAtCreation === 'number' && typeof max === 'number' && maxAtCreation > max)
+      errors.push('characterCreation.actionRatings.maxAtCreation cannot exceed max.');
+  }
+
+  // traumaConditions, when present, is a string[].
+  if (
+    content.traumaConditions !== undefined &&
+    (!Array.isArray(content.traumaConditions) ||
+      content.traumaConditions.some(c => typeof c !== 'string'))
+  )
+    errors.push('traumaConditions must be an array of strings when present.');
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, content: input as unknown as RulesetContent };

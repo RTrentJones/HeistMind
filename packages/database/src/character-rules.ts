@@ -10,6 +10,7 @@ import type {
   CharacterData,
   CharacterXp,
   AbilityDefinition,
+  AbilityEffects,
   PlaybookDefinition,
   CreationRestriction,
   StressRules,
@@ -17,6 +18,11 @@ import type {
   LoadLevel,
   ValidationError,
 } from './domain-types';
+
+/** A minimal crew shape for crew-aware validation — just the abilities the crew currently holds. */
+export interface CrewContext {
+  crewAbilities?: string[];
+}
 import type { ValidationResult, ValidationWarning, CharacterAdvancement } from './repositories';
 
 /** Blades-in-the-Dark defaults, used when a ruleset omits `stress`. */
@@ -35,6 +41,13 @@ export interface ValidateOptions {
    * exceeds creation limits via advancement, so those creation-only rules must not fire.
    */
   mode?: ValidationMode;
+  /**
+   * The campaign's crew, when validating in context. Crew abilities raise the effective bounds
+   * (Mastery → action cap 4, Deadly → bonus action dots, a veteran upgrade → cross-playbook picks).
+   * Absent when validating a character standalone/as a template — crew-granted extras are then
+   * tolerated as warnings rather than errors (see `validateCharacter`).
+   */
+  crew?: CrewContext | null;
 }
 
 // ----- step classification (shared with the wizard's creation-steps.ts) ---------------------
@@ -150,13 +163,15 @@ function prerequisiteSatisfied(
 
 /**
  * Whether an ability is selectable AT CREATION (prerequisite + creation-tier gating).
- * Creation-tier is 1, so tier ≥ 2 requires either a satisfied prerequisite or membership in the
- * chosen playbook's own ability roster. (TODO: raise available tier once crew advancement exists.)
+ * Creation-tier is 1, so tier ≥ 2 requires a satisfied prerequisite, membership in the chosen
+ * playbook's own ability roster, OR a "veteran" pick granted by the crew (BitD: a crew advancement
+ * lets a member take an ability from another playbook). Pass the campaign's crew for that last case.
  */
 export function isAbilityUnlocked(
   ruleset: RulesetContent,
   data: CharacterData,
-  abilityId: string
+  abilityId: string,
+  crew?: CrewContext | null
 ): boolean {
   const ability = findAbility(ruleset, abilityId);
   if (!ability) return true;
@@ -167,7 +182,8 @@ export function isAbilityUnlocked(
     );
     const prereqHeld =
       !!ability.prerequisite && data.specialAbilities.includes(ability.prerequisite);
-    if (!inPlaybookRoster && !prereqHeld) return false;
+    const veteranGranted = collectAbilityEffects(ruleset, data, crew).veteran > 0;
+    if (!inPlaybookRoster && !prereqHeld && !veteranGranted) return false;
   }
   return true;
 }
@@ -197,6 +213,52 @@ export function loadLimit(ruleset: RulesetContent, level: LoadLevel): number {
 export function loadUsed(ruleset: RulesetContent, data: CharacterData): number {
   const byId = new Map((ruleset.equipment?.items ?? []).map(i => [i.id, i.load ?? 0]));
   return (data.loadout?.items ?? []).reduce((n, id) => n + (byId.get(id) ?? 0), 0);
+}
+
+/**
+ * Aggregate the structured {@link AbilityEffects} a character has from its own special abilities and
+ * (optionally) from its crew's abilities: `loadCapacity`/`actionMax` take the HIGHEST value, bonus
+ * dots / veteran picks SUM. The single place crew + ability bonuses are combined (load, action cap,
+ * Deadly dots, veteran access).
+ */
+export function collectAbilityEffects(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  crew?: CrewContext | null
+): Required<Pick<AbilityEffects, 'actionMax' | 'bonusActionDots' | 'veteran'>> & {
+  loadCapacity: Partial<Record<LoadLevel, number>>;
+} {
+  const out = {
+    loadCapacity: {} as Partial<Record<LoadLevel, number>>,
+    actionMax: 0,
+    bonusActionDots: 0,
+    veteran: 0,
+  };
+  const apply = (e?: AbilityEffects) => {
+    if (!e) return;
+    for (const [lvl, v] of Object.entries(e.loadCapacity ?? {})) {
+      const level = lvl as LoadLevel;
+      out.loadCapacity[level] = Math.max(out.loadCapacity[level] ?? 0, v ?? 0);
+    }
+    if (e.actionMax) out.actionMax = Math.max(out.actionMax, e.actionMax);
+    if (e.bonusActionDots) out.bonusActionDots += e.bonusActionDots;
+    if (e.veteran) out.veteran += e.veteran;
+  };
+  for (const id of data.specialAbilities) apply(findAbility(ruleset, id)?.effects);
+  for (const id of crew?.crewAbilities ?? [])
+    apply(ruleset.crew?.abilities?.find(a => a.id === id)?.effects);
+  return out;
+}
+
+/** Carry limit for a level, raised by any load-boosting abilities the character (or crew) holds. */
+export function effectiveLoadLimit(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  level: LoadLevel,
+  crew?: CrewContext | null
+): number {
+  const bonus = collectAbilityEffects(ruleset, data, crew).loadCapacity[level] ?? 0;
+  return Math.max(loadLimit(ruleset, level), bonus);
 }
 
 /**
@@ -333,10 +395,13 @@ export function validateCharacter(
 
   const actionMode = usesActionRatings(ruleset);
   const ar = ruleset.characterCreation?.actionRatings;
+  // Crew + ability effects (load, action cap, Deadly dots, veteran) — applied to the bounds below.
+  const effects = collectAbilityEffects(ruleset, data, opts.crew);
 
   if (actionMode) {
     // Per-ACTION caps (both modes); attributes are derived, so they need no cap check.
-    const max = ar?.max ?? DEFAULT_ATTR_MAX - 1; // BitD actions cap at 3
+    // BitD actions cap at 3, raised to 4 when the crew holds the "Mastery" upgrade.
+    const max = Math.max(ar?.max ?? DEFAULT_ATTR_MAX - 1, effects.actionMax);
     const creationMax = ar?.maxAtCreation ?? 2;
     for (const action of rulesetActions(ruleset)) {
       const value = data.skills?.[action] ?? 0;
@@ -381,14 +446,25 @@ export function validateCharacter(
           `${ability.name} requires ${ability.prerequisite}.`
         )
       );
-    } else if (mode === 'creation' && !isAbilityUnlocked(ruleset, data, abilityId)) {
-      errors.push(
-        err(
-          `specialAbilities.${abilityId}`,
-          'ABILITY_LOCKED',
-          `${ability.name} is not available at character creation.`
-        )
-      );
+    } else if (mode === 'creation' && !isAbilityUnlocked(ruleset, data, abilityId, opts.crew)) {
+      // A tier-2 cross-playbook ability needs a crew veteran grant. With crew context we can say it's
+      // illegal (error); without it (template / standalone load) we can't verify the grant, so we
+      // only warn — the character may be perfectly legal inside its campaign.
+      if (opts.crew)
+        errors.push(
+          err(
+            `specialAbilities.${abilityId}`,
+            'ABILITY_LOCKED',
+            `${ability.name} is not available at character creation.`
+          )
+        );
+      else
+        warnings.push(
+          warn(
+            `specialAbilities.${abilityId}`,
+            `${ability.name} needs a crew veteran grant — validate within the campaign.`
+          )
+        );
     }
   }
 
@@ -400,6 +476,21 @@ export function validateCharacter(
     errors.push(
       err('trauma', 'TRAUMA_OVER', `A character can hold at most ${bounds.traumaMax} trauma.`)
     );
+  // Trauma must be drawn from the ruleset's named conditions when it defines them (BitD's fixed set),
+  // and be distinct. Lenient (count-only) when a ruleset omits `traumaConditions`.
+  if (ruleset.traumaConditions && ruleset.traumaConditions.length > 0) {
+    const allowed = new Set(ruleset.traumaConditions);
+    for (const condition of data.trauma) {
+      if (!allowed.has(condition))
+        errors.push(
+          err('trauma', 'TRAUMA_UNKNOWN', `"${condition}" is not a valid trauma condition.`)
+        );
+    }
+    if (new Set(data.trauma).size !== data.trauma.length)
+      errors.push(
+        err('trauma', 'TRAUMA_DUPLICATE', 'Each trauma condition can be taken only once.')
+      );
+  }
 
   // Harm-track bounds (both modes), if the character tracks harm.
   if (data.harm) {
@@ -412,10 +503,11 @@ export function validateCharacter(
     }
   }
 
-  // Load: carried items can't exceed the chosen load level's capacity (both modes).
+  // Load: carried items can't exceed the chosen load level's capacity (raised by load-boosting
+  // abilities like Mule), both modes.
   if (data.loadout) {
     const used = loadUsed(ruleset, data);
-    const limit = loadLimit(ruleset, data.loadout.level);
+    const limit = effectiveLoadLimit(ruleset, data, data.loadout.level, opts.crew);
     if (used > limit)
       errors.push(
         err(
@@ -428,8 +520,10 @@ export function validateCharacter(
 
   if (mode === 'creation') {
     if (actionMode) {
-      // Action-dot budget: the playbook's seeded dots + the ruleset's creation `points`.
-      const budget = seededActionDots(ruleset, data.playbook) + (ar?.points ?? 0);
+      // Action-dot budget: the playbook's seeded dots + the ruleset's creation `points` + any crew
+      // bonus dots (BitD "Deadly" grants each member an extra dot).
+      const budget =
+        seededActionDots(ruleset, data.playbook) + (ar?.points ?? 0) + effects.bonusActionDots;
       const spent = actionDotsSpent(ruleset, data);
       if (spent > budget)
         errors.push(
@@ -451,8 +545,15 @@ export function validateCharacter(
       }
     }
 
-    // Ability-choice count.
+    // Ability-choice count: at least one (BitD: every character picks 1 ability at creation; the
+    // seeded starting ability mustn't be removable to zero — closes F11) and at most the limit.
     const limit = abilityChoiceLimit(ruleset, data.playbook);
+    const rosterHasAbilities =
+      (findPlaybook(ruleset, data.playbook)?.specialAbilities?.length ?? 0) > 0;
+    if (rosterHasAbilities && data.specialAbilities.length < 1)
+      errors.push(
+        err('specialAbilities', 'ABILITY_REQUIRED', 'Choose a special ability to start with.')
+      );
     if (data.specialAbilities.length > limit)
       errors.push(
         err('specialAbilities', 'ABILITY_LIMIT', `Choose at most ${limit} special abilities.`)

@@ -274,6 +274,12 @@ export interface RulesetContent {
   characterCreation: CreationRules;
   /** Stress/trauma bounds. Optional; defaults to BitD `{ max: 9, traumaMax: 4 }` when absent. */
   stress?: StressRules;
+  /**
+   * The named trauma conditions a character may take (BitD's 8: Cold, Haunted, Obsessed, Paranoid,
+   * Reckless, Soft, Unstable, Vicious — or a reskinned set). When present, `validateCharacter`
+   * enforces that each marked trauma is one of these; when absent, trauma is count-only (lenient).
+   */
+  traumaConditions?: string[];
   /** Harm-track box counts per level. Optional; defaults to BitD `{ lesser:2, moderate:2, severe:1 }`. */
   harm?: HarmRules;
   /** Optional crew-sheet content (crew types, crew abilities, available claims). */
@@ -325,6 +331,12 @@ export interface CrewAbilityDefinition {
   description: string;
   /** Which crew type this ability belongs to (optional — shared abilities omit it). */
   crewType?: string;
+  /**
+   * Optional structured effects this crew ability grants to EVERY member (see {@link AbilityEffects}):
+   * "Deadly" → `{ bonusActionDots: 1 }`, "Mastery" → `{ actionMax: 4 }`, a veteran-granting upgrade →
+   * `{ veteran: 1 }`. Applied by `validateCharacter` when crew context is supplied.
+   */
+  effects?: AbilityEffects;
 }
 
 export interface StressRules {
@@ -367,6 +379,23 @@ export interface SkillDefinition {
   examples?: string[];
 }
 
+/**
+ * Structured mechanical effects an ability grants, so the validator can apply them instead of the
+ * effect living only in prose `rules`. Used by both character special abilities (e.g. BitD "Mule"
+ * raising load) and crew abilities (e.g. "Deadly" granting a member dot, "Mastery" raising the action
+ * cap). Effective bounds = base ⊕ a character's own ability effects ⊕ its crew's ability effects.
+ */
+export interface AbilityEffects {
+  /** Override/raise the load capacity per level (e.g. Mule: `{ light: 4, normal: 6, heavy: 9 }`). */
+  loadCapacity?: Partial<Record<LoadLevel, number>>;
+  /** Raise the per-action rating cap (BitD crew "Mastery": 4). Highest wins. */
+  actionMax?: number;
+  /** Extra free action dots the member may place (BitD crew "Deadly": 1). Summed across abilities. */
+  bonusActionDots?: number;
+  /** Grant N cross-playbook ("veteran") ability picks, opening tier-2 abilities outside the roster. */
+  veteran?: number;
+}
+
 export interface AbilityDefinition {
   id: string;
   name: string;
@@ -377,6 +406,8 @@ export interface AbilityDefinition {
   prerequisite?: string;
   tier?: number;
   category?: string;
+  /** Optional structured effects applied by the validator (see {@link AbilityEffects}). */
+  effects?: AbilityEffects;
 }
 
 export interface ContactDefinition {

@@ -163,6 +163,8 @@ function makeClient(reads: Record<string, Resp>): {
         if (op === 'update') lastUpdatePayload = { data: payload, error: null };
         return Promise.resolve(merged);
       },
+      // Crew-context lookups use maybeSingle (null when the campaign has no crew yet).
+      maybeSingle: () => Promise.resolve(reads[table] ?? { data: null, error: null }),
     };
     return b;
   };

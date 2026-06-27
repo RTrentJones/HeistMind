@@ -36,10 +36,12 @@ test.describe('GM: ability rules text (Brackwater)', () => {
     await next.click(); // → action ratings
     await next.click(); // → special abilities
 
-    // The wizard shows the full rules text inline on each ability card (Bulwark's exact effect).
+    // The wizard shows the full rules text inline on each ability card (Bulwark's exact effect),
+    // even for an unselected ability — rules are always visible, not gated behind picking it.
     await expect(gmPage.getByText(/take the harm onto yourself/)).toBeVisible();
 
-    await gmPage.getByText('Bulwark', { exact: true }).click();
+    // BitD = exactly ONE ability at creation; the playbook seeds Scarred as that single pick, so we
+    // keep it (no second ability) and verify its rules expand on the sheet below.
     await next.click(); // → Heritage
     await next.click(); // → Background
     await next.click(); // → Vice

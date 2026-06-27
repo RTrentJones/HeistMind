@@ -43,7 +43,9 @@ export function AbilitiesStep() {
   const renderCard = (ab: AbilityDefinition) => {
     const isSelected = selected.includes(ab.id);
     const unlocked = isAbilityUnlocked(content, draft, ab.id);
-    const atLimit = !isSelected && selected.length >= limit;
+    // A single-slot pick (limit 1) SWAPS on click, so other unlocked abilities stay selectable — only
+    // a true multi-select cap (limit > 1) disables the rest once full.
+    const atLimit = !isSelected && limit !== 1 && selected.length >= limit;
     const disabled = !isSelected && (!unlocked || atLimit);
     const reason = !unlocked
       ? ab.prerequisite
