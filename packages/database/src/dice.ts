@@ -35,3 +35,23 @@ export function resistanceStress(results: number[]): number {
   if (results.length === 0) return 6;
   return Math.max(0, 6 - Math.max(...results));
 }
+
+/**
+ * Stress cleared when indulging your vice (BitD downtime): roll dice equal to your LOWEST attribute
+ * rating and clear stress equal to the HIGHEST die. A zero-dice roll (lowest attribute 0) rolls two
+ * dice and takes the LOWEST, like any 0-rated action; an empty roll clears nothing.
+ * https://bladesinthedark.com/vice
+ */
+export function viceStressCleared(results: number[], opts: { zeroDice?: boolean } = {}): number {
+  if (results.length === 0) return 0;
+  return opts.zeroDice ? Math.min(...results) : Math.max(...results);
+}
+
+/**
+ * You **overindulge** when your vice roll clears more stress than you currently have marked. The
+ * consequence (Attract Trouble / Brag → +2 heat / Lost / Tapped) is narrated by the GM — this just
+ * flags it. https://bladesinthedark.com/vice
+ */
+export function isOverindulged(cleared: number, stressMarked: number): boolean {
+  return cleared > stressMarked;
+}

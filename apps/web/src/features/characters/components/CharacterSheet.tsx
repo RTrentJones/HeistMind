@@ -8,6 +8,10 @@ import {
   loadUsed,
   usesActionRatings,
   rulesetActions,
+  deriveAttributes,
+  diceForRating,
+  viceStressCleared,
+  isOverindulged,
   usesXpTracks,
   xpTrackSize,
   xpMarks,
@@ -17,6 +21,7 @@ import {
   type CharacterWithDetails,
 } from '@heist-mind/database';
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -50,6 +55,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [rollKey, setRollKey] = useState(0);
+  const [viceNote, setViceNote] = useState<string | null>(null);
 
   const load = async () => {
     const result = await getRepositories().characters.findWithDetails(characterId);
@@ -126,23 +132,34 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const indulgeVice = async () => {
     const userId = user?.id;
     if (!userId || !character) return;
-    const cleared = character.characterData?.stress ?? 0;
+    // BitD vice roll: roll dice equal to your LOWEST attribute rating, clear stress = highest die.
+    const stress = character.characterData?.stress ?? 0;
+    const attrs = Object.values(
+      deriveAttributes(character.ruleset.content, character.characterData)
+    );
+    const lowest = attrs.length > 0 ? Math.min(...attrs) : 0;
+    const { count, zeroDice } = diceForRating(lowest);
+    const results = Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
+    const cleared = viceStressCleared(results, { zeroDice });
+    const overindulged = isOverindulged(cleared, stress);
+    const nextStress = Math.max(0, stress - cleared);
     setSaving(true);
     const r = await getRepositories().characterManagement.updateCharacterWithValidation(
       characterId,
       userId,
-      { characterData: { ...character.characterData, stress: 0 } }
+      { characterData: { ...character.characterData, stress: nextStress } }
     );
     if (r.success) {
-      // A downtime indulgence has no dice — record it as an empty-result entry for attribution.
       await getRepositories().rolls.create(userId, {
         gameId: character.gameId,
         characterId: character.id,
         kind: 'downtime',
         label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
-        dice: 0,
-        results: [],
+        dice: count,
+        results,
       });
+      // Overindulging (cleared more than was marked) is a real consequence the GM narrates.
+      setViceNote(overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
       setRollKey(k => k + 1); // refresh the feed so the new downtime entry appears
       await load();
     } else {
@@ -333,6 +350,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               </Text>
             )}
           </Stack>
+          {viceNote && (
+            <Alert variant='warning' size='sm'>
+              {viceNote}
+            </Alert>
+          )}
           <div>
             <Text as='strong'>{t('components.characterSheet.harm')}</Text>
             <HarmTracker

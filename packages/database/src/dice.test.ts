@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { rollOutcome, diceForRating, resistanceStress } from './dice';
+import {
+  rollOutcome,
+  diceForRating,
+  resistanceStress,
+  viceStressCleared,
+  isOverindulged,
+} from './dice';
 
 describe('rollOutcome', () => {
   it('an empty roll is a bad outcome', () => {
@@ -52,5 +58,26 @@ describe('resistanceStress', () => {
   it('never returns less than 0 (a 6 still floors at 0)', () => {
     expect(resistanceStress([6])).toBe(0);
     expect(resistanceStress([6, 6])).toBe(0);
+  });
+});
+
+describe('viceStressCleared', () => {
+  it('clears the HIGHEST die on a normal roll', () => {
+    expect(viceStressCleared([1, 5, 3])).toBe(5);
+    expect(viceStressCleared([2])).toBe(2);
+  });
+  it('takes the LOWEST die when rolling zero-dice (lowest attribute 0)', () => {
+    expect(viceStressCleared([6, 2], { zeroDice: true })).toBe(2);
+  });
+  it('clears nothing on an empty roll', () => {
+    expect(viceStressCleared([])).toBe(0);
+  });
+});
+
+describe('isOverindulged', () => {
+  it('is true only when more stress is cleared than was marked', () => {
+    expect(isOverindulged(5, 3)).toBe(true);
+    expect(isOverindulged(3, 3)).toBe(false);
+    expect(isOverindulged(2, 5)).toBe(false);
   });
 });

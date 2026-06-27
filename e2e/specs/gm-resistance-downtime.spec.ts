@@ -41,7 +41,11 @@ test.describe('GM: resistance + downtime', () => {
     await gmPage.locator('button.rounded-full').nth(2).click(); // set stress = 3
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 10_000 });
     await gmPage.getByRole('button', { name: 'Indulge vice (clear stress)' }).click();
-    await expect(gmPage.getByText('0/9')).toBeVisible({ timeout: 10_000 }); // stress cleared
+    // BitD vice roll clears a *rolled* amount (the lowest-attribute roll's highest die), so assert
+    // the downtime entry lands in the feed rather than a fixed 0/9.
+    await expect(gmPage.getByText(/Indulged vice — cleared/).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // --- Resistance: roll against an attribute → an entry lands in the shared roll log, annotated
     // with the stress it cost. The die is random (stress can be 0–6), so assert the log entry's

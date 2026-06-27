@@ -24,3 +24,22 @@ export function clampNonNegative(value: number): number {
 export function normalizeHold(hold: string | null | undefined): CrewHold {
   return hold === 'weak' ? 'weak' : 'strong';
 }
+
+/**
+ * Apply a heat change with the BitD Wanted cascade: when the heat track fills (9), the crew gains a
+ * Wanted level and heat resets, carrying any remainder. Wanted clamps at its cap (4); once maxed,
+ * extra heat just clamps at the cap. Returns the new `{ heat, wanted }`.
+ * https://bladesinthedark.com (crew heat → wanted)
+ */
+export function applyHeat(
+  current: { heat: number; wanted: number },
+  delta: number
+): { heat: number; wanted: number } {
+  let heat = Math.max(0, Math.floor(current.heat + delta));
+  let wanted = clampCrewStat('wanted', current.wanted);
+  while (heat >= CREW_LIMITS.heat && wanted < CREW_LIMITS.wanted) {
+    heat -= CREW_LIMITS.heat;
+    wanted += 1;
+  }
+  return { heat: Math.min(heat, CREW_LIMITS.heat), wanted };
+}
