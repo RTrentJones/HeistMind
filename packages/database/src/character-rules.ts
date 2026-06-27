@@ -400,6 +400,21 @@ export function validateCharacter(
     errors.push(
       err('trauma', 'TRAUMA_OVER', `A character can hold at most ${bounds.traumaMax} trauma.`)
     );
+  // Trauma must be drawn from the ruleset's named conditions when it defines them (BitD's fixed set),
+  // and be distinct. Lenient (count-only) when a ruleset omits `traumaConditions`.
+  if (ruleset.traumaConditions && ruleset.traumaConditions.length > 0) {
+    const allowed = new Set(ruleset.traumaConditions);
+    for (const condition of data.trauma) {
+      if (!allowed.has(condition))
+        errors.push(
+          err('trauma', 'TRAUMA_UNKNOWN', `"${condition}" is not a valid trauma condition.`)
+        );
+    }
+    if (new Set(data.trauma).size !== data.trauma.length)
+      errors.push(
+        err('trauma', 'TRAUMA_DUPLICATE', 'Each trauma condition can be taken only once.')
+      );
+  }
 
   // Harm-track bounds (both modes), if the character tracks harm.
   if (data.harm) {
@@ -451,8 +466,15 @@ export function validateCharacter(
       }
     }
 
-    // Ability-choice count.
+    // Ability-choice count: at least one (BitD: every character picks 1 ability at creation; the
+    // seeded starting ability mustn't be removable to zero — closes F11) and at most the limit.
     const limit = abilityChoiceLimit(ruleset, data.playbook);
+    const rosterHasAbilities =
+      (findPlaybook(ruleset, data.playbook)?.specialAbilities?.length ?? 0) > 0;
+    if (rosterHasAbilities && data.specialAbilities.length < 1)
+      errors.push(
+        err('specialAbilities', 'ABILITY_REQUIRED', 'Choose a special ability to start with.')
+      );
     if (data.specialAbilities.length > limit)
       errors.push(
         err('specialAbilities', 'ABILITY_LIMIT', `Choose at most ${limit} special abilities.`)

@@ -76,7 +76,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['blade', 'armor', 'large-weapon'],
       attributes: {},
-      skills: { Clash: 1 },
+      skills: { Clash: 2, Marshal: 1 },
     },
     {
       id: 'harpoon',
@@ -98,7 +98,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['pistol', 'large-weapon', 'climbing-gear'],
       attributes: {},
-      skills: { Track: 1 },
+      skills: { Track: 2, Scout: 1 },
     },
     {
       id: 'brewer',
@@ -120,7 +120,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['burglar-rig', 'subterfuge-tools', 'documents'],
       attributes: {},
-      skills: { Rig: 1 },
+      skills: { Rig: 2, Wreck: 1 },
     },
     {
       id: 'eel',
@@ -142,7 +142,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['blade', 'burglar-rig', 'climbing-gear'],
       attributes: {},
-      skills: { Skulk: 1 },
+      skills: { Skulk: 2, Sleight: 1 },
     },
     {
       id: 'mask',
@@ -164,7 +164,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['fine-clothes', 'subterfuge-tools', 'documents'],
       attributes: {},
-      skills: { Coax: 1 },
+      skills: { Coax: 2, Mingle: 1 },
     },
     {
       id: 'weaver',
@@ -186,7 +186,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['documents', 'fine-clothes', 'subterfuge-tools'],
       attributes: {},
-      skills: { Mingle: 1 },
+      skills: { Mingle: 2, Examine: 1 },
     },
     {
       id: 'medium',
@@ -208,7 +208,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       ],
       equipment: ['spirit-mask', 'documents', 'subterfuge-tools'],
       attributes: {},
-      skills: { Channel: 1 },
+      skills: { Channel: 2, Examine: 1 },
     },
   ],
 
@@ -821,10 +821,10 @@ export const DEFAULT_RULESET: RulesetContent = {
     ],
   },
 
-  // Stress/trauma bounds (BitD-standard). Trauma conditions, for flavor: Hollow, Hunted, Fixated,
-  // Wary, Rash, Tender, Brittle, Cruel — fill traumaMax and the character retires. (Naming them
-  // in the trauma UI is a future enhancement; the schema tracks trauma as a count.)
+  // Stress/trauma bounds (BitD-standard). Trauma conditions are Brackwater's reskinned 8; the
+  // validator enforces trauma ∈ this set (fill traumaMax and the character retires).
   stress: { max: 9, traumaMax: 4 },
+  traumaConditions: ['Hollow', 'Hunted', 'Fixated', 'Wary', 'Rash', 'Tender', 'Brittle', 'Cruel'],
 
   // Crew sheet: pick a crew type, take crew abilities, and stake claims over Brackwater's turf.
   crew: {
@@ -937,10 +937,11 @@ export const DEFAULT_RULESET: RulesetContent = {
 
   characterCreation: {
     // Per-action ratings (FitD): rate the 12 actions 0–3; attributes are derived (count of an
-    // attribute's actions rated ≥ 1). Each playbook seeds one starting dot; assign 4 more, none
-    // above 2 at creation (raise to 3 later via advancement).
+    // attribute's actions rated ≥ 1). Each playbook pre-places 3 starting dots (seeded above); the
+    // player assigns 4 more, none above 2 at creation — 7 total (raise an action to 4 later via the
+    // crew's Mastery upgrade). One special ability at creation, per BitD.
     actionRatings: { points: 4, maxAtCreation: 2, max: 3 },
-    abilityChoices: 2,
+    abilityChoices: 1,
     steps: [
       {
         id: 'playbook',

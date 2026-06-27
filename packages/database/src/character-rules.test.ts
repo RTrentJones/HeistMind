@@ -105,7 +105,8 @@ function character(overrides: Partial<CharacterData> = {}): CharacterData {
     playbook: 'razor',
     attributes: {},
     skills: {},
-    specialAbilities: [],
+    // A created character always has its one starting ability (BitD: pick 1 at creation).
+    specialAbilities: ['battle-born'],
     items: [],
     stress: 0,
     trauma: [],
@@ -347,6 +348,32 @@ describe('validateCharacter — stress / trauma', () => {
       character({ trauma: ['a', 'b', 'c'] })
     );
     expect(codes(r)).toContain('TRAUMA_OVER');
+  });
+  it('blocks a trauma not in the ruleset’s named set, and duplicates', () => {
+    const rs = ruleset({ traumaConditions: ['Cold', 'Haunted'] });
+    expect(codes(validateCharacter(rs, character({ trauma: ['Spooked'] })))).toContain(
+      'TRAUMA_UNKNOWN'
+    );
+    expect(codes(validateCharacter(rs, character({ trauma: ['Cold', 'Cold'] })))).toContain(
+      'TRAUMA_DUPLICATE'
+    );
+    expect(validateCharacter(rs, character({ trauma: ['Cold'] })).isValid).toBe(true);
+  });
+  it('is lenient (count-only) when the ruleset names no trauma conditions', () => {
+    expect(validateCharacter(ruleset(), character({ trauma: ['anything'] })).isValid).toBe(true);
+  });
+});
+
+describe('validateCharacter — one ability at creation (F11)', () => {
+  it('requires at least one special ability when the playbook has a roster', () => {
+    const r = validateCharacter(ruleset(), character({ specialAbilities: [] }), {
+      mode: 'creation',
+    });
+    expect(codes(r)).toContain('ABILITY_REQUIRED');
+  });
+  it('does not require an ability in live mode', () => {
+    const r = validateCharacter(ruleset(), character({ specialAbilities: [] }), { mode: 'live' });
+    expect(codes(r)).not.toContain('ABILITY_REQUIRED');
   });
 });
 
