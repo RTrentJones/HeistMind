@@ -497,6 +497,24 @@
       "authPrompt": "Please sign in to upload a ruleset.",
       "starterPrompt": "Don't have a ruleset? Start with the built-in one:"
     },
+    "gamesList": {
+      "title": "Campaigns",
+      "authPrompt": "Please sign in to view your campaigns.",
+      "newCampaign": "New campaign",
+      "loadError": "Couldn't load campaigns",
+      "loadFailed": "Failed to load campaigns",
+      "empty": "No campaigns yet. Create one, or join one with an invite code.",
+      "yourCampaigns": "Your campaigns",
+      "joinedCampaigns": "Campaigns you've joined",
+      "open": "Open",
+      "gmBadge": "GM",
+      "playerBadge": "Player",
+      "joinTitle": "Join a campaign",
+      "codeLabel": "Invite code",
+      "joinPlaceholder": "Enter an invite code",
+      "joinCta": "Join",
+      "joinFailed": "Couldn't join — check the code and try again."
+    },
     "game": {
       "loadFailed": "Failed to load game",
       "notFound": "Game not found",
