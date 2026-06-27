@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rollOutcome, diceForRating } from './dice';
+import { rollOutcome, diceForRating, resistanceStress } from './dice';
 
 describe('rollOutcome', () => {
   it('an empty roll is a bad outcome', () => {
@@ -34,5 +34,23 @@ describe('diceForRating', () => {
   it('a positive rating rolls that many dice', () => {
     expect(diceForRating(3)).toEqual({ count: 3, zeroDice: false });
     expect(diceForRating(1)).toEqual({ count: 1, zeroDice: false });
+  });
+});
+
+describe('resistanceStress', () => {
+  it('takes 6 − highest die, using the HIGHEST result', () => {
+    expect(resistanceStress([1])).toBe(5);
+    expect(resistanceStress([4])).toBe(2);
+    expect(resistanceStress([1, 6, 3])).toBe(0); // a 6 resists for free
+    expect(resistanceStress([2, 5])).toBe(1);
+  });
+
+  it('a roll with no dice takes the full 6', () => {
+    expect(resistanceStress([])).toBe(6);
+  });
+
+  it('never returns less than 0 (a 6 still floors at 0)', () => {
+    expect(resistanceStress([6])).toBe(0);
+    expect(resistanceStress([6, 6])).toBe(0);
   });
 });
