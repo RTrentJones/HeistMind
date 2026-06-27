@@ -210,27 +210,30 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
           set(state => {
             const content = state.ruleset?.content;
             if (!content) return {};
-            const has = state.draft.specialAbilities.includes(abilityId);
-            if (has) {
+            const { specialAbilities, playbook } = state.draft;
+            const has = specialAbilities.includes(abilityId);
+            const limit = abilityChoiceLimit(content, playbook);
+            // Single-slot pick (BitD: exactly ONE ability at creation) → radio semantics. Clicking
+            // the current pick keeps it (a character must start with an ability — can't drop to zero);
+            // clicking a different UNLOCKED ability SWAPS to it rather than being a dead no-op. (Gaining
+            // ADDITIONAL abilities happens later via XP advancement in the editor, not this toggle.)
+            if (limit === 1) {
+              if (has) return {};
+              if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
+              return { draft: { ...state.draft, specialAbilities: [abilityId] } };
+            }
+            // Multi-select: toggle off if held, else add up to the limit (tier/prereq gated).
+            if (has)
               return {
                 draft: {
                   ...state.draft,
-                  specialAbilities: state.draft.specialAbilities.filter(a => a !== abilityId),
+                  specialAbilities: specialAbilities.filter(a => a !== abilityId),
                 },
               };
-            }
-            // Adding: enforce the choice limit and tier/prerequisite gating.
-            if (
-              state.draft.specialAbilities.length >=
-              abilityChoiceLimit(content, state.draft.playbook)
-            )
-              return {};
+            if (specialAbilities.length >= limit) return {};
             if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
             return {
-              draft: {
-                ...state.draft,
-                specialAbilities: [...state.draft.specialAbilities, abilityId],
-              },
+              draft: { ...state.draft, specialAbilities: [...specialAbilities, abilityId] },
             };
           }),
 
