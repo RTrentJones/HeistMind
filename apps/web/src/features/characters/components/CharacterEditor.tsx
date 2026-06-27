@@ -34,6 +34,7 @@ import {
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 type Section = 'build' | 'stress' | 'gear' | 'advancement';
 const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
@@ -52,6 +53,7 @@ export function CharacterEditor({
   onSaved: () => void;
 }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const content = character.ruleset.content;
   const bounds = stressBounds(content);
 
@@ -73,9 +75,9 @@ export function CharacterEditor({
   const harm = draft.harm ?? EMPTY_HARM;
   const hb = harmBounds(content);
   const addHarm = (level: keyof CharacterHarm) => {
-    const t = harmInput.trim();
-    if (!t || harm[level].length >= hb[level]) return;
-    patch({ harm: { ...harm, [level]: [...harm[level], t] } });
+    const value = harmInput.trim();
+    if (!value || harm[level].length >= hb[level]) return;
+    patch({ harm: { ...harm, [level]: [...harm[level], value] } });
     setHarmInput('');
   };
   const removeHarm = (level: keyof CharacterHarm, val: string) =>
@@ -125,7 +127,7 @@ export function CharacterEditor({
       { characterData: draft }
     );
     setSaving(false);
-    if (!r.success) setError(r.error?.message ?? 'Save failed.');
+    if (!r.success) setError(r.error?.message ?? t('components.characterEditor.saveFailed'));
     else {
       setError(null);
       onSaved();
@@ -148,7 +150,7 @@ export function CharacterEditor({
       adv
     );
     setSaving(false);
-    if (!r.success) setError(r.error?.message ?? 'Advancement failed.');
+    if (!r.success) setError(r.error?.message ?? t('components.characterEditor.advancementFailed'));
     else {
       setError(null);
       onSaved();
@@ -173,7 +175,7 @@ export function CharacterEditor({
       adv
     );
     setSaving(false);
-    if (!r.success) setError(r.error?.message ?? 'Advancement failed.');
+    if (!r.success) setError(r.error?.message ?? t('components.characterEditor.advancementFailed'));
     else {
       setError(null);
       onSaved();
@@ -190,10 +192,10 @@ export function CharacterEditor({
     <Card variant='outline'>
       <Stack direction='column' gap='md'>
         <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-          {tab('build', 'Build')}
-          {tab('stress', 'Stress & Trauma')}
-          {tab('gear', 'Gear')}
-          {tab('advancement', 'Advancement')}
+          {tab('build', t('components.characterEditor.tabBuild'))}
+          {tab('stress', t('components.characterEditor.tabStress'))}
+          {tab('gear', t('components.characterEditor.tabGear'))}
+          {tab('advancement', t('components.characterEditor.tabAdvancement'))}
         </Stack>
 
         {error && (
@@ -204,29 +206,28 @@ export function CharacterEditor({
 
         {section === 'build' && (
           <Stack direction='column' gap='md'>
-            <Heading level='h3'>Identity</Heading>
+            <Heading level='h3'>{t('components.characterEditor.identity')}</Heading>
             <Stack direction='column' gap='sm' className='max-w-md'>
               <Input
-                label='Heritage'
+                label={t('components.characterEditor.heritage')}
                 value={draft.heritage ?? ''}
                 onChange={e => patch({ heritage: e.target.value })}
               />
               <Input
-                label='Background'
+                label={t('components.characterEditor.background')}
                 value={draft.background ?? ''}
                 onChange={e => patch({ background: e.target.value })}
               />
               <Input
-                label='Vice'
+                label={t('components.characterEditor.vice')}
                 value={draft.vice ?? ''}
                 onChange={e => patch({ vice: e.target.value })}
               />
             </Stack>
 
-            <Heading level='h3'>Attributes</Heading>
+            <Heading level='h3'>{t('components.characterEditor.attributes')}</Heading>
             <Text variant='muted' size='sm'>
-              Bounded by each attribute&apos;s cap. Raising attributes during play is done through
-              Advancement.
+              {t('components.characterEditor.attributesNote')}
             </Text>
             {content.attributes.map(attr => (
               <Card key={attr.id} variant='default'>
@@ -250,14 +251,14 @@ export function CharacterEditor({
             ))}
 
             <Button variant='ember' onClick={saveBuild} loading={saving}>
-              Save build
+              {t('components.characterEditor.saveBuild')}
             </Button>
           </Stack>
         )}
 
         {section === 'stress' && (
           <Stack direction='column' gap='md'>
-            <Heading level='h3'>Stress</Heading>
+            <Heading level='h3'>{t('components.characterEditor.stress')}</Heading>
             <StressTracker
               current={draft.stress}
               max={bounds.max}
@@ -268,27 +269,30 @@ export function CharacterEditor({
             />
             {draft.stress >= bounds.max && (
               <Alert variant='warning' size='sm'>
-                Stress is maxed — take a trauma.
+                {t('components.characterEditor.stressMaxed')}
               </Alert>
             )}
 
             <Heading level='h3'>
-              Trauma ({draft.trauma.length}/{bounds.traumaMax})
+              {t('components.characterEditor.traumaHeading', {
+                count: draft.trauma.length,
+                max: bounds.traumaMax,
+              })}
             </Heading>
             <Stack direction='row' gap='sm' className='flex-wrap'>
               {draft.trauma.length === 0 && (
                 <Text variant='muted' size='sm'>
-                  None.
+                  {t('components.characterEditor.none')}
                 </Text>
               )}
-              {draft.trauma.map(t => (
-                <Badge key={t} variant='stress-critical'>
-                  {t}
+              {draft.trauma.map(condition => (
+                <Badge key={condition} variant='stress-critical'>
+                  {condition}
                   <button
                     type='button'
-                    aria-label={`Remove ${t}`}
+                    aria-label={t('components.characterEditor.remove', { name: condition })}
                     className='ml-1.5 cursor-pointer'
-                    onClick={() => patch({ trauma: draft.trauma.filter(x => x !== t) })}
+                    onClick={() => patch({ trauma: draft.trauma.filter(x => x !== condition) })}
                   >
                     ×
                   </button>
@@ -297,27 +301,31 @@ export function CharacterEditor({
             </Stack>
             <Stack direction='row' gap='sm' align='end' className='max-w-md'>
               <Input
-                label='Add trauma'
+                label={t('components.characterEditor.addTrauma')}
                 value={traumaInput}
                 onChange={e => setTraumaInput(e.target.value)}
-                placeholder='Cold, Haunted, Reckless…'
+                placeholder={t('components.characterEditor.traumaPlaceholder')}
               />
               <Button
                 variant='outline'
                 disabled={!traumaInput.trim() || draft.trauma.length >= bounds.traumaMax}
                 onClick={() => {
-                  const t = traumaInput.trim();
-                  if (t && draft.trauma.length < bounds.traumaMax && !draft.trauma.includes(t)) {
-                    patch({ trauma: [...draft.trauma, t] });
+                  const value = traumaInput.trim();
+                  if (
+                    value &&
+                    draft.trauma.length < bounds.traumaMax &&
+                    !draft.trauma.includes(value)
+                  ) {
+                    patch({ trauma: [...draft.trauma, value] });
                     setTraumaInput('');
                   }
                 }}
               >
-                Add
+                {t('components.characterEditor.add')}
               </Button>
             </Stack>
 
-            <Heading level='h3'>Harm</Heading>
+            <Heading level='h3'>{t('components.characterEditor.harm')}</Heading>
             <HarmTracker harm={harm} bounds={hb} />
             {(['severe', 'moderate', 'lesser'] as const).map(level =>
               harm[level].length > 0 ? (
@@ -330,7 +338,7 @@ export function CharacterEditor({
                       {h}
                       <button
                         type='button'
-                        aria-label={`Remove ${h}`}
+                        aria-label={t('components.characterEditor.remove', { name: h })}
                         className='ml-1.5 cursor-pointer'
                         onClick={() => removeHarm(level, h)}
                       >
@@ -343,46 +351,45 @@ export function CharacterEditor({
             )}
             <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
               <Input
-                label='Add harm'
+                label={t('components.characterEditor.addHarm')}
                 value={harmInput}
                 onChange={e => setHarmInput(e.target.value)}
-                placeholder='Battered, Shaken, Impaled…'
+                placeholder={t('components.characterEditor.harmPlaceholder')}
               />
               <Button
                 variant='outline'
                 disabled={!harmInput.trim()}
                 onClick={() => addHarm('lesser')}
               >
-                + Lesser
+                {t('components.characterEditor.addLesser')}
               </Button>
               <Button
                 variant='outline'
                 disabled={!harmInput.trim()}
                 onClick={() => addHarm('moderate')}
               >
-                + Moderate
+                {t('components.characterEditor.addModerate')}
               </Button>
               <Button
                 variant='outline'
                 disabled={!harmInput.trim()}
                 onClick={() => addHarm('severe')}
               >
-                + Severe
+                {t('components.characterEditor.addSevere')}
               </Button>
             </Stack>
 
             <Button variant='ember' onClick={saveBuild} loading={saving}>
-              Save stress, harm &amp; trauma
+              {t('components.characterEditor.saveStress')}
             </Button>
           </Stack>
         )}
 
         {section === 'gear' && (
           <Stack direction='column' gap='md'>
-            <Heading level='h3'>Loadout</Heading>
+            <Heading level='h3'>{t('components.characterEditor.loadout')}</Heading>
             <Text variant='muted' size='sm'>
-              Pick a load level, then check the gear you carry. Heavier loads carry more but draw
-              more notice.
+              {t('components.characterEditor.loadoutNote')}
             </Text>
             <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
               {LOAD_LEVELS.map(lvl => (
@@ -393,21 +400,24 @@ export function CharacterEditor({
                   className='capitalize'
                   onClick={() => patch({ loadout: { ...loadout, level: lvl } })}
                 >
-                  {lvl} ({loadLimit(content, lvl)})
+                  {t('components.characterEditor.loadLevelOption', {
+                    level: lvl,
+                    limit: loadLimit(content, lvl),
+                  })}
                 </Button>
               ))}
               <Badge variant={loadCarried > loadCap ? 'stress-critical' : 'steel'}>
-                Load {loadCarried} / {loadCap}
+                {t('components.characterEditor.loadBadge', { carried: loadCarried, cap: loadCap })}
               </Badge>
             </Stack>
             {loadCarried > loadCap && (
               <Alert variant='warning' size='sm'>
-                Over capacity — drop an item or raise your load level.
+                {t('components.characterEditor.overCapacity')}
               </Alert>
             )}
             {gearItems.length === 0 ? (
               <Text variant='muted' size='sm'>
-                This ruleset defines no equipment.
+                {t('components.characterEditor.noEquipment')}
               </Text>
             ) : (
               <Stack direction='column' gap='xs'>
@@ -420,17 +430,19 @@ export function CharacterEditor({
                     />
                     <Text size='sm'>
                       {item.name}
-                      <span className='text-foreground-muted'> · load {item.load}</span>
+                      <span className='text-foreground-muted'>
+                        {t('components.characterEditor.itemLoad', { load: item.load })}
+                      </span>
                     </Text>
                   </label>
                 ))}
               </Stack>
             )}
 
-            <Heading level='h3'>Coin</Heading>
+            <Heading level='h3'>{t('components.characterEditor.coin')}</Heading>
             <Stack direction='row' gap='sm' align='end' className='max-w-md'>
               <Input
-                label='Coin (carried)'
+                label={t('components.characterEditor.coinLabel')}
                 type='number'
                 value={String(draft.coins ?? 0)}
                 onChange={e =>
@@ -438,7 +450,7 @@ export function CharacterEditor({
                 }
               />
               <Input
-                label='Stash'
+                label={t('components.characterEditor.stash')}
                 type='number'
                 value={String(draft.stash ?? 0)}
                 onChange={e =>
@@ -449,10 +461,10 @@ export function CharacterEditor({
 
             {playbookContacts.length > 0 && (
               <>
-                <Heading level='h3'>Friends &amp; Rivals</Heading>
+                <Heading level='h3'>{t('components.characterEditor.friendsRivals')}</Heading>
                 <Stack direction='row' gap='md' align='end' className='flex-wrap'>
                   <label className='flex flex-col gap-1 text-sm'>
-                    Close friend
+                    {t('components.characterEditor.closeFriend')}
                     <select
                       className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
                       value={contactName('friend')}
@@ -467,7 +479,7 @@ export function CharacterEditor({
                     </select>
                   </label>
                   <label className='flex flex-col gap-1 text-sm'>
-                    Rival
+                    {t('components.characterEditor.rival')}
                     <select
                       className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
                       value={contactName('rival')}
@@ -486,7 +498,7 @@ export function CharacterEditor({
             )}
 
             <Button variant='ember' onClick={saveBuild} loading={saving}>
-              Save gear
+              {t('components.characterEditor.saveGear')}
             </Button>
           </Stack>
         )}
@@ -500,8 +512,10 @@ export function CharacterEditor({
                     xpTrackFull(content, character.characterData, PLAYBOOK_TRACK) ? 'gold' : 'steel'
                   }
                 >
-                  Playbook {xpMarks(character.characterData, PLAYBOOK_TRACK)}/
-                  {xpTrackSize(content, PLAYBOOK_TRACK)}
+                  {t('components.characterEditor.playbookTrack', {
+                    marks: xpMarks(character.characterData, PLAYBOOK_TRACK),
+                    size: xpTrackSize(content, PLAYBOOK_TRACK),
+                  })}
                 </Badge>
                 {content.attributes.map(a => (
                   <Badge
@@ -512,15 +526,17 @@ export function CharacterEditor({
                   </Badge>
                 ))}
               </Stack>
-              <Heading level='h3'>Special Abilities</Heading>
+              <Heading level='h3'>{t('components.characterEditor.specialAbilities')}</Heading>
               <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
-              <Heading level='h3'>Action Dots</Heading>
+              <Heading level='h3'>{t('components.characterEditor.actionDots')}</Heading>
               <ActionDotOptions character={character} onAdvance={advanceAction} saving={saving} />
             </Stack>
           ) : (
             <Stack direction='column' gap='md'>
               <Stack direction='row' gap='sm' align='center'>
-                <Badge variant='gold'>{character.experiencePoints} XP available</Badge>
+                <Badge variant='gold'>
+                  {t('components.characterEditor.xpAvailable', { xp: character.experiencePoints })}
+                </Badge>
               </Stack>
               <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
             </Stack>
@@ -540,6 +556,7 @@ function AdvancementOptions({
   onBuy: (abilityId: string, cost: number, name: string) => void;
   saving: boolean;
 }) {
+  const { t } = useTranslation();
   const content = character.ruleset.content;
   const owned = character.characterData.specialAbilities;
   const option = content.advancement?.advancementOptions?.find(o => o.category === 'ability');
@@ -547,7 +564,7 @@ function AdvancementOptions({
   if (!option) {
     return (
       <Text variant='muted' size='sm'>
-        This ruleset defines no ability advancements.
+        {t('components.characterEditor.noAbilityAdvancements')}
       </Text>
     );
   }
@@ -555,7 +572,7 @@ function AdvancementOptions({
   if (buyable.length === 0) {
     return (
       <Text variant='muted' size='sm'>
-        All special abilities have been learned.
+        {t('components.characterEditor.allLearned')}
       </Text>
     );
   }
@@ -568,7 +585,9 @@ function AdvancementOptions({
   return (
     <Stack direction='column' gap='sm'>
       <Text variant='muted' size='sm'>
-        {option.name} — {trackMode ? 'clears a full playbook track' : `${option.cost} XP each`}.
+        {trackMode
+          ? t('components.characterEditor.optionTrack', { name: option.name })
+          : t('components.characterEditor.optionFlat', { name: option.name, cost: option.cost })}
       </Text>
       {buyable.map(ability => {
         const prereqKnown =
@@ -580,12 +599,14 @@ function AdvancementOptions({
         const disabled = saving || !prereqMet || !requirementsMet || !affordable;
         const reason = !affordable
           ? trackMode
-            ? 'Fill the playbook XP track'
-            : `Need ${option.cost} XP`
+            ? t('components.characterEditor.fillTrack')
+            : t('components.characterEditor.needXp', { cost: option.cost })
           : !prereqMet
-            ? `Requires ${ability.prerequisite}`
+            ? t('components.characterEditor.requires', { prerequisite: ability.prerequisite ?? '' })
             : !requirementsMet
-              ? `Requires ${option.requirements?.join(', ')}`
+              ? t('components.characterEditor.requiresAll', {
+                  requirements: option.requirements?.join(', ') ?? '',
+                })
               : null;
         return (
           <Card key={ability.id} variant='outline'>
@@ -594,7 +615,7 @@ function AdvancementOptions({
                 <Text as='strong'>{ability.name}</Text>
                 {ability.tier != null && (
                   <Badge variant='gold' size='sm' className='ml-2'>
-                    Tier {ability.tier}
+                    {t('components.characterEditor.tier', { tier: ability.tier })}
                   </Badge>
                 )}
                 <Text variant='muted' size='sm'>
@@ -603,7 +624,7 @@ function AdvancementOptions({
                 {ability.rules && (
                   <details className='mt-1'>
                     <summary className='cursor-pointer text-xs text-foreground-muted'>
-                      Rules
+                      {t('components.characterEditor.rules')}
                     </summary>
                     <Text variant='muted' size='sm' className='mt-1'>
                       {ability.rules}
@@ -622,7 +643,9 @@ function AdvancementOptions({
                 disabled={disabled}
                 onClick={() => onBuy(ability.id, option.cost, ability.name)}
               >
-                {trackMode ? 'Take ability' : `Buy (${option.cost} XP)`}
+                {trackMode
+                  ? t('components.characterEditor.takeAbility')
+                  : t('components.characterEditor.buyAbility', { cost: option.cost })}
               </Button>
             </Stack>
           </Card>
@@ -645,6 +668,7 @@ function ActionDotOptions({
   onAdvance: (action: string) => void;
   saving: boolean;
 }) {
+  const { t } = useTranslation();
   const content = character.ruleset.content;
   const data = character.characterData;
   const max = content.characterCreation?.actionRatings?.max ?? 3;
@@ -653,7 +677,7 @@ function ActionDotOptions({
   if (ready.length === 0) {
     return (
       <Text variant='muted' size='sm'>
-        Fill an attribute XP track to add an action dot.
+        {t('components.characterEditor.fillTrackForDot')}
       </Text>
     );
   }
@@ -662,7 +686,7 @@ function ActionDotOptions({
     <Stack direction='column' gap='sm'>
       {ready.map(attr => (
         <Card key={attr.id} variant='outline'>
-          <Text as='strong'>{attr.name} — pick an action to raise</Text>
+          <Text as='strong'>{t('components.characterEditor.pickAction', { name: attr.name })}</Text>
           <Stack direction='row' gap='sm' className='flex-wrap'>
             {attr.skills.map(action => {
               const rating = data.skills?.[action] ?? 0;
@@ -676,7 +700,9 @@ function ActionDotOptions({
                   onClick={() => onAdvance(action)}
                 >
                   {action} {rating}
-                  {atMax ? ' (max)' : ' → +1'}
+                  {atMax
+                    ? t('components.characterEditor.maxSuffix')
+                    : t('components.characterEditor.incrementSuffix')}
                 </Button>
               );
             })}

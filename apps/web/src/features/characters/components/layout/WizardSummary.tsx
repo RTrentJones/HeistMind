@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Badge } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useCharacterSummary } from '../../lib/use-character-summary';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 const LABEL_STYLE = {
   fontSize: 11,
@@ -16,10 +17,10 @@ const LABEL_STYLE = {
 function Row({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <div className="text-foreground-muted" style={LABEL_STYLE}>
+      <div className='text-foreground-muted' style={LABEL_STYLE}>
         {title}
       </div>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
+      <div className='flex flex-wrap gap-1.5'>{children}</div>
     </div>
   );
 }
@@ -29,6 +30,7 @@ function Row({ title, children }: { title: string; children: ReactNode }) {
  * builds. Shares `useCharacterSummary` with the Review step so the two agree.
  */
 export function WizardSummary() {
+  const { t } = useTranslation();
   const { charName, playbookName, attrBadges, abilityBadges, identityBadges } =
     useCharacterSummary();
   const { name, draft } = useCharacterCreationStore(
@@ -46,8 +48,8 @@ export function WizardSummary() {
 
   return (
     <aside
-      className="flex flex-col gap-4"
-      aria-label="Character summary"
+      className='flex flex-col gap-4'
+      aria-label={t('components.wizard.summary.ariaLabel')}
       style={{
         position: 'sticky',
         top: 24,
@@ -59,7 +61,7 @@ export function WizardSummary() {
       }}
     >
       <div>
-        <div className="font-display" style={{ fontSize: 19, lineHeight: 1.05 }}>
+        <div className='font-display' style={{ fontSize: 19, lineHeight: 1.05 }}>
           {charName}
         </div>
         <div
@@ -70,50 +72,50 @@ export function WizardSummary() {
             color: 'var(--color-game-ember)',
           }}
         >
-          {playbookName ?? 'No playbook'}
+          {playbookName ?? t('components.wizard.summary.noPlaybook')}
         </div>
       </div>
 
       <div style={{ height: 1, background: 'var(--color-border-primary)' }} />
 
-      <Row title="Attributes">
+      <Row title={t('components.wizard.summary.attributes')}>
         {attrBadges.length > 0 ? (
           attrBadges.map(b => (
-            <Badge key={b} variant="steel" size="sm">
+            <Badge key={b} variant='steel' size='sm'>
               {b}
             </Badge>
           ))
         ) : (
-          <span className="text-foreground-muted" style={{ fontSize: 13 }}>
-            No points assigned.
+          <span className='text-foreground-muted' style={{ fontSize: 13 }}>
+            {t('components.wizard.summary.noPoints')}
           </span>
         )}
       </Row>
 
-      <Row title="Abilities">
+      <Row title={t('components.wizard.summary.abilities')}>
         {abilityBadges.length > 0 ? (
           abilityBadges.map(b => (
-            <Badge key={b} variant="success" size="sm">
+            <Badge key={b} variant='success' size='sm'>
               {b}
             </Badge>
           ))
         ) : (
-          <span className="text-foreground-muted" style={{ fontSize: 13 }}>
-            None chosen.
+          <span className='text-foreground-muted' style={{ fontSize: 13 }}>
+            {t('components.wizard.summary.noneChosen')}
           </span>
         )}
       </Row>
 
-      <Row title="Identity">
+      <Row title={t('components.wizard.summary.identity')}>
         {identityBadges.length > 0 ? (
           identityBadges.map(b => (
-            <Badge key={b} variant="outline" size="sm">
+            <Badge key={b} variant='outline' size='sm'>
               {b}
             </Badge>
           ))
         ) : (
-          <span className="text-foreground-muted" style={{ fontSize: 13 }}>
-            Not set.
+          <span className='text-foreground-muted' style={{ fontSize: 13 }}>
+            {t('components.wizard.summary.notSet')}
           </span>
         )}
       </Row>
@@ -127,10 +129,10 @@ export function WizardSummary() {
         }}
       >
         <div
-          className="flex justify-between"
+          className='flex justify-between'
           style={{ fontSize: 12, color: 'var(--color-foreground-muted)', marginBottom: 7 }}
         >
-          <span>Completion</span>
+          <span>{t('components.wizard.summary.completion')}</span>
           <span style={{ color: 'var(--color-game-ember)', fontWeight: 700 }}>{pct}%</span>
         </div>
         <div

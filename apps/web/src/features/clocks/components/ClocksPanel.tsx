@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { CLOCK_SEGMENTS, type Clock as ClockType, type ClockSegments } from '@heist-mind/database';
-import { Alert, Button, Card, Clock, Input, Stack, Text } from '@heist-mind/ui';
+import { Alert, Badge, Button, Card, Clock, Input, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Progress clocks for a campaign. Everyone sees the clocks (DB-backed shared state, loaded on
@@ -13,6 +14,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
  */
 export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [clocks, setClocks] = useState<ClockType[]>([]);
   const [name, setName] = useState('');
   const [segments, setSegments] = useState<ClockSegments>(4);
@@ -23,7 +25,7 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
     const r = await getRepositories().clocks.findByGame(gameId);
     // Faction project clocks live in the Factions panel; this panel shows the standalone ones.
     if (r.success) setClocks(r.data.filter(c => !c.linkedType));
-    else setError(r.error?.message ?? 'Failed to load clocks');
+    else setError(r.error?.message ?? t('components.clocksPanel.loadFailed'));
   };
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
       setSegments(4);
       setError(null);
       await load();
-    } else setError(r.error?.message ?? 'Failed to create clock');
+    } else setError(r.error?.message ?? t('components.clocksPanel.createFailed'));
   };
 
   const tick = async (clock: ClockType, delta: number) => {
@@ -54,7 +56,7 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
     const r = await getRepositories().clocks.update(clock.id, { filled: clock.filled + delta });
     setBusy(false);
     if (r.success) await load();
-    else setError(r.error?.message ?? 'Failed to update clock');
+    else setError(r.error?.message ?? t('components.clocksPanel.updateFailed'));
   };
 
   const remove = async (id: string) => {
@@ -62,7 +64,7 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
     const r = await getRepositories().clocks.delete(id);
     setBusy(false);
     if (r.success) await load();
-    else setError(r.error?.message ?? 'Failed to remove clock');
+    else setError(r.error?.message ?? t('components.clocksPanel.removeFailed'));
   };
 
   return (
@@ -75,61 +77,74 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
 
       {clocks.length === 0 ? (
         <Text variant='muted' size='sm'>
-          No clocks yet.{isGm ? ' Add one below to track a developing situation.' : ''}
+          {t('components.clocksPanel.empty')}
+          {isGm ? t('components.clocksPanel.emptyGmHint') : ''}
         </Text>
       ) : (
         <Stack direction='row' gap='lg' className='flex-wrap'>
-          {clocks.map(c => (
-            <Card key={c.id} variant='outline'>
-              <Stack direction='column' gap='sm' align='center'>
-                <Clock segments={c.segments} filled={c.filled} label={c.name} size={84} />
-                {isGm && (
-                  <Stack direction='row' gap='xs' align='center'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      aria-label={`Reduce ${c.name}`}
-                      disabled={busy || c.filled <= 0}
-                      onClick={() => tick(c, -1)}
-                    >
-                      −1
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      aria-label={`Advance ${c.name}`}
-                      disabled={busy || c.filled >= c.segments}
-                      onClick={() => tick(c, 1)}
-                    >
-                      +1
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      aria-label={`Remove ${c.name}`}
-                      disabled={busy}
-                      onClick={() => remove(c.id)}
-                    >
-                      Remove
-                    </Button>
-                  </Stack>
-                )}
-              </Stack>
-            </Card>
-          ))}
+          {clocks.map(c => {
+            const complete = c.filled >= c.segments;
+            return (
+              <Card
+                key={c.id}
+                variant='outline'
+                className={
+                  complete ? 'ring-1 ring-game-ember/60 shadow-lg shadow-game-ember/20' : undefined
+                }
+              >
+                <Stack direction='column' gap='sm' align='center'>
+                  <Clock segments={c.segments} filled={c.filled} label={c.name} size={84} />
+                  {complete && (
+                    <Badge variant='success'>{t('components.clocksPanel.complete')}</Badge>
+                  )}
+                  {isGm && (
+                    <Stack direction='row' gap='xs' align='center'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        aria-label={t('components.clocksPanel.reduceAria', { name: c.name })}
+                        disabled={busy || c.filled <= 0}
+                        onClick={() => tick(c, -1)}
+                      >
+                        −1
+                      </Button>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        aria-label={t('components.clocksPanel.advanceAria', { name: c.name })}
+                        disabled={busy || c.filled >= c.segments}
+                        onClick={() => tick(c, 1)}
+                      >
+                        +1
+                      </Button>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        aria-label={t('components.clocksPanel.removeAria', { name: c.name })}
+                        disabled={busy}
+                        onClick={() => remove(c.id)}
+                      >
+                        {t('components.clocksPanel.remove')}
+                      </Button>
+                    </Stack>
+                  )}
+                </Stack>
+              </Card>
+            );
+          })}
         </Stack>
       )}
 
       {isGm && (
         <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
           <Input
-            label='New clock'
+            label={t('components.clocksPanel.newClockLabel')}
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder='e.g. The Alarm'
+            placeholder={t('components.clocksPanel.newClockPlaceholder')}
           />
           <label className='flex flex-col gap-1 text-sm'>
-            Segments
+            {t('components.clocksPanel.segments')}
             <select
               className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
               value={segments}
@@ -143,7 +158,7 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
             </select>
           </label>
           <Button variant='ember' disabled={busy || !name.trim()} onClick={create}>
-            Add clock
+            {t('components.clocksPanel.addClock')}
           </Button>
         </Stack>
       )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useTranslation as useI18nTranslation } from 'react-i18next';
 import type {
   TranslationKey,
@@ -25,30 +26,36 @@ export function useTranslation(): {
 } {
   const { t: i18nT, ready, i18n } = useI18nTranslation();
 
-  const t: TranslationFunction = (key: TranslationKey, params?: InterpolationParams) => {
-    // Handle namespace-prefixed keys by extracting namespace and key
-    if (key.includes('.')) {
-      const [namespace, ...keyParts] = key.split('.');
-      const actualKey = keyParts.join('.');
+  // Memoized so `t` keeps a stable identity across renders (react-i18next's `i18nT` is stable until
+  // the language changes). Without this, passing `t` into a useEffect/useCallback dependency array
+  // re-runs the effect every render — which caused data-fetch loops on pages that load on view.
+  const t: TranslationFunction = useCallback(
+    (key: TranslationKey, params?: InterpolationParams) => {
+      // Handle namespace-prefixed keys by extracting namespace and key
+      if (key.includes('.')) {
+        const [namespace, ...keyParts] = key.split('.');
+        const actualKey = keyParts.join('.');
 
-      // Check if this is a valid namespace
-      const validNamespaces = [
-        'common',
-        'navigation',
-        'components',
-        'auth',
-        'pages',
-        'forms',
-        'errors',
-      ];
-      if (namespace && validNamespaces.includes(namespace)) {
-        return i18nT(actualKey, { ...params, ns: namespace });
+        // Check if this is a valid namespace
+        const validNamespaces = [
+          'common',
+          'navigation',
+          'components',
+          'auth',
+          'pages',
+          'forms',
+          'errors',
+        ];
+        if (namespace && validNamespaces.includes(namespace)) {
+          return i18nT(actualKey, { ...params, ns: namespace });
+        }
       }
-    }
 
-    // Fallback to default behavior
-    return i18nT(key, params);
-  };
+      // Fallback to default behavior
+      return i18nT(key, params);
+    },
+    [i18nT]
+  );
 
   return {
     t,
@@ -67,9 +74,10 @@ export function useCommonTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('common');
 
-  const t = (key: CommonKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: CommonKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }
@@ -80,9 +88,10 @@ export function useNavigationTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('navigation');
 
-  const t = (key: NavigationKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: NavigationKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }
@@ -93,9 +102,10 @@ export function useComponentTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('components');
 
-  const t = (key: ComponentKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: ComponentKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }
@@ -106,9 +116,10 @@ export function useAuthTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('auth');
 
-  const t = (key: AuthKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: AuthKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }
@@ -119,9 +130,10 @@ export function usePageTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('pages');
 
-  const t = (key: PageKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: PageKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }
@@ -132,9 +144,10 @@ export function useFormTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('forms');
 
-  const t = (key: FormKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: FormKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }
@@ -145,9 +158,10 @@ export function useErrorTranslation(): {
 } {
   const { t: i18nT, ready } = useI18nTranslation('errors');
 
-  const t = (key: ErrorKeys, params?: InterpolationParams) => {
-    return i18nT(key, params);
-  };
+  const t = useCallback(
+    (key: ErrorKeys, params?: InterpolationParams) => i18nT(key, params),
+    [i18nT]
+  );
 
   return { t, isLoading: !ready };
 }

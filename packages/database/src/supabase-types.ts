@@ -143,6 +143,7 @@ export type Database = {
           id: string
           name: string | null
           rep: number
+          resources: Json
           tier: number
           updated_at: string | null
           vault: number
@@ -162,6 +163,7 @@ export type Database = {
           id?: string
           name?: string | null
           rep?: number
+          resources?: Json
           tier?: number
           updated_at?: string | null
           vault?: number
@@ -181,6 +183,7 @@ export type Database = {
           id?: string
           name?: string | null
           rep?: number
+          resources?: Json
           tier?: number
           updated_at?: string | null
           vault?: number

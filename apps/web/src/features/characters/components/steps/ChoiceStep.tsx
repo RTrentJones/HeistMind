@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { CreationStep } from '@heist-mind/database';
 import { Alert, Badge, Card, Stack, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Generic single-select renderer for any ruleset-defined creation step we don't recognize
@@ -12,13 +13,14 @@ import { useCharacterCreationStore } from '../../stores/character-creation-store
  * bespoke code. Card markup matches PlaybookStep so selectable cards look the same everywhere.
  */
 export function ChoiceStep({ step }: { step: CreationStep | undefined }) {
+  const { t } = useTranslation();
   const { custom, setCustom } = useCharacterCreationStore(
     useShallow(s => ({ custom: s.draft.custom, setCustom: s.setCustom }))
   );
 
   const options = step?.options ?? [];
   if (!step || options.length === 0) {
-    return <Text variant='muted'>Nothing to choose for this step.</Text>;
+    return <Text variant='muted'>{t('components.steps.choice.empty')}</Text>;
   }
 
   const selected = custom[step.id];
@@ -27,7 +29,7 @@ export function ChoiceStep({ step }: { step: CreationStep | undefined }) {
     <Stack direction='column' gap='sm'>
       {step.required && selected == null && (
         <Alert variant='warning' size='sm'>
-          Choose an option to continue.
+          {t('components.steps.choice.chooseToContinue')}
         </Alert>
       )}
       {options.map(opt => {
@@ -54,7 +56,7 @@ export function ChoiceStep({ step }: { step: CreationStep | undefined }) {
               </span>
               {isSelected && (
                 <Badge variant='ember' size='sm'>
-                  Selected
+                  {t('components.steps.common.selected')}
                 </Badge>
               )}
             </div>

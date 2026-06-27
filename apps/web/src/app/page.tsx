@@ -14,8 +14,11 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
+import { usePageTranslation } from '@/lib/i18n/hooks';
 
 export default function HomePage() {
+  const { t } = usePageTranslation();
+
   return (
     <Section variant='hero' padding='none' width='full' className='min-h-screen' as='div'>
       <AuthHeader />
@@ -26,12 +29,12 @@ export default function HomePage() {
             {/* Hero Section */}
             <Stack gap='lg' align='center'>
               <Heading level='h1' variant='hero' animate>
-                Welcome to <span className='text-brand-primary'>Heist</span>Mind
+                {t('landing.hero.welcomePrefix')}
+                <span className='text-brand-primary'>Heist</span>Mind
               </Heading>
 
               <Paragraph variant='lead' maxWidth='2xl' align='center' animate>
-                The ultimate character management platform for Forged in the Dark tabletop RPGs.
-                Create, manage, and advance your scoundrels across multiple campaigns.
+                {t('landing.hero.lead')}
               </Paragraph>
             </Stack>
 
@@ -39,37 +42,28 @@ export default function HomePage() {
             <Grid cols={3} gap='lg' animateChildren staggerDelay={0.2}>
               <Card>
                 <CardHeader>
-                  <CardTitle>Dynamic Character Creation</CardTitle>
+                  <CardTitle>{t('landing.features.creation.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Text variant='secondary'>
-                    Build characters using any Forged in the Dark ruleset. Upload custom rules or
-                    use community-created content.
-                  </Text>
+                  <Text variant='secondary'>{t('landing.features.creation.body')}</Text>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Multi-Game Management</CardTitle>
+                  <CardTitle>{t('landing.features.management.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Text variant='secondary'>
-                    Organize characters across multiple games and campaigns. Track advancement,
-                    stress, and relationships.
-                  </Text>
+                  <Text variant='secondary'>{t('landing.features.management.body')}</Text>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Seamless Collaboration</CardTitle>
+                  <CardTitle>{t('landing.features.collaboration.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Text variant='secondary'>
-                    Share characters with GMs, clone builds for new games, and collaborate on crew
-                    sheets and faction relationships.
-                  </Text>
+                  <Text variant='secondary'>{t('landing.features.collaboration.body')}</Text>
                 </CardContent>
               </Card>
             </Grid>
@@ -77,10 +71,10 @@ export default function HomePage() {
             {/* Call to Action */}
             <Stack gap='md' align='center'>
               <Heading level='h2' variant='primary' animate>
-                Ready to start your next heist?
+                {t('landing.cta.heading')}
               </Heading>
               <Text variant='secondary' animate>
-                Sign up with Discord to begin managing your scoundrels and join the community.
+                {t('landing.cta.body')}
               </Text>
             </Stack>
           </Stack>

@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { actionDotsSpent, deriveAttributes } from '@heist-mind/database';
 import { ActionDots, Badge, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Action-rating allocator (FitD): rate each ACTION 0..creation-cap with `ActionDots`, grouped by
@@ -12,6 +13,7 @@ import { useCharacterCreationStore } from '../../stores/character-creation-store
  * Used when the ruleset is in action-rating mode (`characterCreation.actionRatings`).
  */
 export function ActionRatingsStep() {
+  const { t } = useTranslation();
   const { content, draft, setActionRating } = useCharacterCreationStore(
     useShallow(s => ({
       content: s.ruleset?.content ?? null,
@@ -21,7 +23,7 @@ export function ActionRatingsStep() {
   );
 
   if (!content || (content.attributes?.length ?? 0) === 0) {
-    return <Text variant='muted'>This ruleset has no actions defined.</Text>;
+    return <Text variant='muted'>{t('components.steps.actionRatings.empty')}</Text>;
   }
 
   const ar = content.characterCreation?.actionRatings;
@@ -37,7 +39,7 @@ export function ActionRatingsStep() {
     <div className='flex flex-col gap-4'>
       <div>
         <Badge variant={over ? 'stress-critical' : 'steel'} size='lg'>
-          {spent} / {budget} action dots
+          {t('components.steps.actionRatings.actionDots', { spent, budget })}
         </Badge>
       </div>
 

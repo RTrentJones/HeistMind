@@ -9,6 +9,7 @@ import {
 } from '@heist-mind/database';
 import { Badge, Button, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Special-abilities picker (multi-select), gated by the ruleset's choice limit + tier/prereqs.
@@ -16,6 +17,7 @@ import { useCharacterCreationStore } from '../../stores/character-creation-store
  * from other roles are collapsed behind a toggle so a large ruleset doesn't bury the relevant few.
  */
 export function AbilitiesStep() {
+  const { t } = useTranslation();
   const { content, draft, toggle } = useCharacterCreationStore(
     useShallow(s => ({
       content: s.ruleset?.content ?? null,
@@ -27,7 +29,7 @@ export function AbilitiesStep() {
 
   const abilities = content?.specialAbilities ?? [];
   if (!content || abilities.length === 0) {
-    return <Text variant='muted'>This ruleset has no special abilities defined.</Text>;
+    return <Text variant='muted'>{t('components.steps.abilities.empty')}</Text>;
   }
 
   const selected = draft.specialAbilities;
@@ -45,10 +47,10 @@ export function AbilitiesStep() {
     const disabled = !isSelected && (!unlocked || atLimit);
     const reason = !unlocked
       ? ab.prerequisite
-        ? `Requires ${ab.prerequisite}`
-        : 'Not available at creation'
+        ? t('components.steps.abilities.requires', { prerequisite: ab.prerequisite })
+        : t('components.steps.abilities.notAvailable')
       : atLimit
-        ? `Limit of ${limit} reached`
+        ? t('components.steps.abilities.limitReached', { limit })
         : null;
 
     return (
@@ -76,18 +78,18 @@ export function AbilitiesStep() {
           </span>
           {ab.tier != null && (
             <Badge variant='gold' size='sm'>
-              Tier {ab.tier}
+              {t('components.steps.abilities.tier', { tier: ab.tier })}
             </Badge>
           )}
           {reason && (
             <Badge variant='outline' size='sm'>
-              Locked
+              {t('components.steps.abilities.locked')}
             </Badge>
           )}
           {isSelected && (
             <span style={{ marginLeft: 'auto' }}>
               <Badge variant='success' size='sm'>
-                Chosen
+                {t('components.steps.abilities.chosen')}
               </Badge>
             </span>
           )}
@@ -118,15 +120,17 @@ export function AbilitiesStep() {
   return (
     <div className='flex flex-col gap-3'>
       <Text variant='muted' size='sm'>
-        {selected.length} of {limit} chosen
-        {playbook ? ` · ${playbook.name}'s abilities` : ''}
+        {t('components.steps.abilities.countChosen', { count: selected.length, limit })}
+        {playbook
+          ? t('components.steps.abilities.playbookAbilities', { playbook: playbook.name })
+          : ''}
       </Text>
 
       {roster.length > 0 ? (
         roster.map(renderCard)
       ) : (
         <Text variant='muted' size='sm'>
-          Choose a crew role first to see its special abilities.
+          {t('components.steps.abilities.chooseRoleFirst')}
         </Text>
       )}
 
@@ -138,7 +142,9 @@ export function AbilitiesStep() {
             onClick={() => setShowOthers(v => !v)}
             className='self-start'
           >
-            {showOthers ? 'Hide' : `Show ${others.length} more`} abilities from other roles
+            {showOthers
+              ? t('components.steps.abilities.hideMore')
+              : t('components.steps.abilities.showMore', { count: others.length })}
           </Button>
           {showOthers && others.map(renderCard)}
         </>

@@ -2,6 +2,7 @@
 
 import { useShallow } from 'zustand/react/shallow';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * Left vertical step rail for the `rail` layout (ported from
@@ -9,6 +10,7 @@ import { useCharacterCreationStore } from '../../stores/character-creation-store
  * stepper, shown as a tall list with step number / completion check.
  */
 export function WizardRail() {
+  const { t } = useTranslation();
   const { steps, stepIndex, goToStep, isStepValid } = useCharacterCreationStore(
     useShallow(s => ({
       steps: s.steps,
@@ -19,17 +21,17 @@ export function WizardRail() {
   );
 
   return (
-    <nav className="flex flex-col gap-1" aria-label="Creation steps">
+    <nav className='flex flex-col gap-1' aria-label={t('components.wizard.stepsLabel')}>
       {steps.map((s, i) => {
         const current = i === stepIndex;
         const complete = !current && isStepValid(i);
         return (
           <button
             key={s.id}
-            type="button"
+            type='button'
             onClick={() => goToStep(i)}
             aria-current={current}
-            className="flex cursor-pointer items-center gap-3 text-left"
+            className='flex cursor-pointer items-center gap-3 text-left'
             style={{
               padding: '11px 12px',
               borderRadius: 11,
@@ -72,9 +74,12 @@ export function WizardRail() {
             >
               {complete ? '✓' : i + 1}
             </span>
-            <span className="flex flex-col" style={{ lineHeight: 1.15 }}>
-              <span className="text-foreground-muted" style={{ fontSize: 10, letterSpacing: '0.12em' }}>
-                STEP {String(i + 1).padStart(2, '0')}
+            <span className='flex flex-col' style={{ lineHeight: 1.15 }}>
+              <span
+                className='text-foreground-muted'
+                style={{ fontSize: 10, letterSpacing: '0.12em' }}
+              >
+                {t('components.wizard.stepNumber', { num: String(i + 1).padStart(2, '0') })}
               </span>
               <span style={{ fontSize: 14, fontWeight: 600 }}>{s.name}</span>
             </span>
