@@ -153,6 +153,15 @@
       "refreshFailed": "Failed to refresh the starter ruleset.",
       "loadFailed": "Failed to load the starter ruleset."
     },
+    "inviteSection": {
+      "title": "Invite players",
+      "description": "Share a join code so players can add themselves to this campaign.",
+      "generate": "Create a join code",
+      "generateFailed": "Couldn't create a join code.",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "noCodes": "No active join codes yet."
+    },
     "wizard": {
       "nameLabel": "Character name",
       "namePlaceholder": "e.g. Shadows McKenzie",

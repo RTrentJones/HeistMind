@@ -16,6 +16,7 @@ import {
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
+import { InviteCodeSection } from '@/features/games/components/InviteCodeSection';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
@@ -95,6 +96,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           </Text>
           {game.description && <Text>{game.description}</Text>}
         </Stack>
+
+        {game.createdBy === user?.id && <InviteCodeSection gameId={gameId} />}
 
         <Stack direction='row' justify='between' align='center'>
           <Heading level='h2' variant='primary'>
