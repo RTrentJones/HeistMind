@@ -282,7 +282,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   both themes regardless.)_
 - **fix:** Mount `ThemeProvider` in the root layout; add `ThemeToggle` to the header. Re-confirm the
   wiring before fixing.
-- **status:** open
+- **status:** resolved (PR #59) — `ThemeProvider` was mounted in the foundation; the DS `ThemeToggle`
+  (light/dark/system) now sits in the header (`AuthHeader`), so the light palette is reachable.
 
 ### F21 — Header/nav overflows on mobile
 
@@ -291,7 +292,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   with no responsive collapse.
 - **root cause:** Campaigns / Rulesets / username / sign-out wrap awkwardly under ~640px.
 - **fix:** Responsive collapse to a menu under a breakpoint.
-- **status:** open
+- **status:** resolved (PR #59) — `HeaderActions` + the action `Stack` now `flex-wrap justify-end`, so
+  the items reflow onto multiple rows under ~640px instead of overflowing.
 
 ### F22 — No breadcrumbs / secondary nav across deep routes
 
@@ -300,7 +302,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** games → campaign → character → sheet has no in-app way back up a level; users lean
   on the browser back button.
 - **fix:** Breadcrumb (or campaign-context sub-nav linking Crew/Clocks/Factions/Characters).
-- **status:** open
+- **status:** resolved (PR #59) — a path-derived `Breadcrumbs` component (in the new `AppShell`)
+  renders linked parent crumbs on deep routes (Campaigns → Campaign → Character / New character,
+  Rulesets → Upload ruleset); id segments relabel to their kind.
 
 ---
 
@@ -357,7 +361,8 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `?error=auth_failed`. `auth/callback/page.tsx:29–46` → longer/explicit retry + a home banner.
   **open**
 - **F41** · CX · No skip-to-main link; sticky header makes keyboard users tab through all nav.
-  `packages/ui/src/components/Header.tsx` → skip link + `id="main-content"`. **open**
+  `packages/ui/src/components/Header.tsx` → skip link + `id="main-content"`. **fixed @d9d7d49 (PR #59)**
+  — `AppShell` renders a focus-revealed skip link targeting the single `<main id="main-content">`.
 - **F42** · CX · Sheet doesn't distinguish GM vs player edit affordances (controls shown regardless;
   RLS blocks server-side, but the UI invites dead actions). `CharacterSheet.tsx`, `CharacterEditor.tsx`
   → gate interactive controls by role/ownership. **open**

@@ -76,8 +76,11 @@ bundled **Brackwater** starter opts into full FitD mode.
   An ESLint `no-literal-string` gate (`eslint-plugin-i18next`, `jsx-text-only`) now enforces this on
   `apps/web/src/**` — hardcoded JSX copy fails CI, so the system can't silently rot again.
 - **Design language.** FitD-themed tokens in `packages/ui/src/styles/globals.css`
-  (`game-ember`/`game-crimson` = stress/danger, `game-gold` = XP, `game-steel`); the `ThemeProvider`
-  + display fonts are now mounted (PR #59 foundation), so the light/dark toggle is reachable.
+  (`game-ember`/`game-crimson` = stress/danger, `game-gold` = XP, `game-steel`); `ThemeProvider` +
+  display fonts are mounted and the `ThemeToggle` (light/dark/system) lives in the header (PR #59).
+- **App shell.** Authenticated routes are wrapped by `AppShell` (header + breadcrumb wayfinding +
+  skip-to-main + `<main>`); inner pages previously had no nav chrome at all. The marketing landing
+  (`/`) and auth callback (`/auth/*`) keep their own layouts.
 
 ## Plans
 

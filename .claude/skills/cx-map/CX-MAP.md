@@ -21,6 +21,17 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 
 ---
 
+## App shell
+
+Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
+mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand, Campaigns/Rulesets
+nav, `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
+focus-revealed **skip-to-main** link, and the `<main id="main-content">` landmark. The header wraps
+(`flex-wrap`) instead of overflowing on mobile. The shell steps aside on `/` (marketing hero owns its
+header) and `/auth/*` (transient callback), which render their own full-screen layouts.
+
+---
+
 ## Routes
 
 ### `/` — Home / landing
@@ -146,7 +157,7 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
   catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-27 @ 4b7343e
+_Last verified:_ 2026-06-27 @ d9d7d49
 
 ---
 
