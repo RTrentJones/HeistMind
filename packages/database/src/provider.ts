@@ -5,6 +5,7 @@ import type { DatabaseProvider, DatabaseRepositories, DatabaseTransaction } from
 import type { AuthService, AuthConfig } from './auth-types';
 import { SupabaseProfileRepository } from './implementations/supabase-profile-repository';
 import { SupabaseRulesetRepository } from './implementations/supabase-ruleset-repository';
+import { SupabaseInvitationRepository } from './implementations/supabase-invitation-repository';
 import { SupabaseGameRepository } from './implementations/supabase-game-repository';
 import { SupabaseGamePlayerRepository } from './implementations/supabase-game-player-repository';
 import { SupabaseCharacterRepository } from './implementations/supabase-character-repository';
@@ -108,8 +109,8 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
       crews: new SupabaseCrewRepository(this.client, schema),
       factions: new SupabaseFactionRepository(this.client, schema),
       characterManagement: new SupabaseCharacterManagementRepository(this.client, schema),
-      // Aggregate/invitation repositories are outside the current journey scope.
-      invitations: {} as any, // Placeholder
+      invitations: new SupabaseInvitationRepository(this.client, schema),
+      // Aggregate repository is outside the current journey scope.
       gameManagement: {} as any, // Placeholder
     };
   }
