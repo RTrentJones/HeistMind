@@ -18,9 +18,11 @@ import {
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { LoadBuiltinRulesetButton } from '@/features/rulesets/components/LoadBuiltinRulesetButton';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 export default function RulesetsPage() {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,10 +33,11 @@ export default function RulesetsPage() {
     getRepositories()
       .rulesets.findByCreator(userId)
       .then(result => {
-        if (!result.success) setError(result.error?.message ?? 'Failed to load rulesets');
+        if (!result.success)
+          setError(result.error?.message ?? t('pages.rulesetsCatalog.loadFailed'));
         else setRulesets(result.data);
       });
-  }, [user?.id]);
+  }, [user?.id, t]);
 
   useEffect(() => {
     loadRulesets();
@@ -43,7 +46,7 @@ export default function RulesetsPage() {
   if (!isAuthenticated) {
     return (
       <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>Please sign in to view your rulesets.</Text>
+        <Text variant='muted'>{t('pages.rulesetsCatalog.authPrompt')}</Text>
       </Container>
     );
   }
@@ -53,23 +56,22 @@ export default function RulesetsPage() {
       <Stack direction='column' gap='lg'>
         <Stack direction='row' justify='between' align='center'>
           <Heading level='h1' variant='hero'>
-            Rulesets
+            {t('pages.rulesetsCatalog.title')}
           </Heading>
           <Button asChild variant='ember'>
-            <Link href='/rulesets/new'>Upload ruleset</Link>
+            <Link href='/rulesets/new'>{t('pages.rulesetsCatalog.uploadCta')}</Link>
           </Button>
         </Stack>
 
-        {error && <ErrorDisplay title="Couldn't load rulesets" message={error} />}
+        {error && <ErrorDisplay title={t('pages.rulesetsCatalog.loadError')} message={error} />}
 
         {/* Built-in catalog — load any system with one click (creates an editable copy you own). */}
         <Card variant='outline'>
           <Stack direction='column' gap='sm'>
             <div>
-              <Heading level='h2'>Starter rulesets</Heading>
+              <Heading level='h2'>{t('pages.rulesetsCatalog.starterHeading')}</Heading>
               <Text variant='muted' size='sm'>
-                New here? Add a ready-made system to start playing right away — each one becomes an
-                editable copy in your rulesets that you can reskin freely.
+                {t('pages.rulesetsCatalog.starterDescription')}
               </Text>
             </div>
             <Stack direction='column' gap='sm'>
@@ -113,9 +115,7 @@ export default function RulesetsPage() {
         {rulesets === null ? (
           <LoadingSpinner />
         ) : rulesets.length === 0 ? (
-          <Text variant='muted'>
-            No rulesets of your own yet. Add a starter above, or upload your own.
-          </Text>
+          <Text variant='muted'>{t('pages.rulesetsCatalog.empty')}</Text>
         ) : (
           <Stack direction='column' gap='md'>
             {rulesets.map(rs => (
@@ -129,7 +129,9 @@ export default function RulesetsPage() {
                     </Text>
                   </div>
                   <Button asChild variant='outline' size='sm'>
-                    <Link href={`/games/new?ruleset=${rs.id}`}>Create game</Link>
+                    <Link href={`/games/new?ruleset=${rs.id}`}>
+                      {t('pages.rulesetsCatalog.createGame')}
+                    </Link>
                   </Button>
                 </Stack>
               </Card>

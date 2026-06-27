@@ -121,6 +121,43 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     else setError(r.error?.message ?? t('components.characterSheet.saveStressFailed'));
   };
 
+  // Downtime — Indulge Vice (FitD A3): clear ALL stress through the same validated write path the
+  // tracker uses, then log a no-dice "downtime" entry so the indulgence shows in the shared feed.
+  const indulgeVice = async () => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    const cleared = character.characterData?.stress ?? 0;
+    setSaving(true);
+    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
+      characterId,
+      userId,
+      { characterData: { ...character.characterData, stress: 0 } }
+    );
+    if (r.success) {
+      // A downtime indulgence has no dice — record it as an empty-result entry for attribution.
+      await getRepositories().rolls.create(userId, {
+        gameId: character.gameId,
+        characterId: character.id,
+        kind: 'downtime',
+        label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
+        dice: 0,
+        results: [],
+      });
+      setRollKey(k => k + 1); // refresh the feed so the new downtime entry appears
+      await load();
+    } else {
+      setError(r.error?.message ?? t('components.downtime.indulgeVice.failed'));
+    }
+    setSaving(false);
+  };
+
+  // A roll (action/fortune/resistance) can mutate the character (resistance spends stress), so
+  // refresh BOTH the roll log AND the sheet — otherwise the StressTracker would show stale stress.
+  const onRolled = () => {
+    setRollKey(k => k + 1);
+    void load();
+  };
+
   // Mark XP into a track (playbook or an attribute id). Sets the track to `value`, clamped, and
   // saves through the same validated path — every player sees the marks on load (the async loop).
   const setXp = async (track: string, value: number) => {
@@ -278,6 +315,24 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
             size='lg'
             onChange={v => void setStress(v)}
           />
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+            <Button
+              variant='outline'
+              size='sm'
+              loading={saving}
+              disabled={(character.characterData?.stress ?? 0) === 0}
+              onClick={() => void indulgeVice()}
+            >
+              {t('components.downtime.indulgeVice.action')}
+            </Button>
+            {character.characterData?.vice && (
+              <Text variant='muted' size='sm'>
+                {t('components.downtime.indulgeVice.viceLabel', {
+                  vice: character.characterData.vice,
+                })}
+              </Text>
+            )}
+          </Stack>
           <div>
             <Text as='strong'>{t('components.characterSheet.harm')}</Text>
             <HarmTracker
@@ -472,14 +527,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 name,
                 rating: character.characterData?.skills?.[name] ?? 0,
               }))}
-              onRolled={() => setRollKey(k => k + 1)}
+              onRolled={onRolled}
             />
           ) : (
-            <RollPanel
-              gameId={character.gameId}
-              characterId={character.id}
-              onRolled={() => setRollKey(k => k + 1)}
-            />
+            <RollPanel gameId={character.gameId} characterId={character.id} onRolled={onRolled} />
           )}
           <RollLog gameId={character.gameId} refreshKey={rollKey} />
         </Stack>
