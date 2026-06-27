@@ -66,6 +66,8 @@ export function RulesetUpload() {
             </Link>{' '}
             {t('forms.rulesetUpload.starterHintSuffix')}
           </Text>
+          {/* eslint-disable i18next/no-literal-string -- JSON-schema reference: prose interleaved
+              with <code> field identifiers; kept verbatim rather than fragmented into i18n keys. */}
           <Text variant='muted' size='sm'>
             A ruleset is a JSON object with: <code>metadata</code> (name, version, author,
             description, system), a non-empty <code>playbooks</code> array (each with an{' '}
@@ -75,6 +77,7 @@ export function RulesetUpload() {
             <code>crew</code>, <code>factions</code>, and <code>stress</code>/<code>harm</code>{' '}
             bounds (these default to Blades-in-the-Dark values when omitted).
           </Text>
+          {/* eslint-enable i18next/no-literal-string */}
         </Stack>
       </Card>
 

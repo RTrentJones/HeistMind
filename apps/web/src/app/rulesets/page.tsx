@@ -124,7 +124,8 @@ export default function RulesetsPage() {
                   <div>
                     <Heading level='h3'>{rs.name}</Heading>
                     <Text variant='muted' size='sm'>
-                      v{rs.version}
+                      {t('pages.rulesetsCatalog.versionPrefix')}
+                      {rs.version}
                       {rs.content?.metadata?.system ? ` · ${rs.content.metadata.system}` : ''}
                     </Text>
                   </div>

@@ -104,7 +104,7 @@ export function GameForm() {
         >
           {rulesets.map(rs => (
             <option key={rs.id} value={rs.id}>
-              {rs.name} (v{rs.version})
+              {t('forms.gameForm.rulesetOption', { name: rs.name, version: rs.version })}
             </option>
           ))}
         </select>

@@ -194,7 +194,7 @@ export function RollPanel({
             >
               {actions!.map(a => (
                 <option key={a.name} value={a.name}>
-                  {a.name} ({a.rating}d)
+                  {a.name} {t('components.rollPanel.diceSuffix', { count: a.rating })}
                 </option>
               ))}
             </select>
@@ -229,7 +229,7 @@ export function RollPanel({
           >
             {[0, 1, 2, 3, 4].map(n => (
               <option key={n} value={n}>
-                {n}d
+                {t('components.rollPanel.diceCount', { count: n })}
               </option>
             ))}
           </select>
@@ -243,7 +243,7 @@ export function RollPanel({
           >
             {resistOptions.map(o => (
               <option key={o.name} value={o.name}>
-                {o.name} ({o.rating}d)
+                {o.name} {t('components.rollPanel.diceSuffix', { count: o.rating })}
               </option>
             ))}
           </select>

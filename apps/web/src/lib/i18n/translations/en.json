@@ -355,6 +355,8 @@
       "rollButton": "Roll",
       "resistButton": "Resist",
       "stressTaken": "{{count}} stress",
+      "diceCount": "{{count}}d",
+      "diceSuffix": "({{count}}d)",
       "outcome": {
         "crit": "Critical!",
         "success": "Success",
@@ -568,7 +570,8 @@
       "starterHeading": "Starter rulesets",
       "starterDescription": "New here? Add a ready-made system to start playing right away — each one becomes an editable copy in your rulesets that you can reskin freely.",
       "empty": "No rulesets of your own yet. Add a starter above, or upload your own.",
-      "createGame": "Create game"
+      "createGame": "Create game",
+      "versionPrefix": "v"
     },
     "home": {
       "title": "HeistMind - Forged in the Dark Platform",
@@ -738,6 +741,7 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Optional",
       "rulesetLabel": "Ruleset",
+      "rulesetOption": "{{name}} (v{{version}})",
       "createCta": "Create campaign",
       "needRuleset": "Upload a ruleset first, then create a campaign.",
       "errorTitle": "Couldn't create campaign",
