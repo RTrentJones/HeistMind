@@ -5,7 +5,7 @@ import {
   validateCharacter,
   stressBounds,
   harmBounds,
-  loadLimit,
+  effectiveLoadLimit,
   loadUsed,
   usesXpTracks,
   xpTrackSize,
@@ -95,7 +95,7 @@ export function CharacterEditor({
           : [...loadout.items, id],
       },
     });
-  const loadCap = loadLimit(content, loadout.level);
+  const loadCap = effectiveLoadLimit(content, draft, loadout.level);
   const loadCarried = loadUsed(content, draft);
 
   const contactName = (rel: 'friend' | 'rival') =>
@@ -402,7 +402,7 @@ export function CharacterEditor({
                 >
                   {t('components.characterEditor.loadLevelOption', {
                     level: lvl,
-                    limit: loadLimit(content, lvl),
+                    limit: effectiveLoadLimit(content, draft, lvl),
                   })}
                 </Button>
               ))}

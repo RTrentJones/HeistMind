@@ -260,6 +260,7 @@ export const DEFAULT_RULESET: RulesetContent = {
       description: 'Your heavy load limit is higher; you carry more gear without slowing down.',
       rules:
         'Your load limits increase: light 4, normal 6, heavy 9. You carry more gear without being slowed or marked as obviously armed.',
+      effects: { loadCapacity: { light: 4, normal: 6, heavy: 9 } },
     },
     {
       id: 'knife-brutal',
@@ -860,6 +861,20 @@ export const DEFAULT_RULESET: RulesetContent = {
         id: 'crew-deadly',
         name: 'Deadly',
         description: 'Each crew member gains an extra action rating in a violent action.',
+        effects: { bonusActionDots: 1 },
+      },
+      {
+        id: 'crew-mastery',
+        name: 'Mastery',
+        description:
+          'Crew members may advance an action rating to 4 (instead of the usual cap of 3).',
+        effects: { actionMax: 4 },
+      },
+      {
+        id: 'crew-veteran',
+        name: 'Veteran',
+        description: 'A crew member may take a special ability from a different crew role.',
+        effects: { veteran: 1 },
       },
       {
         id: 'crew-shadows',

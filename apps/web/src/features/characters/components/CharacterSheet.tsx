@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   stressBounds,
   harmBounds,
-  loadLimit,
+  effectiveLoadLimit,
   loadUsed,
   usesActionRatings,
   rulesetActions,
@@ -491,7 +491,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                     {t('components.characterSheet.loadBadge', {
                       level: loadout.level,
                       used: loadUsed(content, data),
-                      limit: loadLimit(content, loadout.level),
+                      limit: effectiveLoadLimit(content, data, loadout.level),
                     })}
                   </Badge>
                 )}

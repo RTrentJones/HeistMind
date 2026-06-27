@@ -259,6 +259,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         'Your load limits are increased by 2. The maximum you can carry is raised accordingly.',
       tier: 1,
       category: 'cutter',
+      effects: { loadCapacity: { light: 5, normal: 7, heavy: 8 } },
     },
     {
       id: 'cutter-savage',
@@ -906,7 +907,21 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       {
         id: 'crew-deadly',
         name: 'Deadly',
-        description: 'Each crew member gains an action dot in a chosen attribute.',
+        description: 'Each crew member gains an action dot in a chosen action.',
+        effects: { bonusActionDots: 1 },
+      },
+      {
+        id: 'crew-mastery',
+        name: 'Mastery',
+        description:
+          'Crew members may advance an action rating to 4 (instead of the usual cap of 3).',
+        effects: { actionMax: 4 },
+      },
+      {
+        id: 'crew-veteran',
+        name: 'Veteran',
+        description: 'A crew member may take a special ability from a different playbook.',
+        effects: { veteran: 1 },
       },
       {
         id: 'crew-no-traces',
