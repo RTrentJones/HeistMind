@@ -122,7 +122,10 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   — name (editable), attributes/action ratings, **quick** stress/harm/XP edits on the sheet itself,
   gear/loadout, special abilities (expandable rules), identity, contacts, coin/load; plus a
   character-scoped `RollPanel` + `RollLog`. `CharacterEditor`
-  (`apps/web/src/features/characters/components/CharacterEditor.tsx`) for deeper build edits.
+  (`apps/web/src/features/characters/components/CharacterEditor.tsx`) for deeper build edits and
+  XP-spend advancement. The editor loads the campaign **crew** so level-ups validate in context: an
+  action-dot advance caps at the crew's effective max (Mastery → the 4th dot), and the load gauge +
+  live re-validation fold in crew effects (Mule/Deadly) — mirroring the server's `advanceCharacter`.
 - **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; roll an action **or
   resist** (stress applies live to the `StressTracker`); **Indulge vice** (downtime) to clear stress
   to 0, logged to the feed; edit build.
@@ -157,7 +160,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-27 @ d9d7d49
+_Last verified:_ 2026-06-27 @ 2535b31
 
 ---
 
@@ -175,10 +178,13 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    `steps/ActionRatingsStep.tsx` — allocate dots per action; the attribute rating is **derived**
    (count of actions ≥1) and shown live; per-action + total-dot caps enforced. _Valid when the
    allocation respects caps/budget._
-3. **Special abilities** — `steps/AbilitiesStep.tsx`. Multi-select cards; leads with the chosen
-   playbook's roster, hides other playbooks' behind a "show more" toggle; abilities can be locked
-   (prerequisite / not-at-creation / limit reached); shows name + tier + rules text. _Valid at or
-   under the choice limit (limit can be 0)._
+3. **Special abilities** — `steps/AbilitiesStep.tsx`. Cards leading with the chosen playbook's
+   roster, hiding other playbooks' behind a "show more" toggle; abilities can be locked (prerequisite
+   / not-at-creation / limit reached); shows name + tier + rules text. When the choice **limit is 1**
+   (BitD canon — the playbook seeds the suggested pick) the picker is **radio-style**: clicking a
+   different unlocked ability _swaps_ to it, the current pick can't be unclicked to zero, and other
+   roster abilities stay selectable. With limit > 1 it's a multi-select that disables the rest once
+   full. _Valid at or under the choice limit (limit can be 0)._
 4. **Identity** — `steps/IdentityStep.tsx`. Either a card picker (if the step defines options for
    heritage/background/vice) or free-text inputs. _Always valid (optional)._
 5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`. _Valid
@@ -186,7 +192,7 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    passes._ "Create character" submits via
    `getRepositories().characterManagement.createCharacterWithValidation`.
 
-_Last verified:_ 2026-06-25 @ 01594f7
+_Last verified:_ 2026-06-27 @ 2535b31
 
 ---
 
