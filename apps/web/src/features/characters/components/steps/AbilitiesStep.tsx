@@ -148,6 +148,11 @@ export function AbilitiesStep() {
               ? t('components.steps.abilities.hideMore')
               : t('components.steps.abilities.showMore', { count: others.length })}
           </Button>
+          {showOthers && (
+            <Text variant='muted' size='sm'>
+              {t('components.steps.abilities.otherPlaybooks')}
+            </Text>
+          )}
           {showOthers && others.map(renderCard)}
         </>
       )}

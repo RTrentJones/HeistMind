@@ -195,11 +195,13 @@
         "selected": "Selected"
       },
       "playbook": {
-        "empty": "This ruleset has no playbooks defined."
+        "empty": "This ruleset has no playbooks defined.",
+        "startsWith": "Starts with {{abilities}}"
       },
       "actionRatings": {
         "empty": "This ruleset has no actions defined.",
-        "actionDots": "{{spent}} / {{budget}} action dots"
+        "actionDots": "{{spent}} / {{budget}} action dots",
+        "derivedHelp": "Each attribute's rating is the number of its actions rated 1+ — that's how many dice you roll to resist consequences."
       },
       "attributes": {
         "empty": "This ruleset has no attributes defined.",
@@ -217,7 +219,8 @@
         "playbookAbilities": " · {{playbook}}'s abilities",
         "chooseRoleFirst": "Choose a crew role first to see its special abilities.",
         "showMore": "Show {{count}} more abilities from other roles",
-        "hideMore": "Hide abilities from other roles"
+        "hideMore": "Hide abilities from other roles",
+        "otherPlaybooks": "From other playbooks — locked at creation unless your crew's veteran upgrade opens them."
       },
       "identity": {
         "heritageLabel": "Heritage",

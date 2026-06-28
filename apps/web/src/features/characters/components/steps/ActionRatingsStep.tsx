@@ -42,6 +42,9 @@ export function ActionRatingsStep() {
           {t('components.steps.actionRatings.actionDots', { spent, budget })}
         </Badge>
       </div>
+      <Text variant='muted' size='sm'>
+        {t('components.steps.actionRatings.derivedHelp')}
+      </Text>
 
       {content.attributes.map(attr => (
         <Card key={attr.id} variant='default'>
