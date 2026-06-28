@@ -1,8 +1,8 @@
-// Phase 4 — loadout + coin/stash + friends/rivals. The editor's "Gear" tab picks a load level and
-// checks carried items (over-capacity is gated by the same server-enforced LOAD_OVER rule), sets
-// coin + stash, and chooses a close friend + rival from the playbook's contacts. All of it surfaces
-// on the sheet's "Gear & Coin" card and survives a reload. Uses the Brackwater starter (it ships
-// equipment with per-item load and playbook contacts).
+// Phase 4 — loadout + coin/stash + friends/rivals. Loadout is a PER-SCORE choice on the character
+// sheet (not the build): pick a load level + items as you go; over-capacity disables the save (the
+// system won't offer an illegal loadout). Coin + stash + a close friend/rival stay in the build
+// editor's "Gear" tab. All of it surfaces on the sheet and survives a reload. Uses the Brackwater
+// starter (it ships equipment with per-item load and playbook contacts).
 
 import { isLocalStack } from '../support/env';
 import { test, expect } from '../support/fixtures';
@@ -55,40 +55,36 @@ test.describe('GM: loadout, coin & contacts (Brackwater)', () => {
     await gmPage.getByRole('link', { name: 'View' }).first().click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f-]+$/);
 
-    // --- Gear editor: load capacity is enforced. ---
-    await gmPage.getByRole('button', { name: 'Edit build' }).click();
-    await gmPage.getByRole('button', { name: 'Gear', exact: true }).click();
-
+    // --- Loadout is now a per-score choice on the sheet (not the build editor). ---
     // Default load is "normal" (cap 5). Heavy Armor (3) + Large Weapon (2) + Climbing Gear (2) = 7.
     await gmPage.getByRole('checkbox', { name: /Heavy Armor/ }).check();
     await gmPage.getByRole('checkbox', { name: /A Large Weapon/ }).check();
     await gmPage.getByRole('checkbox', { name: /Climbing Gear/ }).check();
-    await expect(gmPage.getByText('Load 7 / 5')).toBeVisible();
+    await expect(gmPage.getByText('Load 7/5')).toBeVisible();
     await expect(gmPage.getByText(/Over capacity/)).toBeVisible();
+    // Rules-driven validity: the system won't OFFER an illegal save — "Save loadout" is disabled
+    // while over capacity.
+    await expect(gmPage.getByRole('button', { name: 'Save loadout' })).toBeDisabled();
 
-    // The save is gated server-side — over-capacity loadouts can't persist.
-    await gmPage.getByRole('button', { name: 'Save gear' }).click();
-    await expect(gmPage.getByText(/exceeds the normal limit/)).toBeVisible({ timeout: 10_000 });
-
-    // Drop back under the cap (5/5), then set coin/stash and contacts.
+    // Drop back under the cap (5/5) and save the loadout.
     await gmPage.getByRole('checkbox', { name: /Climbing Gear/ }).uncheck();
-    await expect(gmPage.getByText('Load 5 / 5')).toBeVisible();
+    await expect(gmPage.getByText('Load 5/5')).toBeVisible();
     await expect(gmPage.getByText(/Over capacity/)).toHaveCount(0);
+    await gmPage.getByRole('button', { name: 'Save loadout' }).click();
 
+    // --- Coin / stash / contacts stay in the build editor. ---
+    await gmPage.getByRole('button', { name: 'Edit build' }).click();
+    await gmPage.getByRole('button', { name: 'Gear', exact: true }).click();
     await gmPage.getByLabel('Coin (carried)').fill('4');
     await gmPage.getByLabel('Stash', { exact: true }).fill('2');
     await gmPage.getByLabel(/Close friend/).selectOption('Vesh');
     await gmPage.getByLabel(/Rival/).selectOption('Old Marrow');
-
     await gmPage.getByRole('button', { name: 'Save gear' }).click();
 
-    // --- The sheet's Gear & Coin card reflects it, and it survives a reload. ---
-    await expect(gmPage.getByText('normal load · 5/5')).toBeVisible({ timeout: 10_000 });
+    // --- The sheet reflects the loadout (its gauge) + coin/stash/contacts, surviving a reload. ---
     await gmPage.reload();
-    await expect(gmPage.getByRole('heading', { name: /Gear & Coin/ })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(gmPage.getByText('normal load · 5/5')).toBeVisible();
+    await expect(gmPage.getByText('Load 5/5')).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.getByRole('heading', { name: /Gear & Coin/ })).toBeVisible();
     await expect(gmPage.getByText('4 coin')).toBeVisible();
     await expect(gmPage.getByText('2 stash')).toBeVisible();
     await expect(gmPage.getByText('Friend: Vesh')).toBeVisible();

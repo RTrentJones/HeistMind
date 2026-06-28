@@ -317,6 +317,7 @@
       "saveStress": "Save stress, harm & trauma",
       "loadout": "Loadout",
       "loadoutNote": "Pick a load level, then check the gear you carry. Heavier loads carry more but draw more notice.",
+      "loadoutMoved": "Loadout is now chosen per score on the character sheet (load is a per-operation choice, not part of your build).",
       "loadLevelOption": "{{level}} ({{limit}})",
       "loadBadge": "Load {{carried}} / {{cap}}",
       "overCapacity": "Over capacity — drop an item or raise your load level.",
@@ -429,6 +430,20 @@
       "recent": "Recent scores",
       "startedNote": "Score started",
       "endedNote": "Score wrapped"
+    },
+    "loadout": {
+      "heading": "Loadout (this score)",
+      "stale": "This loadout is from a previous score.",
+      "resetForScore": "Reset for this score",
+      "levelOption": "{{level}} ({{limit}})",
+      "gauge": "Load {{used}}/{{limit}}",
+      "overCapacity": "Over capacity — drop an item or raise your load level.",
+      "itemLoad": " · load {{load}}",
+      "suggested": "Suggested",
+      "save": "Save loadout",
+      "clear": "Clear",
+      "changedNote": "Loadout set ({{level}}, {{used}}/{{limit}})",
+      "clearedNote": "Loadout cleared"
     },
     "clocksPanel": {
       "loadFailed": "Failed to load clocks",

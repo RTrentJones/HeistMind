@@ -5,9 +5,7 @@ import {
   validateCharacter,
   stressBounds,
   harmBounds,
-  effectiveLoadLimit,
   collectAbilityEffects,
-  loadUsed,
   usesXpTracks,
   xpTrackSize,
   xpMarks,
@@ -16,7 +14,6 @@ import {
   type CharacterAdvancement,
   type CharacterData,
   type CharacterHarm,
-  type LoadLevel,
   type CharacterWithDetails,
   type CrewContext,
   type RulesetContent,
@@ -40,7 +37,6 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 type Section = 'build' | 'stress' | 'gear' | 'advancement';
-const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
 
 /**
  * Validity-gated character editor. Every save runs the same ruleset rules the server enforces
@@ -103,29 +99,9 @@ export function CharacterEditor({
   const removeHarm = (level: keyof CharacterHarm, val: string) =>
     patch({ harm: { ...harm, [level]: harm[level].filter(x => x !== val) } });
 
-  const loadout = draft.loadout ?? { level: 'normal' as LoadLevel, items: [] };
-  const gearItems = content.equipment?.items ?? [];
+  // Loadout moved off the build to the character sheet (it's a per-score choice, not a build/advance).
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const playbookContacts = playbook?.contacts ?? [];
-  // The playbook's SUGGESTED kit (BitD lists a few items per playbook). These items aren't exclusive —
-  // every common item stays available to every character (SRD) — so we keep the whole list reachable
-  // and only EMPHASISE the suggested set: sort it to the top and badge it. Nothing is hidden.
-  const suggestedIds = new Set(playbook?.equipment ?? []);
-  const sortedGear = [
-    ...gearItems.filter(i => suggestedIds.has(i.id)),
-    ...gearItems.filter(i => !suggestedIds.has(i.id)),
-  ];
-  const toggleItem = (id: string) =>
-    patch({
-      loadout: {
-        ...loadout,
-        items: loadout.items.includes(id)
-          ? loadout.items.filter(x => x !== id)
-          : [...loadout.items, id],
-      },
-    });
-  const loadCap = effectiveLoadLimit(content, draft, loadout.level, crew);
-  const loadCarried = loadUsed(content, draft);
 
   const contactName = (rel: 'friend' | 'rival') =>
     draft.contacts.find(c => c.relationship === rel)?.name ?? '';
@@ -448,60 +424,8 @@ export function CharacterEditor({
           <Stack direction='column' gap='md'>
             <Heading level='h3'>{t('components.characterEditor.loadout')}</Heading>
             <Text variant='muted' size='sm'>
-              {t('components.characterEditor.loadoutNote')}
+              {t('components.characterEditor.loadoutMoved')}
             </Text>
-            <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-              {LOAD_LEVELS.map(lvl => (
-                <Button
-                  key={lvl}
-                  variant={loadout.level === lvl ? 'ember' : 'outline'}
-                  size='sm'
-                  className='capitalize'
-                  onClick={() => patch({ loadout: { ...loadout, level: lvl } })}
-                >
-                  {t('components.characterEditor.loadLevelOption', {
-                    level: lvl,
-                    limit: effectiveLoadLimit(content, draft, lvl, crew),
-                  })}
-                </Button>
-              ))}
-              <Badge variant={loadCarried > loadCap ? 'stress-critical' : 'steel'}>
-                {t('components.characterEditor.loadBadge', { carried: loadCarried, cap: loadCap })}
-              </Badge>
-            </Stack>
-            {loadCarried > loadCap && (
-              <Alert variant='warning' size='sm'>
-                {t('components.characterEditor.overCapacity')}
-              </Alert>
-            )}
-            {gearItems.length === 0 ? (
-              <Text variant='muted' size='sm'>
-                {t('components.characterEditor.noEquipment')}
-              </Text>
-            ) : (
-              <Stack direction='column' gap='xs'>
-                {sortedGear.map(item => (
-                  <label key={item.id} className='flex cursor-pointer items-center gap-2.5'>
-                    <input
-                      type='checkbox'
-                      checked={loadout.items.includes(item.id)}
-                      onChange={() => toggleItem(item.id)}
-                    />
-                    <Text size='sm'>
-                      {item.name}
-                      <span className='text-foreground-muted'>
-                        {t('components.characterEditor.itemLoad', { load: item.load })}
-                      </span>
-                    </Text>
-                    {suggestedIds.has(item.id) && (
-                      <Badge variant='steel' size='sm'>
-                        {t('components.characterEditor.suggestedItem')}
-                      </Badge>
-                    )}
-                  </label>
-                ))}
-              </Stack>
-            )}
 
             <Heading level='h3'>{t('components.characterEditor.coin')}</Heading>
             <Stack direction='row' gap='sm' align='end' className='max-w-md'>
