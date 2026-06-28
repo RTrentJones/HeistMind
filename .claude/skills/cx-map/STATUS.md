@@ -3,15 +3,26 @@
 The product-state half of the `cx-map` skill: **what HeistMind is, what's built, the constraints
 worth knowing, and what's next.** This replaces the retired `.memory-bank/` (a Cline-style memory
 bank that drifted badly out of date). Keep it current per `SKILL.md` — when state or plans change,
-edit here and bump `_Last verified:_`. Sibling docs: `CX-MAP.md` (every page + flow), `FINDINGS.md`
-(the prioritized backlog).
+edit here and bump `_Last verified:_`. Sibling docs: `BRD.md` (**the scope-of-record**), `CX-MAP.md`
+(every page + flow), `FINDINGS.md` (the prioritized backlog).
 
 ## What it is
 
-HeistMind is a management platform for **Blades in the Dark** and other **Forged in the Dark
-(FitD)** tabletop RPGs, aimed at **async, Discord-style play-by-post** games. GMs upload custom FitD
-rulesets and run campaigns; players build rule-driven characters and play through a shared,
-DB-backed campaign state (rolls, clocks, crew, factions) that everyone loads on view.
+> **Re-scope (2026-06-27):** HeistMind is **not** a play engine — it is the **between-session tracker
+> /record**. Play happens IRL, on Discord (Avrae-style bot), or in-app; *settled results* are logged
+> here so crew/character/XP/per-score state persists between sessions.
+> - **Core value:** rules-driven management — every step/action the system offers is rules-legal, so
+>   players don't have to read the rules. Correctness is built in.
+> - **À la carte:** capabilities are opt-in — just char sheets, or crew tracking, or full in-app play,
+>   or the Discord bot — in any combination. Nothing forces a full workflow.
+>
+> The full scope, requirements, and gap analysis live in **`BRD.md`** — read it before planning new
+> work. Existing dice/downtime features are **kept but reframed as optional result sources**.
+
+HeistMind is a campaign **tracker** for **Blades in the Dark** and other **Forged in the Dark
+(FitD)** tabletop RPGs. GMs upload custom FitD rulesets and run campaigns; players build rule-driven
+characters and track shared, DB-backed campaign state (crew, characters, XP, per-score gear, clocks,
+factions, a results log) that everyone loads on view.
 
 The problems it targets (kept from the old `productContext.md` as useful framing):
 
