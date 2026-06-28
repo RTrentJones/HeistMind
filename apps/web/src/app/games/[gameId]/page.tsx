@@ -22,6 +22,7 @@ import { RollLog } from '@/features/rolls/components/RollLog';
 import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
 import { CrewSheet } from '@/features/crews/components/CrewSheet';
 import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
+import { ScorePanel } from '@/features/scores/components/ScorePanel';
 
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
@@ -159,6 +160,17 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
             gameId={gameId}
             isGm={game.createdBy === user?.id}
             suggestions={game.ruleset.content.factions}
+          />
+        </Card>
+
+        <Heading level='h2' variant='primary'>
+          {t('game.scoreHeading')}
+        </Heading>
+        <Card variant='outline'>
+          <ScorePanel
+            gameId={gameId}
+            isGm={game.createdBy === user?.id}
+            onChanged={() => setRollKey(k => k + 1)}
           />
         </Card>
 

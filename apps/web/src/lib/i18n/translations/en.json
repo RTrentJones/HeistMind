@@ -411,7 +411,24 @@
       "fortune": "Fortune",
       "gm": "GM",
       "resisted": "resisted — {{count}} stress",
-      "downtime": "Downtime"
+      "downtime": "Downtime",
+      "loadout": "Loadout",
+      "score": "Score"
+    },
+    "scorePanel": {
+      "loadFailed": "Could not load scores.",
+      "startFailed": "Could not start the score.",
+      "endFailed": "Could not end the score.",
+      "inProgress": "In progress",
+      "unnamed": "Untitled score",
+      "none": "No score in progress.",
+      "nameLabel": "Score name",
+      "namePlaceholder": "e.g. The Bluecoat Job",
+      "startScore": "Start score",
+      "endScore": "End score",
+      "recent": "Recent scores",
+      "startedNote": "Score started",
+      "endedNote": "Score wrapped"
     },
     "clocksPanel": {
       "loadFailed": "Failed to load clocks",
@@ -741,6 +758,7 @@
       "crewHeading": "Crew",
       "clocksHeading": "Clocks",
       "factionsHeading": "Factions",
+      "scoreHeading": "Score",
       "rollLogHeading": "Roll Log",
       "fortuneRoll": "Fortune / GM roll",
       "backToCampaign": "← Back to campaign"
