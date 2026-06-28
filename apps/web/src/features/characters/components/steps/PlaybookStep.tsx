@@ -8,9 +8,10 @@ import { useTranslation } from '@/lib/i18n/hooks';
 /** Playbook picker — Card grid driven by `ruleset.content.playbooks`. */
 export function PlaybookStep() {
   const { t } = useTranslation();
-  const { playbooks, selected, setPlaybook } = useCharacterCreationStore(
+  const { playbooks, abilities, selected, setPlaybook } = useCharacterCreationStore(
     useShallow(s => ({
       playbooks: s.ruleset?.content.playbooks ?? [],
+      abilities: s.ruleset?.content.specialAbilities ?? [],
       selected: s.draft.playbook,
       setPlaybook: s.setPlaybook,
     }))
@@ -19,6 +20,8 @@ export function PlaybookStep() {
   if (playbooks.length === 0) {
     return <Text variant='muted'>{t('components.steps.playbook.empty')}</Text>;
   }
+
+  const abilityName = (id: string) => abilities.find(a => a.id === id)?.name ?? id;
 
   return (
     <Grid cols={3} gap='md'>
@@ -56,6 +59,27 @@ export function PlaybookStep() {
             >
               {pb.description}
             </div>
+            {/* Signature kit — the playbook's seeded action dots and its starting ability, so the
+                choice is informed (a BitD sheet shows both up front). */}
+            {(() => {
+              const seeded = Object.entries(pb.skills ?? {}).filter(([, v]) => (v ?? 0) > 0);
+              return seeded.length > 0 ? (
+                <div className='mt-2.5 flex flex-wrap gap-1.5'>
+                  {seeded.map(([action, v]) => (
+                    <Badge key={action} variant='steel' size='sm'>
+                      {action} {v}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null;
+            })()}
+            {(pb.startingAbilities?.length ?? 0) > 0 && (
+              <div className='text-foreground-muted' style={{ fontSize: 12, marginTop: 8 }}>
+                {t('components.steps.playbook.startsWith', {
+                  abilities: pb.startingAbilities.map(abilityName).join(', '),
+                })}
+              </div>
+            )}
           </Card>
         );
       })}

@@ -195,7 +195,8 @@
         "selected": "Selected"
       },
       "playbook": {
-        "empty": "This ruleset has no playbooks defined."
+        "empty": "This ruleset has no playbooks defined.",
+        "startsWith": "Starts with {{abilities}}"
       },
       "actionRatings": {
         "empty": "This ruleset has no actions defined.",
