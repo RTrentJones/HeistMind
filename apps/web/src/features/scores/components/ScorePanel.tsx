@@ -44,8 +44,9 @@ export function ScorePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
-  // Score start/end is a settled campaign event → log it to the shared (roll) log.
-  const logScoreEvent = async (label: string, note: string) => {
+  // Score start/end is a settled campaign event → log it, tagged with that score explicitly (the
+  // end event fires after the score is no longer active, so we can't rely on auto-tagging).
+  const logScoreEvent = async (label: string, note: string, scoreId: string) => {
     const userId = user?.id;
     if (!userId) return;
     await getRepositories().rolls.create(userId, {
@@ -55,6 +56,7 @@ export function ScorePanel({
       dice: 0,
       results: [],
       note,
+      scoreId,
     });
   };
 
@@ -75,7 +77,8 @@ export function ScorePanel({
     setName('');
     await logScoreEvent(
       r.data.name ?? t('components.scorePanel.unnamed'),
-      t('components.scorePanel.startedNote')
+      t('components.scorePanel.startedNote'),
+      r.data.id
     );
     await load();
     onChanged?.();
@@ -93,7 +96,8 @@ export function ScorePanel({
     }
     await logScoreEvent(
       active.name ?? t('components.scorePanel.unnamed'),
-      t('components.scorePanel.endedNote')
+      t('components.scorePanel.endedNote'),
+      active.id
     );
     await load();
     onChanged?.();

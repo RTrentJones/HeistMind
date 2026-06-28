@@ -3,14 +3,16 @@
 // can't be faked by the client. Re-exported via @heist-mind/shared for the web UI.
 
 export type RollOutcome = 'crit' | 'success' | 'partial' | 'bad';
-// 'loadout' / 'score' are non-dice campaign-log events (no roll), carried in the same append-only log.
+// 'loadout' / 'score' / 'note' are non-dice campaign-log events (no roll) — a 'note' is a manually
+// recorded result (settled IRL or on Discord) — carried in the same append-only log.
 export type RollKind =
   | 'action'
   | 'resistance'
   | 'fortune'
   | 'downtime'
   | 'loadout'
-  | 'score';
+  | 'score'
+  | 'note';
 
 /**
  * Classify dice faces the Forged-in-the-Dark way. Take the HIGHEST die: a 6 is a success (two or
