@@ -427,6 +427,15 @@
       "placeholder": "e.g. Tense Skirmish — partial; took 2 stress",
       "add": "Add to log"
     },
+    "roster": {
+      "unknownPlayer": "Unknown player",
+      "meta": "{{playbook}} · {{xp}} XP · {{player}}",
+      "retire": "Retire",
+      "confirmRetire": "Confirm retire",
+      "retiredHeading": "Retired & fallen",
+      "retiredNote": "Retired — coin banked to stash",
+      "view": "View"
+    },
     "scorePanel": {
       "loadFailed": "Could not load scores.",
       "startFailed": "Could not start the score.",

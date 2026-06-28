@@ -24,6 +24,7 @@ import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
 import { CrewSheet } from '@/features/crews/components/CrewSheet';
 import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
 import { ScorePanel } from '@/features/scores/components/ScorePanel';
+import { CharacterRoster } from '@/features/characters/components/CharacterRoster';
 
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
@@ -63,6 +64,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
       active = false;
     };
   }, [gameId, t]);
+
+  const reloadCharacters = async () => {
+    const r = await getRepositories().characters.findByGame(gameId);
+    if (r.success) setCharacters(r.data);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -113,26 +119,16 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         {characters.length === 0 ? (
           <Text variant='muted'>{t('game.noCharacters')}</Text>
         ) : (
-          <Stack direction='column' gap='md'>
-            {characters.map(ch => (
-              <Card key={ch.id} variant='character'>
-                <Stack direction='row' justify='between' align='center'>
-                  <div>
-                    <Heading level='h3'>{ch.name}</Heading>
-                    <Text variant='muted' size='sm'>
-                      {t('game.characterMeta', {
-                        playbook: ch.playbookType,
-                        xp: ch.experiencePoints,
-                      })}
-                    </Text>
-                  </div>
-                  <Button asChild variant='outline' size='sm'>
-                    <Link href={`/games/${gameId}/characters/${ch.id}`}>{t('game.view')}</Link>
-                  </Button>
-                </Stack>
-              </Card>
-            ))}
-          </Stack>
+          <CharacterRoster
+            gameId={gameId}
+            gmId={game.createdBy}
+            userId={user?.id}
+            characters={characters}
+            onChanged={() => {
+              void reloadCharacters();
+              setRollKey(k => k + 1);
+            }}
+          />
         )}
 
         <Heading level='h2' variant='primary'>
