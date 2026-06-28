@@ -115,7 +115,7 @@ independently usable — a group can adopt just one).
 | R-A4 | Crew persists/shared | ✅ | DB-backed, RLS |
 | R-B1 | Character build | ✅ | `CharacterData`; creation wizard; sheet/editor |
 | R-B2 | Stress/trauma/harm | ✅ | live trackers |
-| R-B3 | Coin + stash | 🟡 | `stash` field has no UI (ties to R-F2) |
+| R-B3 | Coin + stash | ✅ | coin tracked; stash banked on retire (Phase 3) |
 | R-B4 | No per-score in build | ✅ | loadout left the build editor (Phase 1b) |
 | R-C1 | Character XP | ✅ | `character-rules.ts` |
 | R-C2 | Crew XP | ✅ | F18 |
@@ -127,9 +127,9 @@ independently usable — a group can adopt just one).
 | R-D5 | Score history | ✅ | feed grouped by score; recent scores on `ScorePanel` |
 | R-E1/E2 | Unified campaign log | ✅ | `rolls` is the event log (`score_id`, kinds); feed grouped by score (Phase 2) |
 | R-E3 | Record results from elsewhere | ✅ | `AddResultForm` → a `note` event (Phase 2) |
-| **R-F1** | **Player roster/attribution** | 🟡 | `userId` exists; no roster view |
-| **R-F2** | **Retire character** | ❌ | enum has `retired`; no action |
-| R-F3 | Status visibility | 🟡 | not surfaced |
+| R-F1 | Player roster/attribution | ✅ | `CharacterRoster` resolves `createdBy` → player (Phase 3) |
+| R-F2 | Retire character | ✅ | roster Retire (GM/owner) → status + coin→stash, logged (Phase 3) |
+| R-F3 | Status visibility | ✅ | status badges on roster + sheet (Phase 3) |
 | R-G1 | Clocks | ✅ | `ClocksPanel.tsx` |
 | R-G2 | Factions | ✅ | `FactionsPanel.tsx` |
 | R-H1 | In-app dice (optional) | ✅ | keep, reframed |
@@ -140,7 +140,7 @@ independently usable — a group can adopt just one).
 1. ~~No "score" concept~~ → **done (Phase 1a):** `scores` table + `ScorePanel`.
 2. ~~Loadout is in the wrong place~~ → **done (Phase 1b):** per-score `LoadoutCard` on the sheet.
 3. ~~The log is only a roll log~~ → **done (Phase 2):** the roll log is the campaign event log — events carry `score_id`, the feed groups by score, and an "add result" entry records outcomes settled IRL/Discord.
-4. **No character lifecycle** — retire (R-F2) + player roster/attribution (R-F1). _(Phase 3.)_
+4. ~~No character lifecycle~~ → **done (Phase 3):** roster (player → character) + Retire (status + coin→stash).
 5. **No Discord integration** (R-H2) — the bot app is a stub. _(Phase 4.)_
 
 ### Already aligned (no work)
