@@ -151,19 +151,22 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 
 ## Roadmap (phased; each ships via deploy → verify → promote)
 
-> Phases 1–2 add DB tables/columns → a migration (single-`DO`-block per-env pattern) **plus a
-> `supabase-types` regen** (`pnpm db:types`, needs DB access) before the adapter can type-check.
+> **Status (2026-06-28):** Phases 1–3 are **shipped to prod**. Phase 4 (Discord) is **specified, not
+> built** — see the detailed appendix at the end of this doc.
 
-- **Phase 1 — Score model + per-score loadout** (R-D1..D4, B4). `scores` table + per-score loadout
+- **Phase 1 — Score model + per-score loadout** (R-D1..D4, B4) — ✅ **shipped.** `scores` table + per-score loadout
   storage; "Start/End score" on the campaign page; the sheet's gear becomes the **active score's
   loadout** (reset on new score); move loadout **out of the build editor**. Reuse `loadUsed`/
   `effectiveLoadLimit`.
-- **Phase 2 — Unified campaign log** (R-C3, R-D4, R-E). Generalize `rolls` → an `events` log; a
-  campaign feed grouped by score; an **"add result"** entry path for outcomes settled elsewhere.
-- **Phase 3 — Character lifecycle & attribution** (R-F1..F3, B3). **Retire** action; a **roster**
-  (player → character(s) + status); surface stash. Mostly uses existing `userId`/`game_players`.
-- **Phase 4 — Discord integration** (R-H2). Implement `apps/discord-bot` (or a webhook/RPC) that
-  links a channel ↔ campaign and writes settled results into the campaign log. Inbound-first.
+- **Phase 2 — Unified campaign log** (R-C3, R-D4, R-E) — ✅ **shipped.** `rolls` widened with `score_id`
+  + a `note` kind; the roll repo auto-tags the active score; a campaign feed **grouped by score**; an
+  **"add result"** entry path for outcomes settled elsewhere.
+- **Phase 3 — Character lifecycle & attribution** (R-F1..F3, B3) — ✅ **shipped.** `CharacterRoster`
+  (player → character(s) + status); **Retire** (status + coin→stash, logged); status badges. No
+  migration (`status` already a column).
+- **Phase 4 — Discord integration** (R-H2) — **specified, not built.** See the detailed appendix below
+  (interactions-endpoint design, channel↔campaign mapping, attribution via `profiles.discord_id`,
+  the migration + credentials the work needs). Inbound-first.
 
 ### Decisions (resolved 2026-06-27)
 1. **Campaign log shape:** **widen the existing `rolls` log incrementally** — add `loadout`/`score`
@@ -181,3 +184,79 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
   per-score (R-D2).
 - **F9 / F15 / F16** (push-bargain / downtime / flashbacks) → reclassified from "missing mechanics"
   to **optional result sources** — not required; logged if used.
+
+---
+
+## Appendix — Phase 4: Discord integration (detailed BRD)
+
+**Status:** specified, **not built**. The `apps/discord-bot` app is a stub. This appendix is the
+spec to build from when the Discord app credentials are available; nothing here is implemented yet.
+
+### Goal & scope
+Let groups who play (or roll) on **Discord** push *settled results* into the HeistMind campaign log,
+so the between-session record stays complete without leaving Discord (P2 — log, don't gate play).
+**v1 is inbound-first:** Discord → HeistMind. Outbound (HeistMind posting state to Discord) is a
+later iteration. This is **opt-in** (P1) — a group that doesn't use Discord is unaffected.
+
+### Requirements
+- **R-H2.1 — Link a channel to a campaign.** A GM links a Discord channel (and guild) to one HeistMind
+  campaign. One active link per channel; a campaign may have one linked channel (v1).
+- **R-H2.2 — Log a result from Discord.** A slash command records a result as a campaign-log event
+  (the existing `note` kind), appearing in the in-app feed like any other entry.
+- **R-H2.3 — Attribution.** The posting Discord user maps to their HeistMind player via the existing
+  unique `profiles.discord_id`, and (when unambiguous) to the character they own in that campaign — so
+  the entry is attributed without extra linking. Unmapped/non-member posters are rejected.
+- **R-H2.4 — Score tagging.** Logged events auto-tag the campaign's **active score** (reuse the roll
+  repo's server-side tagging), so Discord results group under the right operation in the feed.
+- **R-H2.5 — (optional) Server-rolled dice.** A `/heist roll` that rolls FitD dice server-side
+  (reuse `dice.ts` `rollOutcome`) and logs an `action` event — so the result can't be faked, same as
+  in-app. May defer; `/heist log <text>` covers the core need.
+
+### Architecture
+- **Interactions endpoint, not a gateway bot.** A serverless **Next.js API route** (e.g.
+  `apps/web/src/app/api/discord/route.ts`) that **verifies Discord's Ed25519 request signature**
+  (`X-Signature-Ed25519` / `-Timestamp` against the app **public key**) and handles
+  `application command` interactions. This fits the Vercel/serverless model — **no always-on
+  process** — unlike a gateway bot. `apps/discord-bot` is repurposed to hold the **slash-command
+  registration script** + shared types (or deprecated).
+- **Writes go through the same repository layer** (`rolls.create`, scoped to the resolved campaign via
+  the service role), so the same validation/auto-tagging applies. No new write path.
+
+### Data model (migration when built)
+- **`games.discord_channel_id TEXT` (+ `discord_guild_id TEXT`)** — the channel↔campaign link (a
+  per-env `DO`-block migration like the others; needs a `pnpm db:types` regen).
+- **`profiles.discord_id`** — **already exists** (unique, from Discord OAuth) → attribution is free.
+- Optionally a partial unique index so a channel links to at most one campaign.
+
+### Command surface (v1)
+- `/heist link` — GM links the current channel to their campaign (resolves the GM via `discord_id`).
+- `/heist log <text>` — record a result → a `note` event (attributed + score-tagged).
+- `/heist roll <action> [position] [effect]` — *(optional)* server-rolled action → an `action` event.
+- `/heist status` — *(outbound-lite, optional)* reply with the crew/character snapshot.
+
+### Security
+- **Ed25519 signature verification** on every request (reject otherwise) — Discord's required check.
+- Authorize by mapping `discord_id` → an **active member** of the linked campaign; reject others.
+- The endpoint uses the service role **scoped to the resolved campaign/character**; never trusts the
+  channel→campaign mapping without the membership check.
+
+### Setup / credentials (operator-provided)
+A **Discord application** (Developer Portal — needs the operator's Discord account), providing:
+**public key**, **application id**, **bot token** → wired as secrets
+(`DISCORD_PUBLIC_KEY`, `DISCORD_APP_ID`, `DISCORD_BOT_TOKEN`) via the Greenlight secrets flow; set the
+app's **Interactions Endpoint URL** to the deployed route; run the command-registration script.
+
+### Verification
+- A **signed** test interaction POST creates the expected campaign-log event; an unsigned/forged one
+  is rejected (401).
+- `/heist link` then `/heist log` from a member's Discord id lands an attributed, score-tagged entry
+  in the in-app feed; a non-member is rejected.
+
+### Out of scope (v1)
+Proactive outbound to Discord (state posts, reminders), message-content parsing (needs the privileged
+message-content intent + a gateway bot), voice, and a multi-guild management UI.
+
+### Open decisions
+1. **Slash-command-only** (recommended, no privileged intents) vs also parsing channel messages.
+2. **Roll server-side** (`/heist roll`) in v1, or **log-only** (`/heist log`) and defer rolling.
+3. **One channel ↔ one campaign**, or allow several channels per campaign.
