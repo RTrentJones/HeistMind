@@ -318,31 +318,61 @@ export function CharacterEditor({
                 </Badge>
               ))}
             </Stack>
-            <Stack direction='row' gap='sm' align='end' className='max-w-md'>
-              <Input
-                label={t('components.characterEditor.addTrauma')}
-                value={traumaInput}
-                onChange={e => setTraumaInput(e.target.value)}
-                placeholder={t('components.characterEditor.traumaPlaceholder')}
-              />
-              <Button
-                variant='outline'
-                disabled={!traumaInput.trim() || draft.trauma.length >= bounds.traumaMax}
-                onClick={() => {
-                  const value = traumaInput.trim();
-                  if (
-                    value &&
-                    draft.trauma.length < bounds.traumaMax &&
-                    !draft.trauma.includes(value)
-                  ) {
-                    patch({ trauma: [...draft.trauma, value] });
-                    setTraumaInput('');
-                  }
-                }}
-              >
-                {t('components.characterEditor.add')}
-              </Button>
-            </Stack>
+            {content.traumaConditions && content.traumaConditions.length > 0 ? (
+              // Named-condition rulesets (BitD's 8): pick from a checklist — unique, capped at
+              // traumaMax — rather than typing free text. Toggling a chip adds/removes the condition.
+              <Stack direction='row' gap='sm' className='flex-wrap'>
+                {content.traumaConditions.map(condition => {
+                  const taken = draft.trauma.includes(condition);
+                  const full = draft.trauma.length >= bounds.traumaMax;
+                  return (
+                    <Button
+                      key={condition}
+                      variant={taken ? 'crimson' : 'outline'}
+                      size='sm'
+                      aria-pressed={taken}
+                      disabled={!taken && full}
+                      onClick={() =>
+                        patch({
+                          trauma: taken
+                            ? draft.trauma.filter(x => x !== condition)
+                            : [...draft.trauma, condition],
+                        })
+                      }
+                    >
+                      {condition}
+                    </Button>
+                  );
+                })}
+              </Stack>
+            ) : (
+              // Rulesets without a named set: keep free-text entry (unique, capped).
+              <Stack direction='row' gap='sm' align='end' className='max-w-md'>
+                <Input
+                  label={t('components.characterEditor.addTrauma')}
+                  value={traumaInput}
+                  onChange={e => setTraumaInput(e.target.value)}
+                  placeholder={t('components.characterEditor.traumaPlaceholder')}
+                />
+                <Button
+                  variant='outline'
+                  disabled={!traumaInput.trim() || draft.trauma.length >= bounds.traumaMax}
+                  onClick={() => {
+                    const value = traumaInput.trim();
+                    if (
+                      value &&
+                      draft.trauma.length < bounds.traumaMax &&
+                      !draft.trauma.includes(value)
+                    ) {
+                      patch({ trauma: [...draft.trauma, value] });
+                      setTraumaInput('');
+                    }
+                  }}
+                >
+                  {t('components.characterEditor.add')}
+                </Button>
+              </Stack>
+            )}
 
             <Heading level='h3'>{t('components.characterEditor.harm')}</Heading>
             <HarmTracker harm={harm} bounds={hb} />

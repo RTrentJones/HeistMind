@@ -247,9 +247,11 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** Blades trauma is a fixed set (Cold, Haunted, Obsessed, Paranoid, Reckless, Soft,
   Unstable, Vicious) chosen, not typed; free text loses meaning + uniqueness.
 - **fix:** Enum the conditions; pick from a checklist (unique, up to `traumaMax`).
-- **status:** resolved (BitD-accuracy branch, validation) — rulesets carry `traumaConditions` (BitD's
-  8; Brackwater's reskinned 8) and `validateCharacter` enforces trauma ∈ the set + distinct
-  (`TRAUMA_UNKNOWN`/`TRAUMA_DUPLICATE`); lenient when a ruleset omits it. (Checklist UI still to wire.)
+- **status:** resolved — rulesets carry `traumaConditions` (BitD's 8; Brackwater's reskinned 8) and
+  `validateCharacter` enforces trauma ∈ the set + distinct (`TRAUMA_UNKNOWN`/`TRAUMA_DUPLICATE`);
+  lenient when a ruleset omits it. The editor's Stress & Trauma section now picks from a **checklist**
+  of those named conditions (toggle chips, unique, capped at `traumaMax`); rulesets without a named
+  set keep the free-text entry.
 
 ### F15 — Downtime actions entirely absent
 
