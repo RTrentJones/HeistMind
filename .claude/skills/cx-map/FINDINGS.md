@@ -4,6 +4,13 @@ Flaw + FitD-gap log, per the `cx-map` skill. Severity: **S1** blocker · **S2** 
 · **S4** polish. Type: **CX-flaw** (experience) · **FitD-gap** (rules fidelity). When a fix ships,
 flip `status` to `fixed @<sha>` and update the affected `CX-MAP.md` section.
 
+> **Scope note (2026-06-27 re-scope):** HeistMind is now a **between-session tracker**, not a play
+> engine — see **`BRD.md`** for the scope-of-record + gap analysis. Several FitD-gap findings are
+> reclassified: the BRD's headline gaps (score lifecycle, **per-score loadout**, unified campaign log,
+> retire/roster, Discord) supersede them. `**F13**` is **inverted** (loadout leaves the build →
+> per-score); **F9 / F15 / F16** (push-bargain / downtime / flashbacks) are now **optional result
+> sources**, not required mechanics.
+
 **Audit 1 — 2026-06-25 @ 01594f7.** Exhaustive sweep across all 9 routes, the 5 wizard steps, and
 the campaign panels (crew/clocks/factions/rolls), through the UX + FitD lenses in `SKILL.md`.
 Findings the maintainer personally re-checked against source are tagged **(verified)**; the rest are
@@ -240,13 +247,19 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **fix:** A contacts step (or extend Identity) picking from the playbook's contacts.
 - **status:** open
 
-### F13 — Wizard never sets loadout / starting items
+### F13 — Loadout is on the build, not per-score ~~(was: "wizard never sets loadout")~~
 
-- **severity:** S2 · **type:** FitD-gap
-- **where:** loadout is only set in `CharacterEditor`; `emptyDraft` doesn't initialize it.
-- **root cause:** Items/load level — needed to actually play a score — aren't part of creation.
-- **fix:** A loadout step (choose load level + starting items, show capacity).
-- **status:** open
+- **severity:** S2 · **type:** FitD-gap · **INVERTED by the BRD re-scope**
+- **where:** loadout is a persistent field on `CharacterData`, set in `CharacterEditor`'s build tab.
+- **root cause:** BitD loadout is a **per-score** operational choice (pick a load level, equip as you
+  go, reset next score) — **not** a creation or advancement choice. The current persistent model is
+  wrong; adding it to the wizard (the old "fix") would make it *more* wrong.
+- **fix:** Move loadout **out of the build** and make it **per-character, per-score** — see `BRD.md`
+  R-D2 and roadmap Phase 1 (score model + per-score loadout). The load engine (`loadUsed` /
+  `effectiveLoadLimit`) is reused as-is.
+- **status:** fixed — loadout left the build editor for a per-score `LoadoutCard` on the character
+  sheet (load-engine gated, logged, resets against the campaign's active score). Score lifecycle +
+  per-score loadout shipped as BRD Phase 1.
 
 ### F14 — Trauma is free text, not the named conditions
 

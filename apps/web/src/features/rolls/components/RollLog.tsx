@@ -13,6 +13,13 @@ const OUTCOME_VARIANT = {
   bad: 'stress-critical',
 } as const;
 
+// Non-dice campaign events — shown with a neutral kind badge instead of a dice outcome.
+const EVENT_KIND_KEY = {
+  downtime: 'components.rollLog.downtime',
+  loadout: 'components.rollLog.loadout',
+  score: 'components.rollLog.score',
+} as const;
+
 type TFn = ReturnType<typeof useTranslation>['t'];
 
 /** Coarse, locale-friendly relative time ("just now", "5m ago", "3h ago", "2d ago"). */
@@ -114,8 +121,10 @@ export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: n
                     {relativeTime(created, now, t)}
                   </time>
                 </Tooltip>
-                {r.kind === 'downtime' ? (
-                  <Badge variant='steel'>{t('components.rollLog.downtime')}</Badge>
+                {r.kind in EVENT_KIND_KEY ? (
+                  <Badge variant='steel'>
+                    {t(EVENT_KIND_KEY[r.kind as keyof typeof EVENT_KIND_KEY])}
+                  </Badge>
                 ) : (
                   <Badge variant={OUTCOME_VARIANT[r.outcome]}>{r.outcome}</Badge>
                 )}

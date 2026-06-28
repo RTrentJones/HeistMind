@@ -19,6 +19,9 @@ import {
   Faction,
   CreateFactionData,
   UpdateFactionData,
+  Score,
+  CreateScoreData,
+  UpdateScoreData,
   CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
@@ -273,6 +276,15 @@ export interface FactionRepository {
   delete(id: string): Promise<Result<void>>;
 }
 
+/** Per-game scores / operations. Members read; the GM runs the lifecycle (one active at a time). */
+export interface ScoreRepository {
+  findByGame(gameId: string): Promise<Result<Score[]>>;
+  findActive(gameId: string): Promise<Result<Score | null>>;
+  start(userId: string, data: CreateScoreData): Promise<Result<Score>>;
+  end(id: string): Promise<Result<Score>>;
+  update(id: string, data: UpdateScoreData): Promise<Result<Score>>;
+}
+
 export interface DatabaseRepositories {
   profiles: ProfileRepository;
   rulesets: RulesetRepository;
@@ -284,6 +296,7 @@ export interface DatabaseRepositories {
   clocks: ClockRepository;
   crews: CrewRepository;
   factions: FactionRepository;
+  scores: ScoreRepository;
   gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
 }
