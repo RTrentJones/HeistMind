@@ -43,3 +43,63 @@ export function applyHeat(
   }
   return { heat: Math.min(heat, CREW_LIMITS.heat), wanted };
 }
+
+/** Rep needed to advance the crew one Tier — the length of the Rep track (BitD: fill Rep → +1 Tier). */
+export const REP_PER_TIER = 12;
+
+/**
+ * Advance the crew one Tier by spending a full Rep track: BitD raises Tier when the Rep track fills,
+ * then clears it (carrying any remainder). A no-op once Tier is maxed (4) or Rep is short of a track.
+ * Returns the new `{ tier, rep }`. https://bladesinthedark.com/index.php/advancement
+ */
+export function advanceTier(current: { tier: number; rep: number }): {
+  tier: number;
+  rep: number;
+} {
+  const tier = clampCrewStat('tier', current.tier);
+  const rep = clampNonNegative(current.rep);
+  if (tier >= CREW_LIMITS.tier || rep < REP_PER_TIER) return { tier, rep };
+  return { tier: tier + 1, rep: rep - REP_PER_TIER };
+}
+
+/**
+ * Apply an incarceration — BitD's direct way to cool off: when a crew member, ally, contact, or a
+ * framed enemy is convicted and jailed, the crew's Wanted level drops by 1 and its Heat clears.
+ * Returns the new `{ heat, wanted }`. https://bladesinthedark.com/index.php/heat
+ */
+export function incarcerate(current: { heat: number; wanted: number }): {
+  heat: number;
+  wanted: number;
+} {
+  return { heat: 0, wanted: Math.max(0, clampCrewStat('wanted', current.wanted) - 1) };
+}
+
+// ----- crew advancement (XP) -------------------------------------------------------------------
+// BitD: a crew earns XP from its triggers (a smart operation, contending with a greater foe,
+// bolstering its rep, expressing its nature); fill the advancement track → take a crew special
+// ability and reset. The XP rides a reserved key in the existing `resources` map so the feature
+// needs no schema migration (it can graduate to a dedicated column later). 8 mirrors the playbook
+// XP track. https://bladesinthedark.com/index.php/advancement
+
+/** Crew advancement track length — fill it to take a crew advance, then reset. */
+export const CREW_XP_TRACK = 8;
+/** Reserved `resources` key the crew's advancement XP is stored under. */
+export const CREW_XP_KEY = 'crew-xp';
+
+/** The crew's current advancement XP, clamped to `[0, CREW_XP_TRACK]`. */
+export function crewXp(resources: Record<string, number>): number {
+  return Math.max(0, Math.min(CREW_XP_TRACK, Math.floor(resources[CREW_XP_KEY] ?? 0)));
+}
+
+/** Whether the advancement track is full (a crew advance is available). */
+export function crewAdvanceReady(resources: Record<string, number>): boolean {
+  return crewXp(resources) >= CREW_XP_TRACK;
+}
+
+/** A new `resources` map with the crew's advancement XP set to `value` (clamped to the track). */
+export function withCrewXp(
+  resources: Record<string, number>,
+  value: number
+): Record<string, number> {
+  return { ...resources, [CREW_XP_KEY]: crewXp({ [CREW_XP_KEY]: value }) };
+}

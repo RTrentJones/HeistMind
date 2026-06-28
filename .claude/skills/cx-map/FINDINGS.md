@@ -290,7 +290,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   is no conversion path, so crews can't advance tier through play.
 - **fix:** Uncap rep; add rep→tier conversion (auto at ≥12 or a GM "Advance tier" button); show the
   rule.
-- **status:** open
+- **status:** fixed — `advanceTier` (`crews.ts`, SRD-grounded: fill the 12-Rep track → +1 Tier,
+  clear Rep carrying the remainder, capped at Tier 4) + a GM "Advance to Tier N (spend 12 Rep)" button
+  on the crew sheet, shown once Rep ≥ 12. The Rep stat is now uncapped so it can accrue past 12.
 
 ### F18 — Crew XP / advancement absent
 
@@ -299,16 +301,22 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `domain-types.ts`).
 - **root cause:** Crews don't earn XP or buy upgrades — the crew-sheet progression half of Blades.
 - **fix:** Crew XP track + triggers mirroring character XP; spend to unlock crew abilities/upgrades.
-- **status:** open
+- **status:** fixed — an **8-box crew advancement track** on the crew sheet (`crewXp`/`crewAdvanceReady`/
+  `withCrewXp` in `crews.ts`, 100% covered): the GM marks XP (with the four BitD triggers as a hint),
+  and a full track shows "Take advance (reset XP)" pointing at the crew-ability list. Stored under a
+  reserved key in the existing `resources` JSONB (a deliberate no-migration choice — it can graduate
+  to a dedicated column once the generated Supabase types are regenerated). https://bladesinthedark.com/index.php/advancement
 
 ### F19 — Heat→Wanted cascade and reduce-heat unmodeled
 
 - **severity:** S2 · **type:** FitD-gap
 - **where:** `Crew.heat`/`Crew.wanted` are bare numbers; no threshold logic; no "lay low".
-- **root cause:** Heat filling → +1 wanted, and spending to reduce heat, are core consequences with
-  no engine.
-- **fix:** Heat-threshold + wanted helpers in `crews.ts`; a reduce-heat downtime action.
-- **status:** open
+- **root cause:** Heat filling → +1 wanted, and cooling off, are core consequences with no engine.
+- **fix:** Heat-threshold + wanted helpers in `crews.ts`; a cool-off action.
+- **status:** fixed — `applyHeat` cascades heat 9 → +1 Wanted (clear, carry remainder; SRD-verified)
+  and is wired into the crew sheet's heat control. **SRD correction:** core BitD has no "lay low /
+  reduce heat" activity — the direct release valve is **incarceration** (a convicted member/ally/framed
+  enemy → −1 Wanted and clears Heat). Modelled as `incarcerate` + a GM "Incarcerated" button.
 
 ### F20 — Theme system not wired; app is effectively dark-only
 
