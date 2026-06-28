@@ -379,9 +379,11 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
   is the biggest structural gap — a player can't build/own a character *before or without* a campaign,
   or carry it to a new table. D&D Beyond's characters are campaign-independent and travel; ours don't.
 - **fix:** make characters first-class + portable (own them at the user level, *link* into a campaign
-  rather than being born inside one). **Meaningful schema change** — its own BRD phase (5+). A
-  logged-in **"My Characters"** view (the proposed dashboard, `COMPETITIVE.md` Part B) is the surface.
-- **status:** open (BRD Phase 5+ candidate)
+  rather than being born inside one). **Meaningful schema change** — its own BRD phase (5+). The
+  logged-in dashboard now ships a **"Your characters"** view (`features/dashboard`), but those are
+  still **game-scoped** — it surfaces them, it doesn't make them standalone. The structural change
+  remains open.
+- **status:** open (BRD Phase 5+ candidate) — dashboard surface shipped; portability still open.
 
 ### F57 — Character sheet isn't phone-first for at-table / PbP use
 

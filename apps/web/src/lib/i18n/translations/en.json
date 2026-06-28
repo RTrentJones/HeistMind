@@ -667,27 +667,42 @@
       "description": "The definitive platform for Forged in the Dark campaigns. Create characters, run heists, forge your legacy in the shadows."
     },
     "landing": {
+      "brand": "HeistMind",
       "hero": {
-        "welcomePrefix": "Welcome to ",
-        "lead": "Run Forged in the Dark campaigns as async, Discord-style play-by-post — Game Masters upload custom rulesets, players build scoundrels and play through shared rolls, clocks, and crews. No session to schedule."
+        "title": "The mechanical home for your Forged-in-the-Dark crew",
+        "lead": "Build rules-valid characters and crews, then keep them current wherever you play — at the table, or async on Discord. HeistMind handles the dice, gear, XP, clocks, and the campaign log so the rules never slow you down. The story's yours; the bookkeeping's ours."
       },
-      "features": {
-        "creation": {
-          "title": "Rule-Driven Characters",
-          "body": "Build scoundrels against any Forged in the Dark ruleset. Upload your own or load a starter system, and the character sheet follows its rules."
+      "tracks": {
+        "heading": "Two ways to use it",
+        "table": {
+          "title": "At your table",
+          "body": "A living, rules-valid character and crew sheet. Build a scoundrel in minutes; track stress, harm, XP, coin, and gear; and bring it to any Forged-in-the-Dark game — in person or on voice."
         },
-        "management": {
-          "title": "Shared Campaign State",
-          "body": "Rolls, clocks, crew, and factions live in one always-current campaign. Every player sees the latest on view — days or weeks apart."
+        "pbp": {
+          "title": "Play-by-post on Discord",
+          "body": "The async mechanical layer for your game: rolls, clocks, stress, per-score gear, and a score-grouped campaign log that stays in sync as the story unfolds in your Discord channels.",
+          "tag": "Like Avrae for D&D — but built for Forged in the Dark."
+        }
+      },
+      "pillars": {
+        "rules": {
+          "title": "Rules-driven",
+          "body": "Every action the app offers is legal for your ruleset, so you don't have to re-read the book. Correctness is built in."
         },
-        "collaboration": {
-          "title": "Play-by-Post Together",
-          "body": "Invite players with a join code, resist consequences, take downtime, and move the story forward in a shared feed — no scheduled session required."
+        "anywhere": {
+          "title": "Track results from anywhere",
+          "body": "Roll in-app, on Discord, or just record what happened at the table — it all lands in one shared, score-grouped campaign log."
+        },
+        "alacarte": {
+          "title": "Take what you want",
+          "body": "Just a character sheet, or crew tracking, or the full loop. Nothing is forced — adopt the pieces you need and leave the rest."
         }
       },
       "cta": {
-        "heading": "Ready to start your next heist?",
-        "body": "Sign in with Discord to spin up a campaign or join one with a code — then run your crew play-by-post."
+        "heading": "Ready to forge your crew?",
+        "body": "Sign in with Discord to spin up a campaign or join one with a code.",
+        "gm": "Run a campaign",
+        "player": "Join with a code"
       }
     },
     "about": {
@@ -722,17 +737,28 @@
     },
     "dashboard": {
       "welcome": "Welcome back, {{name}}",
-      "subtitle": "Ready to forge your legend in the shadows?",
-      "quickActions": "Quick Actions",
-      "recentActivity": "Recent Activity",
-      "noActivity": "No recent activity",
+      "subtitle": "Pick up where your crew left off.",
+      "quickActions": "Quick actions",
+      "recentActivity": "Recent activity",
+      "noActivity": "No recent activity yet — start a score or log a result.",
+      "activityIn": "in {{campaign}}",
+      "yourCampaigns": "Your campaigns",
+      "yourCharacters": "Your characters",
+      "viewAll": "View all",
+      "open": "Open",
+      "view": "View",
+      "noCampaigns": "No campaigns yet. Create one, or join with an invite code.",
+      "createFirstCampaign": "Create your first campaign",
+      "noCharacters": "No characters yet. Open a campaign to build your scoundrel.",
+      "characterMeta": "{{playbook}} · {{campaign}}",
       "activeGames": "Active Games",
       "characters": "Characters",
       "rulesets": "Rulesets",
       "actions": {
-        "createGame": "Create New Game",
-        "joinGame": "Join a Game",
-        "uploadRuleset": "Upload Ruleset"
+        "createGame": "Create campaign",
+        "joinGame": "Join a game",
+        "rulesets": "Rulesets",
+        "uploadRuleset": "Upload ruleset"
       }
     },
     "rulesets": {
