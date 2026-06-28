@@ -95,7 +95,8 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     const renamed = uniqueName('Asher "Cinder" Vane');
     await gmPage.getByRole('button', { name: 'Edit', exact: true }).click();
     await gmPage.getByLabel('Name', { exact: true }).fill(renamed);
-    await gmPage.getByRole('button', { name: 'Save' }).click();
+    // exact — the sheet also has a "Save loadout" button now (per-score loadout).
+    await gmPage.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(gmPage.getByRole('heading', { name: renamed })).toBeVisible();
 
     await gmPage.getByRole('button', { name: 'Add XP' }).click();
