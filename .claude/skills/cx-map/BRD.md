@@ -4,19 +4,28 @@ The scope-of-record for HeistMind. Sibling of `STATUS.md` (what's built), `CX-MA
 page/flow), and `FINDINGS.md` (the prioritized backlog). When scope changes, edit here first, then
 reconcile the others.
 
-_Last reviewed: 2026-06-27 (re-scope sign-off)._
+_Last reviewed: 2026-06-28 (value-prop sharpened to two modes)._
 
 ## Product statement
 
-HeistMind is **not** a Blades-in-the-Dark play engine. Actual play happens wherever the group plays —
-**in person, on Discord (via an Avrae-style bot), or in-app** — and HeistMind's job is to be the
-**persistent between-session record**:
+HeistMind is **not** an authoritative play engine or VTT. It is a **rules-driven character + crew
+manager** for Forged in the Dark, used **two ways** (one product, two modes):
 
-> _As events are settled — IRL, on Discord, or here — players track their crew, characters, XP, and
-> per-score gear here, so the campaign's state persists between sessions._
+> **Mode 1 — sheet anywhere.** Build a rules-valid scoundrel and crew (every action the app offers is
+> legal for your ruleset) and bring it to any table — in person, on live voice, or here. *The "D&D
+> Beyond for FitD" job.*
+>
+> **Mode 2 — the live mechanical layer for async play-by-post on Discord.** As a PbP game posts over
+> days/weeks, HeistMind holds the shared mechanical state — rolls, clocks, stress, per-score gear,
+> crew/faction state, and a score-grouped campaign log. **The narrative stays in Discord prose; the
+> mechanics + shared truth live here.** *("Avrae for Forged in the Dark" — and FitD has no Avrae
+> today; the competitive frame is in `COMPETITIVE.md`.)*
 
-Existing dice/clocks/factions features are **kept and reframed as logging**: a result can be rolled
-in-app **or** entered after being settled elsewhere. The tracker, not the table, is the product.
+Actual play happens wherever the group plays. Existing dice/clocks/factions features serve both modes:
+a result can be rolled in-app **or** entered after being settled elsewhere (in person / on Discord).
+The mechanical layer + tracker, not the table's narration, is the product. *(An earlier framing called
+this a "between-session record" — accurate for Mode 1, but it undersold Mode 2, where there is no
+session: PbP play is continuous and HeistMind is the surface used while you play.)*
 
 ## Core value & guiding principles
 

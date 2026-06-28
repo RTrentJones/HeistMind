@@ -6,9 +6,10 @@ The living map of every page and user flow. Maintained per the `cx-map` skill (`
 the stable "what it does"; that file is the churn of "what's wrong."
 
 Stack: Next.js 15 App Router (`apps/web`), React 19, Tailwind CSS 4, Radix UI (`packages/ui`),
-Supabase (auth + RLS + per-env schema). Product goal: **async, Discord-style play-by-post** Forged
-in the Dark — all shared state is DB-backed and loaded on view (no realtime), with an async dice
-roller logged to the campaign.
+Supabase (auth + RLS + per-env schema). Product goal (see `BRD.md`): a **rules-driven FitD character
++ crew manager** that doubles as the **mechanical layer for async, play-by-post games on Discord** —
+all shared state is DB-backed and loaded on view (no realtime), with a dice roller and a score-grouped
+campaign log. Narrative lives in Discord prose; mechanics live here. *("Avrae for Forged in the Dark.")*
 
 ## Roles
 
@@ -43,8 +44,11 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **Actions:** Sign in / Sign up with Discord (OAuth). Authenticated users navigate on to
   Campaigns / Rulesets.
 - **Nav:** → `/auth/callback` (after OAuth) → back here; then `/games`, `/rulesets`.
-- **CX intent:** must communicate, above the fold, that this is an async play-by-post FitD tool;
-  signed-in users should get a clear next step (not just marketing).
+- **CX intent:** must communicate, above the fold, the two ways to use HeistMind (a rules-valid
+  character sheet you bring anywhere, and the async-PbP mechanical layer for Discord groups) — not the
+  mis-framing that you "play the whole game here." Signed-in users should get a clear next step (not
+  just marketing). _A reframed landing + a logged-in dashboard at `/` are proposed in `COMPETITIVE.md`
+  / the Phase-B plan (not yet built)._
 
 ### `/auth/callback` — OAuth return
 
@@ -81,7 +85,12 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **File:** `apps/web/src/app/games/[gameId]/page.tsx`
 - **Purpose:** the campaign's home — characters + all shared campaign objects.
 - **Components:**
-  - Characters list (cards → character sheet) + "Create character".
+  - `CharacterRoster` (`apps/web/src/features/characters/components/CharacterRoster.tsx`) — the
+    campaign roster: each character attributed to its **player** (resolves `createdBy` → profile name),
+    a **status** badge (active/inactive/retired/dead), a link to the sheet, and a two-click **Retire**
+    action for the owner or GM. Active characters lead; retired/dead drop to a de-emphasised "Retired &
+    fallen" section (kept for history, not deleted). Retiring banks carried coin into stash and logs a
+    `note` event. Plus a "Create character" button.
   - `CrewSheet` (`apps/web/src/features/crews/components/CrewSheet.tsx`) — crew type, tier, rep,
     heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. Also renders any
     **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
@@ -90,12 +99,21 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
     status (−3..+3) and their project clocks. GM-editable.
-  - `RollPanel` + `RollLog` (`apps/web/src/features/rolls/components/`) — action / fortune / GM **and
-    resistance** rolls. Resistance mode picks the resisted attribute, rolls, and deducts `6 − highest
-    die` stress from the character. The `RollLog` is the reverse-chron, DB-backed feed (the async-play
-    centerpiece; every player sees it on load), now showing **who** (character name; "Fortune"/"GM")
-    and **when** (relative time + timestamp tooltip), annotating resistance ("resisted — N stress")
-    and downtime (neutral badge, no dice).
+  - `ScorePanel` (`apps/web/src/features/scores/components/ScorePanel.tsx`) — the **score / operation
+    lifecycle**. A campaign runs as a series of scores (the per-operation unit per-score loadout hangs
+    off); the GM **starts** one (at most one active at a time) and **ends** it, with the most recent
+    completed scores listed. Start/end are logged to the campaign feed as `score` events. Sessions are
+    real-life and not modelled. Players see the active score read-only.
+  - `RollPanel` + `AddResultForm` + `RollLog` (`apps/web/src/features/rolls/components/`). `RollPanel`:
+    action / fortune / GM **and resistance** rolls — resistance mode picks the resisted attribute,
+    rolls, and deducts `6 − highest die` stress from the character. **`AddResultForm`**: record a
+    result that was **settled elsewhere — in person or on Discord** (writes a `note` event,
+    auto-tagged with the active score), so the between-session log is complete wherever play happened.
+    The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
+    player sees it on load): shows **who** (character name; "Fortune"/"GM") and **when** (relative time
+    + timestamp tooltip), annotates resistance ("resisted — N stress"), and renders non-dice events
+    (downtime / loadout / score / note) with a neutral kind badge. Entries are **grouped by score**
+    (newest operation first, under its name); with no scores in play it falls back to a flat feed.
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -120,15 +138,21 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **File:** `apps/web/src/app/games/[gameId]/characters/[characterId]/page.tsx`
 - **Components:** `CharacterSheet` (`apps/web/src/features/characters/components/CharacterSheet.tsx`)
   — name (editable), attributes/action ratings, **quick** stress/harm/XP edits on the sheet itself,
-  gear/loadout, special abilities (expandable rules), identity, contacts, coin/load; plus a
-  character-scoped `RollPanel` + `RollLog`. `CharacterEditor`
+  special abilities (expandable rules), identity, contacts, coin/load; plus a
+  character-scoped `RollPanel` + `RollLog`. **`LoadoutCard`**
+  (`apps/web/src/features/characters/components/LoadoutCard.tsx`) — the character's **current-score
+  loadout**, chosen *per operation as you go* (BitD: load is not a build/advancement choice, so it
+  **left the build editor**). Pick a load level, equip items up to the limit, then **Save** (one
+  campaign-log entry per save). When a new score has started the loadout is flagged stale and can be
+  **reset** for it; with no active score it's a resettable "current" loadout. Loadout changes/clears
+  are logged to the campaign feed. `CharacterEditor`
   (`apps/web/src/features/characters/components/CharacterEditor.tsx`) for deeper build edits and
   XP-spend advancement. The editor loads the campaign **crew** so level-ups validate in context: an
   action-dot advance caps at the crew's effective max (Mastery → the 4th dot), and the load gauge +
   live re-validation fold in crew effects (Mule/Deadly) — mirroring the server's `advanceCharacter`.
-- **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; roll an action **or
-  resist** (stress applies live to the `StressTracker`); **Indulge vice** (downtime) to clear stress
-  to 0, logged to the feed; edit build.
+- **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; **set the per-score loadout**
+  (level + items, Save); roll an action **or resist** (stress applies live to the `StressTracker`);
+  **Indulge vice** (downtime) to clear stress to 0, logged to the feed; edit build.
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
   stress-release half of the FitD pressure loop (MVP downtime).
@@ -160,7 +184,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-27 @ 2535b31
+_Last verified:_ 2026-06-28 @ 78123c1 (added Phase 1–3: score panel, roster/retire, add-result form, per-score loadout, score-grouped log)
 
 ---
 
@@ -216,18 +240,21 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
    character** → wizard (playbook → ratings → abilities → identity → review → Create). 5. Land back on
    the hub; open the character sheet to play.
 
-### J3 — GM + players: run a score (dice + resist + clocks)
+### J3 — GM + players: run a score (start → dice + resist + clocks → end)
 
-1. On the hub, create/seed clocks for obstacles. 2. Players roll actions from their sheets
-   (`RollPanel`: action → rating → roll → logged). 3. When a consequence lands, the player **resists**
-   (`RollPanel` resistance mode → `6 − highest die` stress applied live). 4. GM makes fortune/GM rolls
-   from the hub `RollPanel`. 5. All rolls land in `RollLog` with who + when (every player sees on
-   reload). 6. GM ticks clocks; adjusts crew heat/rep. 7. Between scores, players **indulge vice**
-   (downtime) to clear stress. 8. End of score: award XP on character sheets.
+1. GM **starts a score** (`ScorePanel`) and seeds clocks for obstacles. 2. Players **set their
+   per-score loadout** on their sheets (`LoadoutCard`: level + items → Save). 3. Players roll actions
+   from their sheets (`RollPanel`: action → rating → roll → logged, auto-tagged with the active score).
+   4. When a consequence lands, the player **resists** (`RollPanel` resistance mode → `6 − highest die`
+   stress applied live). 5. GM makes fortune/GM rolls from the hub `RollPanel`. 6. Anything settled **in
+   person or on Discord** gets recorded via `AddResultForm` so the log stays complete. 7. All events
+   land in `RollLog`, grouped under the score, with who + when (every player sees on reload). 8. GM
+   ticks clocks; adjusts crew heat/rep. 9. Players **indulge vice** (downtime) to clear stress. 10. GM
+   **ends the score** (`ScorePanel`); award XP on character sheets.
 
 ### J4 — Player: level up
 
 1. On the character sheet, mark XP (tracks fill). 2. When the playbook track fills, spend an advance
    (action dot or ability). 3. Sheet updates; track resets.
 
-_Last verified:_ 2026-06-27 @ 4b7343e
+_Last verified:_ 2026-06-28 @ 78123c1 (J3 updated for score start/end, per-score loadout, off-app result recording)
