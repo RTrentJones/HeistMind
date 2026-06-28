@@ -78,6 +78,11 @@ export function RollPanel({
   const [fortune, setFortune] = useState(1);
   const [position, setPosition] = useState('risky');
   const [effect, setEffect] = useState('standard');
+  // BitD pre-roll dice moves (action rolls only): push yourself (+1d for 2 stress) and a devil's
+  // bargain (+1d for a complication). They stack — both just grow the dice pool.
+  const [push, setPush] = useState(false);
+  const [bargain, setBargain] = useState(false);
+  const [bargainNote, setBargainNote] = useState('');
   const [rolling, setRolling] = useState(false);
   const [last, setLast] = useState<{
     outcome: keyof typeof OUTCOME_KEY;
@@ -138,10 +143,21 @@ export function RollPanel({
 
     const isActionRoll = mode === 'action';
     const rating = isActionRoll ? (actions!.find(a => a.name === action)?.rating ?? 0) : fortune;
+    // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2 take-lowest).
+    const extraDice = isActionRoll ? (push ? 1 : 0) + (bargain ? 1 : 0) : 0;
     const { count, zeroDice } = isActionRoll
-      ? diceForRating(rating)
+      ? diceForRating(rating + extraDice)
       : { count: Math.max(fortune, 1), zeroDice: false };
     const results = realize(count);
+    // Record the moves so the feed shows what was spent / accepted.
+    const notes: string[] = [];
+    if (isActionRoll && push) notes.push(t('components.rollPanel.pushedNote'));
+    if (isActionRoll && bargain)
+      notes.push(
+        bargainNote.trim()
+          ? t('components.rollPanel.bargainNote', { note: bargainNote.trim() })
+          : t('components.rollPanel.bargainNoteEmpty')
+      );
     const r = await getRepositories().rolls.create(userId, {
       gameId,
       characterId,
@@ -152,12 +168,16 @@ export function RollPanel({
       zeroDice,
       position: isActionRoll ? position : undefined,
       effect: isActionRoll ? effect : undefined,
+      note: notes.length > 0 ? notes.join(' · ') : undefined,
     });
-    setRolling(false);
     if (!r.success) {
+      setRolling(false);
       setError(r.error?.message ?? t('components.rollPanel.rollFailed'));
       return;
     }
+    // Pushing yourself costs 2 stress, applied win or lose.
+    if (isActionRoll && push) await applyStress(userId, 2);
+    setRolling(false);
     setLast({ outcome: r.data.outcome, results: r.data.results });
     onRolled?.();
   };
@@ -244,6 +264,26 @@ export function RollPanel({
                 ⓘ
               </span>
             </Tooltip>
+            <label className='flex cursor-pointer items-center gap-1.5 text-sm'>
+              <input type='checkbox' checked={push} onChange={e => setPush(e.target.checked)} />
+              {t('components.rollPanel.push')}
+            </label>
+            <label className='flex cursor-pointer items-center gap-1.5 text-sm'>
+              <input
+                type='checkbox'
+                checked={bargain}
+                onChange={e => setBargain(e.target.checked)}
+              />
+              {t('components.rollPanel.bargain')}
+            </label>
+            {bargain && (
+              <input
+                className={sel}
+                placeholder={t('components.rollPanel.bargainPlaceholder')}
+                value={bargainNote}
+                onChange={e => setBargainNote(e.target.value)}
+              />
+            )}
           </>
         )}
         {mode === 'fortune' && (
