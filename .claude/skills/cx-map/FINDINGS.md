@@ -16,7 +16,8 @@ the campaign panels (crew/clocks/factions/rolls), through the UX + FitD lenses i
 Findings the maintainer personally re-checked against source are tagged **(verified)**; the rest are
 from the audit pass with a cited location and should be re-confirmed before fixing.
 
-Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
+Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2. _(+F56/F57 from the 2026-06-28 competitive pass —
+two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
 
 ---
 
@@ -367,6 +368,32 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **status:** resolved (PR #59) — a path-derived `Breadcrumbs` component (in the new `AppShell`)
   renders linked parent crumbs on deep routes (Campaigns → Campaign → Character / New character,
   Rulesets → Upload ruleset); id segments relabel to their kind.
+
+### F56 — Characters are campaign-scoped; no portable "My Characters"
+
+- **severity:** S2 · **type:** CX-flaw (product/structural gap) · **flagged P0 (`COMPETITIVE.md` #2)**
+- **where:** characters are created at `/games/[gameId]/characters/new` and rows carry a `game_id`;
+  there is no character that exists without a campaign and no way to move one between tables.
+  `characters.findByPlayer(userId)` exists but every character still belongs to a game.
+- **root cause:** the data model scopes characters under a game. For **Mode 1 ("sheet anywhere")** this
+  is the biggest structural gap — a player can't build/own a character *before or without* a campaign,
+  or carry it to a new table. D&D Beyond's characters are campaign-independent and travel; ours don't.
+- **fix:** make characters first-class + portable (own them at the user level, *link* into a campaign
+  rather than being born inside one). **Meaningful schema change** — its own BRD phase (5+). A
+  logged-in **"My Characters"** view (the proposed dashboard, `COMPETITIVE.md` Part B) is the surface.
+- **status:** open (BRD Phase 5+ candidate)
+
+### F57 — Character sheet isn't phone-first for at-table / PbP use
+
+- **severity:** S2 · **type:** CX-flaw · **flagged P0 (`COMPETITIVE.md` #3)**
+- **where:** `apps/web/src/features/characters/components/CharacterSheet.tsx` (dense multi-section
+  layout) — responsive but not optimized for a phone held during play.
+- **root cause:** the core use is tracking *during* play, often one-handed on a phone (live at the
+  table, or checking a PbP game on mobile). The sheet is information-dense and tuned for desktop; the
+  common in-play taps (stress / harm / XP / roll / resist / loadout) aren't laid out phone-first.
+- **fix:** a mobile pass on the sheet — prioritize the in-play controls, collapse build detail,
+  thumb-reachable primary actions. Design/responsive effort (no schema change).
+- **status:** open
 
 ---
 

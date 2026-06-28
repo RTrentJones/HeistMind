@@ -1,6 +1,12 @@
 # HeistMind
 
-A comprehensive character management platform for Forged in the Dark tabletop RPGs.
+A **rules-driven character + crew manager** for Forged in the Dark (FitD) tabletop RPGs. It works two
+ways: as your **character sheet anywhere** (build a rules-valid scoundrel and crew — every action the
+app offers is legal for your ruleset — and bring it to any table), and as the **live mechanical layer
+for async, play-by-post games on Discord** (rolls, clocks, stress, per-score gear, crew/faction state,
+and a score-grouped campaign log the table builds as the story posts over days). The narrative stays in
+Discord prose; the mechanics live here — *think "Avrae for Forged in the Dark."* Play can happen in
+person, on Discord, or in-app — take what you want and leave the rest.
 
 ## 🚀 Quick Start
 
@@ -89,20 +95,25 @@ pnpm db:types         # Generate TypeScript types from schema
 
 ## 🌟 Key Features
 
-HeistMind targets **async, Discord-style play-by-post** FitD games — shared campaign state is
-DB-backed and loaded on view (no realtime required).
+Two ways to use HeistMind — **a rules-valid character sheet you bring anywhere**, and **the shared
+mechanical layer for async play-by-post on Discord**. Campaign state is DB-backed and loaded on view
+(no realtime required); the narrative lives in your Discord channels, the mechanics live here.
 
 ### For Game Masters
 
 - Upload and manage custom FitD rulesets (JSON), or load the bundled **Brackwater** starter
-- Run campaigns with a **crew sheet**, **progress clocks**, **factions**, and a shared **roll log**
-- Make fortune/GM rolls and advance clocks as a score unfolds
+- Run campaigns with a **crew sheet**, **progress clocks**, **factions**, a **roster** (player→character,
+  status, retire), and a **score-grouped campaign log**
+- Start/end a **score**, make fortune/GM rolls, and advance clocks as it unfolds
 
 ### For Players
 
-- Build rule-driven characters with a guided wizard (playbook, action ratings, abilities, identity)
-- Play from a live character sheet: **stress**, **harm**, **XP tracks**, loadout, and action rolls
-- Everyone loads the latest shared campaign state on view (play-by-post)
+- Build rule-driven characters with a guided wizard (playbook, action ratings, abilities, identity);
+  level up from the same editor
+- Work from a live character sheet: **stress**, **harm**, **XP tracks**, **per-score loadout**, and
+  action/resistance rolls — every option the app offers is legal for the ruleset
+- Log results from wherever you play (in-app, or recording what happened at the table / on Discord);
+  it all lands in one shared, score-grouped campaign log
 
 ## 🚀 Getting Started
 
@@ -123,20 +134,44 @@ DB-backed and loaded on view (no realtime required).
 
    ```bash
    cp .env.example .env.local
-   # Edit .env.local with your Supabase credentials
+   # Edit .env.local with your Supabase credentials.
+   # SUPABASE_PROJECT_ID is needed for `pnpm db:types` (remote type regen).
    ```
 
-4. **Start development**
+4. **Boot the database and apply migrations**
+
+   ```bash
+   supabase start     # local Postgres + Auth (Docker); configured by supabase/config.toml
+   pnpm db:push       # apply supabase/migrations/*
+   ```
+
+5. **Start development**
+
    ```bash
    pnpm dev
    ```
+
+### Schema changes → regenerate types (important)
+
+Domain types are generated from the live schema into `packages/database/src/supabase-types.ts`.
+**After a migration adds/changes a column or table, regenerate types or the repository adapter (and
+CI `type-check`) will fail** — the new column doesn't exist on the generated types until you regen:
+
+```bash
+pnpm db:types                          # remote schema — needs SUPABASE_PROJECT_ID
+pnpm --filter database db:types-local  # …or a running local stack
+```
+
+Character mechanics ride a JSONB column, so most character-shape changes need no migration at all.
 
 ## 📖 Documentation
 
 Living product docs are maintained in the **`cx-map` skill** (`.claude/skills/cx-map/`):
 
 - **`STATUS.md`** — what HeistMind is, what's built, architecture/constraints, and current plans
+- **`BRD.md`** — the scope-of-record: product requirements, core-value / à-la-carte principles, phased plan
 - **`CX-MAP.md`** — every page and user flow (routes, character wizard, campaign panels, roles)
+- **`COMPETITIVE.md`** — value prop + competitive frame (vs D&D Beyond and Avrae) + ranked P0 gaps
 - **`FINDINGS.md`** — known CX flaws + FitD-rule gaps (the backlog)
 
 Repo conventions, commands, and the deploy loop live in `CLAUDE.md`.

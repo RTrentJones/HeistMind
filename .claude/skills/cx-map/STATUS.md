@@ -8,21 +8,30 @@ edit here and bump `_Last verified:_`. Sibling docs: `BRD.md` (**the scope-of-re
 
 ## What it is
 
-> **Re-scope (2026-06-27):** HeistMind is **not** a play engine — it is the **between-session tracker
-> /record**. Play happens IRL, on Discord (Avrae-style bot), or in-app; *settled results* are logged
-> here so crew/character/XP/per-score state persists between sessions.
+> **Re-scope (2026-06-27, value-prop sharpened 2026-06-28):** HeistMind is **not** a VTT or a live
+> play engine — it is a **rules-driven character + crew manager**, used **two ways**:
+> - **Mode 1 — sheet anywhere:** build a rules-valid scoundrel + crew and bring it to any table
+>   (in person, live voice, or here). *The "D&D Beyond for FitD" job.*
+> - **Mode 2 — the live mechanical layer for async play-by-post on Discord:** rolls, clocks, stress,
+>   per-score gear, crew/faction state, and a score-grouped campaign log built up as the story posts
+>   over days. The narrative stays in Discord prose; the mechanics + shared truth live here.
+>   *("Avrae for Forged in the Dark" — and FitD has no Avrae today; see `COMPETITIVE.md`.)*
+>
+> Earlier wording ("between-session tracker") undersold Mode 2 — for PbP there is no session; play is
+> continuous and HeistMind is the surface used *while* you play.
 > - **Core value:** rules-driven management — every step/action the system offers is rules-legal, so
 >   players don't have to read the rules. Correctness is built in.
 > - **À la carte:** capabilities are opt-in — just char sheets, or crew tracking, or full in-app play,
 >   or the Discord bot — in any combination. Nothing forces a full workflow.
 >
-> The full scope, requirements, and gap analysis live in **`BRD.md`** — read it before planning new
-> work. Existing dice/downtime features are **kept but reframed as optional result sources**.
+> The full scope, requirements, and gap analysis live in **`BRD.md`**; the competitive frame in
+> **`COMPETITIVE.md`** — read both before planning new work. Existing dice/downtime features are
+> **kept but reframed as optional result sources**.
 
-HeistMind is a campaign **tracker** for **Blades in the Dark** and other **Forged in the Dark
-(FitD)** tabletop RPGs. GMs upload custom FitD rulesets and run campaigns; players build rule-driven
-characters and track shared, DB-backed campaign state (crew, characters, XP, per-score gear, clocks,
-factions, a results log) that everyone loads on view.
+HeistMind is a rules-driven character + crew **manager + tracker** for **Blades in the Dark** and
+other **Forged in the Dark (FitD)** tabletop RPGs. GMs upload custom FitD rulesets and run campaigns;
+players build rule-driven characters and share DB-backed campaign state (crew, characters, XP,
+per-score gear, clocks, factions, a score-grouped results log) that everyone loads on view.
 
 The problems it targets (kept from the old `productContext.md` as useful framing):
 
@@ -102,8 +111,13 @@ bundled **Brackwater** starter opts into full FitD mode.
 
 ## Plans
 
-**The 9-phase "real FitD play-by-post tool" plan is complete and in prod.** What's next is driven by
-the audit, not a sprint board:
+**The 9-phase "real FitD play-by-post tool" plan is complete and in prod.** On top of it, the **BRD
+re-scope Phases 1–3 shipped to prod** (2026-06): **per-score play** (`scores` table + `ScorePanel`
+start/end + per-score `LoadoutCard`), the **campaign log** (the `rolls` table widened with
+action/resistance/fortune/downtime/loadout/score/note kinds, score-grouped feed + `AddResultForm` for
+off-app results), and **roster/retire** (`CharacterRoster`: player→character attribution, status,
+Retire). **Phase 4 (Discord bot)** is specified in `BRD.md` but not built. What's next is driven by the
+audit, not a sprint board:
 
 - **`FINDINGS.md` is the backlog** — severity-scored CX flaws + FitD gaps from Audit 1. Its
   closing "themes worth a dedicated pass" section is the de-facto roadmap. Highest-leverage clusters:
@@ -120,4 +134,4 @@ the audit, not a sprint board:
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-06-27 @ 2535b31
+_Last verified:_ 2026-06-28 @ 78123c1 (value-prop sharpened to two modes; BRD Phases 1–3 noted as shipped)
