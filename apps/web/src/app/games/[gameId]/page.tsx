@@ -19,6 +19,7 @@ import { usePageTranslation } from '@/lib/i18n/hooks';
 import { InviteCodeSection } from '@/features/games/components/InviteCodeSection';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
+import { AddResultForm } from '@/features/rolls/components/AddResultForm';
 import { ClocksPanel } from '@/features/clocks/components/ClocksPanel';
 import { CrewSheet } from '@/features/crews/components/CrewSheet';
 import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
@@ -183,6 +184,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
               {t('game.fortuneRoll')}
             </Text>
             <RollPanel gameId={gameId} onRolled={() => setRollKey(k => k + 1)} />
+            <Text variant='muted' size='sm'>
+              {t('game.recordResult')}
+            </Text>
+            <AddResultForm
+              gameId={gameId}
+              characters={characters}
+              onAdded={() => setRollKey(k => k + 1)}
+            />
           </Stack>
         </Card>
         <RollLog gameId={gameId} refreshKey={rollKey} />

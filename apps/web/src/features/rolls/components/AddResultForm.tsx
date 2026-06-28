@@ -1,0 +1,80 @@
+'use client';
+
+import { useState } from 'react';
+import { Button, Input, Stack } from '@heist-mind/ui';
+import { getRepositories } from '@/lib/auth';
+import { useAuth } from '@/features/auth/stores/auth-store';
+import { useTranslation } from '@/lib/i18n/hooks';
+
+const sel =
+  'rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm text-foreground-primary';
+
+/**
+ * Record a result that was settled elsewhere — in person or on Discord (R-E3). Writes a `note` event
+ * to the campaign log (auto-tagged with the active score), so the between-session record is complete
+ * regardless of where play actually happened.
+ */
+export function AddResultForm({
+  gameId,
+  characters,
+  onAdded,
+}: {
+  gameId: string;
+  characters: { id: string; name: string }[];
+  onAdded?: () => void;
+}) {
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const [text, setText] = useState('');
+  const [characterId, setCharacterId] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const add = async () => {
+    const userId = user?.id;
+    if (!userId || !text.trim()) return;
+    setBusy(true);
+    await getRepositories().rolls.create(userId, {
+      gameId,
+      characterId: characterId || undefined,
+      kind: 'note',
+      label: t('components.addResult.label'),
+      dice: 0,
+      results: [],
+      note: text.trim(),
+    });
+    setBusy(false);
+    setText('');
+    onAdded?.();
+  };
+
+  return (
+    <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+      {characters.length > 0 && (
+        <label className='flex flex-col gap-1 text-sm'>
+          {t('components.addResult.character')}
+          <select
+            className={sel}
+            value={characterId}
+            onChange={e => setCharacterId(e.target.value)}
+          >
+            <option value=''>{t('components.addResult.noCharacter')}</option>
+            {characters.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <Input
+        label={t('components.addResult.resultLabel')}
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder={t('components.addResult.placeholder')}
+      />
+      <Button variant='outline' size='sm' loading={busy} disabled={!text.trim()} onClick={add}>
+        {t('components.addResult.add')}
+      </Button>
+    </Stack>
+  );
+}
