@@ -130,9 +130,15 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   also fixed a wizard hang where a disabled ability card read as "not stable" to Playwright. **Level-ups
   honour crew too:** the editor loads the campaign crew so an action-dot advance caps at the crew's
   effective max (Mastery → buy the 4th dot) and the load gauge / live re-validation fold in Mule/Deadly,
-  matching the server's `advanceCharacter`. **Remaining follow-ups:** the grant-on-join "crew benefit
-  available" chooser UI (Deadly dot / veteran pick), the editor item-roster filter, the trauma-checklist
-  UI, and a crew-grant e2e spec.
+  matching the server's `advanceCharacter`. The editor's gear picker now **emphasises the playbook's
+  suggested items** (sorted first + "Suggested" badge) while keeping every common item reachable per
+  SRD, and the trauma-checklist UI is wired (see F14). The editor's Advancement tab now shows a
+  **crew-benefits panel** (Mastery → raise an action to 4; Veteran → take a cross-playbook ability),
+  so the crew's effect on caps is discoverable rather than silent. `gm-crew-grant.spec.ts` exercises
+  the end-to-end path (crew takes Mastery → a member's editor surfaces the raised action cap).
+  **Remaining follow-up:** the **Deadly +1 dot at character creation** belongs in a crew-aware
+  *creation wizard* (the SRD applies Deadly when the character is made, not as a post-hoc editor
+  grant) — a separate change.
 
 ---
 
@@ -247,9 +253,11 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** Blades trauma is a fixed set (Cold, Haunted, Obsessed, Paranoid, Reckless, Soft,
   Unstable, Vicious) chosen, not typed; free text loses meaning + uniqueness.
 - **fix:** Enum the conditions; pick from a checklist (unique, up to `traumaMax`).
-- **status:** resolved (BitD-accuracy branch, validation) — rulesets carry `traumaConditions` (BitD's
-  8; Brackwater's reskinned 8) and `validateCharacter` enforces trauma ∈ the set + distinct
-  (`TRAUMA_UNKNOWN`/`TRAUMA_DUPLICATE`); lenient when a ruleset omits it. (Checklist UI still to wire.)
+- **status:** resolved — rulesets carry `traumaConditions` (BitD's 8; Brackwater's reskinned 8) and
+  `validateCharacter` enforces trauma ∈ the set + distinct (`TRAUMA_UNKNOWN`/`TRAUMA_DUPLICATE`);
+  lenient when a ruleset omits it. The editor's Stress & Trauma section now picks from a **checklist**
+  of those named conditions (toggle chips, unique, capped at `traumaMax`); rulesets without a named
+  set keep the free-text entry.
 
 ### F15 — Downtime actions entirely absent
 
