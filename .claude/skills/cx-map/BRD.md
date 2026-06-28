@@ -74,9 +74,9 @@ independently usable — a group can adopt just one).
   **"Start score" / "End score"** controls; a score is a first-class record (status, started/ended,
   optional name/notes), game-scoped. Groups that don't want scores can ignore them — loadout then
   behaves as a single resettable "current loadout" (P1).
-- **R-D2** **Per-character, per-score loadout** — pick a **load level** (light 3 / normal 5 / heavy 6, ability-modified), **equip items up to the limit as you go**. Loadout lives with the *score*, not the build.
-- **R-D3** **Reset between scores** — a new score clears each character's loadout.
-- **R-D4** **Loadout changes are logged** (attributed to character + score).
+- **R-D2** **Per-character, per-score loadout** — pick a **load level** (light 3 / normal 5 / heavy 6, ability-modified), **equip items up to the limit as you go**. Loadout stays **on the character** as the **resettable "current" loadout** (not a build property, not a per-score table); it's understood to be "for the active score."
+- **R-D3** **Reset between scores** — starting a new score clears each character's current loadout; the reset is recorded as a **log note** ("loadout cleared").
+- **R-D4** **Loadout changes are logged** — when a character (in a campaign) changes loadout, write a `loadout` entry to the campaign/roll log.
 - **R-D5** **Reviewable history** of past scores and their events/loadouts.
 
 ### E. Campaign log (the spine of "track results between sessions")
@@ -165,11 +165,16 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 - **Phase 4 — Discord integration** (R-H2). Implement `apps/discord-bot` (or a webhook/RPC) that
   links a channel ↔ campaign and writes settled results into the campaign log. Inbound-first.
 
-### Open decisions (resolve before the relevant phase)
-1. **Campaign log shape:** widen `rolls` → `events`, or add a separate `events` table.
-2. **Score granularity:** is "score" the unit, or also "sessions" (a session may hold several scores)?
-3. **Discord v1:** inbound-only, or also outbound state posts.
-4. **Loadout storage:** JSONB on a score↔character join row vs a dedicated `score_loadouts` table.
+### Decisions (resolved 2026-06-27)
+1. **Campaign log shape:** **widen the existing `rolls` log incrementally** — add `loadout`/`score`
+   kinds now (the log already has kind/label/note); a full `rolls`→`events` rename is deferred to
+   Phase 2 only if needed.
+2. **Score granularity:** ✅ **score-only.** Sessions are real-life and NOT modelled (a score may span
+   sessions, or several scores fit one session — "between sessions" = tracking IRL).
+3. **Discord v1:** **inbound-only** (log results rolled on Discord); outbound deferred. _(Phase 4.)_
+4. **Loadout storage:** ✅ **current loadout on the character** (Option A) — resettable; changes →
+   campaign log; score reset → a "cleared" log note. **No per-score loadout table.** The only new
+   table is `scores` itself.
 
 ### FINDINGS re-scoped by this BRD
 - **F13** (loadout at creation) → **inverted**: loadout leaves the build entirely and becomes
