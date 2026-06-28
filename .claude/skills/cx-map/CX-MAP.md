@@ -52,7 +52,9 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
   · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
   `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change. Copy in
-  `pages.dashboard.*`.
+  `pages.dashboard.*`. _Forward note: these characters are still **game-scoped**; standalone
+  `/characters`, `/characters/new`, `/characters/[id]` routes are **planned (BRD Phase 5 — portable
+  characters), not built**._
 - **Actions:** (logged out) Sign in / Sign up with Discord; (signed in) jump to any campaign, character
   sheet, or a quick action.
 - **Nav:** → `/auth/callback` (after OAuth) → back to `/` (now the dashboard); → `/games`,
@@ -166,6 +168,9 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
   stress-release half of the FitD pressure loop (MVP downtime).
+- _Forward note: this sheet is only reachable inside a campaign. A **standalone sheet**
+  (`/characters/[id]`, with the score/shared-log sections hidden) is **planned (BRD Phase 5 — portable
+  characters), not built**._
 
 ### `/rulesets` — Ruleset list + built-in catalog
 
