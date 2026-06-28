@@ -205,7 +205,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **root cause:** Two of the most common dice boosters are unavailable.
 - **fix:** Toggles "Push yourself (+1d, 2 stress)" / "Devil's Bargain (+1d)"; add dice, deduct/record
   stress on save.
-- **status:** open
+- **status:** fixed — the action-roll panel has **Push** (+1d, applies 2 stress win-or-lose) and
+  **Devil's bargain** (+1d, with an optional complication field) toggles; both grow the dice pool (a
+  0-pool still rolls 2 take-lowest), and the move + complication persist to the roll's `note` (shown in
+  the feed). No schema change — `note` already existed. https://bladesinthedark.com/index.php/the-roll
 
 ### F10 — Teamwork absent (assist / lead group action / set up / protect)
 

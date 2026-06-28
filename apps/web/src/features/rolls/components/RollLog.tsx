@@ -98,6 +98,12 @@ export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: n
                   {posEffect ? ` · ${posEffect}` : ''}
                   {resisted ? ` · ${resisted}` : ''}
                 </Text>
+                {/* Free-text note — e.g. a pushed roll or the devil's bargain accepted. */}
+                {r.note ? (
+                  <Text variant='muted' size='sm' className='block italic'>
+                    {r.note}
+                  </Text>
+                ) : null}
               </div>
               <Stack direction='row' gap='sm' align='center'>
                 <Tooltip content={created.toLocaleString()}>
