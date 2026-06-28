@@ -7,9 +7,9 @@ test.describe('home page (anonymous)', () => {
   test('renders the hero without an error screen', async ({ page }) => {
     await page.goto('/');
 
-    // The visible hero heading proves the public surface rendered (the "Forged in the Dark" copy
-    // only exists in the <title> + non-visible markup, so don't assert it as visible text).
-    await expect(page.getByRole('heading', { name: /welcome to/i })).toBeVisible();
+    // The visible hero heading proves the public surface rendered. Copy is the reframed two-mode
+    // landing ("The mechanical home for your Forged-in-the-Dark crew").
+    await expect(page.getByRole('heading', { name: /mechanical home/i })).toBeVisible();
     // Next.js error overlay / generic crash guard.
     await expect(page.getByText(/application error|something went wrong/i)).toHaveCount(0);
   });

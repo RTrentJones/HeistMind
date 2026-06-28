@@ -22,11 +22,14 @@ pre-launch app — a stale doc is worse than none, because it lies). This skill 
 - **`CX-MAP.md`** (sibling) — the map: every route, the character-creation wizard, the campaign
   panels, the GM/player roles, and the end-to-end journeys. Each section carries a
   `_Last verified:_ <date> @ <short-sha>` marker.
+- **`COMPETITIVE.md`** (sibling) — the value proposition (one product, two modes), the competitive
+  frame (vs **D&D Beyond** and **Avrae**), and the ranked **P0 gaps**. Read it with `BRD.md` when
+  planning positioning or new differentiating work.
 - **`FINDINGS.md`** (sibling) — the flaw / FitD-gap log: severity-scored, each with a concrete
   location and a proposed fix, tracked from `open` to `fixed @<sha>`. The de-facto backlog.
 
 These are plain Markdown — open them directly. `STATUS.md` + `CX-MAP.md` are the stable reference;
-`FINDINGS.md` is the churn.
+`FINDINGS.md` is the churn; `BRD.md` + `COMPETITIVE.md` are the scope + positioning.
 
 ## Live-update mandate (the core rule)
 
