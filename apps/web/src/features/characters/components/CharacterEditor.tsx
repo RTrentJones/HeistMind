@@ -104,7 +104,16 @@ export function CharacterEditor({
 
   const loadout = draft.loadout ?? { level: 'normal' as LoadLevel, items: [] };
   const gearItems = content.equipment?.items ?? [];
-  const playbookContacts = content.playbooks.find(p => p.id === draft.playbook)?.contacts ?? [];
+  const playbook = content.playbooks.find(p => p.id === draft.playbook);
+  const playbookContacts = playbook?.contacts ?? [];
+  // The playbook's SUGGESTED kit (BitD lists a few items per playbook). These items aren't exclusive —
+  // every common item stays available to every character (SRD) — so we keep the whole list reachable
+  // and only EMPHASISE the suggested set: sort it to the top and badge it. Nothing is hidden.
+  const suggestedIds = new Set(playbook?.equipment ?? []);
+  const sortedGear = [
+    ...gearItems.filter(i => suggestedIds.has(i.id)),
+    ...gearItems.filter(i => !suggestedIds.has(i.id)),
+  ];
   const toggleItem = (id: string) =>
     patch({
       loadout: {
@@ -470,7 +479,7 @@ export function CharacterEditor({
               </Text>
             ) : (
               <Stack direction='column' gap='xs'>
-                {gearItems.map(item => (
+                {sortedGear.map(item => (
                   <label key={item.id} className='flex cursor-pointer items-center gap-2.5'>
                     <input
                       type='checkbox'
@@ -483,6 +492,11 @@ export function CharacterEditor({
                         {t('components.characterEditor.itemLoad', { load: item.load })}
                       </span>
                     </Text>
+                    {suggestedIds.has(item.id) && (
+                      <Badge variant='steel' size='sm'>
+                        {t('components.characterEditor.suggestedItem')}
+                      </Badge>
+                    )}
                   </label>
                 ))}
               </Stack>

@@ -130,9 +130,10 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   also fixed a wizard hang where a disabled ability card read as "not stable" to Playwright. **Level-ups
   honour crew too:** the editor loads the campaign crew so an action-dot advance caps at the crew's
   effective max (Mastery → buy the 4th dot) and the load gauge / live re-validation fold in Mule/Deadly,
-  matching the server's `advanceCharacter`. **Remaining follow-ups:** the grant-on-join "crew benefit
-  available" chooser UI (Deadly dot / veteran pick), the editor item-roster filter, the trauma-checklist
-  UI, and a crew-grant e2e spec.
+  matching the server's `advanceCharacter`. The editor's gear picker now **emphasises the playbook's
+  suggested items** (sorted first + "Suggested" badge) while keeping every common item reachable per
+  SRD, and the trauma-checklist UI is wired (see F14). **Remaining follow-ups:** the grant-on-join
+  "crew benefit available" chooser UI (Deadly dot / veteran pick) and a crew-grant e2e spec.
 
 ---
 

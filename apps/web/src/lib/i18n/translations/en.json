@@ -319,6 +319,7 @@
       "overCapacity": "Over capacity — drop an item or raise your load level.",
       "noEquipment": "This ruleset defines no equipment.",
       "itemLoad": " · load {{load}}",
+      "suggestedItem": "Suggested",
       "coin": "Coin",
       "coinLabel": "Coin (carried)",
       "stash": "Stash",
