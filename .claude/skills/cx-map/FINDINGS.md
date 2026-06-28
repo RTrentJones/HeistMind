@@ -134,10 +134,11 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   suggested items** (sorted first + "Suggested" badge) while keeping every common item reachable per
   SRD, and the trauma-checklist UI is wired (see F14). The editor's Advancement tab now shows a
   **crew-benefits panel** (Mastery → raise an action to 4; Veteran → take a cross-playbook ability),
-  so the crew's effect on caps is discoverable rather than silent. **Remaining follow-ups:** the
-  **Deadly +1 dot at character creation** belongs in a crew-aware *creation wizard* (the SRD applies
-  Deadly when the character is made, not as a post-hoc editor grant) — a separate change; and a
-  crew-grant e2e spec exercising the Mastery cap.
+  so the crew's effect on caps is discoverable rather than silent. `gm-crew-grant.spec.ts` exercises
+  the end-to-end path (crew takes Mastery → a member's editor surfaces the raised action cap).
+  **Remaining follow-up:** the **Deadly +1 dot at character creation** belongs in a crew-aware
+  *creation wizard* (the SRD applies Deadly when the character is made, not as a post-hoc editor
+  grant) — a separate change.
 
 ---
 
