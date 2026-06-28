@@ -104,7 +104,8 @@ next BRD phases.
 2. **Portable characters ("My Characters").** D&D Beyond characters exist independent of a campaign and
    travel to any table; ours are **created inside a game and can't exist standalone or move**. For the
    Mode 1 "your sheet anywhere" promise this is the biggest structural gap. *Meaningful schema change —
-   characters are `game_id`-scoped.* → **`FINDINGS.md` F56**; a BRD Phase 5+ candidate.
+   characters are `game_id`-scoped.* → **`FINDINGS.md` F56**; now **spec'd as `BRD.md` Phase 5**
+   (single active campaign / link-move — `game_id` becomes a nullable pointer), not yet built.
 3. **Mobile-optimized at-table sheet.** The core use is tracking *during* play, often one-handed on a
    phone; the dense sheet isn't phone-first. *Design/responsive effort.* → **`FINDINGS.md` F57**.
 4. **Frictionless first-run.** Bundled starters help, but "load a ruleset → create inside a game" has

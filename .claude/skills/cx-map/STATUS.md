@@ -92,7 +92,9 @@ bundled **Brackwater** starter opts into full FitD mode.
   `production`). See the `heistmind-migration-pattern` memory for the recipe.
 - **Character mechanics ride JSONB.** `CharacterData` is JSONB, so action ratings / harm / loadout /
   xp are type-only additions (no migration); only campaign objects (rolls/clocks/crews/factions) get
-  tables.
+  tables. _(The `characters` row itself is a real table — `created_by`, `game_id`, `original_ruleset_id`
+  etc. — so structural changes like **Phase 5 portable characters** (making `game_id` nullable) are
+  migrations, not JSONB-only edits.)_
 - **Rulesets are snapshots.** Loading a ruleset copies its content into the DB row; it does not track
   the bundle afterward. Reloading the starter refreshes it. See `ruleset-content-is-a-snapshot`.
 - **i18n is being restored (PR #59).** The i18next scaffold (`apps/web/src/lib/i18n/`:
@@ -116,8 +118,9 @@ re-scope Phases 1–3 shipped to prod** (2026-06): **per-score play** (`scores` 
 start/end + per-score `LoadoutCard`), the **campaign log** (the `rolls` table widened with
 action/resistance/fortune/downtime/loadout/score/note kinds, score-grouped feed + `AddResultForm` for
 off-app results), and **roster/retire** (`CharacterRoster`: player→character attribution, status,
-Retire). **Phase 4 (Discord bot)** is specified in `BRD.md` but not built. What's next is driven by the
-audit, not a sprint board:
+Retire). **Phase 4 (Discord bot)** and **Phase 5 (portable characters — F56, the biggest Mode-1 gap)**
+are specified in `BRD.md` but not built; Phase 5's model is **single active campaign (link/move)** —
+`characters.game_id` becomes a nullable pointer. What's next is driven by the audit, not a sprint board:
 
 - **`FINDINGS.md` is the backlog** — severity-scored CX flaws + FitD gaps from Audit 1. Its
   closing "themes worth a dedicated pass" section is the de-facto roadmap. Highest-leverage clusters:

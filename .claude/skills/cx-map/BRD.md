@@ -4,7 +4,7 @@ The scope-of-record for HeistMind. Sibling of `STATUS.md` (what's built), `CX-MA
 page/flow), and `FINDINGS.md` (the prioritized backlog). When scope changes, edit here first, then
 reconcile the others.
 
-_Last reviewed: 2026-06-28 (value-prop sharpened to two modes)._
+_Last reviewed: 2026-06-28 (value-prop sharpened to two modes; Phase 5 portable-characters spec added)._
 
 ## Product statement
 
@@ -97,6 +97,10 @@ independently usable — a group can adopt just one).
 - **R-F1** **Player attribution** — every character is attributed to a player; a player may have several; the GM sees a **roster** of player → character(s).
 - **R-F2** **Retire character** — move out of active play (stash → retirement), keep the record. Distinct from delete.
 - **R-F3** Character status (active / retired / dead) visible in the roster.
+- **R-F4** **Standalone characters (portable)** — a player can build + own a character **without a campaign**; it lives at the user level (`created_by`) and is bound to a **ruleset** the user can read. _(Phase 5.)_
+- **R-F5** **My Characters** — a user sees + manages all their characters (standalone + in-campaign) and opens a **standalone sheet**, not just the dashboard list. _(Phase 5.)_
+- **R-F6** **Attach to a campaign (link)** — a player brings a standalone character into one of their campaigns whose ruleset **matches**; the character is then linked (**single active campaign**), and its loadout + log follow that campaign (Phase-1 behaviour). _(Phase 5.)_
+- **R-F7** **À la carte standalone** — a standalone character degrades gracefully: campaign-scoped sections (active score, shared roll log) hide when it isn't in a campaign (P1 — "a lone player can track a single character with nothing else set up"). _(Phase 5.)_
 
 ### G. Campaign-state tracking (kept — tracking, not play)
 - **R-G1** **Progress clocks** (threats / projects / faction clocks, 4/6/8/10/12).
@@ -160,8 +164,9 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 
 ## Roadmap (phased; each ships via deploy → verify → promote)
 
-> **Status (2026-06-28):** Phases 1–3 are **shipped to prod**. Phase 4 (Discord) is **specified, not
-> built** — see the detailed appendix at the end of this doc.
+> **Status (2026-06-28):** Phases 1–3 are **shipped to prod**. Phase 4 (Discord) and **Phase 5
+> (portable characters)** are **specified, not built** — see the detailed appendices at the end of
+> this doc.
 
 - **Phase 1 — Score model + per-score loadout** (R-D1..D4, B4) — ✅ **shipped.** `scores` table + per-score loadout
   storage; "Start/End score" on the campaign page; the sheet's gear becomes the **active score's
@@ -176,6 +181,10 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 - **Phase 4 — Discord integration** (R-H2) — **specified, not built.** See the detailed appendix below
   (interactions-endpoint design, channel↔campaign mapping, attribution via `profiles.discord_id`,
   the migration + credentials the work needs). Inbound-first.
+- **Phase 5 — Portable characters** (R-F4..F7) — **specified, not built.** See the detailed appendix
+  below. Closes **F56** (the biggest Mode-1 gap): characters become user-owned and standalone, then
+  **attach (link) to a campaign** — *single active campaign*, `game_id` a nullable pointer. The
+  characters table already carries the hooks (`original_ruleset_id`, the latent `transferToGame`).
 
 ### Decisions (resolved 2026-06-27)
 1. **Campaign log shape:** **widen the existing `rolls` log incrementally** — add `loadout`/`score`
@@ -187,6 +196,15 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 4. **Loadout storage:** ✅ **current loadout on the character** (Option A) — resettable; changes →
    campaign log; score reset → a "cleared" log note. **No per-score loadout table.** The only new
    table is `scores` itself.
+
+### Decisions (resolved 2026-06-28)
+5. **Character ↔ campaign (Phase 5):** ✅ **single active campaign (link/move).** One user-owned
+   character row; `game_id` becomes a **nullable pointer** (`NULL` = standalone, `<id>` = currently
+   linked). Chosen over **copy-on-attach** (two diverging sheets — which is "real"?) and
+   **many-to-many** (un-FitD — a scoundrel belongs to one crew — and the largest rework: per-campaign
+   loadout/log/RLS/roster). Matches the Phase-1 loadout decision (#4) and the latent `transferToGame`
+   design. **Attach requires a ruleset match**; cross-ruleset adaptation (the `adaptations` column) is
+   deferred to Phase 5b.
 
 ### FINDINGS re-scoped by this BRD
 - **F13** (loadout at creation) → **inverted**: loadout leaves the build entirely and becomes
@@ -269,3 +287,109 @@ message-content intent + a gateway bot), voice, and a multi-guild management UI.
 1. **Slash-command-only** (recommended, no privileged intents) vs also parsing channel messages.
 2. **Roll server-side** (`/heist roll`) in v1, or **log-only** (`/heist log`) and defer rolling.
 3. **One channel ↔ one campaign**, or allow several channels per campaign.
+
+---
+
+## Appendix — Phase 5: Portable characters (detailed BRD)
+
+**Status:** specified, **not built**. This is the spec for closing **F56** — making characters
+user-owned and campaign-independent. Nothing here is implemented yet.
+
+### Goal & scope
+Deliver **Mode 1 ("your sheet anywhere")**: a player builds + owns a character **without a campaign**,
+opens it as a standalone sheet, and **brings it to a table** (attaches it to one of their campaigns).
+**v1 model = single active campaign (link/move)** (Decision #5): the character row is the source of
+truth, owned by `created_by`, bound to a ruleset; `game_id` is a **nullable pointer** — `NULL` =
+standalone ("My Characters"), `<id>` = currently linked into that campaign. One crew at a time
+(FitD-canonical); loadout + campaign log follow the active campaign. **Opt-in / à la carte** (P1) — a
+group that only plays in-campaign is unaffected; existing characters keep working unchanged.
+
+### Why this is mostly column + RLS, not a rebuild
+The `characters` table (`supabase/migrations/00002_core_schema.sql:240`) already has its own row
+(only `character_data` is JSONB) and **already carries the portability hooks**: `original_ruleset_id
+UUID REFERENCES rulesets(id)` (nullable, unused), `adaptations JSONB` (unused), `is_template`
+(unused). The repository **already declares** `transferToGame` + `cloneCharacter`
+(`packages/database/src/repositories.ts`, currently throwing). `characters.findByPlayer(userId)`
+already returns all of a user's characters. Rulesets are first-class + user-owned (own/public readable
+without a game). **The blockers** are: `game_id NOT NULL ON DELETE CASCADE`; ruleset resolution via
+`character → game → game.ruleset_id` (`supabase-character-repository.ts:111`,
+`supabase-character-management-repository.ts:66`); INSERT RLS requiring active game membership;
+`CreateCharacterData.gameId` required; the wizard requiring a `gameId` prop; and the only sheet route
+being `/games/[gameId]/characters/[characterId]`.
+
+### Requirements
+Implements **R-F4..R-F7** (group F — character lifecycle & ownership).
+
+### Data model (migration when built)
+A single per-env `DO`-block migration (the established pattern); **needs a `pnpm db:types` regen** —
+the adapter won't type-check until the generated types include the changes (the user runs the regen).
+- **`ALTER TABLE characters ALTER COLUMN game_id DROP NOT NULL`**, and change the FK to **`ON DELETE
+  SET NULL`** (deleting a campaign **returns its characters to standalone** instead of cascading them
+  away — important: characters outlive campaigns).
+- **Bind the ruleset on the character** using the existing `original_ruleset_id`: **backfill** it from
+  each row's `game.ruleset_id`, and set it on every create going forward. (`adaptations` stays
+  reserved for cross-ruleset moves — Phase 5b.)
+- **Unique names:** keep the per-game `UNIQUE(game_id, created_by, name)`; add a **partial unique
+  index** `(created_by, name) WHERE game_id IS NULL` so standalone names are unique per owner.
+- **RLS** (the trickiest part — keep ownership and membership intact):
+  - **SELECT** already covers the owner (`created_by = auth.uid()` OR active member), so standalone
+    rows are readable by their owner with no change.
+  - **INSERT** must allow standalone: `created_by = auth.uid() AND (game_id IS NULL OR
+    is_active_game_member(auth.uid(), game_id))`.
+  - **Attach / detach** (set/clear `game_id`) go through a **`SECURITY DEFINER` RPC**
+    (`attach_character_to_game(character_id, game_id)` / `detach_character(character_id)`), modelled on
+    `redeem_invite_code` (`00010`). The RPC enforces server-side: caller **owns** the character, is an
+    **active member** of the target game, and the game's ruleset **matches** the character's
+    `original_ruleset_id`. This avoids overloading UPDATE `WITH CHECK` (which must still let a GM edit
+    an in-game character for retire, yet **not** re-home a player's character to another table).
+
+### Repository / service (when built)
+- Resolve a character's ruleset via its **`original_ruleset_id`** (fallback to `game.ruleset_id` only
+  for legacy rows before backfill); make **`CharacterWithDetails.game` nullable**.
+- Make **`CreateCharacterData.gameId` optional** + add **`rulesetId`**; `createCharacterWithValidation`
+  resolves the ruleset from `rulesetId` (standalone) or `gameId` (in-campaign). Reuse the existing
+  `validateCharacter` — its `crew` context is already optional, so it's simply skipped when standalone.
+- Implement the latent **`transferToGame`** (move) + **`cloneCharacter`** (copy) — used by Phase 5b.
+
+### Routes / surface (when built)
+- **`/characters`** — My Characters list (standalone + in-campaign); the dashboard "Your characters"
+  section links here.
+- **`/characters/new`** — a **ruleset picker** over the user's rulesets + the bundled starters, then
+  the **existing creation wizard** with `gameId` undefined (the wizard already takes a `ruleset`; pass
+  the picked one). The latent ruleset-add path (`/rulesets`) feeds this.
+- **`/characters/[characterId]`** — standalone sheet. Reuse `CharacterSheet`; **hide** the
+  campaign-scoped sections (active score, shared roll log) when `game_id IS NULL`.
+- **Attach:** "Bring to a campaign" on the standalone sheet (pick a same-ruleset campaign → the RPC);
+  "Add one of your characters" on the campaign hub (`CharacterRoster`). The existing
+  `/games/[gameId]/characters/[characterId]` keeps working for the in-campaign view.
+
+### Security
+- Reads stay owner-or-member (unchanged). Standalone insert is owner-only. Attach/detach is **gated by
+  the `SECURITY DEFINER` RPC** (ownership + membership + ruleset match), never by trusting a
+  client-set `game_id`.
+
+### Backward compatibility
+Existing rows keep their `game_id`; the backfilled `original_ruleset_id` makes them behave exactly as
+today. No user-visible change until the standalone routes ship. `ON DELETE SET NULL` changes campaign
+deletion from "destroy characters" to "return them to standalone" — a strict improvement.
+
+### Verification (when built)
+- Create a character with **no campaign** → it appears in My Characters and opens a standalone sheet
+  with score/shared-log sections hidden.
+- **Attach** it to a same-ruleset campaign → it shows in that roster and the in-campaign sheet; loadout
+  + log now follow that campaign.
+- A **non-member** or **wrong-ruleset** attach is **rejected** by the RPC.
+- An existing in-campaign character is **unaffected**; deleting its campaign returns it to standalone
+  (SET NULL), not deletion.
+
+### Out of scope (v1 → Phase 5b)
+**Move/detach** between campaigns, **clone-for-another-table** (`cloneCharacter`), **cross-ruleset
+adaptation** (the `adaptations` column), and a character **in multiple campaigns at once** (the
+rejected many-to-many model).
+
+### Open decisions
+1. **Standalone name collisions on attach** — auto-suffix vs block (the per-game unique constraint
+   still applies once linked).
+2. **Detach authority** — owner-only, or may a GM detach a player's character from their campaign?
+3. **Standalone-create ruleset access** — do bundled starters auto-grant a readable ruleset for
+   standalone create, or must the user "add" one to `/rulesets` first?
