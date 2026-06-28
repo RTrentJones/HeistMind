@@ -68,6 +68,9 @@ test.describe('GM: action ratings (Brackwater)', () => {
 
     await expect(gmPage).toHaveURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
     await expect(gmPage).not.toHaveURL(/characters\/new/);
-    await expect(gmPage.getByText('Vell Quitch')).toBeVisible({ timeout: 15_000 });
+    // The character card heading (the "add result" form also lists the name as a select option).
+    await expect(gmPage.getByRole('heading', { name: 'Vell Quitch' })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

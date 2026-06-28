@@ -21,9 +21,22 @@ export class SupabaseRollRepository implements RollRepository {
   async create(userId: string, data: CreateRollData): Promise<Result<Roll>> {
     try {
       const outcome = rollOutcome(data.results, { zeroDice: data.zeroDice });
+      // Tag the event with the campaign's active score so the feed can group by operation. A caller
+      // may override (an explicit id, e.g. a score's own start/end event, or null to skip); only when
+      // unspecified do we resolve the active score here.
+      let scoreId = data.scoreId ?? null;
+      if (data.scoreId === undefined) {
+        const { data: active } = await this.db
+          .from('scores')
+          .select('id')
+          .eq('game_id', data.gameId)
+          .eq('status', 'active')
+          .maybeSingle();
+        scoreId = active?.id ?? null;
+      }
       const { data: row, error } = await this.db
         .from('rolls')
-        .insert(toSupabaseRollInsert(data, userId, outcome))
+        .insert(toSupabaseRollInsert(data, userId, outcome, scoreId))
         .select()
         .single();
       if (error) return failFromError(error);

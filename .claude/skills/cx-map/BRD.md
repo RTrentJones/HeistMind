@@ -124,9 +124,9 @@ independently usable — a group can adopt just one).
 | R-D2 | Per-score loadout | ✅ | `LoadoutCard` on the sheet, load-engine gated (Phase 1b) |
 | R-D3 | Reset between scores | ✅ | staleness vs active score → "Reset for this score" |
 | R-D4 | Loadout changes logged | ✅ | `loadout` events in the campaign/roll log |
-| R-D5 | Score history | 🟡 | recent scores list on `ScorePanel`; events not yet grouped by score (R-E) |
-| **R-E1/E2** | **Unified campaign log** | 🟡 | `rolls` is a roll-log only |
-| R-E3 | Record results from elsewhere | 🟡 | no after-the-fact entry path |
+| R-D5 | Score history | ✅ | feed grouped by score; recent scores on `ScorePanel` |
+| R-E1/E2 | Unified campaign log | ✅ | `rolls` is the event log (`score_id`, kinds); feed grouped by score (Phase 2) |
+| R-E3 | Record results from elsewhere | ✅ | `AddResultForm` → a `note` event (Phase 2) |
 | **R-F1** | **Player roster/attribution** | 🟡 | `userId` exists; no roster view |
 | **R-F2** | **Retire character** | ❌ | enum has `retired`; no action |
 | R-F3 | Status visibility | 🟡 | not surfaced |
@@ -139,7 +139,7 @@ independently usable — a group can adopt just one).
 ### Headline gaps
 1. ~~No "score" concept~~ → **done (Phase 1a):** `scores` table + `ScorePanel`.
 2. ~~Loadout is in the wrong place~~ → **done (Phase 1b):** per-score `LoadoutCard` on the sheet.
-3. **The log is only a roll log** (R-E) — broaden to a unified campaign event log that accepts results settled elsewhere. _(Phase 2; `loadout`/`score` events already flow into it.)_
+3. ~~The log is only a roll log~~ → **done (Phase 2):** the roll log is the campaign event log — events carry `score_id`, the feed groups by score, and an "add result" entry records outcomes settled IRL/Discord.
 4. **No character lifecycle** — retire (R-F2) + player roster/attribution (R-F1). _(Phase 3.)_
 5. **No Discord integration** (R-H2) — the bot app is a stub. _(Phase 4.)_
 

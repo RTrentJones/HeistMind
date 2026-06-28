@@ -414,7 +414,18 @@
       "resisted": "resisted — {{count}} stress",
       "downtime": "Downtime",
       "loadout": "Loadout",
-      "score": "Score"
+      "score": "Score",
+      "note": "Note",
+      "unnamedScore": "Untitled score",
+      "noScore": "Between scores"
+    },
+    "addResult": {
+      "label": "Result",
+      "character": "Character",
+      "noCharacter": "— (no character)",
+      "resultLabel": "What happened",
+      "placeholder": "e.g. Tense Skirmish — partial; took 2 stress",
+      "add": "Add to log"
     },
     "scorePanel": {
       "loadFailed": "Could not load scores.",
@@ -776,6 +787,7 @@
       "scoreHeading": "Score",
       "rollLogHeading": "Roll Log",
       "fortuneRoll": "Fortune / GM roll",
+      "recordResult": "Record a result settled in person or on Discord:",
       "backToCampaign": "← Back to campaign"
     }
   },

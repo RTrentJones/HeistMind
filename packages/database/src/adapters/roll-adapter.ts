@@ -21,6 +21,7 @@ export function fromSupabaseRoll(row: RollRow): Roll {
     position: row.position ?? null,
     effect: row.effect ?? null,
     note: row.note ?? null,
+    scoreId: row.score_id ?? null,
     createdAt: parseSupabaseDate(row.created_at),
   };
 }
@@ -28,7 +29,8 @@ export function fromSupabaseRoll(row: RollRow): Roll {
 export function toSupabaseRollInsert(
   data: CreateRollData,
   userId: string,
-  outcome: RollOutcome
+  outcome: RollOutcome,
+  scoreId: string | null
 ): RollInsert {
   return {
     game_id: data.gameId,
@@ -42,5 +44,6 @@ export function toSupabaseRollInsert(
     position: data.position ?? null,
     effect: data.effect ?? null,
     note: data.note ?? null,
+    score_id: scoreId,
   };
 }

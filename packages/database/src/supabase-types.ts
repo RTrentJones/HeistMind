@@ -424,6 +424,7 @@ export type Database = {
           outcome: string
           position: string | null
           results: number[]
+          score_id: string | null
           user_id: string
         }
         Insert: {
@@ -439,6 +440,7 @@ export type Database = {
           outcome?: string
           position?: string | null
           results?: number[]
+          score_id?: string | null
           user_id: string
         }
         Update: {
@@ -454,6 +456,7 @@ export type Database = {
           outcome?: string
           position?: string | null
           results?: number[]
+          score_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -469,6 +472,13 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rolls_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
             referencedColumns: ["id"]
           },
         ]
@@ -1141,6 +1151,53 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      scores: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          ended_at: string | null
+          game_id: string
+          id: string
+          name: string | null
+          notes: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          game_id: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          game_id?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scores_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

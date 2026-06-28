@@ -18,6 +18,7 @@ const EVENT_KIND_KEY = {
   downtime: 'components.rollLog.downtime',
   loadout: 'components.rollLog.loadout',
   score: 'components.rollLog.score',
+  note: 'components.rollLog.note',
 } as const;
 
 type TFn = ReturnType<typeof useTranslation>['t'];
@@ -38,6 +39,7 @@ export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: n
   const { t } = useTranslation();
   const [rolls, setRolls] = useState<Roll[] | null>(null);
   const [charNames, setCharNames] = useState<Record<string, string>>({});
+  const [scoreNames, setScoreNames] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     getRepositories()
@@ -66,6 +68,21 @@ export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: n
     };
   }, [gameId]);
 
+  // Resolve scoreId → name so the feed can group events under their operation (refresh on changes).
+  useEffect(() => {
+    let active = true;
+    getRepositories()
+      .scores.findByGame(gameId)
+      .then(r => {
+        if (active && r.success) {
+          setScoreNames(Object.fromEntries(r.data.map(s => [s.id, s.name ?? ''])));
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [gameId, refreshKey]);
+
   if (rolls === null) return null;
   if (rolls.length === 0) {
     return (
@@ -77,62 +94,92 @@ export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: n
 
   const now = Date.now();
 
+  const renderRoll = (r: Roll) => {
+    const who = r.characterId
+      ? (charNames[r.characterId] ?? t('components.rollLog.unknownPlayer'))
+      : r.kind === 'fortune'
+        ? t('components.rollLog.fortune')
+        : t('components.rollLog.gm');
+    // Only join position/effect with a slash when both are present (no trailing "position/").
+    const posEffect =
+      r.position && r.effect ? `${r.position}/${r.effect}` : (r.position ?? r.effect ?? '');
+    const resisted =
+      r.kind === 'resistance'
+        ? t('components.rollLog.resisted', { count: resistanceStress(r.results) })
+        : null;
+    const created = new Date(r.createdAt);
+    return (
+      <Card key={r.id} variant='outline'>
+        <Stack direction='row' justify='between' align='center' className='flex-wrap'>
+          <div>
+            <Text as='strong'>{r.label ?? r.kind}</Text>
+            <Text variant='muted' size='sm'>
+              {' '}
+              · {who}
+              {r.results.length > 0 ? ` · [${r.results.join(', ')}]` : ''}
+              {posEffect ? ` · ${posEffect}` : ''}
+              {resisted ? ` · ${resisted}` : ''}
+            </Text>
+            {/* Free-text note — e.g. a pushed roll, a devil's bargain, or a recorded result. */}
+            {r.note ? (
+              <Text variant='muted' size='sm' className='block italic'>
+                {r.note}
+              </Text>
+            ) : null}
+          </div>
+          <Stack direction='row' gap='sm' align='center'>
+            <Tooltip content={created.toLocaleString()}>
+              <time
+                dateTime={created.toISOString()}
+                className='cursor-default text-sm text-foreground-muted'
+              >
+                {relativeTime(created, now, t)}
+              </time>
+            </Tooltip>
+            {r.kind in EVENT_KIND_KEY ? (
+              <Badge variant='steel'>
+                {t(EVENT_KIND_KEY[r.kind as keyof typeof EVENT_KIND_KEY])}
+              </Badge>
+            ) : (
+              <Badge variant={OUTCOME_VARIANT[r.outcome]}>{r.outcome}</Badge>
+            )}
+          </Stack>
+        </Stack>
+      </Card>
+    );
+  };
+
+  // One score is active at a time, so events cluster by operation — group them (newest score first),
+  // each under its name. Skip headers entirely when no scores are in play (flat feed, à la carte).
+  const groups: { scoreId: string | null; rolls: Roll[] }[] = [];
+  const byKey = new Map<string | null, Roll[]>();
+  for (const r of rolls) {
+    const key = r.scoreId ?? null;
+    let arr = byKey.get(key);
+    if (!arr) {
+      arr = [];
+      byKey.set(key, arr);
+      groups.push({ scoreId: key, rolls: arr });
+    }
+    arr.push(r);
+  }
+  // groups is non-empty here (we returned early on no rolls); optional-chain to satisfy the checker.
+  const showHeaders = groups.length > 1 || groups[0]?.scoreId != null;
+
   return (
     <Stack direction='column' gap='sm'>
-      {rolls.map(r => {
-        const who = r.characterId
-          ? (charNames[r.characterId] ?? t('components.rollLog.unknownPlayer'))
-          : r.kind === 'fortune'
-            ? t('components.rollLog.fortune')
-            : t('components.rollLog.gm');
-        // Only join position/effect with a slash when both are present (no trailing "position/").
-        const posEffect =
-          r.position && r.effect ? `${r.position}/${r.effect}` : (r.position ?? r.effect ?? '');
-        const resisted =
-          r.kind === 'resistance'
-            ? t('components.rollLog.resisted', { count: resistanceStress(r.results) })
-            : null;
-        const created = new Date(r.createdAt);
-        return (
-          <Card key={r.id} variant='outline'>
-            <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-              <div>
-                <Text as='strong'>{r.label ?? r.kind}</Text>
-                <Text variant='muted' size='sm'>
-                  {' '}
-                  · {who}
-                  {r.results.length > 0 ? ` · [${r.results.join(', ')}]` : ''}
-                  {posEffect ? ` · ${posEffect}` : ''}
-                  {resisted ? ` · ${resisted}` : ''}
-                </Text>
-                {/* Free-text note — e.g. a pushed roll or the devil's bargain accepted. */}
-                {r.note ? (
-                  <Text variant='muted' size='sm' className='block italic'>
-                    {r.note}
-                  </Text>
-                ) : null}
-              </div>
-              <Stack direction='row' gap='sm' align='center'>
-                <Tooltip content={created.toLocaleString()}>
-                  <time
-                    dateTime={created.toISOString()}
-                    className='cursor-default text-sm text-foreground-muted'
-                  >
-                    {relativeTime(created, now, t)}
-                  </time>
-                </Tooltip>
-                {r.kind in EVENT_KIND_KEY ? (
-                  <Badge variant='steel'>
-                    {t(EVENT_KIND_KEY[r.kind as keyof typeof EVENT_KIND_KEY])}
-                  </Badge>
-                ) : (
-                  <Badge variant={OUTCOME_VARIANT[r.outcome]}>{r.outcome}</Badge>
-                )}
-              </Stack>
+      {showHeaders
+        ? groups.map(g => (
+            <Stack key={g.scoreId ?? 'none'} direction='column' gap='sm'>
+              <Text variant='muted' size='sm' className='font-display'>
+                {g.scoreId
+                  ? scoreNames[g.scoreId] || t('components.rollLog.unnamedScore')
+                  : t('components.rollLog.noScore')}
+              </Text>
+              {g.rolls.map(renderRoll)}
             </Stack>
-          </Card>
-        );
-      })}
+          ))
+        : rolls.map(renderRoll)}
     </Stack>
   );
 }
