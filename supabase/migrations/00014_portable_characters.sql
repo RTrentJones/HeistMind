@@ -16,6 +16,9 @@
 DO $do$
 DECLARE
   target_schema TEXT := COALESCE(current_setting('heistmind.target_schema', true), 'development');
+  -- Mirror 00002's get_constraint_name() = `<schema>_<base>` inline; the function itself isn't
+  -- reliably resolvable from a later migration (00011 inlines for the same reason).
+  insert_policy TEXT := target_schema || '_characters_insert_policy';
   v_fk_name TEXT;
 BEGIN
   EXECUTE format('SET search_path TO %I, public, extensions', target_schema);
@@ -53,11 +56,11 @@ BEGIN
   -- 5. INSERT policy: allow the owner to create a STANDALONE character (game_id NULL); an in-campaign
   --    insert still requires active membership. (SELECT already covers the owner; UPDATE/DELETE keep
   --    owner-or-GM. Re-homing a linked character goes through the attach RPC below, not a raw UPDATE.)
-  EXECUTE format('DROP POLICY IF EXISTS %I ON characters', get_constraint_name('characters_insert_policy'));
+  EXECUTE format('DROP POLICY IF EXISTS %I ON characters', insert_policy);
   EXECUTE format(
     'CREATE POLICY %I ON characters FOR INSERT WITH CHECK ('
     || 'created_by = auth.uid() AND (game_id IS NULL OR is_active_game_member(auth.uid(), game_id)))',
-    get_constraint_name('characters_insert_policy'));
+    insert_policy);
 
   -- 6. Attach a standalone character to one of the caller's campaigns. SECURITY DEFINER so it runs as
   --    the table owner; it does its own checks: caller OWNS the character, is an ACTIVE member of the
