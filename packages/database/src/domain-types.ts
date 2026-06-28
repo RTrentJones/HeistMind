@@ -228,6 +228,34 @@ export interface UpdateFactionData {
   notes?: string;
 }
 
+/** A score / operation — the per-operation unit of play that per-score loadout hangs off (BitD). */
+export type ScoreStatus = 'active' | 'completed';
+
+export interface Score {
+  id: string;
+  gameId: string;
+  name: string | null;
+  status: ScoreStatus;
+  notes: string | null;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateScoreData {
+  gameId: string;
+  name?: string;
+  notes?: string;
+}
+
+export interface UpdateScoreData {
+  name?: string;
+  status?: ScoreStatus;
+  notes?: string;
+}
+
 export interface Invitation {
   id: string;
   gameId: string;
@@ -581,6 +609,12 @@ export interface CharacterLoadout {
   level: LoadLevel;
   /** Item ids (from `RulesetContent.equipment.items`) marked as carried. */
   items: string[];
+  /**
+   * The score this loadout was last set under (BitD: load is per-operation). When the campaign's
+   * active score differs from this, the loadout is stale and the sheet prompts a reset. Absent for
+   * groups not using scores — loadout then behaves as a single resettable "current" loadout.
+   */
+  scoreId?: string;
 }
 
 export interface CharacterHarm {

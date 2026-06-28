@@ -257,7 +257,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
 - **fix:** Move loadout **out of the build** and make it **per-character, per-score** — see `BRD.md`
   R-D2 and roadmap Phase 1 (score model + per-score loadout). The load engine (`loadUsed` /
   `effectiveLoadLimit`) is reused as-is.
-- **status:** open (re-scoped — Phase 1)
+- **status:** fixed — loadout left the build editor for a per-score `LoadoutCard` on the character
+  sheet (load-engine gated, logged, resets against the campaign's active score). Score lifecycle +
+  per-score loadout shipped as BRD Phase 1.
 
 ### F14 — Trauma is free text, not the named conditions
 

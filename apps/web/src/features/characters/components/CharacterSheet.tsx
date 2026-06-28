@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import {
   stressBounds,
   harmBounds,
-  effectiveLoadLimit,
-  loadUsed,
   usesActionRatings,
   rulesetActions,
   deriveAttributes,
@@ -19,6 +17,7 @@ import {
   markXp,
   PLAYBOOK_TRACK,
   type CharacterWithDetails,
+  type Score,
 } from '@heist-mind/database';
 import {
   Alert,
@@ -42,6 +41,7 @@ import { useTranslation } from '@/lib/i18n/hooks';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { CharacterEditor } from './CharacterEditor';
+import { LoadoutCard } from './LoadoutCard';
 
 /** View a character and modify it (rename, award XP, and edit the validated build). */
 export function CharacterSheet({ characterId }: { characterId: string }) {
@@ -56,6 +56,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [saving, setSaving] = useState(false);
   const [rollKey, setRollKey] = useState(0);
   const [viceNote, setViceNote] = useState<string | null>(null);
+  const [activeScore, setActiveScore] = useState<Score | null>(null);
 
   const load = async () => {
     const result = await getRepositories().characters.findWithDetails(characterId);
@@ -68,6 +69,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     } else {
       setCharacter(result.data);
       setName(result.data.name);
+      // The campaign's active score — the loadout (below) is "for" it, and resets when it changes.
+      const sr = await getRepositories().scores.findActive(result.data.gameId);
+      if (sr.success) setActiveScore(sr.data);
     }
     setLoading(false);
   };
@@ -468,33 +472,21 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           );
         })()}
 
+      {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
+          build editor. Resets against the campaign's active score. */}
+      <LoadoutCard character={character} activeScore={activeScore} onChanged={() => void load()} />
+
       {(() => {
-        const content = character.ruleset.content;
         const data = character.characterData;
-        const loadout = data?.loadout;
-        const itemsById = new Map((content.equipment?.items ?? []).map(i => [i.id, i]));
-        const carried = (loadout?.items ?? [])
-          .map(id => itemsById.get(id)?.name ?? id)
-          .filter(Boolean);
         const friend = data?.contacts?.find(c => c.relationship === 'friend')?.name;
         const rival = data?.contacts?.find(c => c.relationship === 'rival')?.name;
-        const hasGear =
-          loadout || (data?.coins ?? 0) > 0 || (data?.stash ?? 0) > 0 || friend || rival;
+        const hasGear = (data?.coins ?? 0) > 0 || (data?.stash ?? 0) > 0 || friend || rival;
         if (!hasGear) return null;
         return (
           <Card variant='outline'>
             <Stack direction='column' gap='md'>
               <Heading level='h3'>{t('components.characterSheet.gearAndCoin')}</Heading>
               <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                {loadout && (
-                  <Badge variant='steel' className='capitalize'>
-                    {t('components.characterSheet.loadBadge', {
-                      level: loadout.level,
-                      used: loadUsed(content, data),
-                      limit: effectiveLoadLimit(content, data, loadout.level),
-                    })}
-                  </Badge>
-                )}
                 <Badge variant='gold'>
                   {t('components.characterSheet.coin', { coins: data?.coins ?? 0 })}
                 </Badge>
@@ -504,18 +496,6 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   </Badge>
                 )}
               </Stack>
-              {carried.length > 0 && (
-                <div>
-                  <Text as='strong'>{t('components.characterSheet.carried')}</Text>
-                  <Stack direction='row' gap='sm' className='flex-wrap'>
-                    {carried.map(n => (
-                      <Badge key={n} variant='steel'>
-                        {n}
-                      </Badge>
-                    ))}
-                  </Stack>
-                </div>
-              )}
               {(friend || rival) && (
                 <div>
                   <Text as='strong'>{t('components.characterSheet.friendsRivals')}</Text>

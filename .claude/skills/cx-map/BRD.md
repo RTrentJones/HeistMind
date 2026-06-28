@@ -116,15 +116,15 @@ independently usable — a group can adopt just one).
 | R-B1 | Character build | ✅ | `CharacterData`; creation wizard; sheet/editor |
 | R-B2 | Stress/trauma/harm | ✅ | live trackers |
 | R-B3 | Coin + stash | 🟡 | `stash` field has no UI (ties to R-F2) |
-| R-B4 | No per-score in build | 🟡 | **loadout is in the persistent build** — wrong (R-D2) |
+| R-B4 | No per-score in build | ✅ | loadout left the build editor (Phase 1b) |
 | R-C1 | Character XP | ✅ | `character-rules.ts` |
 | R-C2 | Crew XP | ✅ | F18 |
 | R-C3 | XP changes logged | 🟡 | `advancementHistory` only, not a unified log |
-| **R-D1** | **Score lifecycle** | ❌ | **no score entity anywhere** |
-| **R-D2** | **Per-score loadout** | ❌ | persistent on `CharacterData.loadout` |
-| **R-D3** | **Reset between scores** | ❌ | no score to reset against |
-| **R-D4** | **Loadout changes logged** | ❌ | — |
-| R-D5 | Score history | ❌ | no scores |
+| R-D1 | Score lifecycle | ✅ | `scores` table + repo + `ScorePanel` (Phase 1a) |
+| R-D2 | Per-score loadout | ✅ | `LoadoutCard` on the sheet, load-engine gated (Phase 1b) |
+| R-D3 | Reset between scores | ✅ | staleness vs active score → "Reset for this score" |
+| R-D4 | Loadout changes logged | ✅ | `loadout` events in the campaign/roll log |
+| R-D5 | Score history | 🟡 | recent scores list on `ScorePanel`; events not yet grouped by score (R-E) |
 | **R-E1/E2** | **Unified campaign log** | 🟡 | `rolls` is a roll-log only |
 | R-E3 | Record results from elsewhere | 🟡 | no after-the-fact entry path |
 | **R-F1** | **Player roster/attribution** | 🟡 | `userId` exists; no roster view |
@@ -137,11 +137,11 @@ independently usable — a group can adopt just one).
 | R-I1/I2/I3 | Platform | ✅ | auth, invites, rulesets |
 
 ### Headline gaps
-1. **No "score" concept** (R-D1) — the foundation; everything per-score hangs off it.
-2. **Loadout is in the wrong place** (R-D2/B4) — must become per-character-per-score.
-3. **The log is only a roll log** (R-E) — broaden to a unified campaign event log that accepts results settled elsewhere.
-4. **No character lifecycle** — retire (R-F2) + player roster/attribution (R-F1).
-5. **No Discord integration** (R-H2) — the bot app is a stub.
+1. ~~No "score" concept~~ → **done (Phase 1a):** `scores` table + `ScorePanel`.
+2. ~~Loadout is in the wrong place~~ → **done (Phase 1b):** per-score `LoadoutCard` on the sheet.
+3. **The log is only a roll log** (R-E) — broaden to a unified campaign event log that accepts results settled elsewhere. _(Phase 2; `loadout`/`score` events already flow into it.)_
+4. **No character lifecycle** — retire (R-F2) + player roster/attribution (R-F1). _(Phase 3.)_
+5. **No Discord integration** (R-H2) — the bot app is a stub. _(Phase 4.)_
 
 ### Already aligned (no work)
 Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and the in-app dice
