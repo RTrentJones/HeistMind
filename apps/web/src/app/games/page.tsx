@@ -15,6 +15,7 @@ import {
   LoadingSpinner,
   Stack,
   Text,
+  Tooltip,
 } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
@@ -116,7 +117,11 @@ export default function GamesPage() {
           <Badge variant={role === 'gm' ? 'ember' : 'steel'}>
             {role === 'gm' ? t('gamesList.gmBadge') : t('gamesList.playerBadge')}
           </Badge>
-          <Badge variant='outline'>{game.state}</Badge>
+          <Tooltip variant='dark' size='lg' content={t('gamesList.stateLegend')}>
+            <span tabIndex={0} className='cursor-help'>
+              <Badge variant='outline'>{game.state}</Badge>
+            </span>
+          </Tooltip>
           <Button asChild variant='outline' size='sm'>
             <Link href={`/games/${game.id}`}>{t('gamesList.open')}</Link>
           </Button>

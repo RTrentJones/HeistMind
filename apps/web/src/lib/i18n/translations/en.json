@@ -704,6 +704,7 @@
       "open": "Open",
       "gmBadge": "GM",
       "playerBadge": "Player",
+      "stateLegend": "Campaign lifecycle: draft (setting up) → recruiting (open for players) → active (in play) → paused (on hold) → completed (wrapped).",
       "joinTitle": "Join a campaign",
       "codeLabel": "Invite code",
       "joinPlaceholder": "Enter an invite code",

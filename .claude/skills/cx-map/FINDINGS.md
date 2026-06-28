@@ -376,7 +376,9 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **fixed @4b7343e
   (PR #59)** — position/effect now joined with a slash only when both are present.
 - **F32** · CX · Game `state` (draft/recruiting/active/paused/completed) is shown as a badge with no
-  legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **open**
+  legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **partial** —
+  the state badge now has a tooltip explaining the lifecycle (draft → … → completed); a GM control to
+  *change* the state is still open.
 - **F33** · CX · Crew `hold` (strong/weak) shown + toggle with no explanation. `CrewSheet.tsx:172–182`
   → tooltip. **fixed @4b7343e (PR #59)** — hold has an explanatory tooltip (strong = stable, weak =
   one setback from breaking up).
