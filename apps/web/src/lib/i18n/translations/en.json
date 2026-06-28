@@ -441,6 +441,8 @@
       "wanted": "Wanted",
       "coin": "Coin",
       "vault": "Vault",
+      "advanceTier": "Advance to Tier {{tier}} (spend 12 Rep)",
+      "incarcerate": "Incarcerated (−1 Wanted, clear Heat)",
       "holdLabel": "Hold: {{value}}",
       "holdStrong": "strong",
       "holdWeak": "weak",

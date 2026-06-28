@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Crew, CrewRules, UpdateCrewData } from '@heist-mind/database';
-import { applyHeat } from '@heist-mind/database';
+import { applyHeat, advanceTier, incarcerate, REP_PER_TIER, CREW_LIMITS } from '@heist-mind/database';
 import { Alert, Badge, Button, Heading, Input, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
@@ -222,17 +222,45 @@ export function CrewSheet({
       </Stack>
 
       <Stack direction='row' gap='lg' className='flex-wrap'>
-        {stat(t('components.crewSheet.tier'), 'tier', crew.tier, 4)}
-        {stat(t('components.crewSheet.rep'), 'rep', crew.rep, 12)}
-        {stat(t('components.crewSheet.heat'), 'heat', crew.heat, 9, () => {
+        {stat(t('components.crewSheet.tier'), 'tier', crew.tier, CREW_LIMITS.tier)}
+        {/* Rep is uncapped — it accrues until a full track is spent to advance Tier (button below). */}
+        {stat(t('components.crewSheet.rep'), 'rep', crew.rep)}
+        {stat(t('components.crewSheet.heat'), 'heat', crew.heat, CREW_LIMITS.heat, () => {
           // BitD: filling the heat track (9) marks a Wanted level and resets heat.
           const next = applyHeat({ heat: crew.heat, wanted: crew.wanted }, 1);
           void save({ heat: next.heat, wanted: next.wanted });
         })}
-        {stat(t('components.crewSheet.wanted'), 'wanted', crew.wanted, 4)}
+        {stat(t('components.crewSheet.wanted'), 'wanted', crew.wanted, CREW_LIMITS.wanted)}
         {stat(t('components.crewSheet.coin'), 'coin', crew.coin)}
         {stat(t('components.crewSheet.vault'), 'vault', crew.vault)}
       </Stack>
+
+      {/* Crew-progression actions (GM): spend a full Rep track to advance Tier (BitD), and apply an
+          incarceration to cool off (−1 Wanted, clear Heat — BitD's direct release valve). */}
+      {isGm && (crew.rep >= REP_PER_TIER || crew.wanted > 0 || crew.heat > 0) && (
+        <Stack direction='row' gap='sm' className='flex-wrap'>
+          {crew.rep >= REP_PER_TIER && crew.tier < CREW_LIMITS.tier && (
+            <Button
+              variant='ember'
+              size='sm'
+              disabled={busy}
+              onClick={() => void save(advanceTier({ tier: crew.tier, rep: crew.rep }))}
+            >
+              {t('components.crewSheet.advanceTier', { tier: crew.tier + 1 })}
+            </Button>
+          )}
+          {(crew.wanted > 0 || crew.heat > 0) && (
+            <Button
+              variant='outline'
+              size='sm'
+              disabled={busy}
+              onClick={() => void save(incarcerate({ heat: crew.heat, wanted: crew.wanted }))}
+            >
+              {t('components.crewSheet.incarcerate')}
+            </Button>
+          )}
+        </Stack>
+      )}
 
       {pools.length > 0 && (
         <div>

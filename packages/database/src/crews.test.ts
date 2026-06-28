@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { CREW_LIMITS, clampCrewStat, clampNonNegative, normalizeHold, applyHeat } from './crews';
+import {
+  CREW_LIMITS,
+  REP_PER_TIER,
+  clampCrewStat,
+  clampNonNegative,
+  normalizeHold,
+  applyHeat,
+  advanceTier,
+  incarcerate,
+} from './crews';
 
 describe('crew bounds', () => {
   it('CREW_LIMITS are the BitD caps', () => {
@@ -40,5 +49,25 @@ describe('crew bounds', () => {
     expect(applyHeat({ heat: 0, wanted: 0 }, 20)).toEqual({ heat: 2, wanted: 2 });
     // Once Wanted is maxed (4), extra heat just clamps at the cap.
     expect(applyHeat({ heat: 8, wanted: 4 }, 5)).toEqual({ heat: 9, wanted: 4 });
+  });
+
+  it('advanceTier spends a full Rep track to raise Tier (BitD)', () => {
+    expect(REP_PER_TIER).toBe(12);
+    // Short of a full track → no change.
+    expect(advanceTier({ tier: 0, rep: 11 })).toEqual({ tier: 0, rep: 11 });
+    // Full track → +1 Tier, Rep clears carrying the remainder.
+    expect(advanceTier({ tier: 0, rep: 12 })).toEqual({ tier: 1, rep: 0 });
+    expect(advanceTier({ tier: 1, rep: 14 })).toEqual({ tier: 2, rep: 2 });
+    // One Tier per call (deliberate), even with a big Rep bank.
+    expect(advanceTier({ tier: 0, rep: 30 })).toEqual({ tier: 1, rep: 18 });
+    // No-op once Tier is maxed (4).
+    expect(advanceTier({ tier: 4, rep: 20 })).toEqual({ tier: 4, rep: 20 });
+  });
+
+  it('incarcerate drops Wanted by 1 and clears Heat (BitD)', () => {
+    expect(incarcerate({ heat: 7, wanted: 3 })).toEqual({ heat: 0, wanted: 2 });
+    expect(incarcerate({ heat: 9, wanted: 1 })).toEqual({ heat: 0, wanted: 0 });
+    // Wanted can't go below 0; heat still clears.
+    expect(incarcerate({ heat: 5, wanted: 0 })).toEqual({ heat: 0, wanted: 0 });
   });
 });
