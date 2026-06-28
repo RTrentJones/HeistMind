@@ -393,7 +393,13 @@
       "positionHelp": "Controlled (act on your terms) → Risky (the default) → Desperate (worst position, worst consequences).",
       "effectHelpTitle": "Effect — how much you accomplish",
       "effectHelp": "Limited (a partial result) → Standard → Great (more than usual).",
-      "zeroDiceHint": "No rating in this action — roll 2 dice and take the lowest."
+      "zeroDiceHint": "No rating in this action — roll 2 dice and take the lowest.",
+      "push": "Push (+1d, 2 stress)",
+      "bargain": "Devil's bargain (+1d)",
+      "bargainPlaceholder": "The complication you accept…",
+      "pushedNote": "Pushed (+1d, 2 stress)",
+      "bargainNote": "Devil's bargain: {{note}}",
+      "bargainNoteEmpty": "Devil's bargain (+1d)"
     },
     "rollLog": {
       "empty": "No rolls yet.",
