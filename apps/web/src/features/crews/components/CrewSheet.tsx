@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import type { Crew, CrewRules, UpdateCrewData } from '@heist-mind/database';
-import { applyHeat, advanceTier, incarcerate, REP_PER_TIER, CREW_LIMITS } from '@heist-mind/database';
+import {
+  applyHeat,
+  advanceTier,
+  incarcerate,
+  crewXp,
+  crewAdvanceReady,
+  withCrewXp,
+  REP_PER_TIER,
+  CREW_LIMITS,
+  CREW_XP_TRACK,
+} from '@heist-mind/database';
 import { Alert, Badge, Button, Heading, Input, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
@@ -261,6 +271,67 @@ export function CrewSheet({
           )}
         </Stack>
       )}
+
+      {/* Crew advancement (BitD): mark XP from the crew's triggers; fill the track → take a crew
+          ability (the list below) and reset. */}
+      <Stack direction='column' gap='xs'>
+        <Stack direction='row' gap='sm' align='center'>
+          <Text size='sm' className='font-display'>
+            {t('components.crewSheet.advancementXp')}
+          </Text>
+          {isGm && (
+            <Button
+              variant='outline'
+              size='sm'
+              aria-label={t('components.crewSheet.decreaseAria', {
+                label: t('components.crewSheet.advancementXp'),
+              })}
+              disabled={busy || crewXp(crew.resources) <= 0}
+              onClick={() =>
+                void save({ resources: withCrewXp(crew.resources, crewXp(crew.resources) - 1) })
+              }
+            >
+              −
+            </Button>
+          )}
+          <Badge variant={crewAdvanceReady(crew.resources) ? 'gold' : 'steel'}>
+            {t('components.crewSheet.xpFraction', {
+              xp: crewXp(crew.resources),
+              total: CREW_XP_TRACK,
+            })}
+          </Badge>
+          {isGm && (
+            <Button
+              variant='outline'
+              size='sm'
+              aria-label={t('components.crewSheet.increaseAria', {
+                label: t('components.crewSheet.advancementXp'),
+              })}
+              disabled={busy || crewXp(crew.resources) >= CREW_XP_TRACK}
+              onClick={() =>
+                void save({ resources: withCrewXp(crew.resources, crewXp(crew.resources) + 1) })
+              }
+            >
+              +
+            </Button>
+          )}
+          {isGm && crewAdvanceReady(crew.resources) && (
+            <Button
+              variant='ember'
+              size='sm'
+              disabled={busy}
+              onClick={() => void save({ resources: withCrewXp(crew.resources, 0) })}
+            >
+              {t('components.crewSheet.takeCrewAdvance')}
+            </Button>
+          )}
+        </Stack>
+        <Text variant='muted' size='sm'>
+          {crewAdvanceReady(crew.resources)
+            ? t('components.crewSheet.advanceReadyHint')
+            : t('components.crewSheet.crewXpHint')}
+        </Text>
+      </Stack>
 
       {pools.length > 0 && (
         <div>

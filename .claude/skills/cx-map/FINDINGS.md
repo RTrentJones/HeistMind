@@ -301,7 +301,11 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `domain-types.ts`).
 - **root cause:** Crews don't earn XP or buy upgrades — the crew-sheet progression half of Blades.
 - **fix:** Crew XP track + triggers mirroring character XP; spend to unlock crew abilities/upgrades.
-- **status:** open
+- **status:** fixed — an **8-box crew advancement track** on the crew sheet (`crewXp`/`crewAdvanceReady`/
+  `withCrewXp` in `crews.ts`, 100% covered): the GM marks XP (with the four BitD triggers as a hint),
+  and a full track shows "Take advance (reset XP)" pointing at the crew-ability list. Stored under a
+  reserved key in the existing `resources` JSONB (a deliberate no-migration choice — it can graduate
+  to a dedicated column once the generated Supabase types are regenerated). https://bladesinthedark.com/index.php/advancement
 
 ### F19 — Heat→Wanted cascade and reduce-heat unmodeled
 

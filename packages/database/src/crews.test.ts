@@ -2,12 +2,16 @@ import { describe, it, expect } from 'vitest';
 import {
   CREW_LIMITS,
   REP_PER_TIER,
+  CREW_XP_TRACK,
   clampCrewStat,
   clampNonNegative,
   normalizeHold,
   applyHeat,
   advanceTier,
   incarcerate,
+  crewXp,
+  crewAdvanceReady,
+  withCrewXp,
 } from './crews';
 
 describe('crew bounds', () => {
@@ -69,5 +73,18 @@ describe('crew bounds', () => {
     expect(incarcerate({ heat: 9, wanted: 1 })).toEqual({ heat: 0, wanted: 0 });
     // Wanted can't go below 0; heat still clears.
     expect(incarcerate({ heat: 5, wanted: 0 })).toEqual({ heat: 0, wanted: 0 });
+  });
+
+  it('crew advancement XP reads/clamps from the resources map and flags a full track', () => {
+    expect(CREW_XP_TRACK).toBe(8);
+    expect(crewXp({})).toBe(0);
+    expect(crewXp({ 'crew-xp': 3 })).toBe(3);
+    expect(crewXp({ 'crew-xp': 99 })).toBe(8); // clamped to the track
+    expect(crewXp({ 'crew-xp': -2 })).toBe(0);
+    expect(crewAdvanceReady({ 'crew-xp': 7 })).toBe(false);
+    expect(crewAdvanceReady({ 'crew-xp': 8 })).toBe(true);
+    // withCrewXp preserves other resource pools and clamps the XP.
+    expect(withCrewXp({ hoard: 4 }, 5)).toEqual({ hoard: 4, 'crew-xp': 5 });
+    expect(withCrewXp({}, 12)).toEqual({ 'crew-xp': 8 });
   });
 });
