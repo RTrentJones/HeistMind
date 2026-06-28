@@ -354,17 +354,21 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   `character-rules.ts` (~337). **(verified)** → derive on the sheet; hide/lock attributes in
   action-rating mode. **open**
 - **F24** · CX · ActionRatingsStep doesn't explain attributes are _derived_ (count of actions ≥1).
-  `ActionRatingsStep.tsx:34,50–52` → one-line helper text. **open**
+  `ActionRatingsStep.tsx:34,50–52` → one-line helper text. **fixed** — a muted helper above the
+  attribute cards explains the rating = its actions rated 1+ (and that it's the resistance dice).
 - **F25** · CX · Playbook cards show only name+description — no stat/ability preview to choose on.
-  `PlaybookStep.tsx:42–56` → show starting abilities/actions on the card. **open**
+  `PlaybookStep.tsx:42–56` → show starting abilities/actions on the card. **fixed** — each card now
+  shows seeded action dots (badges) + the starting ability by name.
 - **F26** · CX · Starting vs optional abilities aren't visually distinguished. `AbilitiesStep.tsx`
-  (`roster` vs `others` rendered identically) → a "Starting"/section header. **open**
+  (`roster` vs `others` rendered identically) → a "Starting"/section header. **fixed** — the roster
+  is labelled "{playbook}'s abilities" and the expanded others get a "From other playbooks" header.
 - **F27** · CX · Re-selecting a playbook silently resets abilities/attributes.
   `character-creation-store.ts:135–154` `setPlaybook` → warn/confirm before reset. **open**
 - **F28** · CX · Cancelling the wizard gives no "draft saved" reassurance (it _is_ persisted).
   `CharacterCreationWizard.tsx:123–124` → confirm + reassure copy. **open**
 - **F29** · CX · Required name field has no visual required indicator.
-  `CharacterCreationWizard.tsx:83` → asterisk/marker. **open**
+  `CharacterCreationWizard.tsx:83` → asterisk/marker. **fixed (already)** — the shared `Input`
+  renders a red `*` after the label when `required` (Input.tsx:224); the name field passes `required`.
 - **F30** · FitD · Clock completion isn't visually indicated; 4/4 looks like 3/4. `clockComplete()`
   in `clocks.ts` is never called by `ClocksPanel.tsx` → render a complete state. **fixed @4b7343e
   (PR #59)** — full clocks show a "Complete" badge + glow.
