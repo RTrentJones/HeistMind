@@ -132,8 +132,12 @@ Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2.
   effective max (Mastery → buy the 4th dot) and the load gauge / live re-validation fold in Mule/Deadly,
   matching the server's `advanceCharacter`. The editor's gear picker now **emphasises the playbook's
   suggested items** (sorted first + "Suggested" badge) while keeping every common item reachable per
-  SRD, and the trauma-checklist UI is wired (see F14). **Remaining follow-ups:** the grant-on-join
-  "crew benefit available" chooser UI (Deadly dot / veteran pick) and a crew-grant e2e spec.
+  SRD, and the trauma-checklist UI is wired (see F14). The editor's Advancement tab now shows a
+  **crew-benefits panel** (Mastery → raise an action to 4; Veteran → take a cross-playbook ability),
+  so the crew's effect on caps is discoverable rather than silent. **Remaining follow-ups:** the
+  **Deadly +1 dot at character creation** belongs in a crew-aware *creation wizard* (the SRD applies
+  Deadly when the character is made, not as a post-hoc editor grant) — a separate change; and a
+  crew-grant e2e spec exercising the Mastery cap.
 
 ---
 
