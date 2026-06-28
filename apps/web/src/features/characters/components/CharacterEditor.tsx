@@ -19,6 +19,7 @@ import {
   type LoadLevel,
   type CharacterWithDetails,
   type CrewContext,
+  type RulesetContent,
 } from '@heist-mind/database';
 import {
   Alert,
@@ -104,7 +105,16 @@ export function CharacterEditor({
 
   const loadout = draft.loadout ?? { level: 'normal' as LoadLevel, items: [] };
   const gearItems = content.equipment?.items ?? [];
-  const playbookContacts = content.playbooks.find(p => p.id === draft.playbook)?.contacts ?? [];
+  const playbook = content.playbooks.find(p => p.id === draft.playbook);
+  const playbookContacts = playbook?.contacts ?? [];
+  // The playbook's SUGGESTED kit (BitD lists a few items per playbook). These items aren't exclusive —
+  // every common item stays available to every character (SRD) — so we keep the whole list reachable
+  // and only EMPHASISE the suggested set: sort it to the top and badge it. Nothing is hidden.
+  const suggestedIds = new Set(playbook?.equipment ?? []);
+  const sortedGear = [
+    ...gearItems.filter(i => suggestedIds.has(i.id)),
+    ...gearItems.filter(i => !suggestedIds.has(i.id)),
+  ];
   const toggleItem = (id: string) =>
     patch({
       loadout: {
@@ -318,31 +328,61 @@ export function CharacterEditor({
                 </Badge>
               ))}
             </Stack>
-            <Stack direction='row' gap='sm' align='end' className='max-w-md'>
-              <Input
-                label={t('components.characterEditor.addTrauma')}
-                value={traumaInput}
-                onChange={e => setTraumaInput(e.target.value)}
-                placeholder={t('components.characterEditor.traumaPlaceholder')}
-              />
-              <Button
-                variant='outline'
-                disabled={!traumaInput.trim() || draft.trauma.length >= bounds.traumaMax}
-                onClick={() => {
-                  const value = traumaInput.trim();
-                  if (
-                    value &&
-                    draft.trauma.length < bounds.traumaMax &&
-                    !draft.trauma.includes(value)
-                  ) {
-                    patch({ trauma: [...draft.trauma, value] });
-                    setTraumaInput('');
-                  }
-                }}
-              >
-                {t('components.characterEditor.add')}
-              </Button>
-            </Stack>
+            {content.traumaConditions && content.traumaConditions.length > 0 ? (
+              // Named-condition rulesets (BitD's 8): pick from a checklist — unique, capped at
+              // traumaMax — rather than typing free text. Toggling a chip adds/removes the condition.
+              <Stack direction='row' gap='sm' className='flex-wrap'>
+                {content.traumaConditions.map(condition => {
+                  const taken = draft.trauma.includes(condition);
+                  const full = draft.trauma.length >= bounds.traumaMax;
+                  return (
+                    <Button
+                      key={condition}
+                      variant={taken ? 'crimson' : 'outline'}
+                      size='sm'
+                      aria-pressed={taken}
+                      disabled={!taken && full}
+                      onClick={() =>
+                        patch({
+                          trauma: taken
+                            ? draft.trauma.filter(x => x !== condition)
+                            : [...draft.trauma, condition],
+                        })
+                      }
+                    >
+                      {condition}
+                    </Button>
+                  );
+                })}
+              </Stack>
+            ) : (
+              // Rulesets without a named set: keep free-text entry (unique, capped).
+              <Stack direction='row' gap='sm' align='end' className='max-w-md'>
+                <Input
+                  label={t('components.characterEditor.addTrauma')}
+                  value={traumaInput}
+                  onChange={e => setTraumaInput(e.target.value)}
+                  placeholder={t('components.characterEditor.traumaPlaceholder')}
+                />
+                <Button
+                  variant='outline'
+                  disabled={!traumaInput.trim() || draft.trauma.length >= bounds.traumaMax}
+                  onClick={() => {
+                    const value = traumaInput.trim();
+                    if (
+                      value &&
+                      draft.trauma.length < bounds.traumaMax &&
+                      !draft.trauma.includes(value)
+                    ) {
+                      patch({ trauma: [...draft.trauma, value] });
+                      setTraumaInput('');
+                    }
+                  }}
+                >
+                  {t('components.characterEditor.add')}
+                </Button>
+              </Stack>
+            )}
 
             <Heading level='h3'>{t('components.characterEditor.harm')}</Heading>
             <HarmTracker harm={harm} bounds={hb} />
@@ -440,7 +480,7 @@ export function CharacterEditor({
               </Text>
             ) : (
               <Stack direction='column' gap='xs'>
-                {gearItems.map(item => (
+                {sortedGear.map(item => (
                   <label key={item.id} className='flex cursor-pointer items-center gap-2.5'>
                     <input
                       type='checkbox'
@@ -453,6 +493,11 @@ export function CharacterEditor({
                         {t('components.characterEditor.itemLoad', { load: item.load })}
                       </span>
                     </Text>
+                    {suggestedIds.has(item.id) && (
+                      <Badge variant='steel' size='sm'>
+                        {t('components.characterEditor.suggestedItem')}
+                      </Badge>
+                    )}
                   </label>
                 ))}
               </Stack>
@@ -522,6 +567,9 @@ export function CharacterEditor({
           </Stack>
         )}
 
+        {section === 'advancement' && (
+          <CrewBenefits content={content} data={character.characterData} crew={crew} />
+        )}
         {section === 'advancement' &&
           (usesXpTracks(content) ? (
             <Stack direction='column' gap='md'>
@@ -567,6 +615,43 @@ export function CharacterEditor({
           ))}
       </Stack>
     </Card>
+  );
+}
+
+/**
+ * Surface the campaign crew's benefits so they're discoverable rather than silently changing the
+ * caps. Mastery (the only crew effect that's actionable in the editor) lets a member raise an action
+ * to 4; a veteran upgrade opens cross-playbook ability picks. Renders nothing when the crew grants
+ * neither — keeping the panel honest about what's actually in effect.
+ */
+function CrewBenefits({
+  content,
+  data,
+  crew,
+}: {
+  content: RulesetContent;
+  data: CharacterData;
+  crew: CrewContext | null;
+}) {
+  const { t } = useTranslation();
+  const effects = collectAbilityEffects(content, data, crew);
+  const baseMax = content.characterCreation?.actionRatings?.max ?? 3;
+  const masteryMax = Math.max(baseMax, effects.actionMax);
+  const hasMastery = masteryMax > baseMax;
+  const hasVeteran = effects.veteran > 0;
+  if (!hasMastery && !hasVeteran) return null;
+  return (
+    <Alert variant='info' size='sm'>
+      <Stack direction='column' gap='xs'>
+        <Text as='strong' size='sm'>
+          {t('components.characterEditor.crewBenefitsTitle')}
+        </Text>
+        {hasMastery && (
+          <Text size='sm'>{t('components.characterEditor.crewMastery', { max: masteryMax })}</Text>
+        )}
+        {hasVeteran && <Text size='sm'>{t('components.characterEditor.crewVeteran')}</Text>}
+      </Stack>
+    </Alert>
   );
 }
 
