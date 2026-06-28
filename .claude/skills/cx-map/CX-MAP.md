@@ -35,20 +35,30 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 
 ## Routes
 
-### `/` — Home / landing
+### `/` — Home (marketing when logged out, dashboard when signed in)
 
-- **File:** `apps/web/src/app/page.tsx`
-- **Purpose:** public landing; entry point for unauthenticated users.
-- **Components:** `AuthHeader` (`apps/web/src/features/auth/components/AuthHeader.tsx`), hero +
-  feature cards.
-- **Actions:** Sign in / Sign up with Discord (OAuth). Authenticated users navigate on to
-  Campaigns / Rulesets.
-- **Nav:** → `/auth/callback` (after OAuth) → back here; then `/games`, `/rulesets`.
-- **CX intent:** must communicate, above the fold, the two ways to use HeistMind (a rules-valid
-  character sheet you bring anywhere, and the async-PbP mechanical layer for Discord groups) — not the
-  mis-framing that you "play the whole game here." Signed-in users should get a clear next step (not
-  just marketing). _A reframed landing + a logged-in dashboard at `/` are proposed in `COMPETITIVE.md`
-  / the Phase-B plan (not yet built)._
+- **File:** `apps/web/src/app/page.tsx` — a thin brancher: `useAuth().isAuthenticated ? <Dashboard/>
+  : <HomePage/>`. `AppShell` steps aside on `/`, so each side renders its own `AuthHeader` + `<main>`.
+- **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
+  two-mode landing. Hero *"The mechanical home for your Forged-in-the-Dark crew,"* a **dual CTA**
+  (*Run a campaign* / *Join with a code* — both kick off Discord OAuth), **two "how you'll use it"
+  tracks** (*At your table* (Mode 1) and *Play-by-post on Discord* (Mode 2, tagged *"Like Avrae for
+  D&D — but built for Forged in the Dark"*)), and **three pillars** (rules-driven · track from
+  anywhere · take what you want). Copy lives in `pages.landing.*`.
+- **Signed in — `Dashboard`** (`apps/web/src/features/dashboard/components/Dashboard.tsx` +
+  `features/dashboard/hooks/use-dashboard-data.ts`): the personal home (the OAuth callback redirects
+  to `/`). Header *"Welcome back, {name}"*; **quick actions** (create campaign · join a game ·
+  rulesets · upload ruleset); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
+  state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
+  · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
+  `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change. Copy in
+  `pages.dashboard.*`.
+- **Actions:** (logged out) Sign in / Sign up with Discord; (signed in) jump to any campaign, character
+  sheet, or a quick action.
+- **Nav:** → `/auth/callback` (after OAuth) → back to `/` (now the dashboard); → `/games`,
+  `/games/new`, `/rulesets`, `/rulesets/new`, `/games/[gameId]`, character sheets.
+- **CX intent:** logged out, communicate the two ways to use HeistMind above the fold (not "play the
+  whole game here"); signed in, open to *your* campaigns + characters, not marketing.
 
 ### `/auth/callback` — OAuth return
 
@@ -184,7 +194,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-28 @ 78123c1 (added Phase 1–3: score panel, roster/retire, add-result form, per-score loadout, score-grouped log)
+_Last verified:_ 2026-06-28 @ 78123c1 (Phase 1–3 screens; `/` reframed two-mode landing + logged-in dashboard)
 
 ---
 

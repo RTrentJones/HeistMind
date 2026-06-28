@@ -97,8 +97,10 @@ rules-correctness + shared state; the one thing Avrae has that we don't yet is *
 Table-stakes for a character/campaign tracker, ranked. These feed the backlog (`FINDINGS.md`) and the
 next BRD phases.
 
-1. **A logged-in home / dashboard.** D&D Beyond opens to *your* characters/campaigns; we open to
-   marketing, then a flat list. → addressed by the **landing + dashboard proposal** (below).
+1. **A logged-in home / dashboard.** D&D Beyond opens to *your* characters/campaigns; we used to open
+   to marketing, then a flat list. → **shipped**: `/` is now a reframed two-mode landing when logged
+   out and a personal **dashboard** when signed in (your campaigns + characters + recent activity).
+   See "Built" below.
 2. **Portable characters ("My Characters").** D&D Beyond characters exist independent of a campaign and
    travel to any table; ours are **created inside a game and can't exist standalone or move**. For the
    Mode 1 "your sheet anywhere" promise this is the biggest structural gap. *Meaningful schema change —
@@ -114,14 +116,16 @@ rather than repeated here.
 
 ---
 
-## Proposal — reframed landing + a logged-in dashboard (not yet built)
+## Built — reframed landing + a logged-in dashboard
 
-This closes P0 #1 and surfaces P0 #2. **Designed, not built** — pending sign-off and its own build round.
+This closes P0 #1 and surfaces P0 #2. **Shipped** — `apps/web/src/app/page.tsx` branches on auth:
+`HomePage` (marketing) when logged out, `Dashboard` when signed in. See the CX-MAP `/` section for the
+live spec.
 
-### Logged-out landing (reframe `apps/web/src/app/page.tsx` + `landing.*` copy)
+### Logged-out landing (`apps/web/src/features/marketing/components/HomePage.tsx` + `landing.*` copy)
 
-The current hero ("Run Forged in the Dark campaigns as async, Discord-style play-by-post") mis-frames
-the product as "play the whole game here" and names only the PbP audience, erasing Mode 1. Proposed:
+The old hero ("Run Forged in the Dark campaigns as async, Discord-style play-by-post") mis-framed the
+product as "play the whole game here" and named only the PbP audience, erasing Mode 1. Now:
 
 - **Hero:** *"The mechanical home for your Forged-in-the-Dark crew."* — sub: *"Build rules-valid
   characters and crews, then keep them current wherever you play — at the table, or async on Discord.
@@ -131,20 +135,23 @@ the product as "play the whole game here" and names only the PbP audience, erasi
   living rules-valid sheet) and **Play-by-post on Discord** (Mode 2 — the async mechanical layer),
   tagged ***"Like Avrae for D&D — but built for Forged in the Dark."***
 - **Three pillars:** rules-driven · track results from anywhere · take what you want.
-- **Dual CTA** (reuse the unused `roleSelection.*` keys): "Run a campaign (GM)" / "Join with a code."
-- One concrete glimpse (a sheet or campaign-log mock). Keep the FitD theme + DS primitives.
+- **Dual CTA** (`landing.cta.gm` / `landing.cta.player`): "Run a campaign" / "Join with a code" — both
+  start Discord OAuth. _(A concrete sheet/log screenshot is still a nice-to-have, not yet added.)_
 
-### Logged-in dashboard (render at `/` when authenticated)
+### Logged-in dashboard (`/` when authenticated)
 
-`/` becomes marketing when logged out, a **`<Dashboard>`** when authenticated (the OAuth callback
-already redirects to `/`). Reuses existing repos + the **already-present `dashboard.*` i18n keys**:
+`/` is marketing when logged out, the **`Dashboard`** when authenticated (the OAuth callback redirects
+to `/`). Over existing repos + the `dashboard.*` i18n keys:
 
-- **Welcome back, {name}** + quick actions (new campaign · join with code · new character · upload ruleset).
-- **Your campaigns** — `games.findByPlayer(userId)` (GM/player badge, state, active-score indicator).
-- **Your characters** — `characters.findByPlayer(userId)` — the **"My Characters" surface we lack** (P0 #2).
-- **Recent activity** — latest campaign-log events across your campaigns ("what happened since you last looked").
+- **Welcome back, {name}** + quick actions (create campaign · join a game · rulesets · upload ruleset).
+- **Your campaigns** — `games.findByCreator` + `findByPlayer` unioned (GM/player badge + state).
+- **Your characters** — `characters.findByPlayer(userId)` — the **"My Characters" surface** (P0 #2 /
+  F56); name · playbook · campaign · status → the sheet.
+- **Recent activity** — newest-first merge of `rolls.findByGame` across the user's campaigns.
 
-No schema change, no new data layer — `features/dashboard/components/Dashboard.tsx` over existing repos.
+No schema change, no new data layer — `features/dashboard/{components/Dashboard.tsx,hooks/use-dashboard-data.ts}`
+over existing repos. _Note: P0 #2 (truly portable, campaign-independent characters — F56) is still
+open; the dashboard surfaces game-scoped characters, it doesn't make them standalone._
 
 ---
 
