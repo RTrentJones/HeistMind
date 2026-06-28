@@ -238,10 +238,20 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               </Button>
             </Stack>
           ) : (
-            <Stack direction='row' justify='between' align='center'>
-              <Heading level='h2' variant='gradient'>
-                {character.name}
-              </Heading>
+            <Stack direction='row' justify='between' align='center' className='flex-wrap'>
+              <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+                <Heading level='h2' variant='gradient'>
+                  {character.name}
+                </Heading>
+                {character.status !== 'active' && (
+                  <Badge
+                    variant={character.status === 'dead' ? 'stress-critical' : 'steel'}
+                    className='capitalize'
+                  >
+                    {character.status}
+                  </Badge>
+                )}
+              </Stack>
               <Stack direction='row' gap='sm' align='center'>
                 <Button variant='outline' size='sm' onClick={() => setEditing(true)}>
                   {t('common.actions.edit')}
