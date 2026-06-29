@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { Character, Game } from '@heist-mind/database';
 import {
   Badge,
@@ -26,9 +27,26 @@ import { usePageTranslation } from '@/lib/i18n/hooks';
 export default function MyCharactersPage() {
   const { user, isAuthenticated } = useAuth();
   const { t } = usePageTranslation();
+  const router = useRouter();
   const [characters, setCharacters] = useState<Character[] | null>(null);
   const [gameNames, setGameNames] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [cloning, setCloning] = useState<string | null>(null);
+
+  // Duplicate a character into a new standalone copy (Phase 5b), then open it.
+  const duplicate = async (ch: Character) => {
+    const userId = user?.id;
+    if (!userId) return;
+    setCloning(ch.id);
+    const r = await getRepositories().characters.cloneCharacter(
+      ch.id,
+      userId,
+      t('characters.copyName', { name: ch.name })
+    );
+    setCloning(null);
+    if (r.success) router.push(`/characters/${r.data.id}`);
+    else setError(r.error?.message ?? t('characters.loadFailed'));
+  };
 
   useEffect(() => {
     const userId = user?.id;
@@ -78,11 +96,23 @@ export default function MyCharactersPage() {
             })}
           </Text>
         </div>
-        <Button asChild variant='outline' size='sm'>
-          <Link href={ch.gameId ? `/games/${ch.gameId}/characters/${ch.id}` : `/characters/${ch.id}`}>
-            {t('characters.open')}
-          </Link>
-        </Button>
+        <Stack direction='row' gap='sm' align='center'>
+          <Button
+            variant='outline'
+            size='sm'
+            loading={cloning === ch.id}
+            onClick={() => void duplicate(ch)}
+          >
+            {t('characters.duplicate')}
+          </Button>
+          <Button asChild variant='outline' size='sm'>
+            <Link
+              href={ch.gameId ? `/games/${ch.gameId}/characters/${ch.id}` : `/characters/${ch.id}`}
+            >
+              {t('characters.open')}
+            </Link>
+          </Button>
+        </Stack>
       </Stack>
     </Card>
   );

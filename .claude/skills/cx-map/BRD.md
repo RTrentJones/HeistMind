@@ -383,10 +383,17 @@ deletion from "destroy characters" to "return them to standalone" — a strict i
 - An existing in-campaign character is **unaffected**; deleting its campaign returns it to standalone
   (SET NULL), not deletion.
 
-### Out of scope (v1 → Phase 5b)
-**Move/detach** between campaigns, **clone-for-another-table** (`cloneCharacter`), **cross-ruleset
-adaptation** (the `adaptations` column), and a character **in multiple campaigns at once** (the
-rejected many-to-many model).
+### Phase 5b — ✅ shipped (move / detach / clone, same-ruleset)
+**Move** (re-home to another same-ruleset campaign — reuses the attach RPC), **detach** (return to My
+Characters — the `detach_character` RPC), and **clone** (`cloneCharacter` — duplicate a build to a new
+standalone character; also the clean way to run the same scoundrel at two tables). Owner controls live
+on the character sheet (`AttachToCampaign`), "Duplicate" on My Characters. **No migration** — the
+`00014` RPCs + RLS already covered it.
+
+### Out of scope → Phase 5c
+**Cross-ruleset adaptation** (the `adaptations` column — clone/move into a *different*-ruleset campaign
+with re-validation + guided fixes), `transferToGame` as a distinct primitive, and a character **in
+multiple campaigns at once** (the rejected many-to-many model). GM-initiated detach (5b is owner-only).
 
 ### Open decisions
 1. **Standalone name collisions on attach** — auto-suffix vs block (the per-game unique constraint

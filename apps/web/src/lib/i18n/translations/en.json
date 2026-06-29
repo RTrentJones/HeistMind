@@ -439,10 +439,16 @@
     "attachToCampaign": {
       "title": "Bring to a campaign",
       "help": "Link this character into one of your campaigns that uses the same ruleset. Its loadout and the campaign log then follow that campaign.",
+      "moveTitle": "Move to another campaign",
+      "moveHelp": "Re-home this character to a different campaign of yours that uses the same ruleset, or return it to My Characters.",
       "none": "None of your campaigns use this ruleset yet. Create one, or join with a code.",
       "select": "Campaign",
       "attach": "Attach",
-      "failed": "Couldn't attach the character."
+      "move": "Move",
+      "detach": "Return to My Characters",
+      "confirmDetach": "Confirm — remove from campaign",
+      "failed": "Couldn't attach the character.",
+      "failedDetach": "Couldn't remove the character from the campaign."
     },
     "scorePanel": {
       "loadFailed": "Could not load scores.",
@@ -782,6 +788,8 @@
       "standalone": "Standalone",
       "meta": "{{playbook}} · {{campaign}}",
       "open": "Open",
+      "duplicate": "Duplicate",
+      "copyName": "{{name}} (copy)",
       "newCharacter": "New character",
       "empty": "No characters yet. Build a standalone scoundrel and bring it to any table.",
       "createFirst": "Create your first character",

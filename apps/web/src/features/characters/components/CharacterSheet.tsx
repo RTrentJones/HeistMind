@@ -312,8 +312,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Stack>
       </Card>
 
-      {/* Standalone character (Phase 5): offer to bring it to one of your campaigns (same ruleset). */}
-      {!character.gameId && <AttachToCampaign character={character} />}
+      {/* Owner campaign controls (Phase 5/5b): bring a standalone character to a campaign, or move /
+          return an in-campaign one. The component picks its mode from whether the character is linked. */}
+      {character.createdBy === user?.id && <AttachToCampaign character={character} />}
 
       {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
       <Card variant='outline'>
