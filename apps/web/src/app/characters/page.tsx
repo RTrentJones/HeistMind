@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Character, Game } from '@heist-mind/database';
+import type { Character } from '@heist-mind/database';
 import {
   Button,
   Card,
@@ -18,6 +18,8 @@ import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
+import { useCharactersByPlayer } from '@/features/characters/data/queries';
+import { useGamesByPlayer } from '@/features/games/data/queries';
 
 /**
  * "My Characters" (Phase 5) — every character the user owns, standalone or in a campaign. The
@@ -28,16 +30,21 @@ export default function MyCharactersPage() {
   const { user, isAuthenticated } = useAuth();
   const { t } = usePageTranslation();
   const router = useRouter();
-  const [characters, setCharacters] = useState<Character[] | null>(null);
-  const [gameNames, setGameNames] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
+  const characters = useCharactersByPlayer(user?.id);
+  const games = useGamesByPlayer(user?.id);
+  const gameNames = useMemo(
+    () => Object.fromEntries((games.data ?? []).map(g => [g.id, g.name])),
+    [games.data]
+  );
   const [cloning, setCloning] = useState<string | null>(null);
+  const [cloneError, setCloneError] = useState<string | null>(null);
 
-  // Duplicate a character into a new standalone copy (Phase 5b), then open it.
+  // Duplicate a character into a new standalone copy (Phase 5b), then open it. (Write → PR4b mutation.)
   const duplicate = async (ch: Character) => {
     const userId = user?.id;
     if (!userId) return;
     setCloning(ch.id);
+    setCloneError(null);
     const r = await getRepositories().characters.cloneCharacter(
       ch.id,
       userId,
@@ -45,28 +52,8 @@ export default function MyCharactersPage() {
     );
     setCloning(null);
     if (r.success) router.push(`/characters/${r.data.id}`);
-    else setError(r.error?.message ?? t('characters.loadFailed'));
+    else setCloneError(r.error?.message ?? t('characters.loadFailed'));
   };
-
-  useEffect(() => {
-    const userId = user?.id;
-    if (!userId) return;
-    let active = true;
-    const repos = getRepositories();
-    void repos.characters.findByPlayer(userId).then(r => {
-      if (!active) return;
-      if (!r.success) setError(r.error?.message ?? t('characters.loadFailed'));
-      else setCharacters(r.data);
-    });
-    void repos.games.findByPlayer(userId).then(r => {
-      if (active && r.success) {
-        setGameNames(Object.fromEntries(r.data.map((g: Game) => [g.id, g.name])));
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [user?.id, t]);
 
   if (!isAuthenticated) {
     return (
@@ -119,11 +106,16 @@ export default function MyCharactersPage() {
           </Button>
         </Stack>
 
-        {error && <ErrorDisplay title={t('characters.loadError')} message={error} />}
+        {(characters.isError || cloneError) && (
+          <ErrorDisplay
+            title={t('characters.loadError')}
+            message={cloneError ?? (characters.error as Error)?.message ?? ''}
+          />
+        )}
 
-        {characters === null ? (
+        {characters.isLoading ? (
           <LoadingSpinner />
-        ) : characters.length === 0 ? (
+        ) : !characters.data || characters.data.length === 0 ? (
           <Card variant='outline'>
             <Stack direction='column' gap='sm' align='start'>
               <Text variant='muted'>{t('characters.empty')}</Text>
@@ -134,7 +126,7 @@ export default function MyCharactersPage() {
           </Card>
         ) : (
           <Stack direction='column' gap='md'>
-            {characters.map(card)}
+            {characters.data.map(card)}
           </Stack>
         )}
       </Stack>
