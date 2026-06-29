@@ -118,10 +118,11 @@ re-scope Phases 1–3 shipped to prod** (2026-06): **per-score play** (`scores` 
 start/end + per-score `LoadoutCard`), the **campaign log** (the `rolls` table widened with
 action/resistance/fortune/downtime/loadout/score/note kinds, score-grouped feed + `AddResultForm` for
 off-app results), and **roster/retire** (`CharacterRoster`: player→character attribution, status,
-Retire). **Phase 5 (portable characters — F56)** also shipped (2026-06-29): migration `00014` makes
-`characters.game_id` a **nullable pointer** (single active campaign), with the ruleset bound on the
-character + attach/detach RPCs, and standalone `/characters*` routes. **Phase 4 (Discord bot)** remains
-specified in `BRD.md` but not built. What's next is driven by the audit, not a sprint board:
+Retire). **Phase 5 + 5b (portable characters — F56)** also shipped (2026-06-29): migration `00014`
+makes `characters.game_id` a **nullable pointer** (single active campaign), with the ruleset bound on
+the character + attach/detach RPCs, standalone `/characters*` routes, and **5b** owner controls to
+**move / detach / clone** (no migration — reuses the RPCs). **Phase 4 (Discord bot)** and **Phase 5c
+(cross-ruleset adaptation)** remain specified/deferred. What's next is driven by the audit, not a sprint board:
 
 - **`FINDINGS.md` is the backlog** — severity-scored CX flaws + FitD gaps from Audit 1. Its
   closing "themes worth a dedicated pass" section is the de-facto roadmap. Highest-leverage clusters:

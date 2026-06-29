@@ -205,7 +205,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **Purpose:** the campaign-independent home for every character the user owns — standalone **and**
   in-campaign (`characters.findByPlayer`). A standalone one carries a "Standalone" badge.
 - **Actions:** "New character" → `/characters/new`; open a character (standalone → `/characters/[id]`,
-  in-campaign → its game route).
+  in-campaign → its game route); **Duplicate** (Phase 5b — `cloneCharacter` → a new standalone copy).
 - **Nav:** → `/characters/new`, `/characters/[id]`, `/games/[gameId]/characters/[id]`.
 
 ### `/characters/new` — Build a standalone character
@@ -219,11 +219,13 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 ### `/characters/[characterId]` — Standalone character sheet
 
 - **File:** `apps/web/src/app/characters/[characterId]/page.tsx` — reuses `CharacterSheet`. With no
-  campaign, the active-score + shared dice/roll-log sections hide, and an **`AttachToCampaign`** card
-  ("Bring to a campaign") links the character into a same-ruleset campaign (the
-  `attach_character_to_game` RPC), after which it opens at `/games/[gameId]/characters/[id]`.
+  campaign, the active-score + shared dice/roll-log sections hide. The **`AttachToCampaign`** card is
+  the **owner's campaign-membership control** (shown on both standalone *and* in-campaign sheets):
+  standalone → **"Bring to a campaign"**; in-campaign (Phase 5b) → **"Move to another campaign"**
+  (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
+  `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
 
-_Last verified:_ 2026-06-29 @ 00014 (Phase 5 portable characters: /characters routes + attach; game_id nullable)
+_Last verified:_ 2026-06-29 @ 00014 (Phase 5 portable characters: /characters routes + attach; 5b move/detach/clone)
 
 ---
 

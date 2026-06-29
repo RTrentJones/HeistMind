@@ -32,6 +32,21 @@ async function buildBrackwaterCharacter(page: import('@playwright/test').Page, n
   await page.getByRole('button', { name: 'Create character' }).click();
 }
 
+// Build a STANDALONE Brackwater character (My Characters → New character → pick Brackwater → wizard).
+// Lands on the standalone sheet.
+async function buildStandaloneBrackwater(page: import('@playwright/test').Page, name: string) {
+  await page.goto('/characters/new');
+  await page
+    .locator('div')
+    .filter({ hasText: 'Brackwater' })
+    .filter({ has: page.getByRole('button', { name: 'Build' }) })
+    .last()
+    .getByRole('button', { name: 'Build' })
+    .click();
+  await buildBrackwaterCharacter(page, name);
+  await page.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
+}
+
 test.describe('Phase 5: portable characters', () => {
   test.beforeEach(() => {
     test.skip(
@@ -98,5 +113,78 @@ test.describe('Phase 5: portable characters', () => {
     await gmPage.getByRole('link', { name: /back to campaign/i }).click();
     await gmPage.waitForURL(/\/games\/[0-9a-f-]+$/);
     await expect(gmPage.getByRole('heading', { name: charName })).toBeVisible();
+  });
+
+  // --- Phase 5b: move / detach / clone ---
+
+  test('detaches an in-campaign character back to standalone', async ({ gmPage }) => {
+    const ruleset = await addBrackwater(gmPage);
+    await createCampaign(gmPage, ruleset, uniqueName('Detach Job'));
+
+    // Create a character INSIDE the campaign, then open its sheet from the roster.
+    await gmPage.getByRole('link', { name: 'Create character' }).click();
+    await gmPage.waitForURL(/\/characters\/new$/);
+    const charName = uniqueName('Defector');
+    await buildBrackwaterCharacter(gmPage, charName);
+    await gmPage.waitForURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
+    await gmPage
+      .locator('div')
+      .filter({ has: gmPage.getByRole('heading', { name: charName }) })
+      .filter({ has: gmPage.getByRole('link', { name: 'View' }) })
+      .last()
+      .getByRole('link', { name: 'View' })
+      .click();
+    await gmPage.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/);
+
+    // Return it to My Characters (two-click confirm) → it becomes standalone.
+    await gmPage.getByRole('button', { name: 'Return to My Characters' }).click();
+    await gmPage.getByRole('button', { name: /remove from campaign/i }).click();
+    await gmPage.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
+    await expect(gmPage.getByRole('heading', { name: charName })).toBeVisible();
+    await expect(gmPage.getByRole('heading', { name: 'Bring to a campaign' })).toBeVisible();
+  });
+
+  test('moves a character from one campaign to another', async ({ gmPage }) => {
+    const ruleset = await addBrackwater(gmPage);
+    const campA = uniqueName('Campaign A');
+    const campB = uniqueName('Campaign B');
+    await createCampaign(gmPage, ruleset, campA);
+    await createCampaign(gmPage, ruleset, campB);
+
+    const charName = uniqueName('Mover');
+    await buildStandaloneBrackwater(gmPage, charName);
+
+    // Attach to A, then move to B.
+    await gmPage.getByLabel('Campaign').selectOption({ label: campA });
+    await gmPage.getByRole('button', { name: 'Attach' }).click();
+    await gmPage.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
+
+    await gmPage.getByLabel('Campaign').selectOption({ label: campB });
+    await gmPage.getByRole('button', { name: 'Move', exact: true }).click();
+    await gmPage.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
+
+    // It's now in B's roster.
+    await gmPage.getByRole('link', { name: /back to campaign/i }).click();
+    await gmPage.waitForURL(/\/games\/[0-9a-f-]+$/);
+    await expect(gmPage.getByRole('heading', { name: campB })).toBeVisible();
+    await expect(gmPage.getByRole('heading', { name: charName })).toBeVisible();
+  });
+
+  test('duplicates a character into a copy', async ({ gmPage }) => {
+    await addBrackwater(gmPage);
+    const charName = uniqueName('Original');
+    await buildStandaloneBrackwater(gmPage, charName);
+
+    // Duplicate from My Characters → lands on the copy's sheet.
+    await gmPage.goto('/characters');
+    await gmPage
+      .locator('div')
+      .filter({ has: gmPage.getByRole('heading', { name: charName }) })
+      .filter({ has: gmPage.getByRole('button', { name: 'Duplicate' }) })
+      .last()
+      .getByRole('button', { name: 'Duplicate' })
+      .click();
+    await gmPage.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
+    await expect(gmPage.getByRole('heading', { name: `${charName} (copy)` })).toBeVisible();
   });
 });
