@@ -27,9 +27,11 @@ pre-launch app — a stale doc is worse than none, because it lies). This skill 
   planning positioning or new differentiating work.
 - **`FINDINGS.md`** (sibling) — the flaw / FitD-gap log: severity-scored, each with a concrete
   location and a proposed fix, tracked from `open` to `fixed @<sha>`. The de-facto backlog.
+- **`CODE-QUALITY.md`** (sibling) — the architecture / code-quality backlog (data-layer seam, dedup,
+  god-component splits), tiered to a remediation PR sequence; the engineering companion to `FINDINGS.md`.
 
 These are plain Markdown — open them directly. `STATUS.md` + `CX-MAP.md` are the stable reference;
-`FINDINGS.md` is the churn; `BRD.md` + `COMPETITIVE.md` are the scope + positioning.
+`FINDINGS.md` + `CODE-QUALITY.md` are the churn; `BRD.md` + `COMPETITIVE.md` are the scope + positioning.
 
 ## Live-update mandate (the core rule)
 

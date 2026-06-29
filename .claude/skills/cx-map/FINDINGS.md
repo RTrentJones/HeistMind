@@ -19,6 +19,15 @@ from the audit pass with a cited location and should be re-confirmed before fixi
 Counts: 3 fixed · S1 ×2 · S2 ×16 · S3 ×22 · S4 ×2. _(+F56/F57 from the 2026-06-28 competitive pass —
 two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
 
+**Audit 2 — 2026-06-29 (code-quality / FANG-bar pass).** A three-lens review (CX per page, frontend
+architecture, data layer) + direct verification, scoped to **code quality + dedup + data-foundation**.
+Findings that are *architecture/code* (not user-facing CX) live in the companion **`CODE-QUALITY.md`**;
+the user-facing CX items are added here as **F58–F60**. Re-confirmed still-open and folded into the
+remediation: **F37** (onboarding) and **F57** (mobile sheet) — both **split out as their own scoped
+follow-ups**, not part of the code-quality round; **F40** (auth-error dead-end) and **F42** (GM/player
+affordances) — confirmed open, F42 is addressed in the remediation's component round. No regressions
+found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolved).
+
 ---
 
 ## Fixed
@@ -401,7 +410,18 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
   common in-play taps (stress / harm / XP / roll / resist / loadout) aren't laid out phone-first.
 - **fix:** a mobile pass on the sheet — prioritize the in-play controls, collapse build detail,
   thumb-reachable primary actions. Design/responsive effort (no schema change).
-- **status:** open
+- **status:** open — **scoped as its own follow-up** (not part of the 2026-06-29 code-quality round).
+
+### F58 — Full-reload flicker after every mutation; no optimism, no success toast
+
+- **severity:** S2 · **type:** CX-flaw
+- **where:** every write — tick a clock, save a loadout, start a score, update a character
+  (`characters-store.updateCharacter`), campaign panel edits — calls `void load()` and re-fetches the
+  whole surface. No optimistic update, no success confirmation.
+- **root cause:** server state is hand-rolled (`useEffect`+`useState`+`getRepositories()` with a manual
+  race-guard, ~11 copies, plus Zustand store loaders); mutations can only invalidate by full refetch.
+- **fix:** the React Query migration (see `CODE-QUALITY.md` PR4) — `useMutation` with optimistic update
+  + `invalidateQueries`, and a success toast via the notification store. **status:** open.
 
 ---
 
@@ -451,7 +471,8 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
   Now "Add &lt;name&gt; to my rulesets" with a clarifying tooltip, across the whole built-in catalog.
   `LoadBuiltinRulesetButton.tsx`. **fixed @69180e1**
 - **F37** · CX · No first-run onboarding: a new signed-in user with no rulesets/games gets no guided
-  next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open**
+  next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open — scoped as
+  its own follow-up (not part of the 2026-06-29 code-quality round).**
 - **F38** · CX · Landing doesn't convey the async play-by-post value prop or FitD specifics.
   `app/page.tsx:28–34` → messaging + an "async play" feature. **fixed (PR #59)** — hero + the three
   feature cards + CTA now lead with async, Discord-style play-by-post (rulesets, shared rolls/clocks/
@@ -505,6 +526,16 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
   `CharacterData`/roll-loop home); **The Wildsea** (non-FitD dice: count 6s, no position/effect);
   **Slugblaster** (Style/Stuff/Bull token economy). The major-gap items co-require open roll-loop
   findings (F3, F9, F10, F14, F15). Treat each as its own future epic, not a data-only add. **open**
+- **F59** · CX/a11y · No design-system `<Select>`; raw `<select>` in ~9 files with a copy-pasted
+  className and inconsistent labelling (RollPanel uses `aria-label` only; others wrap a bare `<label>`).
+  → a `packages/ui` `<Select>` with a real associated `<label>` + shared token (see `CODE-QUALITY.md`
+  PR3). **open**
+- **F60** · CX · Clarity/consistency cluster (each small, batch as a polish pass): context-less
+  "Loading…" spinners; button loading inconsistent (spinner vs disable); generic vs specific errors
+  (join-code, panels); ruleset catalog doesn't flag "already in your rulesets"; ruleset picker lacks a
+  one-line blurb; standalone sheet has no "standalone — no campaign" banner; indulge-vice has no
+  confirm/preview; duplicate-character has no success toast; no in-app FitD glossary beyond
+  position/effect tooltips. **open**
 
 ---
 
