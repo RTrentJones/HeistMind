@@ -130,6 +130,7 @@ test.describe('Phase 5: portable characters', () => {
     await gmPage
       .locator('div')
       .filter({ has: gmPage.getByRole('heading', { name: charName }) })
+      .filter({ has: gmPage.getByRole('link', { name: 'View' }) })
       .last()
       .getByRole('link', { name: 'View' })
       .click();
@@ -179,6 +180,7 @@ test.describe('Phase 5: portable characters', () => {
     await gmPage
       .locator('div')
       .filter({ has: gmPage.getByRole('heading', { name: charName }) })
+      .filter({ has: gmPage.getByRole('button', { name: 'Duplicate' }) })
       .last()
       .getByRole('button', { name: 'Duplicate' })
       .click();
