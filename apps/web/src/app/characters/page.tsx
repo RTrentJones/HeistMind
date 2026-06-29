@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Character, Game } from '@heist-mind/database';
 import {
-  Badge,
   Button,
   Card,
   Container,
@@ -18,6 +17,7 @@ import {
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
+import { CharacterCard } from '@/features/characters/components/CharacterCard';
 
 /**
  * "My Characters" (Phase 5) — every character the user owns, standalone or in a campaign. The
@@ -77,26 +77,16 @@ export default function MyCharactersPage() {
   }
 
   const card = (ch: Character) => (
-    <Card key={ch.id} variant='character'>
-      <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-        <div>
-          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Heading level='h3'>{ch.name}</Heading>
-            {ch.status !== 'active' && (
-              <Badge variant='steel' className='capitalize'>
-                {ch.status}
-              </Badge>
-            )}
-            {!ch.gameId && <Badge variant='outline'>{t('characters.standalone')}</Badge>}
-          </Stack>
-          <Text variant='muted' size='sm'>
-            {t('characters.meta', {
-              playbook: ch.playbookType,
-              campaign: ch.gameId ? (gameNames[ch.gameId] ?? '') : t('characters.standalone'),
-            })}
-          </Text>
-        </div>
-        <Stack direction='row' gap='sm' align='center'>
+    <CharacterCard
+      key={ch.id}
+      character={ch}
+      standaloneLabel={t('characters.standalone')}
+      meta={t('characters.meta', {
+        playbook: ch.playbookType,
+        campaign: ch.gameId ? (gameNames[ch.gameId] ?? '') : t('characters.standalone'),
+      })}
+      actions={
+        <>
           <Button
             variant='outline'
             size='sm'
@@ -112,9 +102,9 @@ export default function MyCharactersPage() {
               {t('characters.open')}
             </Link>
           </Button>
-        </Stack>
-      </Stack>
-    </Card>
+        </>
+      }
+    />
   );
 
   return (

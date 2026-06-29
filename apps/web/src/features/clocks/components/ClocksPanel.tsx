@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CLOCK_SEGMENTS, type Clock as ClockType, type ClockSegments } from '@heist-mind/database';
-import { Alert, Badge, Button, Card, Clock, Input, Stack, Text } from '@heist-mind/ui';
+import { Alert, Badge, Button, Card, Clock, Input, Select, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -143,20 +143,17 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
             onChange={e => setName(e.target.value)}
             placeholder={t('components.clocksPanel.newClockPlaceholder')}
           />
-          <label className='flex flex-col gap-1 text-sm'>
-            {t('components.clocksPanel.segments')}
-            <select
-              className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-              value={segments}
-              onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
-            >
-              {CLOCK_SEGMENTS.map(s => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            label={t('components.clocksPanel.segments')}
+            value={segments}
+            onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
+          >
+            {CLOCK_SEGMENTS.map(s => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
           <Button variant='ember' disabled={busy || !name.trim()} onClick={create}>
             {t('components.clocksPanel.addClock')}
           </Button>

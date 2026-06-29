@@ -26,6 +26,7 @@ import {
   HarmTracker,
   Heading,
   Input,
+  Select,
   Stack,
   StressTracker,
   Text,
@@ -456,36 +457,30 @@ export function CharacterEditor({
               <>
                 <Heading level='h3'>{t('components.characterEditor.friendsRivals')}</Heading>
                 <Stack direction='row' gap='md' align='end' className='flex-wrap'>
-                  <label className='flex flex-col gap-1 text-sm'>
-                    {t('components.characterEditor.closeFriend')}
-                    <select
-                      className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-                      value={contactName('friend')}
-                      onChange={e => setContact('friend', e.target.value)}
-                    >
-                      <option value=''>—</option>
-                      {playbookContacts.map(c => (
-                        <option key={c.name} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className='flex flex-col gap-1 text-sm'>
-                    {t('components.characterEditor.rival')}
-                    <select
-                      className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-                      value={contactName('rival')}
-                      onChange={e => setContact('rival', e.target.value)}
-                    >
-                      <option value=''>—</option>
-                      {playbookContacts.map(c => (
-                        <option key={c.name} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <Select
+                    label={t('components.characterEditor.closeFriend')}
+                    value={contactName('friend')}
+                    onChange={e => setContact('friend', e.target.value)}
+                  >
+                    <option value=''>—</option>
+                    {playbookContacts.map(c => (
+                      <option key={c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label={t('components.characterEditor.rival')}
+                    value={contactName('rival')}
+                    onChange={e => setContact('rival', e.target.value)}
+                  >
+                    <option value=''>—</option>
+                    {playbookContacts.map(c => (
+                      <option key={c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </Select>
                 </Stack>
               </>
             )}

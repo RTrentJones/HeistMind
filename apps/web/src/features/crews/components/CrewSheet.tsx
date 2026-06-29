@@ -13,7 +13,7 @@ import {
   CREW_LIMITS,
   CREW_XP_TRACK,
 } from '@heist-mind/database';
-import { Alert, Badge, Button, Heading, Input, Stack, Text, Tooltip } from '@heist-mind/ui';
+import { Alert, Badge, Button, Heading, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -105,21 +105,18 @@ export function CrewSheet({
           {t('components.crewSheet.startPrompt')}
         </Text>
         <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-          <label className='flex flex-col gap-1 text-sm'>
-            {t('components.crewSheet.crewType')}
-            <select
-              className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-              value={crewType}
-              onChange={e => setCrewType(e.target.value)}
-            >
-              <option value=''>—</option>
-              {(crewRules?.types ?? []).map(type => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            label={t('components.crewSheet.crewType')}
+            value={crewType}
+            onChange={e => setCrewType(e.target.value)}
+          >
+            <option value=''>—</option>
+            {(crewRules?.types ?? []).map(type => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </Select>
           <Button variant='ember' disabled={busy} onClick={createCrew}>
             {t('components.crewSheet.createCrew')}
           </Button>
@@ -441,23 +438,20 @@ export function CrewSheet({
         </Stack>
         {isGm && (
           <Stack direction='row' gap='sm' align='end' className='mt-2 flex-wrap'>
-            <label className='flex flex-col gap-1 text-sm'>
-              {t('components.crewSheet.addClaim')}
-              <select
-                className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-                value={newClaim}
-                onChange={e => setNewClaim(e.target.value)}
-              >
-                <option value=''>—</option>
-                {(crewRules?.claims ?? [])
-                  .filter(c => !crew.claims.includes(c))
-                  .map(c => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <Select
+              label={t('components.crewSheet.addClaim')}
+              value={newClaim}
+              onChange={e => setNewClaim(e.target.value)}
+            >
+              <option value=''>—</option>
+              {(crewRules?.claims ?? [])
+                .filter(c => !crew.claims.includes(c))
+                .map(c => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+            </Select>
             <Button
               variant='outline'
               size='sm'

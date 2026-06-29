@@ -96,6 +96,7 @@ export * from './components/Alert';
 // Form components
 export * from './components/Input';
 export * from './components/Textarea';
+export * from './components/Select';
 
 // Base components
 export * from './components/Button';
