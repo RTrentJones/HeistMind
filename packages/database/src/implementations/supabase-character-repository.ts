@@ -249,14 +249,40 @@ export class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
-  // --- Phase 5b (move / clone across campaigns + rulesets) — not yet implemented ---
+  // Duplicate a character into a new STANDALONE character owned by the caller (Phase 5b). Copies the
+  // build verbatim (an exact snapshot, not re-validated — a played character legitimately exceeds
+  // creation limits). Owner-only; the new character is bound to the same ruleset.
+  async cloneCharacter(
+    characterId: string,
+    userId: string,
+    newName?: string
+  ): Promise<Result<Character>> {
+    try {
+      const source = await this.findById(characterId);
+      if (!source.success) return source as Result<Character>;
+      if (!source.data) return { success: false, error: { message: 'Character not found' } };
+      if (source.data.createdBy !== userId) {
+        return { success: false, error: { message: 'Not your character', code: 'FORBIDDEN' } };
+      }
+      const src = source.data;
+      return this.create(userId, {
+        rulesetId: src.originalRulesetId ?? undefined,
+        name: newName ?? `${src.name} (copy)`,
+        description: src.description ?? undefined,
+        avatarUrl: src.avatarUrl ?? undefined,
+        characterData: structuredClone(src.characterData),
+        playbookType: src.playbookType,
+      });
+    } catch (e) {
+      return failFromCatch(e);
+    }
+  }
+
+  // --- Phase 5c (transfer as a distinct primitive; cross-ruleset) — not yet implemented ---
   async delete(): Promise<Result<void>> {
     throw new Error('SupabaseCharacterRepository.delete not implemented');
   }
   async transferToGame(): Promise<Result<Character>> {
     throw new Error('SupabaseCharacterRepository.transferToGame not implemented');
-  }
-  async cloneCharacter(): Promise<Result<Character>> {
-    throw new Error('SupabaseCharacterRepository.cloneCharacter not implemented');
   }
 }

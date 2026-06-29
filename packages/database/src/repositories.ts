@@ -123,10 +123,12 @@ export interface CharacterRepository {
     targetGameId: string,
     userId: string
   ): Promise<Result<Character>>;
+  /** Duplicate a character into a new STANDALONE character owned by `userId` (Phase 5b). Copies the
+   * build verbatim (an exact snapshot — not re-validated). Owner-only. */
   cloneCharacter(
     characterId: string,
-    targetGameId: string,
-    userId: string
+    userId: string,
+    newName?: string
   ): Promise<Result<Character>>;
   /** Link a standalone character into a campaign (single active campaign). The DB RPC enforces
    * ownership + active membership + ruleset match server-side. (Phase 5 — portable characters.) */

@@ -104,7 +104,8 @@ next BRD phases.
 2. ~~**Portable characters ("My Characters").**~~ ✅ **Shipped (Phase 5).** Characters are now
    user-owned and standalone (`/characters`, `/characters/new`, `/characters/[id]`), and **attach
    (link) into a same-ruleset campaign** — single active campaign, `game_id` a nullable pointer
-   (`FINDINGS.md` F56, migration `00014`). *Phase 5b (move/clone across campaigns + rulesets) remains.*
+   (`FINDINGS.md` F56, migration `00014`). **Phase 5b** adds **move / detach / clone** (carry your
+   scoundrel between tables, duplicate a build). *Only cross-ruleset adaptation (5c) remains.*
 3. **Mobile-optimized at-table sheet.** The core use is tracking *during* play, often one-handed on a
    phone; the dense sheet isn't phone-first. *Design/responsive effort.* → **`FINDINGS.md` F57**.
 4. **Frictionless first-run.** Bundled starters help, but "load a ruleset → create inside a game" has

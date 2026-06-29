@@ -386,8 +386,10 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
   standalone), **`/characters/[id]`** (standalone sheet — campaign-scoped sections hide). The standalone
   sheet offers **"Bring to a campaign"** (`AttachToCampaign`). Repo/service resolve the ruleset via the
   character binding and handle a null game; `CreateCharacterData.gameId` is optional + a `rulesetId`.
-- **status:** fixed — Phase 5 (migration `00014` + `apps/web/src/app/characters/*` + `features/characters`
-  attach + `features/dashboard` links). *(Phase 5b — move/clone/cross-ruleset — remains open.)*
+- **status:** fixed — Phase 5 (migration `00014` + `apps/web/src/app/characters/*` + attach) **+ Phase
+  5b** (move + detach + clone — owner controls on the sheet via `AttachToCampaign`, "Duplicate" on My
+  Characters; reuses the `00014` RPCs + `cloneCharacter`, no migration). *(Cross-ruleset adaptation —
+  Phase 5c — remains open.)*
 
 ### F57 — Character sheet isn't phone-first for at-table / PbP use
 
