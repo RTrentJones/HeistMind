@@ -10,7 +10,7 @@ import {
   toSupabaseScoreInsert,
   toSupabaseScoreUpdate,
 } from '../adapters/score-adapter';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
 
 export class SupabaseScoreRepository implements ScoreRepository {
   constructor(
@@ -19,7 +19,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async findByGame(gameId: string): Promise<Result<Score[]>> {
@@ -58,7 +58,10 @@ export class SupabaseScoreRepository implements ScoreRepository {
       if (active.success && active.data)
         return {
           success: false,
-          error: { message: 'A score is already in progress — end it first.', code: 'SCORE_ACTIVE' },
+          error: {
+            message: 'A score is already in progress — end it first.',
+            code: 'SCORE_ACTIVE',
+          },
         };
       const { data: row, error } = await this.db
         .from('scores')

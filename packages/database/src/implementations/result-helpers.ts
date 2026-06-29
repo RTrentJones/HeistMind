@@ -1,5 +1,7 @@
 // Shared Result helpers for Supabase repository implementations.
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Result } from '../domain-types';
+import type { Database } from '../supabase-types';
 
 /**
  * The env-scoped schema the core tables (rulesets/games/characters/game_players)
@@ -7,6 +9,19 @@ import type { Result } from '../domain-types';
  * migration's `heistmind.target_schema`.
  */
 export type CoreSchema = 'development' | 'production';
+
+/** A PostgREST client scoped to one of the generated schemas. */
+type CoreDb = ReturnType<SupabaseClient<Database>['schema']>;
+
+/**
+ * A PostgREST client scoped to the env's core schema. The generated `Database` type only carries the
+ * active schema ('development'), so the runtime schema name is cast here — in exactly one place —
+ * rather than at every repository call site. The explicit return type keeps tsc from inlining a
+ * non-portable postgrest-js path into the emitted declarations.
+ */
+export function coreSchema(client: SupabaseClient<Database>, schema: CoreSchema): CoreDb {
+  return client.schema(schema as 'development');
+}
 
 interface SupabaseishError {
   message: string;

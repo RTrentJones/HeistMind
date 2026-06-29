@@ -1,6 +1,6 @@
 // Supabase CharacterRepository — core tables in the env schema, profiles in public.
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Json } from '../supabase-types';
+import type { Database } from '../supabase-types';
 import type {
   Character,
   CharacterWithDetails,
@@ -19,8 +19,15 @@ import {
 } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
-import { fromSupabaseProfile } from '../adapters/profile-adapter';
-import { failFromError, failFromCatch, NO_ROWS, type CoreSchema } from './result-helpers';
+import { fromSupabaseProfile, toJson } from '../adapters/profile-adapter';
+import {
+  failFromError,
+  failFromCatch,
+  NO_ROWS,
+  type CoreSchema,
+  coreSchema,
+} from './result-helpers';
+import { newId } from './id';
 
 function stubProfile(id: string): Profile {
   return {
@@ -34,12 +41,6 @@ function stubProfile(id: string): Profile {
   };
 }
 
-function newId(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ?? `adv-${Date.now()}-${Math.round(Math.random() * 1e9)}`
-  );
-}
-
 export class SupabaseCharacterRepository implements CharacterRepository {
   constructor(
     private readonly client: SupabaseClient<Database>,
@@ -47,7 +48,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async create(userId: string, data: CreateCharacterData): Promise<Result<Character>> {
@@ -122,6 +123,14 @@ export class SupabaseCharacterRepository implements CharacterRepository {
       }
       const character = fromSupabaseCharacter(charRow);
 
+      // The creator profile is independent of the game/ruleset chain — fetch it concurrently with
+      // them rather than after.
+      const creatorPromise = this.client
+        .from('profiles')
+        .select('*')
+        .eq('id', character.createdBy)
+        .single();
+
       // Standalone characters (Phase 5) have no game; only load it when linked.
       let game: Game | null = null;
       if (character.gameId) {
@@ -147,11 +156,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .single();
       if (rsErr) return failFromError(rsErr);
 
-      const { data: creatorRow, error: cErr } = await this.client
-        .from('profiles')
-        .select('*')
-        .eq('id', character.createdBy)
-        .single();
+      const { data: creatorRow, error: cErr } = await creatorPromise;
       if (cErr && cErr.code !== NO_ROWS) return failFromError(cErr);
 
       const details: CharacterWithDetails = {
@@ -209,7 +214,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .from('characters')
         .update({
           experience_points: character.experiencePoints + amount,
-          advancement_history: history as unknown as Json,
+          advancement_history: toJson(history),
         })
         .eq('id', id)
         .select()

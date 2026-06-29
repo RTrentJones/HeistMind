@@ -6,7 +6,7 @@ import type { Database } from '../supabase-types';
 import type { GamePlayer, UserGameContext, Result, GameRole, PlayerStatus } from '../domain-types';
 import type { GamePlayerRepository } from '../repositories';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
 
 export class SupabaseGamePlayerRepository implements GamePlayerRepository {
   constructor(
@@ -15,7 +15,7 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async findByGame(gameId: string): Promise<Result<GamePlayer[]>> {

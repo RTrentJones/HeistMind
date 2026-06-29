@@ -11,7 +11,7 @@ import {
   toSupabaseClockInsert,
   toSupabaseClockUpdate,
 } from '../adapters/clock-adapter';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
 
 export class SupabaseClockRepository implements ClockRepository {
   constructor(
@@ -20,7 +20,7 @@ export class SupabaseClockRepository implements ClockRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async create(userId: string, data: CreateClockData): Promise<Result<Clock>> {

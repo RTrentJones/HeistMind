@@ -16,6 +16,7 @@ import {
 import { getRepositories } from '@/lib/auth';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useNotificationStore } from '@/shared/stores/notification-store';
+import i18n from '@/lib/i18n';
 import type { LoadingState } from '@/shared/types';
 import {
   deriveSteps,
@@ -307,7 +308,10 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
           if (!canSubmit() || (!gameId && !rulesetId)) {
             useNotificationStore
               .getState()
-              .warning('Incomplete character', 'Add a name and pick a playbook first.');
+              .warning(
+                i18n.t('pages:characters.notifyIncompleteTitle'),
+                i18n.t('pages:characters.notifyIncompleteBody')
+              );
             return null;
           }
 
@@ -315,7 +319,10 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
           if (!userId) {
             useNotificationStore
               .getState()
-              .error('Not signed in', 'You must be signed in to create a character.');
+              .error(
+                i18n.t('pages:characters.notifySignedOutTitle'),
+                i18n.t('pages:characters.notifySignedOutBody')
+              );
             return null;
           }
 
@@ -336,17 +343,23 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
                 data
               );
             if (!result.success) {
-              throw new Error(result.error?.message || 'Failed to create character');
+              throw new Error(result.error?.message || i18n.t('pages:characters.createFailed'));
             }
             set({ isLoading: false, lastUpdated: new Date() });
             useNotificationStore
               .getState()
-              .success('Character created', `${name.trim()} is ready to play.`);
+              .success(
+                i18n.t('pages:characters.createdTitle'),
+                i18n.t('pages:characters.createdBody', { name: name.trim() })
+              );
             return result.data.id;
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to create character';
+            const message =
+              err instanceof Error ? err.message : i18n.t('pages:characters.createFailed');
             set({ error: message, isLoading: false });
-            useNotificationStore.getState().error('Could not create character', message);
+            useNotificationStore
+              .getState()
+              .error(i18n.t('pages:characters.createFailedTitle'), message);
             return null;
           }
         },

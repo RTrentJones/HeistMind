@@ -1,7 +1,7 @@
 // Type adapters for Profile entity
 // Transforms between Supabase database types and clean domain types
 
-import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
+import type { Tables, TablesInsert, TablesUpdate, Json } from '../supabase-types';
 import type { Profile, CreateProfileData, UpdateProfileData } from '../domain-types';
 
 // Supabase type aliases for cleaner code
@@ -58,7 +58,7 @@ export function parseSupabaseDate(dateString: string | null): Date {
 /**
  * Helper to safely parse JSON fields from Supabase
  */
-export function parseSupabaseJson<T>(jsonValue: any, defaultValue: T): T {
+export function parseSupabaseJson<T>(jsonValue: unknown, defaultValue: T): T {
   if (jsonValue === null || jsonValue === undefined) {
     return defaultValue;
   }
@@ -78,4 +78,13 @@ export function parseSupabaseJson<T>(jsonValue: any, defaultValue: T): T {
   } catch {
     return defaultValue;
   }
+}
+
+/**
+ * Narrow a domain value into the Supabase `Json` column type for a write. These JSONB columns are
+ * stored verbatim and re-hydrated on read via `parseSupabaseJson`, so the structural cast is safe;
+ * centralizing it here keeps the `as unknown as Json` workaround out of every adapter/repository.
+ */
+export function toJson(value: unknown): Json {
+  return value as Json;
 }

@@ -11,7 +11,7 @@ import {
   toSupabaseFactionInsert,
   toSupabaseFactionUpdate,
 } from '../adapters/faction-adapter';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
 
 export class SupabaseFactionRepository implements FactionRepository {
   constructor(
@@ -20,7 +20,7 @@ export class SupabaseFactionRepository implements FactionRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async findByGame(gameId: string): Promise<Result<Faction[]>> {

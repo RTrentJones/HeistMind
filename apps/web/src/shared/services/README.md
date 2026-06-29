@@ -11,7 +11,11 @@ The infrastructure consists of several key components:
 3. **Circuit Breaker** - Prevents cascading failures in distributed systems
 4. **Resilience Service** - Orchestrates multiple resilience patterns
 5. **Error Boundary** - React component for catching and handling UI errors
-6. **Enhanced API Client** - Integrated with resilience patterns
+
+> **Note:** these are generic resilience primitives. HeistMind has **no REST API** — the web app reads
+> and writes through the Supabase repositories in `@heist-mind/database` (React Query hooks under
+> `features/{concept}/data/`). To make a repository call resilient, wrap its body in
+> `resilienceService.executeWithResilience(...)`; there is intentionally no `apiClient`/`fetch` wrapper.
 
 ## Key Features
 
@@ -40,15 +44,6 @@ try {
 
 // Create typed errors
 throw createAppError('User not found', 'USER_NOT_FOUND', 'userId');
-```
-
-### API Calls with Resilience
-
-```typescript
-import { apiClient } from '@/shared/services';
-
-// API client automatically includes retry and circuit breaker logic
-const user = await apiClient.get('/users/123');
 ```
 
 ### Custom Resilient Operations
@@ -149,46 +144,6 @@ React component for UI error handling:
 - Supports error recovery
 - Hook-based API for functional components
 
-## Configuration
-
-### Default API Client Configuration
-
-The default API client includes resilience configuration:
-
-```typescript
-{
-  retry: {
-    maxAttempts: 3,
-    baseDelay: 1000,
-    maxDelay: 5000,
-    backoffMultiplier: 2,
-  },
-  circuitBreaker: {
-    failureThreshold: 5,
-    resetTimeout: 30000,
-    monitoringPeriod: 60000,
-  },
-  timeout: 15000,
-}
-```
-
-### Custom Configuration
-
-You can override default settings:
-
-```typescript
-const customApiClient = new ApiClient({
-  baseUrl: '/api',
-  resilience: {
-    retry: {
-      maxAttempts: 5,
-      baseDelay: 2000,
-    },
-    // ... other options
-  },
-});
-```
-
 ## Error Types
 
 ### AppError
@@ -230,15 +185,6 @@ const metrics = resilienceService.getCircuitBreakerMetrics('api-call');
 
 // Get all circuit breaker metrics
 const allMetrics = resilienceService.getAllCircuitBreakerMetrics();
-```
-
-### Health Checks
-
-```typescript
-import { getSystemHealth } from '@/shared/services/examples/resilience-examples';
-
-const health = getSystemHealth();
-console.log('System health:', health);
 ```
 
 ## Best Practices
@@ -310,17 +256,6 @@ Run tests with:
 ```bash
 npm test shared/services
 ```
-
-## Examples
-
-See `examples/resilience-examples.ts` for comprehensive usage examples including:
-
-- Basic API calls with resilience
-- Custom resilient operations
-- Circuit breaker patterns
-- Error boundary usage
-- Graceful degradation
-- Monitoring and health checks
 
 ## Integration with Other Systems
 

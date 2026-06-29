@@ -1,7 +1,7 @@
 // Type adapters for the Game entity (development/production schema).
-import type { Json, Tables, TablesInsert, TablesUpdate } from '../supabase-types';
+import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
 import type { Game, CreateGameData, UpdateGameData, GameState } from '../domain-types';
-import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
+import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type GameRow = Tables<{ schema: 'development' }, 'games'>;
 type GameInsert = TablesInsert<{ schema: 'development' }, 'games'>;
@@ -51,8 +51,7 @@ export function toSupabaseGameUpdate(data: UpdateGameData): GameUpdate {
   if (data.maxPlayers !== undefined) update.max_players = data.maxPlayers;
   if (data.allowCoGMs !== undefined) update.allow_co_gms = data.allowCoGMs;
   if (data.allowSpectators !== undefined) update.allow_spectators = data.allowSpectators;
-  if (data.ruleOverrides !== undefined)
-    update.rule_overrides = data.ruleOverrides as unknown as Json;
+  if (data.ruleOverrides !== undefined) update.rule_overrides = toJson(data.ruleOverrides);
   if (data.houseRules !== undefined) update.house_rules = data.houseRules ?? null;
   if (data.inviteOnly !== undefined) update.invite_only = data.inviteOnly;
   if (data.publicListing !== undefined) update.public_listing = data.publicListing;

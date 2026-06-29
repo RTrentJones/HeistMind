@@ -22,7 +22,13 @@ import {
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
 import { fromSupabaseProfile } from '../adapters/profile-adapter';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
-import { failFromError, failFromCatch, NO_ROWS, type CoreSchema } from './result-helpers';
+import {
+  failFromError,
+  failFromCatch,
+  NO_ROWS,
+  type CoreSchema,
+  coreSchema,
+} from './result-helpers';
 
 function stubProfile(id: string): Profile {
   return {
@@ -43,7 +49,7 @@ export class SupabaseGameRepository implements GameRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async create(userId: string, data: CreateGameData): Promise<Result<Game>> {

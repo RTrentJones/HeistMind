@@ -15,7 +15,13 @@ import {
   toSupabaseRulesetInsert,
   toSupabaseRulesetUpdate,
 } from '../adapters/ruleset-adapter';
-import { failFromError, failFromCatch, NO_ROWS, type CoreSchema } from './result-helpers';
+import {
+  failFromError,
+  failFromCatch,
+  NO_ROWS,
+  type CoreSchema,
+  coreSchema,
+} from './result-helpers';
 
 export class SupabaseRulesetRepository implements RulesetRepository {
   constructor(
@@ -26,7 +32,7 @@ export class SupabaseRulesetRepository implements RulesetRepository {
   // Cast to the development schema (the only one with generated table types;
   // production is created empty until that env is deployed).
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async create(userId: string, data: CreateRulesetData): Promise<Result<Ruleset>> {

@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HeistMind is a **rules-driven character + crew manager** for Blades in the Dark and other Forged in the Dark (FitD) tabletop RPG systems. It works two ways: **(1)** as your **character sheet anywhere** — build a rules-valid scoundrel and crew (every action the app offers is legal for your ruleset, so you don't re-read the book) and bring it to any table; and **(2)** as the **live mechanical layer for async, play-by-post games on Discord** — rolls, clocks, stress, per-score gear, crew/faction state, and a score-grouped campaign log that the table builds up as the story posts over days. The narrative stays in Discord prose; the mechanics and shared truth live in HeistMind — *think "Avrae for Forged in the Dark."* Play itself can happen in person, on Discord, or in-app — nothing is forced (à la carte). Game Masters upload custom FitD rulesets and run campaigns; players build characters and share DB-backed campaign state loaded on view. Auth is Discord OAuth; multi-tenant isolation is enforced via per-environment Postgres schemas + Supabase Row Level Security.
+HeistMind is a **rules-driven character + crew manager** for Blades in the Dark and other Forged in the Dark (FitD) tabletop RPG systems. It works two ways: **(1)** as your **character sheet anywhere** — build a rules-valid scoundrel and crew (every action the app offers is legal for your ruleset, so you don't re-read the book) and bring it to any table; and **(2)** as the **live mechanical layer for async, play-by-post games on Discord** — rolls, clocks, stress, per-score gear, crew/faction state, and a score-grouped campaign log that the table builds up as the story posts over days. The narrative stays in Discord prose; the mechanics and shared truth live in HeistMind — _think "Avrae for Forged in the Dark."_ Play itself can happen in person, on Discord, or in-app — nothing is forced (à la carte). Game Masters upload custom FitD rulesets and run campaigns; players build characters and share DB-backed campaign state loaded on view. Auth is Discord OAuth; multi-tenant isolation is enforced via per-environment Postgres schemas + Supabase Row Level Security.
 
-The **scope-of-record is `.claude/skills/cx-map/BRD.md`** (product requirements + the core-value / à-la-carte principles); `STATUS.md` and `COMPETITIVE.md` (vs D&D Beyond and Avrae) sit alongside it. Avoid the bare "play-by-post play engine" framing — HeistMind is the mechanical *tracker/layer*, not a VTT or forum where the story happens. (A first-class player invite/join flow is not yet built — see `cx-map` `FINDINGS.md`.)
+The **scope-of-record is `.claude/skills/cx-map/BRD.md`** (product requirements + the core-value / à-la-carte principles); `STATUS.md` and `COMPETITIVE.md` (vs D&D Beyond and Avrae) sit alongside it. Avoid the bare "play-by-post play engine" framing — HeistMind is the mechanical _tracker/layer_, not a VTT or forum where the story happens. (A first-class player invite/join flow is not yet built — see `cx-map` `FINDINGS.md`.)
 
 ## Monorepo Structure
 
@@ -103,16 +103,22 @@ Supabase + E2E specifics.
 
 - **app/** — Next.js App Router pages and layouts
 - **features/** — Domain-organized screens (auth, games, characters), each with its own stores and components
-- **shared/** — Cross-feature services (API client, error handling, resilience), stores (UI, notifications), types, and components
+- **shared/** — Cross-feature services (error handling, resilience primitives), stores (UI, notifications), types, and components
 - **lib/** — Core infrastructure (auth setup, i18n config)
 
 ### State Management
 
 Zustand stores use a consistent pattern: `create<State>()(devtools(persist(...)))`. Domain stores live in `features/{domain}/stores/`, cross-cutting stores in `shared/stores/`. Always use `useShallow` for selectors to prevent infinite re-render loops. Only persist essential state via `partialize`.
 
-### API Resilience Layer (shared/services)
+### Data access & resilience (shared/services)
 
-All API calls go through `apiClient` which wraps fetch with retry (exponential backoff + jitter), circuit breaker, and configurable timeouts. Error handling uses typed error classes (`AppError`, `ApiError`, `ValidationAppError`) and routes to the notification store.
+The app has **no REST API** — the web client reads and writes through the Supabase repositories in
+`@heist-mind/database` (see the Database section), which return a `Result<T>`. There is no `fetch`/
+`apiClient` wrapper. `shared/services` provides generic resilience primitives (`resilienceService`
+with retry + exponential backoff + jitter, circuit breaker, timeout) for wrapping any async operation,
+plus typed error classes (`AppError`, `ApiError`, `ValidationAppError`) that route to the notification
+store. Repository access is being consolidated behind a per-concept React Query data-access seam
+(`features/{concept}/data/`) so the datastore stays swappable.
 
 ### Database (packages/database)
 

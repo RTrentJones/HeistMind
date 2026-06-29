@@ -767,6 +767,7 @@
       "noCampaigns": "No campaigns yet. Create one, or join with an invite code.",
       "createFirstCampaign": "Create your first campaign",
       "noCharacters": "No characters yet. Open a campaign to build your scoundrel.",
+      "loadFailed": "Failed to load dashboard",
       "characterMeta": "{{playbook}} · {{campaign}}",
       "activeGames": "Active Games",
       "characters": "Characters",
@@ -797,7 +798,15 @@
       "noRulesets": "You don't have any rulesets yet. Add a starter system first.",
       "addRuleset": "Add a ruleset",
       "rulesetVersion": "v{{version}}",
-      "build": "Build"
+      "build": "Build",
+      "notifyIncompleteTitle": "Incomplete character",
+      "notifyIncompleteBody": "Add a name and pick a playbook first.",
+      "notifySignedOutTitle": "Not signed in",
+      "notifySignedOutBody": "You must be signed in to create a character.",
+      "createdTitle": "Character created",
+      "createdBody": "{{name}} is ready to play.",
+      "createFailedTitle": "Could not create character",
+      "createFailed": "Failed to create character"
     },
     "rulesets": {
       "title": "Rulesets",
