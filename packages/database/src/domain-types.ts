@@ -69,7 +69,10 @@ export interface GamePlayer {
 export interface Character {
   id: string;
   createdBy: string;
-  gameId: string;
+  /** The campaign this character is currently linked into, or `null` when it's standalone
+   * ("My Characters" — Phase 5 portable characters). Single active campaign: a character is in at
+   * most one game at a time. */
+  gameId: string | null;
   name: string;
   description: string | null;
   avatarUrl: string | null;
@@ -736,7 +739,12 @@ export interface UpdateGameData {
 }
 
 export interface CreateCharacterData {
-  gameId: string;
+  /** The campaign to create the character inside, or omit for a standalone character (Phase 5).
+   * When omitted, `rulesetId` is required so the character binds to a ruleset. */
+  gameId?: string;
+  /** The ruleset to bind a standalone character to (the game's ruleset is used when `gameId` is set).
+   * Stored as `original_ruleset_id`. */
+  rulesetId?: string;
   name: string;
   description?: string;
   avatarUrl?: string;
@@ -779,7 +787,9 @@ export interface GameWithDetails extends Game {
 }
 
 export interface CharacterWithDetails extends Character {
-  game: Game;
+  /** `null` for a standalone character (no campaign). The `ruleset` is still resolved (from the
+   * character's binding), so the sheet/validation always have a ruleset. */
+  game: Game | null;
   ruleset: Ruleset;
   creator: Profile;
 }

@@ -63,6 +63,17 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
     return this.client.schema(this.schema as 'development');
   }
 
+  /** Load ruleset content by id (rulesets.content). */
+  private async rulesetContentById(rulesetId: string): Promise<Result<RulesetContent>> {
+    const { data: rsRow, error } = await this.db
+      .from('rulesets')
+      .select('*')
+      .eq('id', rulesetId)
+      .single();
+    if (error) return failFromError(error);
+    return { success: true, data: fromSupabaseRuleset(rsRow).content };
+  }
+
   /** Load the ruleset content backing a game (game.ruleset_id → rulesets.content). */
   private async rulesetForGame(gameId: string): Promise<Result<RulesetContent>> {
     const { data: gameRow, error: gErr } = await this.db
@@ -71,15 +82,46 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       .eq('id', gameId)
       .single();
     if (gErr) return failFromError(gErr);
-    const game = fromSupabaseGame(gameRow);
+    return this.rulesetContentById(fromSupabaseGame(gameRow).rulesetId);
+  }
 
-    const { data: rsRow, error: rsErr } = await this.db
-      .from('rulesets')
-      .select('*')
-      .eq('id', game.rulesetId)
-      .single();
-    if (rsErr) return failFromError(rsErr);
-    return { success: true, data: fromSupabaseRuleset(rsRow).content };
+  /**
+   * The ruleset content for an EXISTING character — resolved via its binding
+   * (`original_ruleset_id`), falling back to its game for any legacy row not yet backfilled. Works
+   * for standalone characters (Phase 5), which have no game.
+   */
+  private async rulesetForCharacter(character: Character): Promise<Result<RulesetContent>> {
+    if (character.originalRulesetId) return this.rulesetContentById(character.originalRulesetId);
+    if (character.gameId) return this.rulesetForGame(character.gameId);
+    return { success: false, error: { message: 'Character has no ruleset' } };
+  }
+
+  /**
+   * Resolve the ruleset + crew context for CREATING a character: from the game (in-campaign) or
+   * directly from a ruleset (standalone). Standalone has no crew context.
+   */
+  private async resolveCreationContext(
+    data: CreateCharacterData
+  ): Promise<Result<{ rulesetId: string; content: RulesetContent; crew: CrewContext | null }>> {
+    if (data.gameId) {
+      const { data: gameRow, error: gErr } = await this.db
+        .from('games')
+        .select('*')
+        .eq('id', data.gameId)
+        .single();
+      if (gErr) return failFromError(gErr);
+      const game = fromSupabaseGame(gameRow);
+      const content = await this.rulesetContentById(game.rulesetId);
+      if (!content.success) return content as Result<never>;
+      const crew = await this.crewForGame(data.gameId);
+      return { success: true, data: { rulesetId: game.rulesetId, content: content.data, crew } };
+    }
+    if (data.rulesetId) {
+      const content = await this.rulesetContentById(data.rulesetId);
+      if (!content.success) return content as Result<never>;
+      return { success: true, data: { rulesetId: data.rulesetId, content: content.data, crew: null } };
+    }
+    return { success: false, error: { message: 'A character needs a campaign or a ruleset.' } };
   }
 
   /**
@@ -101,17 +143,18 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
     data: CreateCharacterData
   ): Promise<Result<CharacterWithDetails>> {
     try {
-      const ruleset = await this.rulesetForGame(data.gameId);
-      if (!ruleset.success) return ruleset;
+      const ctx = await this.resolveCreationContext(data);
+      if (!ctx.success) return ctx as Result<CharacterWithDetails>;
 
-      const crew = await this.crewForGame(data.gameId);
-      const result = validateCharacter(ruleset.data, data.characterData, {
+      const result = validateCharacter(ctx.data.content, data.characterData, {
         mode: 'creation',
-        crew,
+        crew: ctx.data.crew,
       });
       if (!result.isValid) return failValidation<CharacterWithDetails>(result);
 
-      const created = await this.characters.create(userId, data);
+      // Bind the resolved ruleset on the character (original_ruleset_id), so a standalone character
+      // and an in-campaign one both carry their ruleset.
+      const created = await this.characters.create(userId, { ...data, rulesetId: ctx.data.rulesetId });
       if (!created.success) return created;
       return this.characters.findWithDetails(created.data.id) as Promise<
         Result<CharacterWithDetails>
@@ -134,10 +177,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       // Validate the resulting build (live invariants: caps, prerequisites, stress/trauma bounds).
       // Point-buy/ability-count are creation-only — a played character legitimately exceeds them.
       const nextData: CharacterData = data.characterData ?? current.data.characterData;
-      const ruleset = await this.rulesetForGame(current.data.gameId);
+      const ruleset = await this.rulesetForCharacter(current.data);
       if (!ruleset.success) return ruleset as Result<Character>;
 
-      const crew = await this.crewForGame(current.data.gameId);
+      const crew = current.data.gameId ? await this.crewForGame(current.data.gameId) : null;
       const result = validateCharacter(ruleset.data, nextData, { mode: 'live', crew });
       if (!result.isValid) return failValidation<Character>(result);
 
@@ -161,7 +204,7 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       if (readErr) return failFromError(readErr);
       const character = fromSupabaseCharacter(charRow);
 
-      const rs = await this.rulesetForGame(character.gameId);
+      const rs = await this.rulesetForCharacter(character);
       if (!rs.success) return rs as Result<Character>;
       const ruleset = rs.data;
 
@@ -209,8 +252,9 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       }
 
       // The campaign's crew gates what an advance may take (a veteran upgrade opens cross-playbook
-      // picks) and raises the bounds the result is validated against (Mastery/Deadly/Mule).
-      const crew = await this.crewForGame(character.gameId);
+      // picks) and raises the bounds the result is validated against (Mastery/Deadly/Mule). A
+      // standalone character (no game) advances against the ruleset alone.
+      const crew = character.gameId ? await this.crewForGame(character.gameId) : null;
 
       // Apply the effect to a cloned build.
       const next: CharacterData = structuredClone(character.characterData);
@@ -272,10 +316,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       if (!current.success) return current as Result<ValidationResult>;
       if (!current.data) return { success: false, error: { message: 'Character not found' } };
 
-      const rs = await this.rulesetForGame(current.data.gameId);
+      const rs = await this.rulesetForCharacter(current.data);
       if (!rs.success) return rs as Result<ValidationResult>;
 
-      const crew = await this.crewForGame(current.data.gameId);
+      const crew = current.data.gameId ? await this.crewForGame(current.data.gameId) : null;
       // Success carries the result even when the character is invalid.
       return {
         success: true,

@@ -70,8 +70,9 @@ export function LoadoutCard({
     const r = await getRepositories().characters.update(character.id, userId, {
       characterData: { ...data, loadout: tagged },
     });
-    if (r.success) {
-      // Log the settled loadout change to the campaign feed (one entry per save).
+    if (r.success && character.gameId) {
+      // Log the settled loadout change to the campaign feed (one entry per save). A standalone
+      // character has no campaign feed; the loadout still saves on the sheet.
       await getRepositories().rolls.create(userId, {
         gameId: character.gameId,
         characterId: character.id,

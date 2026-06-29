@@ -7,6 +7,7 @@ import type {
   CreateCharacterData,
   UpdateCharacterData,
   AdvancementRecord,
+  Game,
   Profile,
   Result,
 } from '../domain-types';
@@ -121,18 +122,28 @@ export class SupabaseCharacterRepository implements CharacterRepository {
       }
       const character = fromSupabaseCharacter(charRow);
 
-      const { data: gameRow, error: gErr } = await this.db
-        .from('games')
-        .select('*')
-        .eq('id', character.gameId)
-        .single();
-      if (gErr) return failFromError(gErr);
-      const game = fromSupabaseGame(gameRow);
+      // Standalone characters (Phase 5) have no game; only load it when linked.
+      let game: Game | null = null;
+      if (character.gameId) {
+        const { data: gameRow, error: gErr } = await this.db
+          .from('games')
+          .select('*')
+          .eq('id', character.gameId)
+          .single();
+        if (gErr) return failFromError(gErr);
+        game = fromSupabaseGame(gameRow);
+      }
 
+      // The ruleset is bound on the character (original_ruleset_id); fall back to the game's ruleset
+      // for any legacy row not yet backfilled.
+      const rulesetId = character.originalRulesetId ?? game?.rulesetId;
+      if (!rulesetId) {
+        return { success: false, error: { message: 'Character has no ruleset' } };
+      }
       const { data: rsRow, error: rsErr } = await this.db
         .from('rulesets')
         .select('*')
-        .eq('id', game.rulesetId)
+        .eq('id', rulesetId)
         .single();
       if (rsErr) return failFromError(rsErr);
 
@@ -210,7 +221,35 @@ export class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
-  // --- Outside the journey scope ---
+  // Link a standalone character into a campaign (single active campaign). The RPC enforces
+  // ownership + active membership + ruleset match server-side (see migration 00014).
+  async attachToGame(characterId: string, gameId: string): Promise<Result<Character>> {
+    try {
+      const { data: row, error } = await this.db.rpc('attach_character_to_game', {
+        p_character_id: characterId,
+        p_game_id: gameId,
+      });
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseCharacter(row) };
+    } catch (e) {
+      return failFromCatch(e);
+    }
+  }
+
+  // Return a character to standalone ("My Characters"). Owner-only, enforced by the RPC.
+  async detachFromGame(characterId: string): Promise<Result<Character>> {
+    try {
+      const { data: row, error } = await this.db.rpc('detach_character', {
+        p_character_id: characterId,
+      });
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseCharacter(row) };
+    } catch (e) {
+      return failFromCatch(e);
+    }
+  }
+
+  // --- Phase 5b (move / clone across campaigns + rulesets) — not yet implemented ---
   async delete(): Promise<Result<void>> {
     throw new Error('SupabaseCharacterRepository.delete not implemented');
   }

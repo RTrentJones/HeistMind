@@ -52,9 +52,8 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
   · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
   `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change. Copy in
-  `pages.dashboard.*`. _Forward note: these characters are still **game-scoped**; standalone
-  `/characters`, `/characters/new`, `/characters/[id]` routes are **planned (BRD Phase 5 — portable
-  characters), not built**._
+  `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
+  `/characters` routes (Phase 5 — portable characters; see below).
 - **Actions:** (logged out) Sign in / Sign up with Discord; (signed in) jump to any campaign, character
   sheet, or a quick action.
 - **Nav:** → `/auth/callback` (after OAuth) → back to `/` (now the dashboard); → `/games`,
@@ -168,9 +167,10 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
   stress-release half of the FitD pressure loop (MVP downtime).
-- _Forward note: this sheet is only reachable inside a campaign. A **standalone sheet**
-  (`/characters/[id]`, with the score/shared-log sections hidden) is **planned (BRD Phase 5 — portable
-  characters), not built**._
+- **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
+  for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
+  card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
+  routes below.
 
 ### `/rulesets` — Ruleset list + built-in catalog
 
@@ -199,7 +199,31 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   catalog as the no-JSON path.
 - **Nav:** → `/rulesets` on success.
 
-_Last verified:_ 2026-06-28 @ 78123c1 (Phase 1–3 screens; `/` reframed two-mode landing + logged-in dashboard)
+### `/characters` — My Characters (Phase 5 — portable characters)
+
+- **File:** `apps/web/src/app/characters/page.tsx`
+- **Purpose:** the campaign-independent home for every character the user owns — standalone **and**
+  in-campaign (`characters.findByPlayer`). A standalone one carries a "Standalone" badge.
+- **Actions:** "New character" → `/characters/new`; open a character (standalone → `/characters/[id]`,
+  in-campaign → its game route).
+- **Nav:** → `/characters/new`, `/characters/[id]`, `/games/[gameId]/characters/[id]`.
+
+### `/characters/new` — Build a standalone character
+
+- **File:** `apps/web/src/app/characters/new/page.tsx`
+- **Purpose:** pick one of your rulesets (`rulesets.findByCreator`), then the **same
+  `CharacterCreationWizard`** runs with **no `gameId`**; on create it lands on the standalone sheet.
+  Empty state points to `/rulesets` to add a starter first.
+- **Nav:** → `/characters/[id]` on create.
+
+### `/characters/[characterId]` — Standalone character sheet
+
+- **File:** `apps/web/src/app/characters/[characterId]/page.tsx` — reuses `CharacterSheet`. With no
+  campaign, the active-score + shared dice/roll-log sections hide, and an **`AttachToCampaign`** card
+  ("Bring to a campaign") links the character into a same-ruleset campaign (the
+  `attach_character_to_game` RPC), after which it opens at `/games/[gameId]/characters/[id]`.
+
+_Last verified:_ 2026-06-29 @ 00014 (Phase 5 portable characters: /characters routes + attach; game_id nullable)
 
 ---
 
