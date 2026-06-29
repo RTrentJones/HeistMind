@@ -69,11 +69,16 @@ export function CharacterEditor({
   const [crew, setCrew] = useState<CrewContext | null>(null);
   useEffect(() => {
     let active = true;
+    // A standalone character (Phase 5) has no campaign crew; it validates against the ruleset alone.
+    const gameId = character.gameId;
+    if (!gameId) {
+      setCrew(null);
+      return;
+    }
     void getRepositories()
-      .crews.findByGame(character.gameId)
+      .crews.findByGame(gameId)
       .then(r => {
-        if (active && r.success && r.data)
-          setCrew({ crewAbilities: r.data.crewAbilities });
+        if (active && r.success && r.data) setCrew({ crewAbilities: r.data.crewAbilities });
       });
     return () => {
       active = false;

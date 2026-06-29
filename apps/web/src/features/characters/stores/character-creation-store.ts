@@ -65,7 +65,7 @@ interface CharacterCreationState extends LoadingState {
   stepIndex: number;
 
   // Lifecycle
-  initFromRuleset: (ruleset: Ruleset, gameId: string) => void;
+  initFromRuleset: (ruleset: Ruleset, gameId?: string) => void;
   reset: () => void;
 
   // Field edits
@@ -111,7 +111,9 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
 
         initFromRuleset: (ruleset, gameId) => {
           const steps = deriveSteps(ruleset);
-          const isSameDraft = get().gameId === gameId && get().rulesetId === ruleset.id;
+          // Standalone create (Phase 5) passes no gameId; resume keys on (gameId, rulesetId).
+          const nextGameId = gameId ?? null;
+          const isSameDraft = get().gameId === nextGameId && get().rulesetId === ruleset.id;
           set(
             isSameDraft
               ? // Resume the persisted draft, just re-attach the live ruleset + steps
@@ -120,7 +122,7 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
                 {
                   ruleset,
                   steps,
-                  gameId,
+                  gameId: nextGameId,
                   rulesetId: ruleset.id,
                   name: '',
                   draft: emptyDraft(),
@@ -299,8 +301,10 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
         },
 
         submit: async () => {
-          const { name, draft, gameId, canSubmit } = get();
-          if (!canSubmit() || !gameId) {
+          const { name, draft, gameId, rulesetId, canSubmit } = get();
+          // A character is created either inside a campaign (gameId) or standalone against a ruleset
+          // (rulesetId) — Phase 5 portable characters.
+          if (!canSubmit() || (!gameId && !rulesetId)) {
             useNotificationStore
               .getState()
               .warning('Incomplete character', 'Add a name and pick a playbook first.');
@@ -318,7 +322,9 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
           set({ isLoading: true, error: null });
           try {
             const data: CreateCharacterData = {
-              gameId,
+              // gameId present → create in-campaign; otherwise standalone, bound to rulesetId.
+              ...(gameId ? { gameId } : {}),
+              ...(rulesetId ? { rulesetId } : {}),
               name: name.trim(),
               characterData: draft,
               playbookType: draft.playbook,

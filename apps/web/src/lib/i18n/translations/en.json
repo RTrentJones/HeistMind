@@ -436,6 +436,14 @@
       "retiredNote": "Retired — coin banked to stash",
       "view": "View"
     },
+    "attachToCampaign": {
+      "title": "Bring to a campaign",
+      "help": "Link this character into one of your campaigns that uses the same ruleset. Its loadout and the campaign log then follow that campaign.",
+      "none": "None of your campaigns use this ruleset yet. Create one, or join with a code.",
+      "select": "Campaign",
+      "attach": "Attach",
+      "failed": "Couldn't attach the character."
+    },
     "scorePanel": {
       "loadFailed": "Could not load scores.",
       "startFailed": "Could not start the score.",
@@ -747,6 +755,9 @@
       "viewAll": "View all",
       "open": "Open",
       "view": "View",
+      "standalone": "Standalone",
+      "newCharacter": "New character",
+      "manageCharacters": "My characters",
       "noCampaigns": "No campaigns yet. Create one, or join with an invite code.",
       "createFirstCampaign": "Create your first campaign",
       "noCharacters": "No characters yet. Open a campaign to build your scoundrel.",
@@ -760,6 +771,25 @@
         "rulesets": "Rulesets",
         "uploadRuleset": "Upload ruleset"
       }
+    },
+    "characters": {
+      "title": "My characters",
+      "newTitle": "New character",
+      "authPrompt": "Please sign in to manage your characters.",
+      "backToMine": "← My characters",
+      "loadFailed": "Failed to load characters",
+      "loadError": "Couldn't load characters",
+      "standalone": "Standalone",
+      "meta": "{{playbook}} · {{campaign}}",
+      "open": "Open",
+      "newCharacter": "New character",
+      "empty": "No characters yet. Build a standalone scoundrel and bring it to any table.",
+      "createFirst": "Create your first character",
+      "pickRuleset": "Pick a ruleset to build against. The character is yours — bring it to a campaign later.",
+      "noRulesets": "You don't have any rulesets yet. Add a starter system first.",
+      "addRuleset": "Add a ruleset",
+      "rulesetVersion": "v{{version}}",
+      "build": "Build"
     },
     "rulesets": {
       "title": "Rulesets",

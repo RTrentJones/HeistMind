@@ -60,7 +60,7 @@ axes, not maps/tokens/storefronts.
 |---|---|---|
 | Rules-driven character builder + sheet | ✅ | ✅ (FitD, validated) |
 | Logged-in home / "my stuff" dashboard | ✅ | ❌ (flat games list; no dashboard) |
-| Characters independent of a campaign ("My Characters") | ✅ | ❌ characters are **game-scoped** |
+| Characters independent of a campaign ("My Characters") | ✅ | ✅ (Phase 5 — standalone + attach) |
 | Mobile app / phone-first at-table sheet | ✅ polished app | 🟡 web, responsive, not phone-optimized |
 | Free content to start instantly | ✅ (SRD) | 🟡 bundled starters (Brackwater + builtins) |
 | Campaign mgmt / GM sees player sheets | ✅ | ✅ (roster + shared state) |
@@ -101,10 +101,10 @@ next BRD phases.
    to marketing, then a flat list. → **shipped**: `/` is now a reframed two-mode landing when logged
    out and a personal **dashboard** when signed in (your campaigns + characters + recent activity).
    See "Built" below.
-2. **Portable characters ("My Characters").** D&D Beyond characters exist independent of a campaign and
-   travel to any table; ours are **created inside a game and can't exist standalone or move**. For the
-   Mode 1 "your sheet anywhere" promise this is the biggest structural gap. *Meaningful schema change —
-   characters are `game_id`-scoped.* → **`FINDINGS.md` F56**; a BRD Phase 5+ candidate.
+2. ~~**Portable characters ("My Characters").**~~ ✅ **Shipped (Phase 5).** Characters are now
+   user-owned and standalone (`/characters`, `/characters/new`, `/characters/[id]`), and **attach
+   (link) into a same-ruleset campaign** — single active campaign, `game_id` a nullable pointer
+   (`FINDINGS.md` F56, migration `00014`). *Phase 5b (move/clone across campaigns + rulesets) remains.*
 3. **Mobile-optimized at-table sheet.** The core use is tracking *during* play, often one-handed on a
    phone; the dense sheet isn't phone-first. *Design/responsive effort.* → **`FINDINGS.md` F57**.
 4. **Frictionless first-run.** Bundled starters help, but "load a ruleset → create inside a game" has

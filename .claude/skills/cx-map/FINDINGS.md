@@ -378,12 +378,16 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
 - **root cause:** the data model scopes characters under a game. For **Mode 1 ("sheet anywhere")** this
   is the biggest structural gap — a player can't build/own a character *before or without* a campaign,
   or carry it to a new table. D&D Beyond's characters are campaign-independent and travel; ours don't.
-- **fix:** make characters first-class + portable (own them at the user level, *link* into a campaign
-  rather than being born inside one). **Meaningful schema change** — its own BRD phase (5+). The
-  logged-in dashboard now ships a **"Your characters"** view (`features/dashboard`), but those are
-  still **game-scoped** — it surfaces them, it doesn't make them standalone. The structural change
-  remains open.
-- **status:** open (BRD Phase 5+ candidate) — dashboard surface shipped; portability still open.
+- **fix:** **Shipped (BRD Phase 5 — portable characters).** Migration `00014` makes `characters.game_id`
+  a **nullable pointer** (single active campaign / link-move), with `ON DELETE SET NULL`, the ruleset
+  bound on the character (`original_ruleset_id`, backfilled), and `attach_character_to_game` /
+  `detach_character` `SECURITY DEFINER` RPCs (ownership + membership + ruleset match). New routes:
+  **`/characters`** (My Characters), **`/characters/new`** (ruleset picker → the existing wizard,
+  standalone), **`/characters/[id]`** (standalone sheet — campaign-scoped sections hide). The standalone
+  sheet offers **"Bring to a campaign"** (`AttachToCampaign`). Repo/service resolve the ruleset via the
+  character binding and handle a null game; `CreateCharacterData.gameId` is optional + a `rulesetId`.
+- **status:** fixed — Phase 5 (migration `00014` + `apps/web/src/app/characters/*` + `features/characters`
+  attach + `features/dashboard` links). *(Phase 5b — move/clone/cross-ruleset — remains open.)*
 
 ### F57 — Character sheet isn't phone-first for at-table / PbP use
 

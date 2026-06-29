@@ -24,7 +24,7 @@ export type Database = {
           created_by: string
           description: string | null
           experience_points: number | null
-          game_id: string
+          game_id: string | null
           id: string
           is_template: boolean | null
           name: string
@@ -42,7 +42,7 @@ export type Database = {
           created_by: string
           description?: string | null
           experience_points?: number | null
-          game_id: string
+          game_id?: string | null
           id?: string
           is_template?: boolean | null
           name: string
@@ -60,7 +60,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           experience_points?: number | null
-          game_id?: string
+          game_id?: string | null
           id?: string
           is_template?: boolean | null
           name?: string
@@ -589,6 +589,60 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      attach_character_to_game: {
+        Args: { p_character_id: string; p_game_id: string }
+        Returns: {
+          adaptations: Json | null
+          advancement_history: Json | null
+          avatar_url: string | null
+          character_data: Json
+          created_at: string | null
+          created_by: string
+          description: string | null
+          experience_points: number | null
+          game_id: string | null
+          id: string
+          is_template: boolean | null
+          name: string
+          original_ruleset_id: string | null
+          playbook_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "characters"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      detach_character: {
+        Args: { p_character_id: string }
+        Returns: {
+          adaptations: Json | null
+          advancement_history: Json | null
+          avatar_url: string | null
+          character_data: Json
+          created_at: string | null
+          created_by: string
+          description: string | null
+          experience_points: number | null
+          game_id: string | null
+          id: string
+          is_template: boolean | null
+          name: string
+          original_ruleset_id: string | null
+          playbook_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "characters"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_game_role: {
         Args: { game_id: string; user_id: string }
         Returns: string
@@ -1049,6 +1103,7 @@ export type Database = {
           outcome: string
           position: string | null
           results: number[]
+          score_id: string | null
           user_id: string
         }
         Insert: {
@@ -1064,6 +1119,7 @@ export type Database = {
           outcome?: string
           position?: string | null
           results?: number[]
+          score_id?: string | null
           user_id: string
         }
         Update: {
@@ -1079,6 +1135,7 @@ export type Database = {
           outcome?: string
           position?: string | null
           results?: number[]
+          score_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1094,6 +1151,13 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rolls_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
             referencedColumns: ["id"]
           },
         ]

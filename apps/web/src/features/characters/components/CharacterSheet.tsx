@@ -42,6 +42,7 @@ import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { CharacterEditor } from './CharacterEditor';
 import { LoadoutCard } from './LoadoutCard';
+import { AttachToCampaign } from './AttachToCampaign';
 
 /** View a character and modify it (rename, award XP, and edit the validated build). */
 export function CharacterSheet({ characterId }: { characterId: string }) {
@@ -70,8 +71,13 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       setCharacter(result.data);
       setName(result.data.name);
       // The campaign's active score — the loadout (below) is "for" it, and resets when it changes.
-      const sr = await getRepositories().scores.findActive(result.data.gameId);
-      if (sr.success) setActiveScore(sr.data);
+      // A standalone character (Phase 5) has no campaign, so there's no active score.
+      if (result.data.gameId) {
+        const sr = await getRepositories().scores.findActive(result.data.gameId);
+        if (sr.success) setActiveScore(sr.data);
+      } else {
+        setActiveScore(null);
+      }
     }
     setLoading(false);
   };
@@ -154,14 +160,18 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       { characterData: { ...character.characterData, stress: nextStress } }
     );
     if (r.success) {
-      await getRepositories().rolls.create(userId, {
-        gameId: character.gameId,
-        characterId: character.id,
-        kind: 'downtime',
-        label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
-        dice: count,
-        results,
-      });
+      // Log the downtime to the campaign feed — only when the character is in a campaign (a
+      // standalone character still clears stress, it just has no shared log to write to).
+      if (character.gameId) {
+        await getRepositories().rolls.create(userId, {
+          gameId: character.gameId,
+          characterId: character.id,
+          kind: 'downtime',
+          label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
+          dice: count,
+          results,
+        });
+      }
       // Overindulging (cleared more than was marked) is a real consequence the GM narrates.
       setViceNote(overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
       setRollKey(k => k + 1); // refresh the feed so the new downtime entry appears
@@ -301,6 +311,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           </div>
         </Stack>
       </Card>
+
+      {/* Standalone character (Phase 5): offer to bring it to one of your campaigns (same ruleset). */}
+      {!character.gameId && <AttachToCampaign character={character} />}
 
       {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
       <Card variant='outline'>
@@ -528,25 +541,29 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         );
       })()}
 
-      <Card variant='outline'>
-        <Stack direction='column' gap='md'>
-          <Heading level='h3'>{t('components.characterSheet.dice')}</Heading>
-          {usesActionRatings(character.ruleset.content) ? (
-            <RollPanel
-              gameId={character.gameId}
-              characterId={character.id}
-              actions={rulesetActions(character.ruleset.content).map(name => ({
-                name,
-                rating: character.characterData?.skills?.[name] ?? 0,
-              }))}
-              onRolled={onRolled}
-            />
-          ) : (
-            <RollPanel gameId={character.gameId} characterId={character.id} onRolled={onRolled} />
-          )}
-          <RollLog gameId={character.gameId} refreshKey={rollKey} />
-        </Stack>
-      </Card>
+      {/* Dice + shared campaign log: only in a campaign. A standalone character (Phase 5) has no
+          shared feed — its sheet is the rules-valid build, brought to a table when you attach it. */}
+      {character.gameId && (
+        <Card variant='outline'>
+          <Stack direction='column' gap='md'>
+            <Heading level='h3'>{t('components.characterSheet.dice')}</Heading>
+            {usesActionRatings(character.ruleset.content) ? (
+              <RollPanel
+                gameId={character.gameId}
+                characterId={character.id}
+                actions={rulesetActions(character.ruleset.content).map(name => ({
+                  name,
+                  rating: character.characterData?.skills?.[name] ?? 0,
+                }))}
+                onRolled={onRolled}
+              />
+            ) : (
+              <RollPanel gameId={character.gameId} characterId={character.id} onRolled={onRolled} />
+            )}
+            <RollLog gameId={character.gameId} refreshKey={rollKey} />
+          </Stack>
+        </Card>
+      )}
 
       {showEditor && <CharacterEditor character={character} onSaved={() => void load()} />}
     </Stack>
