@@ -164,9 +164,8 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 
 ## Roadmap (phased; each ships via deploy → verify → promote)
 
-> **Status (2026-06-28):** Phases 1–3 are **shipped to prod**. Phase 4 (Discord) and **Phase 5
-> (portable characters)** are **specified, not built** — see the detailed appendices at the end of
-> this doc.
+> **Status (2026-06-29):** Phases 1–3 **and Phase 5 (portable characters)** are **shipped**. Phase 4
+> (Discord) is **specified, not built** — see the detailed appendices at the end of this doc.
 
 - **Phase 1 — Score model + per-score loadout** (R-D1..D4, B4) — ✅ **shipped.** `scores` table + per-score loadout
   storage; "Start/End score" on the campaign page; the sheet's gear becomes the **active score's
@@ -181,10 +180,12 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 - **Phase 4 — Discord integration** (R-H2) — **specified, not built.** See the detailed appendix below
   (interactions-endpoint design, channel↔campaign mapping, attribution via `profiles.discord_id`,
   the migration + credentials the work needs). Inbound-first.
-- **Phase 5 — Portable characters** (R-F4..F7) — **specified, not built.** See the detailed appendix
-  below. Closes **F56** (the biggest Mode-1 gap): characters become user-owned and standalone, then
-  **attach (link) to a campaign** — *single active campaign*, `game_id` a nullable pointer. The
-  characters table already carries the hooks (`original_ruleset_id`, the latent `transferToGame`).
+- **Phase 5 — Portable characters** (R-F4..F7) — ✅ **shipped.** Closes **F56** (the biggest Mode-1
+  gap): migration `00014` makes `game_id` a **nullable pointer** (single active campaign, `ON DELETE
+  SET NULL`), binds the ruleset on the character (`original_ruleset_id`), and adds
+  `attach_character_to_game` / `detach_character` RPCs. Routes `/characters`, `/characters/new`
+  (ruleset picker → the existing wizard), `/characters/[id]` (standalone sheet + "Bring to a
+  campaign"). **Phase 5b** (move/clone/cross-ruleset adaptation) deferred — see the appendix.
 
 ### Decisions (resolved 2026-06-27)
 1. **Campaign log shape:** **widen the existing `rolls` log incrementally** — add `loadout`/`score`

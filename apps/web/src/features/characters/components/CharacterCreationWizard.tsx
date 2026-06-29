@@ -13,7 +13,9 @@ import { WizardSummary } from './layout/WizardSummary';
 
 interface CharacterCreationWizardProps {
   ruleset: Ruleset;
-  gameId: string;
+  /** The campaign to create inside; omit for a standalone character (Phase 5). When omitted, pass
+   * `onComplete` to route to the standalone sheet. */
+  gameId?: string;
   /**
    * `single` (default) — centered single column with a Badge stepper.
    * `rail` — 3-column: left step rail, center stage, right live summary.
@@ -76,7 +78,8 @@ export function CharacterCreationWizard({
     const id = await submit();
     if (id) {
       if (onComplete) onComplete(id);
-      else router.push(`/games/${gameId}`);
+      else if (gameId) router.push(`/games/${gameId}`);
+      else router.push(`/characters/${id}`);
     }
   };
 

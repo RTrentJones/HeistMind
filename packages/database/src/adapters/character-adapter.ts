@@ -41,7 +41,9 @@ export function toSupabaseCharacterInsert(
 ): CharacterInsert {
   return {
     created_by: userId,
-    game_id: data.gameId,
+    // Standalone characters have no game (Phase 5); the ruleset binds via original_ruleset_id.
+    game_id: data.gameId ?? null,
+    original_ruleset_id: data.rulesetId ?? null,
     name: data.name,
     description: data.description ?? null,
     avatar_url: data.avatarUrl ?? null,

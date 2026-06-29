@@ -217,16 +217,21 @@ export const useCharactersStore = create<CharactersState>()(
             }
 
             const newCharacter = result.data;
+            const gameId = data.gameId;
 
             set(state => ({
               characters: [newCharacter, ...state.characters],
               userCharacters: [newCharacter, ...state.userCharacters],
-              gameCharacters: {
-                ...state.gameCharacters,
-                [data.gameId]: state.gameCharacters[data.gameId]
-                  ? [newCharacter, ...(state.gameCharacters[data.gameId] || [])]
-                  : [newCharacter],
-              },
+              // Bucket by game only for in-campaign characters; a standalone character (Phase 5) has
+              // no game bucket.
+              gameCharacters: gameId
+                ? {
+                    ...state.gameCharacters,
+                    [gameId]: state.gameCharacters[gameId]
+                      ? [newCharacter, ...(state.gameCharacters[gameId] || [])]
+                      : [newCharacter],
+                  }
+                : state.gameCharacters,
               isLoading: false,
               lastUpdated: new Date(),
             }));

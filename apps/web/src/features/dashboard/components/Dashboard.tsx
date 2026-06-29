@@ -99,12 +99,21 @@ export function Dashboard() {
           <Text variant='muted' size='sm'>
             {t('pages.dashboard.characterMeta', {
               playbook: ch.playbookType,
-              campaign: gameNameById.get(ch.gameId) ?? '',
+              campaign: ch.gameId
+                ? (gameNameById.get(ch.gameId) ?? '')
+                : t('pages.dashboard.standalone'),
             })}
           </Text>
         </div>
         <Button asChild variant='outline' size='sm'>
-          <Link href={`/games/${ch.gameId}/characters/${ch.id}`}>{t('pages.dashboard.view')}</Link>
+          {/* Standalone characters (Phase 5) open at /characters/[id]; in-campaign ones at the game route. */}
+          <Link
+            href={
+              ch.gameId ? `/games/${ch.gameId}/characters/${ch.id}` : `/characters/${ch.id}`
+            }
+          >
+            {t('pages.dashboard.view')}
+          </Link>
         </Button>
       </Stack>
     </Card>
@@ -167,6 +176,9 @@ export function Dashboard() {
                 <Link href='/games'>{t('pages.dashboard.actions.joinGame')}</Link>
               </Button>
               <Button asChild variant='outline'>
+                <Link href='/characters/new'>{t('pages.dashboard.newCharacter')}</Link>
+              </Button>
+              <Button asChild variant='outline'>
                 <Link href='/rulesets'>{t('pages.dashboard.actions.rulesets')}</Link>
               </Button>
               <Button asChild variant='outline'>
@@ -207,11 +219,23 @@ export function Dashboard() {
             )}
 
             {/* Your characters */}
-            <Heading level='h2' variant='primary'>
-              {t('pages.dashboard.yourCharacters')}
-            </Heading>
+            <Stack direction='row' justify='between' align='center'>
+              <Heading level='h2' variant='primary'>
+                {t('pages.dashboard.yourCharacters')}
+              </Heading>
+              <Button asChild variant='ghost' size='sm'>
+                <Link href='/characters'>{t('pages.dashboard.manageCharacters')}</Link>
+              </Button>
+            </Stack>
             {loading ? null : characters.length === 0 ? (
-              <Text variant='muted'>{t('pages.dashboard.noCharacters')}</Text>
+              <Card variant='outline'>
+                <Stack direction='column' gap='sm' align='start'>
+                  <Text variant='muted'>{t('pages.dashboard.noCharacters')}</Text>
+                  <Button asChild variant='ember' size='sm'>
+                    <Link href='/characters/new'>{t('pages.dashboard.newCharacter')}</Link>
+                  </Button>
+                </Stack>
+              </Card>
             ) : (
               <Grid cols={2} gap='md'>
                 {characters.slice(0, MAX_SHOWN).map(characterCard)}

@@ -378,13 +378,16 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
 - **root cause:** the data model scopes characters under a game. For **Mode 1 ("sheet anywhere")** this
   is the biggest structural gap — a player can't build/own a character *before or without* a campaign,
   or carry it to a new table. D&D Beyond's characters are campaign-independent and travel; ours don't.
-- **fix:** make characters first-class + portable (own them at the user level, *link* into a campaign
-  rather than being born inside one). **Now specified as `BRD.md` Phase 5** — model = **single active
-  campaign (link/move)**: `characters.game_id` becomes a nullable pointer; bind the ruleset on the
-  character (`original_ruleset_id`, already a column); attach/detach via a `SECURITY DEFINER` RPC;
-  standalone `/characters*` routes. The dashboard "Your characters" view ships the *surface*, but
-  characters are still **game-scoped** — the structural change is spec'd, not built.
-- **status:** open — **specified as BRD Phase 5** (single active campaign / link-move); build later.
+- **fix:** **Shipped (BRD Phase 5 — portable characters).** Migration `00014` makes `characters.game_id`
+  a **nullable pointer** (single active campaign / link-move), with `ON DELETE SET NULL`, the ruleset
+  bound on the character (`original_ruleset_id`, backfilled), and `attach_character_to_game` /
+  `detach_character` `SECURITY DEFINER` RPCs (ownership + membership + ruleset match). New routes:
+  **`/characters`** (My Characters), **`/characters/new`** (ruleset picker → the existing wizard,
+  standalone), **`/characters/[id]`** (standalone sheet — campaign-scoped sections hide). The standalone
+  sheet offers **"Bring to a campaign"** (`AttachToCampaign`). Repo/service resolve the ruleset via the
+  character binding and handle a null game; `CreateCharacterData.gameId` is optional + a `rulesetId`.
+- **status:** fixed — Phase 5 (migration `00014` + `apps/web/src/app/characters/*` + `features/characters`
+  attach + `features/dashboard` links). *(Phase 5b — move/clone/cross-ruleset — remains open.)*
 
 ### F57 — Character sheet isn't phone-first for at-table / PbP use
 
