@@ -3,13 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CharacterWithDetails, Game } from '@heist-mind/database';
-import { Alert, Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
+import { Alert, Button, Card, Heading, Select, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
-
-const sel =
-  'rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm text-foreground-primary';
 
 /**
  * Owner controls for a character's campaign membership (single active campaign):
@@ -103,16 +100,17 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
         {/* The move/attach picker — only when there's an eligible target. */}
         {hasTargets ? (
           <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-            <label className='flex flex-col gap-1 text-sm'>
-              {t('components.attachToCampaign.select')}
-              <select className={sel} value={gameId} onChange={e => setGameId(e.target.value)}>
-                {(games ?? []).map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Select
+              label={t('components.attachToCampaign.select')}
+              value={gameId}
+              onChange={e => setGameId(e.target.value)}
+            >
+              {(games ?? []).map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
             <Button
               variant='ember'
               size='sm'
@@ -136,12 +134,7 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
         {/* Return to standalone — only when currently in a campaign. */}
         {inCampaign &&
           (confirmingDetach ? (
-            <Button
-              variant='crimson'
-              size='sm'
-              loading={busy}
-              onClick={() => void detach()}
-            >
+            <Button variant='crimson' size='sm' loading={busy} onClick={() => void detach()}>
               {t('components.attachToCampaign.confirmDetach')}
             </Button>
           ) : (

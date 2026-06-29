@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Character, Game, Roll } from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
+import i18n from '@/lib/i18n';
 
 export interface DashboardCampaign {
   game: Game;
@@ -60,7 +61,7 @@ export function useDashboardData(userId: string | undefined): DashboardData {
         setData(d => ({
           ...d,
           loading: false,
-          error: createdRes.error?.message ?? 'load-failed',
+          error: createdRes.error?.message ?? i18n.t('pages:dashboard.loadFailed'),
         }));
         return;
       }
@@ -80,18 +81,18 @@ export function useDashboardData(userId: string | undefined): DashboardData {
 
       // Recent activity: a few rolls per campaign (capped), merged newest-first.
       const activityLists = await Promise.all(
-        campaigns.slice(0, MAX_ACTIVITY_GAMES).map(c =>
-          repos.rolls
-            .findByGame(c.game.id, PER_GAME_ACTIVITY)
-            .then(r => (r.success ? r.data.map(roll => ({ roll, gameName: c.game.name })) : []))
-        )
+        campaigns
+          .slice(0, MAX_ACTIVITY_GAMES)
+          .map(c =>
+            repos.rolls
+              .findByGame(c.game.id, PER_GAME_ACTIVITY)
+              .then(r => (r.success ? r.data.map(roll => ({ roll, gameName: c.game.name })) : []))
+          )
       );
       if (!active) return;
       const activity = activityLists
         .flat()
-        .sort(
-          (a, b) => new Date(b.roll.createdAt).getTime() - new Date(a.roll.createdAt).getTime()
-        )
+        .sort((a, b) => new Date(b.roll.createdAt).getTime() - new Date(a.roll.createdAt).getTime())
         .slice(0, MAX_ACTIVITY);
 
       setData({ loading: false, error: null, campaigns, characters, activity });

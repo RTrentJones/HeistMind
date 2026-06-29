@@ -1,13 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Stack } from '@heist-mind/ui';
+import { Button, Input, Select, Stack } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
-
-const sel =
-  'rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm text-foreground-primary';
 
 /**
  * Record a result that was settled elsewhere — in person or on Discord (R-E3). Writes a `note` event
@@ -50,21 +47,18 @@ export function AddResultForm({
   return (
     <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
       {characters.length > 0 && (
-        <label className='flex flex-col gap-1 text-sm'>
-          {t('components.addResult.character')}
-          <select
-            className={sel}
-            value={characterId}
-            onChange={e => setCharacterId(e.target.value)}
-          >
-            <option value=''>{t('components.addResult.noCharacter')}</option>
-            {characters.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          label={t('components.addResult.character')}
+          value={characterId}
+          onChange={e => setCharacterId(e.target.value)}
+        >
+          <option value=''>{t('components.addResult.noCharacter')}</option>
+          {characters.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
       )}
       <Input
         label={t('components.addResult.resultLabel')}

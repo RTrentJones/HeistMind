@@ -1,5 +1,5 @@
 // Type adapters for the Ruleset entity (development/production schema).
-import type { Json, Tables, TablesInsert, TablesUpdate } from '../supabase-types';
+import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
 import type {
   Ruleset,
   RulesetContent,
@@ -7,7 +7,7 @@ import type {
   UpdateRulesetData,
   RulesetStatus,
 } from '../domain-types';
-import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
+import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type RulesetRow = Tables<{ schema: 'development' }, 'rulesets'>;
 type RulesetInsert = TablesInsert<{ schema: 'development' }, 'rulesets'>;
@@ -40,7 +40,7 @@ export function toSupabaseRulesetInsert(data: CreateRulesetData, userId: string)
     name: data.name,
     description: data.description ?? null,
     version: data.version,
-    content: data.content as unknown as Json,
+    content: toJson(data.content),
     is_public: data.isPublic ?? false,
     tags: data.tags ?? [],
     // schema_version + status fall back to DB defaults ('1.0' / 'draft').
@@ -52,7 +52,7 @@ export function toSupabaseRulesetUpdate(data: UpdateRulesetData): RulesetUpdate 
   if (data.name !== undefined) update.name = data.name;
   if (data.description !== undefined) update.description = data.description ?? null;
   if (data.version !== undefined) update.version = data.version;
-  if (data.content !== undefined) update.content = data.content as unknown as Json;
+  if (data.content !== undefined) update.content = toJson(data.content);
   if (data.status !== undefined) update.status = data.status;
   if (data.isPublic !== undefined) update.is_public = data.isPublic;
   if (data.tags !== undefined) update.tags = data.tags;

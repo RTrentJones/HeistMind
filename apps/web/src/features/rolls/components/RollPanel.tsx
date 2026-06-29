@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { diceForRating, resistanceStress, stressBounds } from '@heist-mind/database';
-import { Alert, Badge, Button, Stack, Text, Tooltip } from '@heist-mind/ui';
+import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -38,9 +38,6 @@ const MODE_KEY = {
   fortune: 'components.rollPanel.mode.fortune',
   resistance: 'components.rollPanel.mode.resistance',
 } as const;
-
-const sel =
-  'rounded-md border border-border-primary bg-background-secondary px-2 py-1 text-sm text-foreground-primary';
 
 /**
  * Roll dice for a character action, a GM fortune roll, or a resistance roll, and persist it to the
@@ -195,9 +192,9 @@ export function RollPanel({
       )}
       <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
         {modes.length > 1 && (
-          <select
+          <Select
             aria-label={t('components.rollPanel.modeLabel')}
-            className={sel}
+            selectSize='sm'
             value={mode}
             onChange={e => setMode(e.target.value as RollMode)}
           >
@@ -206,13 +203,13 @@ export function RollPanel({
                 {t(MODE_KEY[m])}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         {mode === 'action' && (
           <>
-            <select
+            <Select
               aria-label={t('components.rollPanel.actionLabel')}
-              className={sel}
+              selectSize='sm'
               value={action}
               onChange={e => setAction(e.target.value)}
             >
@@ -221,27 +218,27 @@ export function RollPanel({
                   {a.name} {t('components.rollPanel.diceSuffix', { count: a.rating })}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               aria-label={t('components.rollPanel.positionLabel')}
-              className={sel}
+              selectSize='sm'
               value={position}
               onChange={e => setPosition(e.target.value)}
             >
               <option value='controlled'>{t('components.rollPanel.position.controlled')}</option>
               <option value='risky'>{t('components.rollPanel.position.risky')}</option>
               <option value='desperate'>{t('components.rollPanel.position.desperate')}</option>
-            </select>
-            <select
+            </Select>
+            <Select
               aria-label={t('components.rollPanel.effectLabel')}
-              className={sel}
+              selectSize='sm'
               value={effect}
               onChange={e => setEffect(e.target.value)}
             >
               <option value='limited'>{t('components.rollPanel.effect.limited')}</option>
               <option value='standard'>{t('components.rollPanel.effect.standard')}</option>
               <option value='great'>{t('components.rollPanel.effect.great')}</option>
-            </select>
+            </Select>
             <Tooltip
               variant='dark'
               size='lg'
@@ -277,8 +274,9 @@ export function RollPanel({
               {t('components.rollPanel.bargain')}
             </label>
             {bargain && (
-              <input
-                className={sel}
+              <Input
+                size='sm'
+                aria-label={t('components.rollPanel.bargainPlaceholder')}
                 placeholder={t('components.rollPanel.bargainPlaceholder')}
                 value={bargainNote}
                 onChange={e => setBargainNote(e.target.value)}
@@ -287,9 +285,9 @@ export function RollPanel({
           </>
         )}
         {mode === 'fortune' && (
-          <select
+          <Select
             aria-label={t('components.rollPanel.fortuneLabel')}
-            className={sel}
+            selectSize='sm'
             value={fortune}
             onChange={e => setFortune(Number(e.target.value))}
           >
@@ -298,12 +296,12 @@ export function RollPanel({
                 {t('components.rollPanel.diceCount', { count: n })}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         {mode === 'resistance' && (
-          <select
+          <Select
             aria-label={t('components.rollPanel.resistLabel')}
-            className={sel}
+            selectSize='sm'
             value={resist}
             onChange={e => setResist(e.target.value)}
           >
@@ -312,7 +310,7 @@ export function RollPanel({
                 {o.name} {t('components.rollPanel.diceSuffix', { count: o.rating })}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         <Button variant='ember' onClick={roll} loading={rolling}>
           {mode === 'resistance'

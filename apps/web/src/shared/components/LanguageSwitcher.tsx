@@ -1,5 +1,6 @@
 'use client';
 
+import { Select } from '@heist-mind/ui';
 import { useComponentTranslation, useLanguageSwitcher } from '@/lib/i18n/hooks';
 import { AVAILABLE_LANGUAGES } from '@/lib/i18n/translations';
 
@@ -24,17 +25,18 @@ export function LanguageSwitcher() {
   if (languages.length <= 1) return null;
 
   return (
-    <select
+    <Select
       value={currentLanguage}
       onChange={e => changeLanguage(e.target.value)}
       aria-label={t('languageSwitcher.label')}
-      className='rounded-md border border-border-primary bg-background-secondary px-2 py-1 text-sm text-foreground-secondary'
+      selectSize='sm'
+      className='text-foreground-secondary'
     >
       {languages.map(lang => (
         <option key={lang} value={lang}>
           {LANGUAGE_LABELS[lang]}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

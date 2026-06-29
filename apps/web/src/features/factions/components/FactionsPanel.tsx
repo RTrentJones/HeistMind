@@ -9,7 +9,18 @@ import {
   type Faction,
   type FactionDefinition,
 } from '@heist-mind/database';
-import { Alert, Badge, Button, Card, Clock, Input, Stack, Text, Tooltip } from '@heist-mind/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Clock,
+  Input,
+  Select,
+  Stack,
+  Text,
+  Tooltip,
+} from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -108,24 +119,21 @@ export function FactionsPanel({
 
       {isGm && available.length > 0 && (
         <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-          <label className='flex flex-col gap-1 text-sm'>
-            {t('components.factionsPanel.addFaction')}
-            <select
-              className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-              value={pick}
-              onChange={e => setPick(e.target.value)}
-            >
-              <option value=''>—</option>
-              {available.map(s => (
-                <option key={s.name} value={s.name}>
-                  {s.name}
-                  {s.tier != null
-                    ? ` (${t('components.factionsPanel.tierOption', { tier: s.tier })})`
-                    : ''}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            label={t('components.factionsPanel.addFaction')}
+            value={pick}
+            onChange={e => setPick(e.target.value)}
+          >
+            <option value=''>—</option>
+            {available.map(s => (
+              <option key={s.name} value={s.name}>
+                {s.name}
+                {s.tier != null
+                  ? ` (${t('components.factionsPanel.tierOption', { tier: s.tier })})`
+                  : ''}
+              </option>
+            ))}
+          </Select>
           <Button variant='ember' disabled={busy || !pick} onClick={addSuggested}>
             {t('components.factionsPanel.addFaction')}
           </Button>
@@ -324,20 +332,17 @@ function FactionCard({
               onChange={e => setClockName(e.target.value)}
               placeholder={t('components.factionsPanel.projectClockPlaceholder')}
             />
-            <label className='flex flex-col gap-1 text-sm'>
-              {t('components.factionsPanel.segments')}
-              <select
-                className='rounded-md border border-border-primary bg-background-secondary px-2 py-1.5 text-sm'
-                value={segments}
-                onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
-              >
-                {CLOCK_SEGMENTS.map(s => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Select
+              label={t('components.factionsPanel.segments')}
+              value={segments}
+              onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
+            >
+              {CLOCK_SEGMENTS.map(s => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
             <Button
               variant='outline'
               size='sm'

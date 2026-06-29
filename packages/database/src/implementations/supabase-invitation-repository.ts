@@ -11,7 +11,13 @@ import type {
 import type { InvitationRepository } from '../repositories';
 import { fromSupabaseInvitation, toSupabaseInvitationInsert } from '../adapters/invitation-adapter';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
-import { failFromError, failFromCatch, NO_ROWS, type CoreSchema } from './result-helpers';
+import {
+  failFromError,
+  failFromCatch,
+  NO_ROWS,
+  type CoreSchema,
+  coreSchema,
+} from './result-helpers';
 
 /** Generate a short, human-shareable invite code (avoids ambiguous chars like O/0, I/1). */
 function generateInviteCode(): string {
@@ -30,7 +36,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async create(userId: string, data: CreateInvitationData): Promise<Result<Invitation>> {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Ruleset } from '@heist-mind/database';
-import { Button, ErrorDisplay, Input, LoadingSpinner, Stack, Text } from '@heist-mind/ui';
+import { Button, ErrorDisplay, Input, LoadingSpinner, Select, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -91,24 +91,18 @@ export function GameForm() {
         onChange={e => setDescription(e.target.value)}
         placeholder={t('forms.gameForm.descriptionPlaceholder')}
       />
-      <div>
-        <label htmlFor='ruleset-select' className='mb-2 block text-foreground-secondary'>
-          {t('forms.gameForm.rulesetLabel')}
-        </label>
-        <select
-          id='ruleset-select'
-          aria-label={t('forms.gameForm.rulesetLabel')}
-          value={rulesetId}
-          onChange={e => setRulesetId(e.target.value)}
-          className='w-full rounded-lg border border-border-primary bg-background-tertiary px-3 py-2 text-foreground-primary'
-        >
-          {rulesets.map(rs => (
-            <option key={rs.id} value={rs.id}>
-              {t('forms.gameForm.rulesetOption', { name: rs.name, version: rs.version })}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label={t('forms.gameForm.rulesetLabel')}
+        value={rulesetId}
+        onChange={e => setRulesetId(e.target.value)}
+        className='w-full rounded-lg bg-background-tertiary px-3 py-2'
+      >
+        {rulesets.map(rs => (
+          <option key={rs.id} value={rs.id}>
+            {t('forms.gameForm.rulesetOption', { name: rs.name, version: rs.version })}
+          </option>
+        ))}
+      </Select>
 
       {error && <ErrorDisplay title={t('forms.gameForm.errorTitle')} message={error} />}
 

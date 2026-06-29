@@ -2,17 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Character, CharacterStatus } from '@heist-mind/database';
-import { Badge, Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
+import type { Character } from '@heist-mind/database';
+import { Button, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n/hooks';
-
-const STATUS_VARIANT: Record<CharacterStatus, 'success' | 'steel' | 'outline' | 'stress-critical'> = {
-  active: 'success',
-  inactive: 'outline',
-  retired: 'steel',
-  dead: 'stress-critical',
-};
+import { CharacterCard } from './CharacterCard';
 
 /**
  * The campaign roster: every character attributed to its player, with status. Active characters lead;
@@ -46,7 +40,8 @@ export function CharacterRoster({
         getRepositories()
           .profiles.findById(id)
           .then(
-            r => [id, r.success && r.data ? r.data.displayName || r.data.username || '' : ''] as const
+            r =>
+              [id, r.success && r.data ? r.data.displayName || r.data.username || '' : ''] as const
           )
       )
     ).then(entries => {
@@ -58,7 +53,8 @@ export function CharacterRoster({
   }, [characters]);
 
   const ownerName = (id: string) => owners[id] || t('components.roster.unknownPlayer');
-  const canManage = (ch: Character) => userId != null && (userId === gmId || userId === ch.createdBy);
+  const canManage = (ch: Character) =>
+    userId != null && (userId === gmId || userId === ch.createdBy);
 
   const retire = async (ch: Character) => {
     if (!userId) return;
@@ -85,26 +81,16 @@ export function CharacterRoster({
   };
 
   const renderCard = (ch: Character) => (
-    <Card key={ch.id} variant='character'>
-      <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-        <div>
-          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Heading level='h3'>{ch.name}</Heading>
-            {ch.status !== 'active' && (
-              <Badge variant={STATUS_VARIANT[ch.status]} className='capitalize'>
-                {ch.status}
-              </Badge>
-            )}
-          </Stack>
-          <Text variant='muted' size='sm'>
-            {t('components.roster.meta', {
-              playbook: ch.playbookType,
-              xp: ch.experiencePoints,
-              player: ownerName(ch.createdBy),
-            })}
-          </Text>
-        </div>
-        <Stack direction='row' gap='sm' align='center'>
+    <CharacterCard
+      key={ch.id}
+      character={ch}
+      meta={t('components.roster.meta', {
+        playbook: ch.playbookType,
+        xp: ch.experiencePoints,
+        player: ownerName(ch.createdBy),
+      })}
+      actions={
+        <>
           {ch.status === 'active' &&
             canManage(ch) &&
             (confirming === ch.id ? (
@@ -124,9 +110,9 @@ export function CharacterRoster({
           <Button asChild variant='outline' size='sm'>
             <Link href={`/games/${gameId}/characters/${ch.id}`}>{t('components.roster.view')}</Link>
           </Button>
-        </Stack>
-      </Stack>
-    </Card>
+        </>
+      }
+    />
   );
 
   const active = characters.filter(c => c.status === 'active');

@@ -1,5 +1,5 @@
 // Type adapters for the Character entity (development/production schema).
-import type { Json, Tables, TablesInsert, TablesUpdate } from '../supabase-types';
+import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
 import type {
   Character,
   CharacterData,
@@ -8,7 +8,7 @@ import type {
   AdvancementRecord,
   CharacterStatus,
 } from '../domain-types';
-import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
+import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type CharacterRow = Tables<{ schema: 'development' }, 'characters'>;
 type CharacterInsert = TablesInsert<{ schema: 'development' }, 'characters'>;
@@ -47,7 +47,7 @@ export function toSupabaseCharacterInsert(
     name: data.name,
     description: data.description ?? null,
     avatar_url: data.avatarUrl ?? null,
-    character_data: data.characterData as unknown as Json,
+    character_data: toJson(data.characterData),
     playbook_type: data.playbookType,
   };
 }
@@ -57,8 +57,7 @@ export function toSupabaseCharacterUpdate(data: UpdateCharacterData): CharacterU
   if (data.name !== undefined) update.name = data.name;
   if (data.description !== undefined) update.description = data.description ?? null;
   if (data.avatarUrl !== undefined) update.avatar_url = data.avatarUrl ?? null;
-  if (data.characterData !== undefined)
-    update.character_data = data.characterData as unknown as Json;
+  if (data.characterData !== undefined) update.character_data = toJson(data.characterData);
   if (data.experiencePoints !== undefined) update.experience_points = data.experiencePoints;
   if (data.status !== undefined) update.status = data.status;
   return update;

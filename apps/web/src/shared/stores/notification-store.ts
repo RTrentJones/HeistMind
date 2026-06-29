@@ -19,7 +19,7 @@ export const useNotificationStore = create<NotificationStore>()(
       notifications: [],
 
       add: notification => {
-        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        const id = crypto.randomUUID();
         const newNotification: Notification = {
           id,
           duration: 5000, // Default 5 seconds

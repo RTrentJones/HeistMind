@@ -3,7 +3,7 @@
 // tampered client can't persist an illegal build. Loads the ruleset via character→game→ruleset
 // (the env schema), mirroring the stitch in SupabaseCharacterRepository.findWithDetails.
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Json } from '../supabase-types';
+import type { Database } from '../supabase-types';
 import type {
   Character,
   CharacterData,
@@ -22,6 +22,7 @@ import type {
 import { fromSupabaseCharacter } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
+import { toJson } from '../adapters/profile-adapter';
 import { SupabaseCharacterRepository } from './supabase-character-repository';
 import {
   validateCharacter,
@@ -33,13 +34,8 @@ import {
   PLAYBOOK_TRACK,
   type CrewContext,
 } from '../character-rules';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
-
-function newId(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ?? `adv-${Date.now()}-${Math.round(Math.random() * 1e9)}`
-  );
-}
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
+import { newId } from './id';
 
 /** A failed Result carrying the joined validation error messages. */
 function failValidation<T>(result: ValidationResult): Result<T> {
@@ -60,7 +56,7 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
   }
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   /** Load ruleset content by id (rulesets.content). */
@@ -119,7 +115,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
     if (data.rulesetId) {
       const content = await this.rulesetContentById(data.rulesetId);
       if (!content.success) return content as Result<never>;
-      return { success: true, data: { rulesetId: data.rulesetId, content: content.data, crew: null } };
+      return {
+        success: true,
+        data: { rulesetId: data.rulesetId, content: content.data, crew: null },
+      };
     }
     return { success: false, error: { message: 'A character needs a campaign or a ruleset.' } };
   }
@@ -154,7 +153,10 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
 
       // Bind the resolved ruleset on the character (original_ruleset_id), so a standalone character
       // and an in-campaign one both carry their ruleset.
-      const created = await this.characters.create(userId, { ...data, rulesetId: ctx.data.rulesetId });
+      const created = await this.characters.create(userId, {
+        ...data,
+        rulesetId: ctx.data.rulesetId,
+      });
       if (!created.success) return created;
       return this.characters.findWithDetails(created.data.id) as Promise<
         Result<CharacterWithDetails>
@@ -296,8 +298,8 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         .from('characters')
         .update({
           ...(trackMode ? {} : { experience_points: character.experiencePoints - cost }),
-          character_data: next as unknown as Json,
-          advancement_history: [...character.advancementHistory, record] as unknown as Json,
+          character_data: toJson(next),
+          advancement_history: toJson([...character.advancementHistory, record]),
           ...(adv.type === 'playbook' ? { playbook_type: adv.target } : {}),
         })
         .eq('id', characterId)

@@ -6,7 +6,7 @@ import type { Roll, CreateRollData, Result } from '../domain-types';
 import type { RollRepository } from '../repositories';
 import { rollOutcome } from '../dice';
 import { fromSupabaseRoll, toSupabaseRollInsert } from '../adapters/roll-adapter';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
 
 export class SupabaseRollRepository implements RollRepository {
   constructor(
@@ -15,7 +15,7 @@ export class SupabaseRollRepository implements RollRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   async create(userId: string, data: CreateRollData): Promise<Result<Roll>> {

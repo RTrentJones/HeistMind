@@ -10,7 +10,7 @@ import {
   toSupabaseCrewInsert,
   toSupabaseCrewUpdate,
 } from '../adapters/crew-adapter';
-import { failFromError, failFromCatch, type CoreSchema } from './result-helpers';
+import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
 
 export class SupabaseCrewRepository implements CrewRepository {
   constructor(
@@ -19,7 +19,7 @@ export class SupabaseCrewRepository implements CrewRepository {
   ) {}
 
   private get db() {
-    return this.client.schema(this.schema as 'development');
+    return coreSchema(this.client, this.schema);
   }
 
   /** The game's crew, or null when none has been created yet. */

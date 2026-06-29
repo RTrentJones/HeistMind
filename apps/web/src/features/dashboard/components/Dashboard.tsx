@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import type { CharacterStatus } from '@heist-mind/database';
 import {
   Badge,
   Button,
@@ -18,18 +17,12 @@ import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
+import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import {
   useDashboardData,
   type DashboardActivity,
   type DashboardCampaign,
 } from '@/features/dashboard/hooks/use-dashboard-data';
-
-const STATUS_VARIANT: Record<CharacterStatus, 'success' | 'outline' | 'steel' | 'crimson'> = {
-  active: 'success',
-  inactive: 'outline',
-  retired: 'steel',
-  dead: 'crimson',
-};
 
 const MAX_SHOWN = 6;
 
@@ -85,38 +78,24 @@ export function Dashboard() {
   );
 
   const characterCard = (ch: (typeof characters)[number]) => (
-    <Card key={ch.id} variant='character'>
-      <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-        <div>
-          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Heading level='h3'>{ch.name}</Heading>
-            {ch.status !== 'active' && (
-              <Badge variant={STATUS_VARIANT[ch.status]} className='capitalize'>
-                {ch.status}
-              </Badge>
-            )}
-          </Stack>
-          <Text variant='muted' size='sm'>
-            {t('pages.dashboard.characterMeta', {
-              playbook: ch.playbookType,
-              campaign: ch.gameId
-                ? (gameNameById.get(ch.gameId) ?? '')
-                : t('pages.dashboard.standalone'),
-            })}
-          </Text>
-        </div>
+    <CharacterCard
+      key={ch.id}
+      character={ch}
+      meta={t('pages.dashboard.characterMeta', {
+        playbook: ch.playbookType,
+        campaign: ch.gameId ? (gameNameById.get(ch.gameId) ?? '') : t('pages.dashboard.standalone'),
+      })}
+      actions={
         <Button asChild variant='outline' size='sm'>
           {/* Standalone characters (Phase 5) open at /characters/[id]; in-campaign ones at the game route. */}
           <Link
-            href={
-              ch.gameId ? `/games/${ch.gameId}/characters/${ch.id}` : `/characters/${ch.id}`
-            }
+            href={ch.gameId ? `/games/${ch.gameId}/characters/${ch.id}` : `/characters/${ch.id}`}
           >
             {t('pages.dashboard.view')}
           </Link>
         </Button>
-      </Stack>
-    </Card>
+      }
+    />
   );
 
   const activityRow = (a: DashboardActivity) => {
@@ -186,9 +165,7 @@ export function Dashboard() {
               </Button>
             </Stack>
 
-            {error && (
-              <ErrorDisplay title={t('pages.gamesList.loadError')} message={error} />
-            )}
+            {error && <ErrorDisplay title={t('pages.gamesList.loadError')} message={error} />}
 
             {/* Your campaigns */}
             <Stack direction='row' justify='between' align='center'>
