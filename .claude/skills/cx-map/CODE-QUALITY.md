@@ -5,6 +5,11 @@ standing **architecture / code-quality** backlog from the 2026-06-29 FANG-bar au
 per page, frontend architecture, data layer) + direct verification. Items are tiered to the remediation
 PR sequence. Flip an item to `done @<sha>` when it ships.
 
+> **Progress (2026-06-29):** Tier 1 (PR2, `c492cbf`) and Tier 2 (PR3, `bebe87f`) shipped. **C5** moved
+> into Tier 3/PR4 (the throwing methods are still called by the store loaders being reworked there).
+> **C11** (`<ResourceList>`) deferred — lower-priority list scaffolding, follow-up. Tier 3 (PR4) and
+> Tier 4 (PR5) remain.
+
 > **Calibration:** load-on-view with no realtime is an **intentional BRD decision** — "React Query
 > unused" is not a blocker on its own. The real costs are (a) repeated fetch boilerplate, (b)
 > full-reload-after-mutation flicker, and (c) no single seam isolating the datastore. There are **no
@@ -30,7 +35,7 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 
 ---
 
-## Tier 1 (PR2) — behavior-preserving quick wins
+## Tier 1 (PR2) — behavior-preserving quick wins ✅ done @c492cbf (C5 → PR4)
 
 - **C1** Delete the REST `apiClient` shell: `apps/web/src/shared/services/api-client.ts` +
   `shared/services/examples/` + its `README.md` claims. **Keep** `resilience-service.ts` +
@@ -44,7 +49,7 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 - **C3** Extract duplicate `newId()` (`supabase-character-repository.ts` +
   `supabase-character-management-repository.ts`) into one shared helper.
 - **C4** Types: `SchemaName = 'development' | 'production'` union (replace `schema(this.schema as
-  'development')` casts in repos); `toJson(value): Json` helper (replace ~6 `as unknown as Json` in the
+'development')` casts in repos); `toJson(value): Json` helper (replace ~6 `as unknown as Json` in the
   character/ruleset/game adapters); `parseSupabaseJson<T>(value: unknown, …)` (`profile-adapter.ts:61`,
   drop `any`).
 - **C5** Trim throwing interface methods to what's implemented across the 5 repos (~15 `not implemented`
@@ -57,7 +62,7 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
   `use-dashboard-data.ts:63` → route through i18n; add a lint guard covering stores/hooks.
 - **C8** `notification-store` id → `crypto.randomUUID()` (drop deprecated `substr`/`Date.now()+random`).
 
-## Tier 2 (PR3) — DS primitives + presentational dedup (no data change)
+## Tier 2 (PR3) — DS primitives + presentational dedup (no data change) ✅ C9–C10 done @bebe87f (C11 deferred)
 
 - **C9** `packages/ui` `<Select>` (native `<select>` + shared token + real associated `<label>`, a11y);
   replace the ~9 raw-`<select>` copies. _(See `FINDINGS.md` F59.)_
@@ -75,7 +80,7 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
   (`useCharacters`/`useCharacter`/`useUpdateCharacter`, `useGames`/`useGame`, `useRolls`, …) over stable
   query keys. Wrap queryFn in `resilienceService.executeWithResilience` (or RQ `retry`).
 - **C14** ESLint `no-restricted-imports` (or `boundaries`) rule: ban `getRepositories` / `@heist-mind/
-  database` *repository* imports outside `features/*/data/**` (domain types + pure rules stay allowed).
+database` _repository_ imports outside `features/*/data/**` (domain types + pure rules stay allowed).
   This is the enforceable "swap the DB at will" guarantee.
 - **C15** Migrate every consumer to the seam: replace the ~11 inline `useEffect`/`let active = true`
   copies (`app/characters/page.tsx`, `app/games/page.tsx`, `app/games/[gameId]/page.tsx`, the two

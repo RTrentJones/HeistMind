@@ -21,7 +21,7 @@ two S2 product gaps flagged P0 in `COMPETITIVE.md`.)_
 
 **Audit 2 — 2026-06-29 (code-quality / FANG-bar pass).** A three-lens review (CX per page, frontend
 architecture, data layer) + direct verification, scoped to **code quality + dedup + data-foundation**.
-Findings that are *architecture/code* (not user-facing CX) live in the companion **`CODE-QUALITY.md`**;
+Findings that are _architecture/code_ (not user-facing CX) live in the companion **`CODE-QUALITY.md`**;
 the user-facing CX items are added here as **F58–F60**. Re-confirmed still-open and folded into the
 remediation: **F37** (onboarding) and **F57** (mobile sheet) — both **split out as their own scoped
 follow-ups**, not part of the code-quality round; **F40** (auth-error dead-end) and **F42** (GM/player
@@ -132,7 +132,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `packages/database/src/{character-rules,dice,crews}.ts`, `…/ruleset-validation.ts`,
   the character-management repository, and the sheet/editor/crew UI.
 - **root cause:** Audit (grounded on https://bladesinthedark.com/character-creation + /vice) found the
-  validation *engine* sound but several rules off: starting action dots gave 5 (Brackwater) / 8 (BitD
+  validation _engine_ sound but several rules off: starting action dots gave 5 (Brackwater) / 8 (BitD
   built-in) instead of **7**; 2 abilities at creation instead of **1**; trauma count-only; indulge-vice
   cleared all stress with no roll/overindulge; no heat→wanted cascade; load-boosting abilities ignored;
   shallow ruleset upload validation; crew never consulted (no Mastery cap, Deadly dot, or veteran).
@@ -154,7 +154,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   so the crew's effect on caps is discoverable rather than silent. `gm-crew-grant.spec.ts` exercises
   the end-to-end path (crew takes Mastery → a member's editor surfaces the raised action cap).
   **Remaining follow-up:** the **Deadly +1 dot at character creation** belongs in a crew-aware
-  *creation wizard* (the SRD applies Deadly when the character is made, not as a post-hoc editor
+  _creation wizard_ (the SRD applies Deadly when the character is made, not as a post-hoc editor
   grant) — a separate change.
 
 ---
@@ -263,7 +263,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **where:** loadout is a persistent field on `CharacterData`, set in `CharacterEditor`'s build tab.
 - **root cause:** BitD loadout is a **per-score** operational choice (pick a load level, equip as you
   go, reset next score) — **not** a creation or advancement choice. The current persistent model is
-  wrong; adding it to the wizard (the old "fix") would make it *more* wrong.
+  wrong; adding it to the wizard (the old "fix") would make it _more_ wrong.
 - **fix:** Move loadout **out of the build** and make it **per-character, per-score** — see `BRD.md`
   R-D2 and roadmap Phase 1 (score model + per-score loadout). The load engine (`loadUsed` /
   `effectiveLoadLimit`) is reused as-is.
@@ -385,7 +385,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   there is no character that exists without a campaign and no way to move one between tables.
   `characters.findByPlayer(userId)` exists but every character still belongs to a game.
 - **root cause:** the data model scopes characters under a game. For **Mode 1 ("sheet anywhere")** this
-  is the biggest structural gap — a player can't build/own a character *before or without* a campaign,
+  is the biggest structural gap — a player can't build/own a character _before or without_ a campaign,
   or carry it to a new table. D&D Beyond's characters are campaign-independent and travel; ours don't.
 - **fix:** **Shipped (BRD Phase 5 — portable characters).** Migration `00014` makes `characters.game_id`
   a **nullable pointer** (single active campaign / link-move), with `ON DELETE SET NULL`, the ruleset
@@ -397,15 +397,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   character binding and handle a null game; `CreateCharacterData.gameId` is optional + a `rulesetId`.
 - **status:** fixed — Phase 5 (migration `00014` + `apps/web/src/app/characters/*` + attach) **+ Phase
   5b** (move + detach + clone — owner controls on the sheet via `AttachToCampaign`, "Duplicate" on My
-  Characters; reuses the `00014` RPCs + `cloneCharacter`, no migration). *(Cross-ruleset adaptation —
-  Phase 5c — remains open.)*
+  Characters; reuses the `00014` RPCs + `cloneCharacter`, no migration). _(Cross-ruleset adaptation —
+  Phase 5c — remains open.)_
 
 ### F57 — Character sheet isn't phone-first for at-table / PbP use
 
 - **severity:** S2 · **type:** CX-flaw · **flagged P0 (`COMPETITIVE.md` #3)**
 - **where:** `apps/web/src/features/characters/components/CharacterSheet.tsx` (dense multi-section
   layout) — responsive but not optimized for a phone held during play.
-- **root cause:** the core use is tracking *during* play, often one-handed on a phone (live at the
+- **root cause:** the core use is tracking _during_ play, often one-handed on a phone (live at the
   table, or checking a PbP game on mobile). The sheet is information-dense and tuned for desktop; the
   common in-play taps (stress / harm / XP / roll / resist / loadout) aren't laid out phone-first.
 - **fix:** a mobile pass on the sheet — prioritize the in-play controls, collapse build detail,
@@ -421,7 +421,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** server state is hand-rolled (`useEffect`+`useState`+`getRepositories()` with a manual
   race-guard, ~11 copies, plus Zustand store loaders); mutations can only invalidate by full refetch.
 - **fix:** the React Query migration (see `CODE-QUALITY.md` PR4) — `useMutation` with optimistic update
-  + `invalidateQueries`, and a success toast via the notification store. **status:** open.
+  - `invalidateQueries`, and a success toast via the notification store. **status:** open.
 
 ---
 
@@ -457,7 +457,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **F32** · CX · Game `state` (draft/recruiting/active/paused/completed) is shown as a badge with no
   legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **partial** —
   the state badge now has a tooltip explaining the lifecycle (draft → … → completed); a GM control to
-  *change* the state is still open.
+  _change_ the state is still open.
 - **F33** · CX · Crew `hold` (strong/weak) shown + toggle with no explanation. `CrewSheet.tsx:172–182`
   → tooltip. **fixed @4b7343e (PR #59)** — hold has an explanatory tooltip (strong = stable, weak =
   one setback from breaking up).
@@ -529,7 +529,8 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **F59** · CX/a11y · No design-system `<Select>`; raw `<select>` in ~9 files with a copy-pasted
   className and inconsistent labelling (RollPanel uses `aria-label` only; others wrap a bare `<label>`).
   → a `packages/ui` `<Select>` with a real associated `<label>` + shared token (see `CODE-QUALITY.md`
-  PR3). **open**
+  PR3). **fixed @bebe87f** — `packages/ui/src/components/Select.tsx` (label/aria-label + token);
+  all 9 raw selects migrated, the copy-pasted `sel` className removed.
 - **F60** · CX · Clarity/consistency cluster (each small, batch as a polish pass): context-less
   "Loading…" spinners; button loading inconsistent (spinner vs disable); generic vs specific errors
   (join-code, panels); ruleset catalog doesn't flag "already in your rulesets"; ruleset picker lacks a
