@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import type { Character, Game, Roll } from '@heist-mind/database';
-import { getRepositories } from '@/lib/auth';
 import i18n from '@/lib/i18n';
+import { useCharactersByPlayer } from '@/features/characters/data/queries';
+import { useGamesByCreator, useGamesByPlayer } from '@/features/games/data/queries';
+import { rollsByGameOptions } from '@/features/rolls/data/queries';
 
 export interface DashboardCampaign {
   game: Game;
@@ -29,81 +32,59 @@ const PER_GAME_ACTIVITY = 5;
 const MAX_ACTIVITY = 6;
 
 /**
- * Aggregates the logged-in home: the user's campaigns (GM + joined), their characters, and a merged
- * "recent activity" feed across those campaigns — all over the existing repositories (no new data
- * layer, no schema change). The character/campaign data also backs the "My Characters" surface we
- * otherwise lack (see COMPETITIVE.md P0 #2 / FINDINGS F56).
+ * Aggregates the logged-in home over the React Query data seam: the user's campaigns (GM + joined),
+ * their characters, and a merged "recent activity" feed across those campaigns. Composes the
+ * per-concept hooks (no direct repository access) — campaigns/characters from their query hooks, and
+ * a bounded `useQueries` fan-out for the per-campaign rolls.
  */
 export function useDashboardData(userId: string | undefined): DashboardData {
-  const [data, setData] = useState<DashboardData>({
-    loading: true,
-    error: null,
-    campaigns: [],
-    characters: [],
-    activity: [],
+  const created = useGamesByCreator(userId);
+  const joined = useGamesByPlayer(userId);
+  const charactersQuery = useCharactersByPlayer(userId);
+
+  // Union created (GM) + joined (member), deduped by id; role from createdBy.
+  const campaigns = useMemo<DashboardCampaign[]>(() => {
+    const byId = new Map<string, DashboardCampaign>();
+    for (const g of created.data ?? []) byId.set(g.id, { game: g, role: 'gm' });
+    for (const g of joined.data ?? []) {
+      if (!byId.has(g.id)) {
+        byId.set(g.id, { game: g, role: g.createdBy === userId ? 'gm' : 'player' });
+      }
+    }
+    return [...byId.values()];
+  }, [created.data, joined.data, userId]);
+
+  // Recent activity: a bounded fan-out of per-campaign rolls.
+  const activityGames = campaigns.slice(0, MAX_ACTIVITY_GAMES);
+  const activityQueries = useQueries({
+    queries: activityGames.map(c => ({
+      ...rollsByGameOptions(c.game.id, PER_GAME_ACTIVITY),
+      enabled: !!userId,
+    })),
   });
 
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
-    setData(d => ({ ...d, loading: true, error: null }));
-
-    (async () => {
-      const repos = getRepositories();
-      const [createdRes, joinedRes, charsRes] = await Promise.all([
-        repos.games.findByCreator(userId),
-        repos.games.findByPlayer(userId),
-        repos.characters.findByPlayer(userId),
-      ]);
-      if (!active) return;
-
-      if (!createdRes.success) {
-        setData(d => ({
-          ...d,
-          loading: false,
-          error: createdRes.error?.message ?? i18n.t('pages:dashboard.loadFailed'),
-        }));
-        return;
-      }
-
-      // Union created (GM) + joined (member), deduped by id; role from createdBy.
-      const byId = new Map<string, DashboardCampaign>();
-      for (const g of createdRes.data) byId.set(g.id, { game: g, role: 'gm' });
-      if (joinedRes.success) {
-        for (const g of joinedRes.data) {
-          if (!byId.has(g.id)) {
-            byId.set(g.id, { game: g, role: g.createdBy === userId ? 'gm' : 'player' });
-          }
-        }
-      }
-      const campaigns = [...byId.values()];
-      const characters = charsRes.success ? charsRes.data : [];
-
-      // Recent activity: a few rolls per campaign (capped), merged newest-first.
-      const activityLists = await Promise.all(
-        campaigns
-          .slice(0, MAX_ACTIVITY_GAMES)
-          .map(c =>
-            repos.rolls
-              .findByGame(c.game.id, PER_GAME_ACTIVITY)
-              .then(r => (r.success ? r.data.map(roll => ({ roll, gameName: c.game.name })) : []))
-          )
-      );
-      if (!active) return;
-      const activity = activityLists
-        .flat()
-        .sort((a, b) => new Date(b.roll.createdAt).getTime() - new Date(a.roll.createdAt).getTime())
-        .slice(0, MAX_ACTIVITY);
-
-      setData({ loading: false, error: null, campaigns, characters, activity });
-    })().catch(err => {
-      if (active) setData(d => ({ ...d, loading: false, error: String(err) }));
+  const activity = useMemo<DashboardActivity[]>(() => {
+    const merged: DashboardActivity[] = [];
+    activityQueries.forEach((q, i) => {
+      const gameName = activityGames[i]?.game.name ?? '';
+      for (const roll of q.data ?? []) merged.push({ roll, gameName });
     });
+    return merged
+      .sort((a, b) => new Date(b.roll.createdAt).getTime() - new Date(a.roll.createdAt).getTime())
+      .slice(0, MAX_ACTIVITY);
+    // activityQueries identity changes each render; key on the resolved data via a join of states.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityQueries.map(q => q.dataUpdatedAt).join(','), campaigns]);
 
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+  const error = created.isError
+    ? ((created.error as Error)?.message ?? i18n.t('pages:dashboard.loadFailed'))
+    : null;
 
-  return data;
+  return {
+    loading: created.isLoading || joined.isLoading || charactersQuery.isLoading,
+    error,
+    campaigns,
+    characters: charactersQuery.data ?? [],
+    activity,
+  };
 }
