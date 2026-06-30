@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   CLOCK_SEGMENTS,
   factionStatusLabel,
@@ -21,8 +21,15 @@ import {
   Text,
   Tooltip,
 } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useClocksByGame } from '@/features/clocks/data/queries';
+import { useCreateClock, useDeleteClock, useUpdateClock } from '@/features/clocks/data/mutations';
+import { useFactionsByGame } from '@/features/factions/data/queries';
+import {
+  useCreateFaction,
+  useDeleteFaction,
+  useUpdateFaction,
+} from '@/features/factions/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -41,58 +48,38 @@ export function FactionsPanel({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [factions, setFactions] = useState<Faction[]>([]);
-  const [clocks, setClocks] = useState<ClockType[]>([]);
+  const factionsQuery = useFactionsByGame(gameId);
+  const clocksQuery = useClocksByGame(gameId);
+  const createFaction = useCreateFaction(gameId);
   const [pick, setPick] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    const repos = getRepositories();
-    const [f, c] = await Promise.all([
-      repos.factions.findByGame(gameId),
-      repos.clocks.findByGame(gameId),
-    ]);
-    if (f.success) setFactions(f.data);
-    else setError(f.error?.message ?? t('components.factionsPanel.loadFailed'));
-    if (c.success) setClocks(c.data);
-  };
+  const factions = factionsQuery.data ?? [];
+  const clocks = clocksQuery.data ?? [];
+  const shownError =
+    error ?? (factionsQuery.error as Error | null)?.message ?? null;
 
-  useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
-
-  const addSuggested = async () => {
+  const addSuggested = () => {
     const userId = user?.id;
     if (!userId || !pick) return;
     const def = suggestions?.find(s => s.name === pick);
-    setBusy(true);
-    const r = await getRepositories().factions.create(userId, {
-      gameId,
-      name: pick,
-      factionType: def?.type,
-      tier: def?.tier ?? 0,
-    });
-    setBusy(false);
-    if (r.success) {
-      setPick('');
-      setError(null);
-      await load();
-    } else setError(r.error?.message ?? t('components.factionsPanel.addFailed'));
-  };
-
-  const onChange = async () => {
-    await load();
+    setError(null);
+    createFaction.mutate(
+      { userId, data: { gameId, name: pick, factionType: def?.type, tier: def?.tier ?? 0 } },
+      {
+        onSuccess: () => setPick(''),
+        onError: e => setError((e as Error).message ?? t('components.factionsPanel.addFailed')),
+      }
+    );
   };
 
   const available = (suggestions ?? []).filter(s => !factions.some(f => f.name === s.name));
 
   return (
     <Stack direction='column' gap='md'>
-      {error && (
+      {shownError && (
         <Alert variant='destructive' size='sm'>
-          {error}
+          {shownError}
         </Alert>
       )}
 
@@ -110,7 +97,6 @@ export function FactionsPanel({
               clocks={clocks.filter(c => c.linkedType === 'faction' && c.linkedId === f.id)}
               isGm={isGm}
               userId={user?.id}
-              onChange={onChange}
               onError={setError}
             />
           ))}
@@ -134,7 +120,11 @@ export function FactionsPanel({
               </option>
             ))}
           </Select>
-          <Button variant='ember' disabled={busy || !pick} onClick={addSuggested}>
+          <Button
+            variant='ember'
+            disabled={createFaction.isPending || !pick}
+            onClick={addSuggested}
+          >
             {t('components.factionsPanel.addFaction')}
           </Button>
         </Stack>
@@ -149,34 +139,35 @@ function FactionCard({
   clocks,
   isGm,
   userId,
-  onChange,
   onError,
 }: {
   faction: Faction;
   clocks: ClockType[];
   isGm: boolean;
   userId?: string;
-  onChange: () => Promise<void>;
   onError: (m: string) => void;
 }) {
   const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
   const [clockName, setClockName] = useState('');
   const [segments, setSegments] = useState<ClockSegments>(4);
+  const updateFaction = useUpdateFaction(faction.gameId);
+  const deleteFaction = useDeleteFaction(faction.gameId);
+  const createClock = useCreateClock(faction.gameId);
+  const updateClock = useUpdateClock(faction.gameId);
+  const deleteClock = useDeleteClock(faction.gameId);
 
-  const run = async (fn: () => Promise<{ success: boolean; error?: { message: string } }>) => {
-    setBusy(true);
-    const r = await fn();
-    setBusy(false);
-    if (r.success) await onChange();
-    else onError(r.error?.message ?? t('components.factionsPanel.updateFailed'));
-  };
+  const busy =
+    updateFaction.isPending ||
+    deleteFaction.isPending ||
+    createClock.isPending ||
+    updateClock.isPending ||
+    deleteClock.isPending;
+  const onErr = { onError: (e: unknown) => onError((e as Error).message ?? t('components.factionsPanel.updateFailed')) };
 
-  const repos = getRepositories();
   const setStatus = (delta: number) =>
-    run(() => repos.factions.update(faction.id, { status: faction.status + delta }));
+    updateFaction.mutate({ id: faction.id, patch: { status: faction.status + delta } }, onErr);
   const setTier = (delta: number) =>
-    run(() => repos.factions.update(faction.id, { tier: faction.tier + delta }));
+    updateFaction.mutate({ id: faction.id, patch: { tier: faction.tier + delta } }, onErr);
 
   return (
     <Card variant='default'>
@@ -190,7 +181,7 @@ function FactionCard({
               size='sm'
               aria-label={t('components.factionsPanel.removeAria', { name: faction.name })}
               disabled={busy}
-              onClick={() => run(() => repos.factions.delete(faction.id))}
+              onClick={() => deleteFaction.mutate(faction.id, onErr)}
             >
               {t('components.factionsPanel.remove')}
             </Button>
@@ -295,7 +286,7 @@ function FactionCard({
                       size='sm'
                       aria-label={t('components.factionsPanel.reduceClockAria', { name: c.name })}
                       disabled={busy || c.filled <= 0}
-                      onClick={() => run(() => repos.clocks.update(c.id, { filled: c.filled - 1 }))}
+                      onClick={() => updateClock.mutate({ id: c.id, patch: { filled: c.filled - 1 } }, onErr)}
                     >
                       −1
                     </Button>
@@ -304,7 +295,7 @@ function FactionCard({
                       size='sm'
                       aria-label={t('components.factionsPanel.advanceClockAria', { name: c.name })}
                       disabled={busy || c.filled >= c.segments}
-                      onClick={() => run(() => repos.clocks.update(c.id, { filled: c.filled + 1 }))}
+                      onClick={() => updateClock.mutate({ id: c.id, patch: { filled: c.filled + 1 } }, onErr)}
                     >
                       +1
                     </Button>
@@ -313,7 +304,7 @@ function FactionCard({
                       size='sm'
                       aria-label={t('components.factionsPanel.removeClockAria', { name: c.name })}
                       disabled={busy}
-                      onClick={() => run(() => repos.clocks.delete(c.id))}
+                      onClick={() => deleteClock.mutate(c.id, onErr)}
                     >
                       ×
                     </Button>
@@ -351,15 +342,18 @@ function FactionCard({
               onClick={() => {
                 const name = clockName.trim();
                 if (!userId || !name) return;
-                setClockName('');
-                void run(() =>
-                  repos.clocks.create(userId, {
-                    gameId: faction.gameId,
-                    name,
-                    segments,
-                    linkedType: 'faction',
-                    linkedId: faction.id,
-                  })
+                createClock.mutate(
+                  {
+                    userId,
+                    data: {
+                      gameId: faction.gameId,
+                      name,
+                      segments,
+                      linkedType: 'faction',
+                      linkedId: faction.id,
+                    },
+                  },
+                  { onSuccess: () => setClockName(''), ...onErr }
                 );
               }}
             >
