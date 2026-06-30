@@ -154,14 +154,24 @@ test.describe('Phase 5: portable characters', () => {
     const charName = uniqueName('Mover');
     await buildStandaloneBrackwater(gmPage, charName);
 
-    // Attach to A, then move to B.
+    // Attach to A.
     await gmPage.getByLabel('Campaign').selectOption({ label: campA });
     await gmPage.getByRole('button', { name: 'Attach' }).click();
     await gmPage.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
+    const gameAId = new URL(gmPage.url()).pathname.split('/')[2];
 
+    // Move to B — wait until the sheet is on a DIFFERENT game's route (i.e. the move actually
+    // navigated). The plain /games/<id>/characters/<id> regex matches BOTH A and B, so it could
+    // resolve instantly against the pre-move URL; key on the gameId changing away from A.
     await gmPage.getByLabel('Campaign').selectOption({ label: campB });
     await gmPage.getByRole('button', { name: 'Move', exact: true }).click();
-    await gmPage.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
+    await gmPage.waitForURL(
+      url => {
+        const m = url.pathname.match(/^\/games\/([0-9a-f-]+)\/characters\//);
+        return !!m && m[1] !== gameAId;
+      },
+      { timeout: 15_000 }
+    );
 
     // It's now in B's roster.
     await gmPage.getByRole('link', { name: /back to campaign/i }).click();

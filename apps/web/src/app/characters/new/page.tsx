@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Ruleset } from '@heist-mind/database';
@@ -14,8 +14,8 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
 
@@ -28,25 +28,8 @@ export default function NewStandaloneCharacterPage() {
   const { user, isAuthenticated } = useAuth();
   const { t } = usePageTranslation();
   const router = useRouter();
-  const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
+  const rulesets = useRulesetsByCreator(user?.id);
   const [picked, setPicked] = useState<Ruleset | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const userId = user?.id;
-    if (!userId) return;
-    let active = true;
-    void getRepositories()
-      .rulesets.findByCreator(userId)
-      .then(r => {
-        if (!active) return;
-        if (!r.success) setError(r.error?.message ?? t('characters.loadFailed'));
-        else setRulesets(r.data);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user?.id, t]);
 
   if (!isAuthenticated) {
     return (
@@ -79,11 +62,16 @@ export default function NewStandaloneCharacterPage() {
           <Text variant='muted'>{t('characters.pickRuleset')}</Text>
         </Stack>
 
-        {error && <ErrorDisplay title={t('characters.loadError')} message={error} />}
+        {rulesets.isError && (
+          <ErrorDisplay
+            title={t('characters.loadError')}
+            message={(rulesets.error as Error)?.message ?? t('characters.loadFailed')}
+          />
+        )}
 
-        {rulesets === null ? (
+        {rulesets.isLoading ? (
           <LoadingSpinner />
-        ) : rulesets.length === 0 ? (
+        ) : !rulesets.data || rulesets.data.length === 0 ? (
           <Card variant='outline'>
             <Stack direction='column' gap='sm' align='start'>
               <Text variant='muted'>{t('characters.noRulesets')}</Text>
@@ -94,7 +82,7 @@ export default function NewStandaloneCharacterPage() {
           </Card>
         ) : (
           <Stack direction='column' gap='md'>
-            {rulesets.map(rs => (
+            {rulesets.data.map(rs => (
               <Card key={rs.id} variant='outline'>
                 <Stack direction='row' justify='between' align='center' className='flex-wrap'>
                   <div>

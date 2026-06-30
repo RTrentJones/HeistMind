@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Game } from '@heist-mind/database';
@@ -20,38 +20,19 @@ import {
 import { getRepositories } from '@/lib/auth';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
+import { useGamesByCreator, useGamesByPlayer } from '@/features/games/data/queries';
 
 export default function GamesPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { signInWithProvider } = useAuthActions();
   const { t } = usePageTranslation();
   const router = useRouter();
-  const [created, setCreated] = useState<Game[] | null>(null);
-  const [joined, setJoined] = useState<Game[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Created (GM) + joined (member, incl. GM'd games — filtered to player-only below).
+  const created = useGamesByCreator(user?.id);
+  const joined = useGamesByPlayer(user?.id);
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-
-  const load = () => {
-    const userId = user?.id;
-    if (!userId) return;
-    const repos = getRepositories();
-    repos.games.findByCreator(userId).then(result => {
-      if (!result.success) setError(result.error?.message ?? t('gamesList.loadFailed'));
-      else setCreated(result.data);
-    });
-    // findByPlayer returns every game the user is an active member of (including the ones they GM);
-    // show only the games they joined as a player here (created ones appear under "Your campaigns").
-    repos.games.findByPlayer(userId).then(result => {
-      if (result.success) setJoined(result.data);
-    });
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
 
   const onJoin = async () => {
     const userId = user?.id;
@@ -97,10 +78,11 @@ export default function GamesPage() {
     );
   }
 
-  const createdIds = new Set((created ?? []).map(g => g.id));
-  const joinedOnly = (joined ?? []).filter(g => !createdIds.has(g.id));
-  const loading = created === null;
-  const isEmpty = !loading && (created ?? []).length === 0 && joinedOnly.length === 0;
+  const createdGames = created.data ?? [];
+  const createdIds = new Set(createdGames.map(g => g.id));
+  const joinedOnly = (joined.data ?? []).filter(g => !createdIds.has(g.id));
+  const loading = created.isLoading;
+  const isEmpty = !loading && createdGames.length === 0 && joinedOnly.length === 0;
 
   const gameCard = (game: Game, role: 'gm' | 'player') => (
     <Card key={game.id} variant='outline'>
@@ -165,7 +147,12 @@ export default function GamesPage() {
           </Stack>
         </Card>
 
-        {error && <ErrorDisplay title={t('gamesList.loadError')} message={error} />}
+        {created.isError && (
+          <ErrorDisplay
+            title={t('gamesList.loadError')}
+            message={(created.error as Error)?.message ?? t('gamesList.loadFailed')}
+          />
+        )}
 
         {loading ? (
           <LoadingSpinner />
@@ -176,7 +163,7 @@ export default function GamesPage() {
           // distinguishes them, so there are no "…campaigns" sub-headings to collide with the
           // page-title selector in tests.
           <Stack direction='column' gap='md'>
-            {(created ?? []).map(game => gameCard(game, 'gm'))}
+            {createdGames.map(game => gameCard(game, 'gm'))}
             {joinedOnly.map(game => gameCard(game, 'player'))}
           </Stack>
         )}
