@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Ruleset } from '@heist-mind/database';
 import { Button, ErrorDisplay, Input, LoadingSpinner, Select, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /** Create a campaign from one of the GM's rulesets. */
@@ -15,32 +15,18 @@ export function GameForm() {
   const { t } = useTranslation();
   const preselect = useSearchParams().get('ruleset') ?? '';
 
-  const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
+  const rulesetsQuery = useRulesetsByCreator(user?.id);
+  const rulesets = rulesetsQuery.data ?? null;
   const [rulesetId, setRulesetId] = useState(preselect);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Default the picker to the first ruleset once loaded (unless a ?ruleset= preselect or a prior pick).
   useEffect(() => {
-    const userId = user?.id;
-    if (!userId) return;
-    let active = true;
-    getRepositories()
-      .rulesets.findByCreator(userId)
-      .then(result => {
-        if (!active) return;
-        if (!result.success) {
-          setError(result.error?.message ?? t('forms.gameForm.loadRulesetsFailed'));
-          return;
-        }
-        setRulesets(result.data);
-        setRulesetId(prev => prev || (result.data[0]?.id ?? ''));
-      });
-    return () => {
-      active = false;
-    };
-  }, [user?.id, t]);
+    setRulesetId(prev => prev || (rulesets?.[0]?.id ?? ''));
+  }, [rulesets]);
 
   const onSubmit = async () => {
     setError(null);
@@ -71,8 +57,16 @@ export function GameForm() {
     router.push(`/games/${created.data.id}`);
   };
 
-  if (rulesets === null) return <LoadingSpinner />;
-  if (rulesets.length === 0) {
+  if (rulesetsQuery.isLoading) return <LoadingSpinner />;
+  if (rulesetsQuery.isError) {
+    return (
+      <ErrorDisplay
+        title={t('forms.gameForm.errorTitle')}
+        message={(rulesetsQuery.error as Error)?.message ?? t('forms.gameForm.loadRulesetsFailed')}
+      />
+    );
+  }
+  if (!rulesets || rulesets.length === 0) {
     return <Text variant='muted'>{t('forms.gameForm.needRuleset')}</Text>;
   }
 
