@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CLOCK_SEGMENTS, type Clock as ClockType, type ClockSegments } from '@heist-mind/database';
 import { Alert, Badge, Button, Card, Clock, Input, Select, Stack, Text } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useClocksByGame } from '@/features/clocks/data/queries';
+import {
+  useCreateClock,
+  useDeleteClock,
+  useUpdateClock,
+} from '@/features/clocks/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -15,57 +20,41 @@ import { useTranslation } from '@/lib/i18n/hooks';
 export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [clocks, setClocks] = useState<ClockType[]>([]);
+  const clocksQuery = useClocksByGame(gameId);
+  const createClock = useCreateClock(gameId);
+  const updateClock = useUpdateClock(gameId);
+  const deleteClock = useDeleteClock(gameId);
   const [name, setName] = useState('');
   const [segments, setSegments] = useState<ClockSegments>(4);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    const r = await getRepositories().clocks.findByGame(gameId);
-    // Faction project clocks live in the Factions panel; this panel shows the standalone ones.
-    if (r.success) setClocks(r.data.filter(c => !c.linkedType));
-    else setError(r.error?.message ?? t('components.clocksPanel.loadFailed'));
-  };
+  // Faction project clocks live in the Factions panel; this panel shows the standalone ones.
+  const clocks = (clocksQuery.data ?? []).filter(c => !c.linkedType);
+  const busy = createClock.isPending || updateClock.isPending || deleteClock.isPending;
+  const error =
+    (clocksQuery.error as Error | null)?.message ??
+    (createClock.error as Error | null)?.message ??
+    (updateClock.error as Error | null)?.message ??
+    (deleteClock.error as Error | null)?.message ??
+    null;
 
-  useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
-
-  const create = async () => {
+  const create = () => {
     const userId = user?.id;
     if (!userId || !name.trim()) return;
-    setBusy(true);
-    const r = await getRepositories().clocks.create(userId, {
-      gameId,
-      name: name.trim(),
-      segments,
-    });
-    setBusy(false);
-    if (r.success) {
-      setName('');
-      setSegments(4);
-      setError(null);
-      await load();
-    } else setError(r.error?.message ?? t('components.clocksPanel.createFailed'));
+    createClock.mutate(
+      { userId, data: { gameId, name: name.trim(), segments } },
+      {
+        onSuccess: () => {
+          setName('');
+          setSegments(4);
+        },
+      }
+    );
   };
 
-  const tick = async (clock: ClockType, delta: number) => {
-    setBusy(true);
-    const r = await getRepositories().clocks.update(clock.id, { filled: clock.filled + delta });
-    setBusy(false);
-    if (r.success) await load();
-    else setError(r.error?.message ?? t('components.clocksPanel.updateFailed'));
-  };
+  const tick = (clock: ClockType, delta: number) =>
+    updateClock.mutate({ id: clock.id, patch: { filled: clock.filled + delta } });
 
-  const remove = async (id: string) => {
-    setBusy(true);
-    const r = await getRepositories().clocks.delete(id);
-    setBusy(false);
-    if (r.success) await load();
-    else setError(r.error?.message ?? t('components.clocksPanel.removeFailed'));
-  };
+  const remove = (id: string) => deleteClock.mutate(id);
 
   return (
     <Stack direction='column' gap='md'>
