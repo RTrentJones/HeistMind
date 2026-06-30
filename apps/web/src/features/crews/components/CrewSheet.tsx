@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Crew, CrewRules, UpdateCrewData } from '@heist-mind/database';
+import { useState } from 'react';
+import type { CrewRules, UpdateCrewData } from '@heist-mind/database';
 import {
   applyHeat,
   advanceTier,
@@ -14,8 +14,9 @@ import {
   CREW_XP_TRACK,
 } from '@heist-mind/database';
 import { Alert, Badge, Button, Heading, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCrewByGame } from '@/features/crews/data/queries';
+import { useCreateCrew, useUpdateCrew } from '@/features/crews/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -34,51 +35,34 @@ export function CrewSheet({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [crew, setCrew] = useState<Crew | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const crewQuery = useCrewByGame(gameId);
+  const createCrewMut = useCreateCrew(gameId);
+  const updateCrewMut = useUpdateCrew(gameId);
   const [crewType, setCrewType] = useState('');
   const [newCohort, setNewCohort] = useState('');
   const [newClaim, setNewClaim] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    const r = await getRepositories().crews.findByGame(gameId);
-    if (r.success) setCrew(r.data);
-    else setError(r.error?.message ?? t('components.crewSheet.loadFailed'));
-    setLoaded(true);
-  };
+  const crew = crewQuery.data ?? null;
+  const busy = createCrewMut.isPending || updateCrewMut.isPending;
+  const error =
+    (crewQuery.error as Error | null)?.message ??
+    (createCrewMut.error as Error | null)?.message ??
+    (updateCrewMut.error as Error | null)?.message ??
+    null;
 
-  useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
-
-  const createCrew = async () => {
+  const createCrew = () => {
     const userId = user?.id;
     if (!userId) return;
-    setBusy(true);
-    const r = await getRepositories().crews.create(userId, {
-      gameId,
-      crewType: crewType || undefined,
-    });
-    setBusy(false);
-    if (r.success) {
-      setError(null);
-      await load();
-    } else setError(r.error?.message ?? t('components.crewSheet.createFailed'));
+    createCrewMut.mutate({ userId, data: { gameId, crewType: crewType || undefined } });
   };
 
-  const save = async (patch: UpdateCrewData) => {
+  // Patch helper used by every control; the mutation invalidates the crew query on success.
+  const save = (patch: UpdateCrewData) => {
     if (!crew) return;
-    setBusy(true);
-    const r = await getRepositories().crews.update(crew.id, patch);
-    setBusy(false);
-    if (r.success) await load();
-    else setError(r.error?.message ?? t('components.crewSheet.updateFailed'));
+    updateCrewMut.mutate({ id: crew.id, patch });
   };
 
-  if (!loaded) {
+  if (crewQuery.isLoading) {
     return (
       <Text variant='muted' size='sm'>
         {t('components.crewSheet.loading')}
