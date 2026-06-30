@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { resistanceStress, type Roll } from '@heist-mind/database';
 import { Badge, Card, Stack, Text, Tooltip } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
+import { useCharactersByGame } from '@/features/characters/data/queries';
+import { useRollsByGame } from '@/features/rolls/data/queries';
+import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 const OUTCOME_VARIANT = {
@@ -37,52 +39,31 @@ function relativeTime(date: Date, now: number, t: TFn): string {
 /** Reverse-chron, DB-backed roll log for a campaign — the async play-by-post feed. */
 export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: number }) {
   const { t } = useTranslation();
-  const [rolls, setRolls] = useState<Roll[] | null>(null);
-  const [charNames, setCharNames] = useState<Record<string, string>>({});
-  const [scoreNames, setScoreNames] = useState<Record<string, string>>({});
+  const rollsQuery = useRollsByGame(gameId, 25);
+  const charsQuery = useCharactersByGame(gameId);
+  const scoresQuery = useScoresByGame(gameId);
 
-  const load = useCallback(() => {
-    getRepositories()
-      .rolls.findByGame(gameId, 25)
-      .then(r => {
-        if (r.success) setRolls(r.data);
-      });
-  }, [gameId]);
-
+  // Backward-compat: callers still bumping an imperative `refreshKey` (the character sheet's raw roll
+  // writes, not yet on the seam) force a refetch. Writers migrated to the seam invalidate directly.
   useEffect(() => {
-    load();
-  }, [load, refreshKey]);
+    if (refreshKey === undefined) return;
+    void rollsQuery.refetch();
+    void scoresQuery.refetch();
+    void charsQuery.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
-  // Resolve characterId → name so each roll can show who made it (the play-by-post attribution).
-  useEffect(() => {
-    let active = true;
-    getRepositories()
-      .characters.findByGame(gameId)
-      .then(r => {
-        if (active && r.success) {
-          setCharNames(Object.fromEntries(r.data.map(c => [c.id, c.name])));
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [gameId]);
+  // Resolve characterId → name (who made each roll) and scoreId → name (group the feed by operation).
+  const charNames = useMemo(
+    () => Object.fromEntries((charsQuery.data ?? []).map(c => [c.id, c.name])),
+    [charsQuery.data]
+  );
+  const scoreNames = useMemo(
+    () => Object.fromEntries((scoresQuery.data ?? []).map(s => [s.id, s.name ?? ''])),
+    [scoresQuery.data]
+  );
 
-  // Resolve scoreId → name so the feed can group events under their operation (refresh on changes).
-  useEffect(() => {
-    let active = true;
-    getRepositories()
-      .scores.findByGame(gameId)
-      .then(r => {
-        if (active && r.success) {
-          setScoreNames(Object.fromEntries(r.data.map(s => [s.id, s.name ?? ''])));
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [gameId, refreshKey]);
-
+  const rolls = rollsQuery.data ?? null;
   if (rolls === null) return null;
   if (rolls.length === 0) {
     return (

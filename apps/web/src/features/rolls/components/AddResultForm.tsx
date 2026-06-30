@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Button, Input, Select, Stack } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCreateRoll } from '@/features/rolls/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -22,26 +22,33 @@ export function AddResultForm({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const createRoll = useCreateRoll(gameId);
   const [text, setText] = useState('');
   const [characterId, setCharacterId] = useState('');
-  const [busy, setBusy] = useState(false);
 
-  const add = async () => {
+  const add = () => {
     const userId = user?.id;
     if (!userId || !text.trim()) return;
-    setBusy(true);
-    await getRepositories().rolls.create(userId, {
-      gameId,
-      characterId: characterId || undefined,
-      kind: 'note',
-      label: t('components.addResult.label'),
-      dice: 0,
-      results: [],
-      note: text.trim(),
-    });
-    setBusy(false);
-    setText('');
-    onAdded?.();
+    createRoll.mutate(
+      {
+        userId,
+        data: {
+          gameId,
+          characterId: characterId || undefined,
+          kind: 'note',
+          label: t('components.addResult.label'),
+          dice: 0,
+          results: [],
+          note: text.trim(),
+        },
+      },
+      {
+        onSuccess: () => {
+          setText('');
+          onAdded?.();
+        },
+      }
+    );
   };
 
   return (
@@ -66,7 +73,13 @@ export function AddResultForm({
         onChange={e => setText(e.target.value)}
         placeholder={t('components.addResult.placeholder')}
       />
-      <Button variant='outline' size='sm' loading={busy} disabled={!text.trim()} onClick={add}>
+      <Button
+        variant='outline'
+        size='sm'
+        loading={createRoll.isPending}
+        disabled={!text.trim()}
+        onClick={add}
+      >
         {t('components.addResult.add')}
       </Button>
     </Stack>

@@ -1,0 +1,73 @@
+'use client';
+
+// The characters data-access seam (write side). Keeps every character repo write — including the
+// read-modify-write ones (stress, retire) — inside the seam so components never touch a repo.
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { stressBounds, type Character } from '@heist-mind/database';
+import { getRepositories } from '@/lib/auth';
+import { unwrap } from '@/lib/query/result';
+import { rollKeys } from '@/features/rolls/data/queries';
+import { characterKeys } from './queries';
+
+/**
+ * Apply a resistance/push stress cost to a character, clamped to the ruleset max. Reads the live
+ * character (for current stress + max) then writes — kept here so RollPanel never touches a repo.
+ */
+export function useApplyCharacterStress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { characterId: string; userId: string; stress: number }) => {
+      if (vars.stress <= 0) return;
+      const char = await getRepositories()
+        .characters.findWithDetails(vars.characterId)
+        .then(unwrap);
+      if (!char) return;
+      const max = stressBounds(char.ruleset.content).max;
+      const current = char.characterData?.stress ?? 0;
+      const next = Math.max(0, Math.min(current + vars.stress, max));
+      if (next === current) return;
+      await getRepositories()
+        .characterManagement.updateCharacterWithValidation(vars.characterId, vars.userId, {
+          characterData: { ...char.characterData, stress: next },
+        })
+        .then(unwrap);
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: characterKeys.detail(vars.characterId) }),
+  });
+}
+
+/**
+ * Retire a character: status → retired, carried coin banked into stash (BitD), plus a campaign-log
+ * note. Invalidates the roster (status moved them to the retired section) and the log (the note).
+ */
+export function useRetireCharacter(gameId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { character: Character; userId: string; note: string }) => {
+      const data = vars.character.characterData;
+      const coins = data?.coins ?? 0;
+      await getRepositories()
+        .characters.update(vars.character.id, vars.userId, {
+          status: 'retired',
+          characterData: { ...data, stash: (data?.stash ?? 0) + coins, coins: 0 },
+        })
+        .then(unwrap);
+      await getRepositories()
+        .rolls.create(vars.userId, {
+          gameId,
+          characterId: vars.character.id,
+          kind: 'note',
+          label: vars.character.name,
+          dice: 0,
+          results: [],
+          note: vars.note,
+        })
+        .then(unwrap);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: characterKeys.byGame(gameId) });
+      qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}

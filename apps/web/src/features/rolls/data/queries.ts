@@ -8,6 +8,8 @@ import { unwrap } from '@/lib/query/result';
 
 export const rollKeys = {
   all: ['rolls'] as const,
+  /** Prefix matching every limit-variant of a game's log — use for invalidation. */
+  gamePrefix: (gameId: string) => ['rolls', 'game', gameId] as const,
   byGame: (gameId: string, limit: number) => ['rolls', 'game', gameId, limit] as const,
 };
 
