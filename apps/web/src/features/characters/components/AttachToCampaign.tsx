@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CharacterWithDetails, Game } from '@heist-mind/database';
+import type { CharacterWithDetails } from '@heist-mind/database';
 import { Alert, Button, Card, Heading, Select, Stack, Text } from '@heist-mind/ui';
 import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useGamesByPlayer } from '@/features/games/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -23,33 +24,25 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   const { t } = useTranslation();
   const router = useRouter();
   const inCampaign = !!character.gameId;
-  const [games, setGames] = useState<Game[] | null>(null);
+  const allGames = useGamesByPlayer(user?.id);
   const [gameId, setGameId] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmingDetach, setConfirmingDetach] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Eligible targets: the owner's campaigns on this character's ruleset, minus the current one.
+  const games = useMemo(
+    () =>
+      (allGames.data ?? []).filter(
+        g => g.rulesetId === character.originalRulesetId && g.id !== character.gameId
+      ),
+    [allGames.data, character.originalRulesetId, character.gameId]
+  );
+
+  // Default the picker to the first eligible target (keep the selection if it's still valid).
   useEffect(() => {
-    const userId = user?.id;
-    if (!userId) return;
-    let active = true;
-    void getRepositories()
-      .games.findByPlayer(userId)
-      .then(r => {
-        if (!active) return;
-        const matches = r.success
-          ? r.data.filter(
-              g => g.rulesetId === character.originalRulesetId && g.id !== character.gameId
-            )
-          : [];
-        setGames(matches);
-        if (matches[0]) setGameId(matches[0].id);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user?.id, character.originalRulesetId, character.gameId]);
+    setGameId(prev => (games.some(g => g.id === prev) ? prev : (games[0]?.id ?? '')));
+  }, [games]);
 
   const attach = async () => {
     if (!gameId) return;
@@ -76,7 +69,7 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
     router.push(`/characters/${character.id}`);
   };
 
-  const hasTargets = games !== null && games.length > 0;
+  const hasTargets = games.length > 0;
 
   return (
     <Card variant='outline'>
@@ -105,7 +98,7 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
               value={gameId}
               onChange={e => setGameId(e.target.value)}
             >
-              {(games ?? []).map(g => (
+              {games.map(g => (
                 <option key={g.id} value={g.id}>
                   {g.name}
                 </option>

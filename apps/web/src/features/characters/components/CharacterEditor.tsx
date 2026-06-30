@@ -34,6 +34,7 @@ import {
 
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 import { getRepositories } from '@/lib/auth';
+import { useCrewByGame } from '@/features/crews/data/queries';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 
@@ -66,25 +67,11 @@ export function CharacterEditor({
 
   // The campaign's crew, so level-ups validate in context: its abilities RAISE the live bounds —
   // Mastery lifts the action cap (so a member can advance an action to 4), Deadly grants bonus dots,
-  // Mule raises load. Matches the server's crew-aware `advanceCharacter`/`updateCharacterWithValidation`.
-  const [crew, setCrew] = useState<CrewContext | null>(null);
-  useEffect(() => {
-    let active = true;
-    // A standalone character (Phase 5) has no campaign crew; it validates against the ruleset alone.
-    const gameId = character.gameId;
-    if (!gameId) {
-      setCrew(null);
-      return;
-    }
-    void getRepositories()
-      .crews.findByGame(gameId)
-      .then(r => {
-        if (active && r.success && r.data) setCrew({ crewAbilities: r.data.crewAbilities });
-      });
-    return () => {
-      active = false;
-    };
-  }, [character.gameId]);
+  // Mule raises load. A standalone character (Phase 5) has no crew → validates against the ruleset alone.
+  const crewQuery = useCrewByGame(character.gameId ?? undefined);
+  const crew: CrewContext | null = crewQuery.data
+    ? { crewAbilities: crewQuery.data.crewAbilities }
+    : null;
 
   // Resync the editable draft whenever the character reloads (e.g. after an advancement),
   // keeping the active section. Saves persist, so clobbering unsaved edits here is acceptable.
