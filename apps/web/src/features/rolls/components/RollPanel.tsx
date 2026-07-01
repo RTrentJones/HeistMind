@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { diceForRating, resistanceStress, stressBounds } from '@heist-mind/database';
+import { diceForRating, resistanceStress } from '@heist-mind/database';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useApplyCharacterStress } from '@/features/characters/data/mutations';
+import { useCreateRoll } from '@/features/rolls/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 interface ActionOption {
@@ -57,6 +58,8 @@ export function RollPanel({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const createRoll = useCreateRoll(gameId);
+  const applyStressMut = useApplyCharacterStress();
   const hasActions = !!actions?.length;
   const canResist = !!characterId;
   // Resistance is rolled against the character's own ratings when we have them, else the BitD trio.
@@ -91,19 +94,11 @@ export function RollPanel({
   const realize = (count: number) =>
     Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
 
-  // Add the resist's stress cost to the character, clamped to the ruleset's stress max.
-  const applyStress = async (userId: string, stress: number) => {
+  // Add the resist's stress cost to the character, clamped to the ruleset's stress max (no-op without
+  // a character or cost). The read-modify-write lives behind the characters seam.
+  const applyStressCost = (userId: string, stress: number) => {
     if (!characterId || stress <= 0) return;
-    const charRes = await getRepositories().characters.findWithDetails(characterId);
-    if (!charRes.success || !charRes.data) return;
-    const char = charRes.data;
-    const max = stressBounds(char.ruleset.content).max;
-    const current = char.characterData?.stress ?? 0;
-    const next = Math.max(0, Math.min(current + stress, max));
-    if (next === current) return;
-    await getRepositories().characterManagement.updateCharacterWithValidation(characterId, userId, {
-      characterData: { ...char.characterData, stress: next },
-    });
+    return applyStressMut.mutateAsync({ characterId, userId, stress });
   };
 
   const roll = async () => {
@@ -112,71 +107,71 @@ export function RollPanel({
     setRolling(true);
     setError(null);
 
-    if (mode === 'resistance') {
-      const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
-      const { count, zeroDice } = diceForRating(opt?.rating ?? 0);
-      const results = realize(count);
-      const stress = resistanceStress(results);
-      const r = await getRepositories().rolls.create(userId, {
-        gameId,
-        characterId,
-        kind: 'resistance',
-        label: opt?.name,
-        dice: count,
-        results,
-        zeroDice,
-      });
-      if (!r.success) {
-        setRolling(false);
-        setError(r.error?.message ?? t('components.rollPanel.rollFailed'));
+    try {
+      if (mode === 'resistance') {
+        const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
+        const { count, zeroDice } = diceForRating(opt?.rating ?? 0);
+        const results = realize(count);
+        const stress = resistanceStress(results);
+        const created = await createRoll.mutateAsync({
+          userId,
+          data: {
+            gameId,
+            characterId,
+            kind: 'resistance',
+            label: opt?.name,
+            dice: count,
+            results,
+            zeroDice,
+          },
+        });
+        await applyStressCost(userId, stress);
+        setLast({ outcome: created.outcome, results: created.results, stress });
+        onRolled?.();
         return;
       }
-      await applyStress(userId, stress);
-      setRolling(false);
-      setLast({ outcome: r.data.outcome, results: r.data.results, stress });
-      onRolled?.();
-      return;
-    }
 
-    const isActionRoll = mode === 'action';
-    const rating = isActionRoll ? (actions!.find(a => a.name === action)?.rating ?? 0) : fortune;
-    // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2 take-lowest).
-    const extraDice = isActionRoll ? (push ? 1 : 0) + (bargain ? 1 : 0) : 0;
-    const { count, zeroDice } = isActionRoll
-      ? diceForRating(rating + extraDice)
-      : { count: Math.max(fortune, 1), zeroDice: false };
-    const results = realize(count);
-    // Record the moves so the feed shows what was spent / accepted.
-    const notes: string[] = [];
-    if (isActionRoll && push) notes.push(t('components.rollPanel.pushedNote'));
-    if (isActionRoll && bargain)
-      notes.push(
-        bargainNote.trim()
-          ? t('components.rollPanel.bargainNote', { note: bargainNote.trim() })
-          : t('components.rollPanel.bargainNoteEmpty')
-      );
-    const r = await getRepositories().rolls.create(userId, {
-      gameId,
-      characterId,
-      kind: isActionRoll ? 'action' : 'fortune',
-      label: isActionRoll ? action : 'Fortune',
-      dice: count,
-      results,
-      zeroDice,
-      position: isActionRoll ? position : undefined,
-      effect: isActionRoll ? effect : undefined,
-      note: notes.length > 0 ? notes.join(' · ') : undefined,
-    });
-    if (!r.success) {
+      const isActionRoll = mode === 'action';
+      const rating = isActionRoll ? (actions!.find(a => a.name === action)?.rating ?? 0) : fortune;
+      // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2 take-lowest).
+      const extraDice = isActionRoll ? (push ? 1 : 0) + (bargain ? 1 : 0) : 0;
+      const { count, zeroDice } = isActionRoll
+        ? diceForRating(rating + extraDice)
+        : { count: Math.max(fortune, 1), zeroDice: false };
+      const results = realize(count);
+      // Record the moves so the feed shows what was spent / accepted.
+      const notes: string[] = [];
+      if (isActionRoll && push) notes.push(t('components.rollPanel.pushedNote'));
+      if (isActionRoll && bargain)
+        notes.push(
+          bargainNote.trim()
+            ? t('components.rollPanel.bargainNote', { note: bargainNote.trim() })
+            : t('components.rollPanel.bargainNoteEmpty')
+        );
+      const created = await createRoll.mutateAsync({
+        userId,
+        data: {
+          gameId,
+          characterId,
+          kind: isActionRoll ? 'action' : 'fortune',
+          label: isActionRoll ? action : 'Fortune',
+          dice: count,
+          results,
+          zeroDice,
+          position: isActionRoll ? position : undefined,
+          effect: isActionRoll ? effect : undefined,
+          note: notes.length > 0 ? notes.join(' · ') : undefined,
+        },
+      });
+      // Pushing yourself costs 2 stress, applied win or lose.
+      if (isActionRoll && push) await applyStressCost(userId, 2);
+      setLast({ outcome: created.outcome, results: created.results });
+      onRolled?.();
+    } catch (e) {
+      setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
+    } finally {
       setRolling(false);
-      setError(r.error?.message ?? t('components.rollPanel.rollFailed'));
-      return;
     }
-    // Pushing yourself costs 2 stress, applied win or lose.
-    if (isActionRoll && push) await applyStress(userId, 2);
-    setRolling(false);
-    setLast({ outcome: r.data.outcome, results: r.data.results });
-    onRolled?.();
   };
 
   // Rating-0 actions roll 2 dice and take the lowest — surface that so it doesn't read as a bug.

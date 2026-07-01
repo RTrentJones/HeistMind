@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Score } from '@heist-mind/database';
+import { useState } from 'react';
 import { Alert, Badge, Button, Input, Stack, Text } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCreateRoll } from '@/features/rolls/data/mutations';
+import { useScoresByGame } from '@/features/scores/data/queries';
+import { useEndScore, useStartScore } from '@/features/scores/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -23,91 +24,76 @@ export function ScorePanel({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [active, setActive] = useState<Score | null>(null);
-  const [recent, setRecent] = useState<Score[]>([]);
+  const scoresQuery = useScoresByGame(gameId);
+  const startScoreMut = useStartScore(gameId);
+  const endScoreMut = useEndScore(gameId);
+  const createRoll = useCreateRoll(gameId);
   const [name, setName] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
-    const r = await getRepositories().scores.findByGame(gameId);
-    if (r.success) {
-      setActive(r.data.find(s => s.status === 'active') ?? null);
-      setRecent(r.data.filter(s => s.status === 'completed').slice(0, 5));
-    } else {
-      setError(r.error?.message ?? t('components.scorePanel.loadFailed'));
-    }
-  };
-
-  useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
+  const scores = scoresQuery.data ?? [];
+  // At most one score is active at a time; recent = the last few completed ones.
+  const active = scores.find(s => s.status === 'active') ?? null;
+  const recent = scores.filter(s => s.status === 'completed').slice(0, 5);
+  const busy = startScoreMut.isPending || endScoreMut.isPending || createRoll.isPending;
+  const shownError =
+    error ??
+    (scoresQuery.error as Error | null)?.message ??
+    (scoresQuery.isError ? t('components.scorePanel.loadFailed') : null);
 
   // Score start/end is a settled campaign event → log it, tagged with that score explicitly (the
   // end event fires after the score is no longer active, so we can't rely on auto-tagging).
-  const logScoreEvent = async (label: string, note: string, scoreId: string) => {
+  const logScoreEvent = (label: string, note: string, scoreId: string) => {
     const userId = user?.id;
     if (!userId) return;
-    await getRepositories().rolls.create(userId, {
-      gameId,
-      kind: 'score',
-      label,
-      dice: 0,
-      results: [],
-      note,
-      scoreId,
+    return createRoll.mutateAsync({
+      userId,
+      data: { gameId, kind: 'score', label, dice: 0, results: [], note, scoreId },
     });
   };
 
   const startScore = async () => {
     const userId = user?.id;
     if (!userId) return;
-    setBusy(true);
     setError(null);
-    const r = await getRepositories().scores.start(userId, {
-      gameId,
-      name: name.trim() || undefined,
-    });
-    setBusy(false);
-    if (!r.success) {
-      setError(r.error?.message ?? t('components.scorePanel.startFailed'));
-      return;
+    try {
+      const created = await startScoreMut.mutateAsync({
+        userId,
+        data: { gameId, name: name.trim() || undefined },
+      });
+      setName('');
+      await logScoreEvent(
+        created.name ?? t('components.scorePanel.unnamed'),
+        t('components.scorePanel.startedNote'),
+        created.id
+      );
+      onChanged?.();
+    } catch (e) {
+      setError((e as Error).message ?? t('components.scorePanel.startFailed'));
     }
-    setName('');
-    await logScoreEvent(
-      r.data.name ?? t('components.scorePanel.unnamed'),
-      t('components.scorePanel.startedNote'),
-      r.data.id
-    );
-    await load();
-    onChanged?.();
   };
 
   const endScore = async () => {
     if (!active) return;
-    setBusy(true);
     setError(null);
-    const r = await getRepositories().scores.end(active.id);
-    setBusy(false);
-    if (!r.success) {
-      setError(r.error?.message ?? t('components.scorePanel.endFailed'));
-      return;
+    try {
+      await endScoreMut.mutateAsync(active.id);
+      await logScoreEvent(
+        active.name ?? t('components.scorePanel.unnamed'),
+        t('components.scorePanel.endedNote'),
+        active.id
+      );
+      onChanged?.();
+    } catch (e) {
+      setError((e as Error).message ?? t('components.scorePanel.endFailed'));
     }
-    await logScoreEvent(
-      active.name ?? t('components.scorePanel.unnamed'),
-      t('components.scorePanel.endedNote'),
-      active.id
-    );
-    await load();
-    onChanged?.();
   };
 
   return (
     <Stack direction='column' gap='sm'>
-      {error && (
+      {shownError && (
         <Alert variant='destructive' size='sm'>
-          {error}
+          {shownError}
         </Alert>
       )}
 

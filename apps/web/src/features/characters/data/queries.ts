@@ -22,11 +22,19 @@ export function useCharactersByPlayer(userId: string | undefined) {
   });
 }
 
-/** All characters in a campaign (the roster). */
+/**
+ * All characters in a campaign (the roster). Shared campaign state that changes from outside this
+ * client — most notably the character-creation wizard, which is not yet on the write seam and so
+ * can't invalidate this query. Per the BRD's load-on-view model, treat it as never fresh: revalidate
+ * on every mount so returning to the hub after a create/retire always shows the current roster.
+ * (Cached data still renders instantly; the refetch is a background revalidation, no empty flicker.)
+ */
 export function useCharactersByGame(gameId: string | undefined) {
   return useQuery({
     queryKey: characterKeys.byGame(gameId ?? ''),
     enabled: !!gameId,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: () => getRepositories().characters.findByGame(gameId!).then(unwrap),
   });
 }

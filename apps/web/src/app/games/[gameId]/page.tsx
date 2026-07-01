@@ -1,8 +1,7 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use } from 'react';
 import Link from 'next/link';
-import type { Character, GameWithDetails } from '@heist-mind/database';
 import {
   Button,
   Card,
@@ -13,8 +12,9 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCharactersByGame } from '@/features/characters/data/queries';
+import { useGameDetail } from '@/features/games/data/queries';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { InviteCodeSection } from '@/features/games/components/InviteCodeSection';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
@@ -31,44 +31,10 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   const { isAuthenticated, user } = useAuth();
   const { t } = usePageTranslation();
 
-  const [game, setGame] = useState<GameWithDetails | null>(null);
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [rollKey, setRollKey] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
-    (async () => {
-      const repos = getRepositories();
-      const gameResult = await repos.games.findWithDetails(gameId);
-      if (!active) return;
-      if (!gameResult.success || !gameResult.data) {
-        setError(
-          gameResult.success
-            ? t('game.notFound')
-            : (gameResult.error?.message ?? t('game.loadFailed'))
-        );
-        setLoading(false);
-        return;
-      }
-      setGame(gameResult.data);
-      const charResult = await repos.characters.findByGame(gameId);
-      if (!active) return;
-      if (charResult.success) setCharacters(charResult.data);
-      setLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [gameId, t]);
-
-  const reloadCharacters = async () => {
-    const r = await getRepositories().characters.findByGame(gameId);
-    if (r.success) setCharacters(r.data);
-  };
+  const gameQuery = useGameDetail(gameId);
+  const charactersQuery = useCharactersByGame(gameId);
+  const game = gameQuery.data ?? null;
+  const characters = charactersQuery.data ?? [];
 
   if (!isAuthenticated) {
     return (
@@ -77,17 +43,21 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
       </Container>
     );
   }
-  if (loading) {
+  if (gameQuery.isLoading) {
     return (
       <Container maxWidth='md' padding='lg'>
         <LoadingSpinner />
       </Container>
     );
   }
-  if (error || !game) {
+  // findWithDetails resolves to null when the game doesn't exist; a thrown query is a real load error.
+  if (gameQuery.isError || !game) {
+    const message = gameQuery.isError
+      ? ((gameQuery.error as Error | null)?.message ?? t('game.loadFailed'))
+      : t('game.notFound');
     return (
       <Container maxWidth='md' padding='lg'>
-        <ErrorDisplay title={t('game.hubLoadError')} message={error ?? t('game.unknownError')} />
+        <ErrorDisplay title={t('game.hubLoadError')} message={message} />
       </Container>
     );
   }
@@ -124,10 +94,6 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
             gmId={game.createdBy}
             userId={user?.id}
             characters={characters}
-            onChanged={() => {
-              void reloadCharacters();
-              setRollKey(k => k + 1);
-            }}
           />
         )}
 
@@ -164,11 +130,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           {t('game.scoreHeading')}
         </Heading>
         <Card variant='outline'>
-          <ScorePanel
-            gameId={gameId}
-            isGm={game.createdBy === user?.id}
-            onChanged={() => setRollKey(k => k + 1)}
-          />
+          <ScorePanel gameId={gameId} isGm={game.createdBy === user?.id} />
         </Card>
 
         <Heading level='h2' variant='primary'>
@@ -179,18 +141,14 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
             <Text variant='muted' size='sm'>
               {t('game.fortuneRoll')}
             </Text>
-            <RollPanel gameId={gameId} onRolled={() => setRollKey(k => k + 1)} />
+            <RollPanel gameId={gameId} />
             <Text variant='muted' size='sm'>
               {t('game.recordResult')}
             </Text>
-            <AddResultForm
-              gameId={gameId}
-              characters={characters}
-              onAdded={() => setRollKey(k => k + 1)}
-            />
+            <AddResultForm gameId={gameId} characters={characters} />
           </Stack>
         </Card>
-        <RollLog gameId={gameId} refreshKey={rollKey} />
+        <RollLog gameId={gameId} />
       </Stack>
     </Container>
   );
