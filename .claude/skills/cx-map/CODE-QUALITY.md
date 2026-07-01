@@ -7,8 +7,40 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 
 > **Progress (2026-06-29):** Tier 1 (PR2, `c492cbf`) and Tier 2 (PR3, `bebe87f`) shipped. **C5** moved
 > into Tier 3/PR4 (the throwing methods are still called by the store loaders being reworked there).
-> **C11** (`<ResourceList>`) deferred — lower-priority list scaffolding, follow-up. Tier 3 (PR4) and
-> Tier 4 (PR5) remain.
+> **C11** (`<ResourceList>`) deferred — lower-priority list scaffolding, follow-up.
+>
+> **Progress (2026-07-01):** Tier 3 is **mostly shipped**, split into CI-gated slices merged to
+> `development` (each verified by build + lint + type-check + the Playwright E2E suite + preview
+> `greenlight verify`):
+>
+> - **PR4a — provider + read hooks:** #90 (Tier 1–2 rebase), #91 (foundation: `QueryClientProvider`,
+>   `lib/query/result.ts` `unwrap()`, first `features/{concept}/data/queries.ts` modules, **deleted the
+>   dead `characters-store` + `games-store`** — they had zero consumers, −980 LOC), #92 (page reads +
+>   a deterministic fix for the chronically-flaky standalone-characters "move" E2E), #93
+>   (AttachToCampaign + CharacterEditor reads).
+> - **PR4b — write mutations:** #94 (ClocksPanel = the mutation template), #95 (FactionsPanel, reusing
+>   the clocks mutations for faction project clocks), #96 (CrewSheet), #97 (**the roll-feed cluster**:
+>   campaign hub + RollPanel/RollLog/AddResultForm/ScorePanel/CharacterRoster — replaced the hub's
+>   `rollKey` re-render bridge with query invalidation; added `scores/`, `profiles/`, `rolls/`
+>   mutations + `characters` stress/retire mutations), #98 (CharacterSheet + LoadoutCard; added
+>   `useUpdateCharacter`/`useUpdateCharacterData`/`useAddExperience`; retired RollPanel's `onRolled`
+>   and RollLog's `refreshKey` props).
+> - **Seam state:** `features/{characters,games,rolls,scores,clocks,factions,crews,rulesets,profiles}/data/`
+>   exist. **11 files still call `getRepositories()` directly** (the remainder of C15):
+>   `app/{characters,games,rulesets}/page.tsx` (clone / join / rulesets-page loads), `GameForm` (create),
+>   `AttachToCampaign` (the attach/detach RPC writes), `InviteCodeSection`, `RulesetUpload`,
+>   `LoadBuiltinRulesetButton`, `CharacterEditor` (save/advance), `auth-store`,
+>   `character-creation-store`. **C14 (the ESLint boundary rule) lands after those** — it must be the
+>   last change so the rule passes with zero violations.
+>
+> ⚠️ **Migration lesson (hit twice — #97, #98):** a read migrated to `useQuery` inherits
+> `staleTime: 30_000`; if an **unmigrated writer** mutates that data and the flow navigates back to a
+> view that cached it, RQ serves stale data (the old `useEffect` loaders refetched on every mount).
+> Bit the roster (`useCharactersByGame` vs the creation wizard) and the sheet (`useCharacterDetail` vs
+> AttachToCampaign detach/move) — both now `staleTime: 0` + `refetchOnMount: 'always'` (load-on-view,
+> per the BRD's shared-state model). **Audit every migrated read for "unmigrated writer +
+> navigate-back" before pushing**; when the writer later joins the seam, its mutation's
+> `invalidateQueries` is the proper fix.
 
 > **Calibration:** load-on-view with no realtime is an **intentional BRD decision** — "React Query
 > unused" is not a blocker on its own. The real costs are (a) repeated fetch boilerplate, (b)
@@ -72,24 +104,29 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 - **C11** `<ResourceList>` (loading / empty / error scaffold) + one empty-state pattern; apply to games,
   characters, rulesets, dashboard (currently inconsistent: games = plain text, characters = card + CTA).
 
-## Tier 3 (PR4) — React Query foundation = the single client data-access seam
+## Tier 3 (PR4) — React Query foundation = the single client data-access seam 🔶 in flight (#91–#98)
 
-- **C12** `QueryClientProvider` (one shared `QueryClient`) in `app/providers.tsx` (innermost).
-- **C13** Per-concept `features/{concept}/data/` modules: the **only** code importing `getRepositories()`
-  / repositories and unwrapping `Result<T>` (throw on `!success`). Typed hooks
-  (`useCharacters`/`useCharacter`/`useUpdateCharacter`, `useGames`/`useGame`, `useRolls`, …) over stable
-  query keys. Wrap queryFn in `resilienceService.executeWithResilience` (or RQ `retry`).
-- **C14** ESLint `no-restricted-imports` (or `boundaries`) rule: ban `getRepositories` / `@heist-mind/
-database` _repository_ imports outside `features/*/data/**` (domain types + pure rules stay allowed).
-  This is the enforceable "swap the DB at will" guarantee.
-- **C15** Migrate every consumer to the seam: replace the ~11 inline `useEffect`/`let active = true`
-  copies (`app/characters/page.tsx`, `app/games/page.tsx`, `app/games/[gameId]/page.tsx`, the two
-  `.../new` pages, `use-dashboard-data.ts`, `CharacterEditor.tsx`, `CharacterRoster.tsx`,
-  `AttachToCampaign.tsx`, `RollLog.tsx`, `GameForm.tsx`); retire the loader/cache halves of
-  `characters-store.ts` + `games-store.ts` (Zustand keeps UI/client state only).
-- **C16** `useMutation` per write with optimistic update + `invalidateQueries` + success toast
-  (notification store). Standardize user-facing failures on the notification store (replace silent
-  `console.error` in sign-in paths: `HomePage`, `AuthHeader`, `games/page`). _(Resolves F58.)_
+- **C12** ✅ done @e0ccfd8 (#91) — `QueryClientProvider` (one shared `QueryClient`) in
+  `app/providers.tsx`; `staleTime: 30_000, retry: 1, refetchOnWindowFocus: false`.
+- **C13** ✅ done (pattern established #91–#98) — per-concept `features/{concept}/data/` modules
+  (`queries.ts` + `mutations.ts`): the **only** code importing `getRepositories()` and unwrapping
+  `Result<T>` (`lib/query/result.ts` `unwrap()` throws on `!success`). Typed hooks over stable query
+  keys (`['characters','game',gameId]`, …). _Deviation from the draft: queryFn uses RQ's built-in
+  `retry: 1` rather than wrapping `resilienceService.executeWithResilience` — the resilience service
+  remains available for non-query async work._
+- **C14** ⏳ pending — ESLint `no-restricted-imports` (or `boundaries`) rule: ban `getRepositories` /
+  repository imports outside `features/*/data/**` (domain types + pure rules stay allowed). **Must land
+  last**, after the 11 remaining call sites (see Progress note) migrate. This is the enforceable
+  "swap the DB at will" guarantee.
+- **C15** 🔶 mostly done — all inline `useEffect`/`active`-guard loaders and the coupled write surfaces
+  are on the seam (#92–#98); the dead `characters-store` + `games-store` were **deleted outright**
+  (#91 — simpler than the planned "retire the loader halves": they had no consumers at all). Remaining:
+  the 11 files listed in the Progress note (simple writes + `CharacterEditor` + the two stores).
+- **C16** 🔶 partial — every migrated write is a `useMutation` with `invalidateQueries` (kills the
+  full-reload flicker and the `rollKey` re-render bridge). _Not yet done:_ optimistic updates and
+  success toasts (invalidation-refetch was chosen first for correctness; optimism/toasts are a
+  follow-up polish pass), and the notification-store standardization for sign-in `console.error`
+  paths (F58) — fold into the remaining-writes slice or PR5.
 
 ## Tier 4 (PR5) — reusable per-concept view/edit + god-component splits
 
