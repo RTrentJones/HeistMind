@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { resistanceStress, type Roll } from '@heist-mind/database';
 import { Badge, Card, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useCharactersByGame } from '@/features/characters/data/queries';
@@ -37,21 +37,11 @@ function relativeTime(date: Date, now: number, t: TFn): string {
 }
 
 /** Reverse-chron, DB-backed roll log for a campaign — the async play-by-post feed. */
-export function RollLog({ gameId, refreshKey }: { gameId: string; refreshKey?: number }) {
+export function RollLog({ gameId }: { gameId: string }) {
   const { t } = useTranslation();
   const rollsQuery = useRollsByGame(gameId, 25);
   const charsQuery = useCharactersByGame(gameId);
   const scoresQuery = useScoresByGame(gameId);
-
-  // Backward-compat: callers still bumping an imperative `refreshKey` (the character sheet's raw roll
-  // writes, not yet on the seam) force a refetch. Writers migrated to the seam invalidate directly.
-  useEffect(() => {
-    if (refreshKey === undefined) return;
-    void rollsQuery.refetch();
-    void scoresQuery.refetch();
-    void charsQuery.refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
 
   // Resolve characterId → name (who made each roll) and scoreId → name (group the feed by operation).
   const charNames = useMemo(

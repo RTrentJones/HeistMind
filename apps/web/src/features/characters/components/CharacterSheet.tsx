@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   stressBounds,
   harmBounds,
@@ -16,8 +16,6 @@ import {
   xpTrackFull,
   markXp,
   PLAYBOOK_TRACK,
-  type CharacterWithDetails,
-  type Score,
 } from '@heist-mind/database';
 import {
   Alert,
@@ -35,8 +33,15 @@ import {
 } from '@heist-mind/ui';
 
 const EMPTY_HARM = { lesser: [], moderate: [], severe: [] };
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCharacterDetail } from '@/features/characters/data/queries';
+import {
+  useAddExperience,
+  useUpdateCharacter,
+  useUpdateCharacterData,
+} from '@/features/characters/data/mutations';
+import { useCreateRoll } from '@/features/rolls/data/mutations';
+import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
@@ -48,93 +53,65 @@ import { AttachToCampaign } from './AttachToCampaign';
 export function CharacterSheet({ characterId }: { characterId: string }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const [character, setCharacter] = useState<CharacterWithDetails | null>(null);
+  const characterQuery = useCharacterDetail(characterId);
+  const character = characterQuery.data ?? null;
+  // The campaign's active score — the loadout (below) is "for" it, and resets when it changes. A
+  // standalone character has no campaign, so the scores query stays disabled and there's no active one.
+  const scoresQuery = useScoresByGame(character?.gameId ?? undefined);
+  const activeScore = (scoresQuery.data ?? []).find(s => s.status === 'active') ?? null;
+
+  const updateChar = useUpdateCharacter(characterId);
+  const updateCharData = useUpdateCharacterData(characterId);
+  const addXpMut = useAddExperience(characterId);
+  const createRoll = useCreateRoll(character?.gameId ?? '');
+
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [rollKey, setRollKey] = useState(0);
   const [viceNote, setViceNote] = useState<string | null>(null);
-  const [activeScore, setActiveScore] = useState<Score | null>(null);
 
-  const load = async () => {
-    const result = await getRepositories().characters.findWithDetails(characterId);
-    if (!result.success || !result.data) {
-      setError(
-        result.success
-          ? t('components.characterSheet.notFound')
-          : (result.error?.message ?? t('components.characterSheet.loadFailed'))
-      );
-    } else {
-      setCharacter(result.data);
-      setName(result.data.name);
-      // The campaign's active score — the loadout (below) is "for" it, and resets when it changes.
-      // A standalone character (Phase 5) has no campaign, so there's no active score.
-      if (result.data.gameId) {
-        const sr = await getRepositories().scores.findActive(result.data.gameId);
-        if (sr.success) setActiveScore(sr.data);
-      } else {
-        setActiveScore(null);
-      }
-    }
-    setLoading(false);
-  };
+  const busy =
+    updateChar.isPending ||
+    updateCharData.isPending ||
+    addXpMut.isPending ||
+    createRoll.isPending;
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [characterId]);
-
-  const saveName = async () => {
+  const saveName = () => {
     const userId = user?.id;
     if (!userId || !name.trim()) return;
-    setSaving(true);
-    const result = await getRepositories().characters.update(characterId, userId, {
-      name: name.trim(),
-    });
-    setSaving(false);
-    if (result.success) {
-      setEditing(false);
-      await load();
-    } else {
-      setError(result.error?.message ?? t('components.characterSheet.saveNameFailed'));
-    }
+    updateChar.mutate(
+      { userId, data: { name: name.trim() } },
+      {
+        onSuccess: () => setEditing(false),
+        onError: e =>
+          setError((e as Error).message ?? t('components.characterSheet.saveNameFailed')),
+      }
+    );
   };
 
-  const addXp = async () => {
+  const addXp = () => {
     const userId = user?.id;
     if (!userId) return;
-    setSaving(true);
-    const result = await getRepositories().characters.addExperience(
-      characterId,
-      userId,
-      1,
-      'Manual award'
+    addXpMut.mutate(
+      { userId, amount: 1, reason: 'Manual award' },
+      { onError: e => setError((e as Error).message ?? t('components.characterSheet.addXpFailed')) }
     );
-    setSaving(false);
-    if (result.success) await load();
-    else setError(result.error?.message ?? t('components.characterSheet.addXpFailed'));
   };
 
   // Live stress: clicking the tracker on the sheet face saves immediately (no "Edit build" needed).
-  const setStress = async (v: number) => {
+  const setStress = (v: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
     const max = stressBounds(character.ruleset.content).max;
     const characterData = { ...character.characterData, stress: Math.max(0, Math.min(v, max)) };
-    setSaving(true);
-    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
-      characterId,
-      userId,
-      { characterData }
+    updateCharData.mutate(
+      { userId, data: { characterData } },
+      {
+        onError: e =>
+          setError((e as Error).message ?? t('components.characterSheet.saveStressFailed')),
+      }
     );
-    setSaving(false);
-    if (r.success) await load();
-    else setError(r.error?.message ?? t('components.characterSheet.saveStressFailed'));
   };
 
   // Downtime — Indulge Vice (FitD A3): clear ALL stress through the same validated write path the
@@ -153,45 +130,36 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     const cleared = viceStressCleared(results, { zeroDice });
     const overindulged = isOverindulged(cleared, stress);
     const nextStress = Math.max(0, stress - cleared);
-    setSaving(true);
-    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
-      characterId,
-      userId,
-      { characterData: { ...character.characterData, stress: nextStress } }
-    );
-    if (r.success) {
+    try {
+      await updateCharData.mutateAsync({
+        userId,
+        data: { characterData: { ...character.characterData, stress: nextStress } },
+      });
       // Log the downtime to the campaign feed — only when the character is in a campaign (a
       // standalone character still clears stress, it just has no shared log to write to).
       if (character.gameId) {
-        await getRepositories().rolls.create(userId, {
-          gameId: character.gameId,
-          characterId: character.id,
-          kind: 'downtime',
-          label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
-          dice: count,
-          results,
+        await createRoll.mutateAsync({
+          userId,
+          data: {
+            gameId: character.gameId,
+            characterId: character.id,
+            kind: 'downtime',
+            label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
+            dice: count,
+            results,
+          },
         });
       }
       // Overindulging (cleared more than was marked) is a real consequence the GM narrates.
       setViceNote(overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
-      setRollKey(k => k + 1); // refresh the feed so the new downtime entry appears
-      await load();
-    } else {
-      setError(r.error?.message ?? t('components.downtime.indulgeVice.failed'));
+    } catch (e) {
+      setError((e as Error).message ?? t('components.downtime.indulgeVice.failed'));
     }
-    setSaving(false);
-  };
-
-  // A roll (action/fortune/resistance) can mutate the character (resistance spends stress), so
-  // refresh BOTH the roll log AND the sheet — otherwise the StressTracker would show stale stress.
-  const onRolled = () => {
-    setRollKey(k => k + 1);
-    void load();
   };
 
   // Mark XP into a track (playbook or an attribute id). Sets the track to `value`, clamped, and
   // saves through the same validated path — every player sees the marks on load (the async loop).
-  const setXp = async (track: string, value: number) => {
+  const setXp = (track: string, value: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
     const content = character.ruleset.content;
@@ -199,23 +167,29 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     const target = Math.max(0, Math.min(value, xpTrackSize(content, track)));
     if (target === current) return;
     const xp = markXp(content, character.characterData, track, target - current);
-    setSaving(true);
-    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
-      characterId,
-      userId,
-      { characterData: { ...character.characterData, xp } }
+    updateCharData.mutate(
+      { userId, data: { characterData: { ...character.characterData, xp } } },
+      {
+        onError: e =>
+          setError((e as Error).message ?? t('components.characterSheet.markXpFailed')),
+      }
     );
-    setSaving(false);
-    if (r.success) await load();
-    else setError(r.error?.message ?? t('components.characterSheet.markXpFailed'));
   };
 
-  if (loading) return <LoadingSpinner />;
-  if (error || !character) {
+  if (characterQuery.isLoading) return <LoadingSpinner />;
+  // A save error blows the sheet back to the error state (unchanged from the pre-seam behavior);
+  // a thrown query is a load failure, and a resolved-but-null character is a genuine not-found.
+  if (error || characterQuery.isError || !character) {
+    const message =
+      error ??
+      (characterQuery.isError
+        ? ((characterQuery.error as Error | null)?.message ??
+          t('components.characterSheet.loadFailed'))
+        : t('components.characterSheet.notFound'));
     return (
       <ErrorDisplay
         title={t('components.characterSheet.loadError')}
-        message={error ?? t('components.characterSheet.unknownError')}
+        message={message ?? t('components.characterSheet.unknownError')}
       />
     );
   }
@@ -234,7 +208,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 value={name}
                 onChange={e => setName(e.target.value)}
               />
-              <Button variant='ember' onClick={saveName} loading={saving}>
+              <Button variant='ember' onClick={saveName} loading={busy}>
                 {t('common.actions.save')}
               </Button>
               <Button
@@ -263,7 +237,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 )}
               </Stack>
               <Stack direction='row' gap='sm' align='center'>
-                <Button variant='outline' size='sm' onClick={() => setEditing(true)}>
+                <Button variant='outline' size='sm' onClick={() => {
+                    setEditing(true);
+                    setName(character.name);
+                  }}>
                   {t('common.actions.edit')}
                 </Button>
                 <Button variant='outline' size='sm' onClick={() => setShowEditor(s => !s)}>
@@ -285,7 +262,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               <Badge variant='gold'>
                 {t('components.characterSheet.xpBadge', { xp: character.experiencePoints })}
               </Badge>
-              <Button variant='outline' size='sm' onClick={addXp} loading={saving}>
+              <Button variant='outline' size='sm' onClick={addXp} loading={busy}>
                 {t('components.characterSheet.addXp')}
               </Button>
             </Stack>
@@ -364,7 +341,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
             <Button
               variant='outline'
               size='sm'
-              loading={saving}
+              loading={busy}
               disabled={(character.characterData?.stress ?? 0) === 0}
               onClick={() => void indulgeVice()}
             >
@@ -456,7 +433,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                         <Button
                           variant='outline'
                           size='sm'
-                          disabled={saving || pbFull}
+                          disabled={busy || pbFull}
                           onClick={() =>
                             void setXp(
                               PLAYBOOK_TRACK,
@@ -498,7 +475,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
       {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
           build editor. Resets against the campaign's active score. */}
-      <LoadoutCard character={character} activeScore={activeScore} onChanged={() => void load()} />
+      <LoadoutCard character={character} activeScore={activeScore} />
 
       {(() => {
         const data = character.characterData;
@@ -556,17 +533,16 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   name,
                   rating: character.characterData?.skills?.[name] ?? 0,
                 }))}
-                onRolled={onRolled}
               />
             ) : (
-              <RollPanel gameId={character.gameId} characterId={character.id} onRolled={onRolled} />
+              <RollPanel gameId={character.gameId} characterId={character.id} />
             )}
-            <RollLog gameId={character.gameId} refreshKey={rollKey} />
+            <RollLog gameId={character.gameId} />
           </Stack>
         </Card>
       )}
 
-      {showEditor && <CharacterEditor character={character} onSaved={() => void load()} />}
+      {showEditor && <CharacterEditor character={character} onSaved={() => void characterQuery.refetch()} />}
     </Stack>
   );
 }

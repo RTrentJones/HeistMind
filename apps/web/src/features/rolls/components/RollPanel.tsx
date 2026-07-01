@@ -49,12 +49,10 @@ export function RollPanel({
   gameId,
   characterId,
   actions,
-  onRolled,
 }: {
   gameId: string;
   characterId?: string;
   actions?: ActionOption[];
-  onRolled?: () => void;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -127,7 +125,6 @@ export function RollPanel({
         });
         await applyStressCost(userId, stress);
         setLast({ outcome: created.outcome, results: created.results, stress });
-        onRolled?.();
         return;
       }
 
@@ -166,7 +163,6 @@ export function RollPanel({
       // Pushing yourself costs 2 stress, applied win or lose.
       if (isActionRoll && push) await applyStressCost(userId, 2);
       setLast({ outcome: created.outcome, results: created.results });
-      onRolled?.();
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
     } finally {
