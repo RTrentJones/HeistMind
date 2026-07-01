@@ -10,8 +10,9 @@ import {
   type Score,
 } from '@heist-mind/database';
 import { Alert, Badge, Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useUpdateCharacter } from '@/features/characters/data/mutations';
+import { useCreateRoll } from '@/features/rolls/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
@@ -30,16 +31,18 @@ export function LoadoutCard({
 }: {
   character: CharacterWithDetails;
   activeScore: Score | null;
-  onChanged: () => void;
+  onChanged?: () => void;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const updateChar = useUpdateCharacter(character.id);
+  const createRoll = useCreateRoll(character.gameId ?? '');
   const content = character.ruleset.content;
   const data = character.characterData;
   const saved: CharacterLoadout = data.loadout ?? { level: 'normal', items: [] };
 
   const [draft, setDraft] = useState<CharacterLoadout>({ level: saved.level, items: [...saved.items] });
-  const [busy, setBusy] = useState(false);
+  const busy = updateChar.isPending || createRoll.isPending;
 
   const items = content.equipment?.items ?? [];
   if (items.length === 0) return null;
@@ -65,26 +68,31 @@ export function LoadoutCard({
   const persist = async (next: CharacterLoadout, note: string) => {
     const userId = user?.id;
     if (!userId) return;
-    setBusy(true);
     const tagged: CharacterLoadout = { ...next, scoreId: activeScore?.id };
-    const r = await getRepositories().characters.update(character.id, userId, {
-      characterData: { ...data, loadout: tagged },
-    });
-    if (r.success && character.gameId) {
+    try {
+      await updateChar.mutateAsync({ userId, data: { characterData: { ...data, loadout: tagged } } });
       // Log the settled loadout change to the campaign feed (one entry per save). A standalone
       // character has no campaign feed; the loadout still saves on the sheet.
-      await getRepositories().rolls.create(userId, {
-        gameId: character.gameId,
-        characterId: character.id,
-        kind: 'loadout',
-        label: character.name,
-        dice: 0,
-        results: [],
-        note,
-      });
+      if (character.gameId) {
+        await createRoll.mutateAsync({
+          userId,
+          data: {
+            gameId: character.gameId,
+            characterId: character.id,
+            kind: 'loadout',
+            label: character.name,
+            dice: 0,
+            results: [],
+            note,
+          },
+        });
+      }
+    } catch {
+      // Loadout save is best-effort on the sheet (parity with the prior non-surfacing behavior);
+      // the character-data mutation still invalidates the sheet so it reflects whatever landed.
+    } finally {
+      onChanged?.();
     }
-    setBusy(false);
-    onChanged();
   };
 
   const saveLoadout = () =>
