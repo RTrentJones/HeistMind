@@ -39,11 +39,19 @@ export function useCharactersByGame(gameId: string | undefined) {
   });
 }
 
-/** A single character with its game (nullable) + ruleset + creator. */
+/**
+ * A single character with its game (nullable) + ruleset + creator. Load-on-view for the same reason
+ * as the roster: unmigrated writers mutate it and navigate to a possibly-cached sheet — most sharply
+ * AttachToCampaign (attach/detach flips `gameId`, so a stale detail shows the wrong campaign mode),
+ * plus CharacterEditor and the creation wizard. Revalidate on every mount so the sheet always
+ * reflects the current character; the sheet's own edits still refresh in place via invalidation.
+ */
 export function useCharacterDetail(id: string | undefined) {
   return useQuery({
     queryKey: characterKeys.detail(id ?? ''),
     enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: () => getRepositories().characters.findWithDetails(id!).then(unwrap),
   });
 }
