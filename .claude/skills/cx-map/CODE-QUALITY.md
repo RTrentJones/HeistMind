@@ -153,14 +153,21 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
   round — invalidation-refetch was chosen for correctness and in-place UI updates are the feedback;
   optimism/success-toasts remain an available follow-up polish pass.
 
-## Tier 4 (PR5) — reusable per-concept view/edit + god-component splits
+## Tier 4 (PR5) — reusable per-concept view/edit + god-component splits ✅ done
 
-- **C17** Split `CharacterEditor.tsx` (759) + `CharacterSheet.tsx` (572) into reusable `<XpTracksCard>`,
-  `<GearCard>`, `<HarmCard>` (lift the 40–90-line inline IIFEs) + a `useCharacterAdvancement` hook; view
-  and edit become thin compositions over the shared cards (one implementation per concept surface).
-- **C18** Same treatment for `CrewSheet.tsx` (524); align with the character pattern.
-- **C19** Role-gate write affordances client-side (read-only for non-GM/owner) rather than render-then-
-  fail-at-RLS. _(Resolves `FINDINGS.md` F42.)_
+- **C17** ✅ done — `CharacterEditor.tsx` (742 → 240) + `CharacterSheet.tsx` (548 → 418) are thin
+  compositions over shared concept cards: `cards/XpTracksCard` (the sheet's XP tracks, read-only for
+  non-editors), `cards/GearCard` + `cards/HarmCard` (each ONE implementation with a view mode for the
+  sheet and an `edit` mode for the editor), `advancement/{CrewBenefits,AdvancementOptions,ActionDotOptions}`
+  (moved out of the editor file), and the `useCharacterAdvancement` hook (validated saves + XP-spend
+  advancement + shared saving/error state).
+- **C18** ✅ done — `CrewSheet.tsx` (502 → 241) composed from `crews/components/cards/`:
+  `CrewStatStepper`, `CrewAdvanceTrack`, `CrewResourcePools`, `CrewAbilitiesList`, `CrewClaimsCard`,
+  `CrewCohortsCard` (every card takes the sheet's `save(patch)` + `isGm`/`busy`).
+- **C19** ✅ done — the character sheet computes `canEdit` mirroring the RLS write policy (owner OR
+  the campaign's GM) and gates every write affordance (rename, edit build, stress tracker, indulge
+  vice, XP marking, loadout save); other members get a read-only sheet. The campaign panels were
+  already `isGm`-gated. _(Resolves `FINDINGS.md` F42.)_
 
 ## Out of scope (this round)
 

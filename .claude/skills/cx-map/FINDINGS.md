@@ -495,7 +495,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   — `AppShell` renders a focus-revealed skip link targeting the single `<main id="main-content">`.
 - **F42** · CX · Sheet doesn't distinguish GM vs player edit affordances (controls shown regardless;
   RLS blocks server-side, but the UI invites dead actions). `CharacterSheet.tsx`, `CharacterEditor.tsx`
-  → gate interactive controls by role/ownership. **open**
+  → gate interactive controls by role/ownership. **fixed** (PR5, code-quality Tier 4) — the sheet
+  computes `canEdit` mirroring the RLS policy (owner OR the campaign's GM) and gates rename,
+  edit-build, the stress tracker, indulge vice, XP marking, and the loadout save; other members see
+  a read-only sheet. (The campaign panels — crew/clocks/factions/scores — were already `isGm`-gated.)
 - **F43** · FitD · Harm penalties (−1d / reduced effect at moderate, incapacitated at severe) aren't
   applied or surfaced on rolls. `RollPanel.tsx` has no harm input → show harm + default
   effect/limit. **open**

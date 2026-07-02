@@ -27,9 +27,12 @@ const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
 export function LoadoutCard({
   character,
   activeScore,
+  canEdit,
 }: {
   character: CharacterWithDetails;
   activeScore: Score | null;
+  /** Owner/GM only (F42): others see the loadout read-only — no toggles, no save. */
+  canEdit: boolean;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -106,9 +109,11 @@ export function LoadoutCard({
         {stale && (
           <Alert variant='warning' size='sm'>
             {t('components.loadout.stale')}{' '}
-            <Button variant='outline' size='sm' disabled={busy} onClick={resetLoadout}>
-              {t('components.loadout.resetForScore')}
-            </Button>
+            {canEdit && (
+              <Button variant='outline' size='sm' disabled={busy} onClick={resetLoadout}>
+                {t('components.loadout.resetForScore')}
+              </Button>
+            )}
           </Alert>
         )}
 
@@ -119,7 +124,7 @@ export function LoadoutCard({
               variant={draft.level === lvl ? 'ember' : 'outline'}
               size='sm'
               className='capitalize'
-              disabled={busy}
+              disabled={busy || !canEdit}
               onClick={() => setDraft(d => ({ ...d, level: lvl }))}
             >
               {t('components.loadout.levelOption', {
@@ -141,7 +146,7 @@ export function LoadoutCard({
               <input
                 type='checkbox'
                 checked={draft.items.includes(item.id)}
-                disabled={busy}
+                disabled={busy || !canEdit}
                 onChange={() =>
                   setDraft(d => ({
                     ...d,
@@ -166,16 +171,24 @@ export function LoadoutCard({
           ))}
         </Stack>
 
-        <Stack direction='row' gap='sm' className='flex-wrap'>
-          <Button variant='ember' size='sm' loading={busy} disabled={!dirty || over} onClick={saveLoadout}>
-            {t('components.loadout.save')}
-          </Button>
-          {saved.items.length > 0 && (
-            <Button variant='outline' size='sm' disabled={busy} onClick={resetLoadout}>
-              {t('components.loadout.clear')}
+        {canEdit && (
+          <Stack direction='row' gap='sm' className='flex-wrap'>
+            <Button
+              variant='ember'
+              size='sm'
+              loading={busy}
+              disabled={!dirty || over}
+              onClick={saveLoadout}
+            >
+              {t('components.loadout.save')}
             </Button>
-          )}
-        </Stack>
+            {saved.items.length > 0 && (
+              <Button variant='outline' size='sm' disabled={busy} onClick={resetLoadout}>
+                {t('components.loadout.clear')}
+              </Button>
+            )}
+          </Stack>
+        )}
       </Stack>
     </Card>
   );
