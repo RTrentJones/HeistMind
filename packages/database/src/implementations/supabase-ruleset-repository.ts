@@ -1,7 +1,7 @@
 // Supabase RulesetRepository — queries the env schema via client.schema().
-import type { Ruleset, CreateRulesetData, Result } from '../domain-types';
+import type { Ruleset, CreateRulesetData, Result } from '@heist-mind/core';
 import type { RulesetRepository } from '../repositories';
-import type { UpdateRulesetData } from '../domain-types';
+import type { UpdateRulesetData } from '@heist-mind/core';
 import {
   fromSupabaseRuleset,
   toSupabaseRulesetInsert,

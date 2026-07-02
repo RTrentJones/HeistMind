@@ -1,7 +1,7 @@
 // Supabase CrewRepository — the one shared crew sheet per game. Stats are clamped server-side
 // through the pure crew bounds (in the adapter); the DB CHECK constraints are the backstop. RLS
 // restricts writes to the game's GM.
-import type { Crew, CreateCrewData, UpdateCrewData, Result } from '../domain-types';
+import type { Crew, CreateCrewData, UpdateCrewData, Result } from '@heist-mind/core';
 import type { CrewRepository } from '../repositories';
 import {
   fromSupabaseCrew,

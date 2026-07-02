@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { diceForRating, resistanceStress } from '@heist-mind/database';
+import { diceForRating, resistanceStress } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useApplyCharacterStress } from '@/features/characters/data/mutations';

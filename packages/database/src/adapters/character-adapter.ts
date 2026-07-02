@@ -7,7 +7,7 @@ import type {
   UpdateCharacterData,
   AdvancementRecord,
   CharacterStatus,
-} from '../domain-types';
+} from '@heist-mind/core';
 import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type CharacterRow = Tables<{ schema: 'development' }, 'characters'>;

@@ -27,7 +27,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@heist-mind/database": "workspace:*"
+    "@heist-mind/core": "workspace:*"
   },
   "devDependencies": {},
   "keywords": [

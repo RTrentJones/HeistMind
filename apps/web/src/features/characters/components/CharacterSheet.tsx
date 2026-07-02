@@ -14,7 +14,7 @@ import {
   xpTrackSize,
   xpMarks,
   markXp,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import {
   Alert,
   Badge,

@@ -5,7 +5,7 @@ import {
   type CharacterData,
   type CrewContext,
   type RulesetContent,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Alert, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

@@ -13,12 +13,9 @@ import type {
   AdvancementRecord,
   RulesetContent,
   Result,
-} from '../domain-types';
-import type {
-  CharacterManagementRepository,
-  CharacterAdvancement,
-  ValidationResult,
-} from '../repositories';
+} from '@heist-mind/core';
+import type { CharacterManagementRepository } from '../repositories';
+import type { CharacterAdvancement, ValidationResult } from '@heist-mind/core';
 import { fromSupabaseCharacter } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
@@ -33,7 +30,7 @@ import {
   clearXpTrack,
   PLAYBOOK_TRACK,
   type CrewContext,
-} from '../character-rules';
+} from '@heist-mind/core';
 import { failFromError, type CoreSchema } from './result-helpers';
 import { SupabaseRepositoryBase } from './repository-base';
 import { newId } from './id';

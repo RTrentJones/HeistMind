@@ -4,7 +4,7 @@
 // action/fortune/resistance rolls, score start/end events, retire notes, and recorded results — each
 // invalidating the game's log so every RollLog (campaign hub + character sheet) refetches.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateRollData, Roll } from '@heist-mind/database';
+import type { CreateRollData, Roll } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { rollKeys } from './queries';

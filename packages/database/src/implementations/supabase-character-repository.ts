@@ -7,7 +7,7 @@ import type {
   AdvancementRecord,
   Game,
   Result,
-} from '../domain-types';
+} from '@heist-mind/core';
 import type { CharacterRepository } from '../repositories';
 import {
   fromSupabaseCharacter,
@@ -21,7 +21,10 @@ import { failFromError, NO_ROWS } from './result-helpers';
 import { SupabaseRepositoryBase } from './repository-base';
 import { newId } from './id';
 
-export class SupabaseCharacterRepository extends SupabaseRepositoryBase implements CharacterRepository {
+export class SupabaseCharacterRepository
+  extends SupabaseRepositoryBase
+  implements CharacterRepository
+{
   async create(userId: string, data: CreateCharacterData): Promise<Result<Character>> {
     return this.run(async () => {
       const { data: row, error } = await this.db
@@ -233,5 +236,4 @@ export class SupabaseCharacterRepository extends SupabaseRepositoryBase implemen
       });
     });
   }
-
 }

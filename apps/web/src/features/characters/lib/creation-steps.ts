@@ -1,4 +1,4 @@
-import { stepKind, type StepKind, type Ruleset, type CharacterData } from '@heist-mind/database';
+import { stepKind, type StepKind, type Ruleset, type CharacterData } from '@heist-mind/core';
 
 /**
  * The wizard is RULESET-DRIVEN: steps come from `ruleset.content.characterCreation.steps`. Each

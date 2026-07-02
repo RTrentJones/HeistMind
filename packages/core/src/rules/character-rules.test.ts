@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { RulesetContent, CharacterData } from './domain-types';
+import type { RulesetContent, CharacterData } from '../domain';
 import {
   clampStress,
   validateCharacter,

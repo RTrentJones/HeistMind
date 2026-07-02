@@ -1,6 +1,6 @@
 // Type adapters for the Game entity (development/production schema).
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
-import type { Game, CreateGameData, UpdateGameData, GameState } from '../domain-types';
+import type { Game, CreateGameData, UpdateGameData, GameState } from '@heist-mind/core';
 import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type GameRow = Tables<{ schema: 'development' }, 'games'>;

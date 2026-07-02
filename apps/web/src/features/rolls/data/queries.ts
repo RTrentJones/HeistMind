@@ -2,7 +2,7 @@
 
 // The rolls (campaign log) data-access seam (read side).
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
-import type { Roll } from '@heist-mind/database';
+import type { Roll } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 

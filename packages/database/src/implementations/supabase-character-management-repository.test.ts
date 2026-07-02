@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CharacterData, RulesetContent } from '../domain-types';
+import type { CharacterData, RulesetContent } from '@heist-mind/core';
 import type { Database } from '../supabase-types';
 import { SupabaseCharacterManagementRepository } from './supabase-character-management-repository';
 
@@ -62,7 +62,6 @@ function charData(o: Partial<CharacterData> = {}): CharacterData {
   };
 }
 
- 
 function charRow(o: any = {}): any {
   return {
     id: 'c1',
@@ -104,7 +103,6 @@ const gameRow = {
   updated_at: ISO,
 };
 
- 
 function rulesetRow(c: RulesetContent): any {
   return {
     id: 'r1',
@@ -125,7 +123,6 @@ function rulesetRow(c: RulesetContent): any {
 
 // --- mock client ------------------------------------------------------------------------------
 
- 
 type Resp = { data: any; error: any };
 
 /** A chainable mock of the supabase-js query builder, sufficient for this repo's calls. */
@@ -136,20 +133,20 @@ function makeClient(reads: Record<string, Resp>): {
   let lastUpdatePayload: Resp | null = null;
   const builder = (table: string) => {
     let op: 'read' | 'insert' | 'update' = 'read';
-     
+
     let payload: any;
-     
+
     const b: any = {
       select: () => b,
       eq: () => b,
       order: () => b,
-       
+
       insert: (r: any) => {
         op = 'insert';
         payload = r;
         return b;
       },
-       
+
       update: (p: any) => {
         op = 'update';
         payload = p;
@@ -171,7 +168,6 @@ function makeClient(reads: Record<string, Resp>): {
   const client = {
     from: (t: string) => builder(t),
     schema: () => ({ from: (t: string) => builder(t) }),
-     
   } as any as SupabaseClient<Database>;
   return { client, lastUpdate: () => lastUpdatePayload };
 }

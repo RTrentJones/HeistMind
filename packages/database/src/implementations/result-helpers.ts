@@ -1,6 +1,6 @@
 // Shared Result helpers for Supabase repository implementations.
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Result } from '../domain-types';
+import type { Result } from '@heist-mind/core';
 import type { Database } from '../supabase-types';
 
 /**

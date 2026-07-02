@@ -1,7 +1,7 @@
 // Type adapters for the Roll entity (development/production schema).
 import type { Tables, TablesInsert } from '../supabase-types';
-import type { Roll, CreateRollData } from '../domain-types';
-import type { RollKind, RollOutcome } from '../dice';
+import type { Roll, CreateRollData } from '@heist-mind/core';
+import type { RollKind, RollOutcome } from '@heist-mind/core';
 import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
 
 type RollRow = Tables<{ schema: 'development' }, 'rolls'>;

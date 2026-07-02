@@ -10,7 +10,7 @@
 // Setting: Brackwater, a drowned, lantern-lit canal city of smugglers under perpetual storm,
 // where the dead rise from the water as the "Tide-touched" and fortunes are cut from smuggled
 // saltglass. Every name below is content — rename freely by editing this file.
-import type { RulesetContent } from '@heist-mind/database';
+import type { RulesetContent } from '@heist-mind/core';
 
 export const DEFAULT_RULESET: RulesetContent = {
   metadata: {

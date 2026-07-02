@@ -3,7 +3,7 @@
 // The clocks data-access seam (write side). Each mutation invalidates the game's clocks query, so
 // every clocks view refetches the just-changed slice (replacing the old imperative `load()`).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateClockData, UpdateClockData } from '@heist-mind/database';
+import type { CreateClockData, UpdateClockData } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { clockKeys } from './queries';

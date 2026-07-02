@@ -2,7 +2,7 @@
 // A FitD clock has 4/6/8/10/12 segments and fills from 0 to that count; ticking never overflows
 // or goes negative. The repository clamps every write through these helpers.
 
-import type { ClockSegments } from './domain-types';
+import type { ClockSegments } from '../domain';
 
 /** The legal segment counts for a clock. */
 export const CLOCK_SEGMENTS: ClockSegments[] = [4, 6, 8, 10, 12];

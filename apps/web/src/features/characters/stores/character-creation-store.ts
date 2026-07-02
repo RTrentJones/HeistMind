@@ -12,7 +12,7 @@ import {
   type RulesetContent,
   type CharacterData,
   type CreateCharacterData,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 // The write goes through the characters data seam (its non-hook surface — this store's submit()
 // runs outside React); it invalidates the character queries so the new character shows everywhere.

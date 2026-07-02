@@ -32,7 +32,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0"
+    "@supabase/supabase-js": "^2.50.0",
+    "@heist-mind/core": "workspace:*"
   },
   "devDependencies": {
     "supabase": "^2.24.3"

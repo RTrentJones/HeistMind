@@ -12,7 +12,7 @@ import {
   type CharacterData,
   type CharacterWithDetails,
   type CrewContext,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import {
   Alert,
   Badge,

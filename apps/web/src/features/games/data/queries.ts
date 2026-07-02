@@ -2,7 +2,7 @@
 
 // The games data-access seam (read side).
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
-import type { Game } from '@heist-mind/database';
+import type { Game } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 

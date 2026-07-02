@@ -3,7 +3,7 @@
 // the client directly instead of through the env-scoped `coreSchema` accessor the other repos use.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
-import type { Profile, UpdateProfileData, Result } from '../domain-types';
+import type { Profile, UpdateProfileData, Result } from '@heist-mind/core';
 import type { ProfileRepository } from '../repositories';
 import { fromSupabaseProfile, toSupabaseProfileUpdate } from '../adapters/profile-adapter';
 import { failFromError, NO_ROWS, tryResult } from './result-helpers';

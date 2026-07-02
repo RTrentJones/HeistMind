@@ -1,7 +1,7 @@
 // Type adapters for the Faction entity (development/production schema).
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
-import type { Faction, CreateFactionData, UpdateFactionData } from '../domain-types';
-import { clampFactionTier, clampFactionStatus } from '../factions';
+import type { Faction, CreateFactionData, UpdateFactionData } from '@heist-mind/core';
+import { clampFactionTier, clampFactionStatus } from '@heist-mind/core';
 import { parseSupabaseDate } from './profile-adapter';
 
 type FactionRow = Tables<{ schema: 'development' }, 'factions'>;

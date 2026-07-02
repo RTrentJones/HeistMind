@@ -1,6 +1,6 @@
 // Type adapters for the Score entity (development/production schema).
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
-import type { Score, CreateScoreData, UpdateScoreData, ScoreStatus } from '../domain-types';
+import type { Score, CreateScoreData, UpdateScoreData, ScoreStatus } from '@heist-mind/core';
 import { parseSupabaseDate } from './profile-adapter';
 
 type ScoreRow = Tables<{ schema: 'development' }, 'scores'>;

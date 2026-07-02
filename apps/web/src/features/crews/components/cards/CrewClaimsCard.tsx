@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Crew, UpdateCrewData } from '@heist-mind/database';
+import type { Crew, UpdateCrewData } from '@heist-mind/core';
 import { Badge, Button, Select, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

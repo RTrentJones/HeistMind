@@ -1,7 +1,7 @@
 // Shared plumbing for the env-schema Supabase repositories.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
-import type { Result } from '../domain-types';
+import type { Result } from '@heist-mind/core';
 import { coreSchema, tryResult, type CoreDb, type CoreSchema } from './result-helpers';
 
 /**

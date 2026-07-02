@@ -1,7 +1,7 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import { actionDotsSpent, deriveAttributes } from '@heist-mind/database';
+import { actionDotsSpent, deriveAttributes } from '@heist-mind/core';
 import { ActionDots, Badge, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';

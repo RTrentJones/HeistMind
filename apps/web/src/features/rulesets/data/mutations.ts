@@ -2,7 +2,7 @@
 
 // The rulesets data-access seam (write side).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateRulesetData, RulesetContent } from '@heist-mind/database';
+import type { CreateRulesetData, RulesetContent } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { RepositoryError, unwrap } from '@/lib/query/result';
 import { rulesetKeys } from './queries';

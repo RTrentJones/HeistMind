@@ -5,7 +5,7 @@ import type {
   CreateInvitationData,
   JoinGameData,
   Result,
-} from '../domain-types';
+} from '@heist-mind/core';
 import type { InvitationRepository } from '../repositories';
 import { fromSupabaseInvitation, toSupabaseInvitationInsert } from '../adapters/invitation-adapter';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
@@ -34,7 +34,10 @@ function generateInviteCode(): string {
   return code;
 }
 
-export class SupabaseInvitationRepository extends SupabaseRepositoryBase implements InvitationRepository {
+export class SupabaseInvitationRepository
+  extends SupabaseRepositoryBase
+  implements InvitationRepository
+{
   async create(userId: string, data: CreateInvitationData): Promise<Result<Invitation>> {
     return this.run(async () => {
       const insert = toSupabaseInvitationInsert(data, userId);
@@ -188,5 +191,4 @@ export class SupabaseInvitationRepository extends SupabaseRepositoryBase impleme
       };
     });
   }
-
 }

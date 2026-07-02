@@ -8,7 +8,7 @@
 // The dungeon is modeled as the crew (a single `crew.types` entry), its loot as an optional
 // `crew.resourcePools` track, and its rooms/defenses as crew claims. Otherwise it's a standard
 // action-rating FitD ruleset (stress 9 / trauma 4, harm 2/2/1, XP tracks).
-import type { RulesetContent } from '@heist-mind/database';
+import type { RulesetContent } from '@heist-mind/core';
 
 export const WICKED_ONES: RulesetContent = {
   metadata: {

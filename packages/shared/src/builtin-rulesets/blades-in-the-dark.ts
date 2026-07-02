@@ -9,7 +9,7 @@
 // Shape mirrors `default-ruleset.ts` / `e2e/fixtures/rulesets/cinders.json` so the creation wizard
 // and the character-rules engine accept it unchanged: action-rating creation, BitD stress 9 / trauma
 // 4, harm 2/2/1, XP tracks (playbook 8 / attribute 6).
-import type { RulesetContent } from '@heist-mind/database';
+import type { RulesetContent } from '@heist-mind/core';
 
 export const BLADES_IN_THE_DARK: RulesetContent = {
   metadata: {

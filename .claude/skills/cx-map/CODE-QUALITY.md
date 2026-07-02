@@ -95,7 +95,16 @@ broken placeholders). Nine CI-gated PRs:
   `query.error.message`/`.code` without casts. RQ devtools mounted (dev-only). Persist `version: 1`
   on the auth + creation stores. `features/README.md` documents the seam, mutation conventions,
   staleness policy, and cross-feature import rules.
-- **R2-PR7 ⏳** extract `@heist-mind/core` (types split per domain + rules; dependency flip).
+- **R2-PR7 — `@heist-mind/core` extracted (this PR, the flagship).** New `packages/core`: the
+  828-line `domain-types.ts` split into 12 per-domain modules (`src/domain/`) + the 5 rules engines
+  with their tests (`src/rules/`, per-file 100% gates intact — 106 tests). The validation/
+  advancement contract (`ValidationResult`/`CharacterAdvancement`) moved to core with the rules
+  that speak it. **Dependency graph flipped in one type-checked PR** (61 import rewrites):
+  `core ← database ← shared ← ui ← web`; `@heist-mind/database` now exports ONLY the persistence
+  surface (repository contracts, auth contract, provider factories) — the full flip, no compat
+  re-export layer. Proofs: `packages/shared` imports zero from database; `packages/core` contains
+  zero supabase references; the ESLint seam ban is unchanged (factories still banned outside the
+  seam; core freely importable). The bot can now roll dice without supabase-js.
 - **R2-PR8 ⏳** extract `@heist-mind/engine` (use-cases out of React; mocked-repo unit tests — the
   bot's behavior spec).
 - **R2-PR9 ⏳** `packages/telemetry` (OTel seam, Sentry creds-guarded) + App Router error surfaces +

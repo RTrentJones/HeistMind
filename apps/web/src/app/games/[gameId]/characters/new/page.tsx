@@ -2,7 +2,7 @@
 
 import { Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { GameWithDetails } from '@heist-mind/database';
+import type { GameWithDetails } from '@heist-mind/core';
 import { Container, ErrorDisplay, LoadingSpinner, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useGameDetail } from '@/features/games/data/queries';

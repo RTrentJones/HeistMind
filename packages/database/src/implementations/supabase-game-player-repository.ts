@@ -1,13 +1,16 @@
 // Supabase GamePlayerRepository — reads from the env schema. Writes are handled
 // by DB triggers (auto_assign_game_master) / the invitation flow, so only the
 // read paths the journey needs are implemented.
-import type { GamePlayer, Result, GameRole, PlayerStatus } from '../domain-types';
+import type { GamePlayer, Result, GameRole, PlayerStatus } from '@heist-mind/core';
 import type { GamePlayerRepository } from '../repositories';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
 import { failFromError } from './result-helpers';
 import { SupabaseRepositoryBase } from './repository-base';
 
-export class SupabaseGamePlayerRepository extends SupabaseRepositoryBase implements GamePlayerRepository {
+export class SupabaseGamePlayerRepository
+  extends SupabaseRepositoryBase
+  implements GamePlayerRepository
+{
   async findByGame(gameId: string): Promise<Result<GamePlayer[]>> {
     return this.run(async () => {
       const { data: rows, error } = await this.db
@@ -85,5 +88,4 @@ export class SupabaseGamePlayerRepository extends SupabaseRepositoryBase impleme
       return { success: true, data: fromSupabaseGamePlayer(row) };
     });
   }
-
 }

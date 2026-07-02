@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Character, CharacterStatus } from '@heist-mind/database';
+import type { Character, CharacterStatus } from '@heist-mind/core';
 import { Badge, Card, Heading, Stack, Text } from '@heist-mind/ui';
 
 /**

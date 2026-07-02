@@ -1,6 +1,6 @@
 // Type adapters for the Clock entity (development/production schema).
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
-import type { Clock, CreateClockData, ClockSegments } from '../domain-types';
+import type { Clock, CreateClockData, ClockSegments } from '@heist-mind/core';
 import { parseSupabaseDate } from './profile-adapter';
 
 type ClockRow = Tables<{ schema: 'development' }, 'clocks'>;

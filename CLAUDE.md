@@ -14,11 +14,15 @@ pnpm workspaces + Turborepo monorepo (workspaces: `apps/*`, `packages/*`):
 
 - **apps/web** — Next.js 15 (App Router) with React 19, the main web application
 - **apps/discord-bot** — empty placeholder for a future Discord bot (not yet implemented)
-- **packages/database** — Supabase client with repository pattern abstraction over domain types
+- **packages/core** — the pure domain: FitD types (split per domain) + the rules engines
+  (dice/clocks/crews/factions/character-rules). No I/O, no framework — every client (web, the
+  future Discord bot) and the data layer build on it
+- **packages/database** — Supabase repositories/adapters/factories over the core domain (the
+  client-agnostic data-access layer; import domain types from `core`, persistence from here)
 - **packages/ui** — Shared component library built on Radix UI primitives + Tailwind CSS 4
-- **packages/shared** — Common utilities and types (depends on `database`)
+- **packages/shared** — Cross-client ruleset content (builtin rulesets + validation; depends on `core`)
 
-Build order matters: `database` ← `shared` ← `ui` ← `web`. Turbo's `^build` dependency
+Build order matters: `core` ← `database` ← `shared` ← `ui` ← `web`. Turbo's `^build` dependency
 enforces this, so `pnpm build` (or any `dev`/`test`/`lint` task) rebuilds upstream packages
 first. After editing a `packages/*` source file, downstream packages consume its built `dist/`,
 not its source — rebuild the package (or run its `dev` watcher) for changes to propagate.
@@ -103,22 +107,22 @@ Supabase + E2E specifics.
 
 - **app/** — Next.js App Router pages and layouts
 - **features/** — Domain-organized screens (auth, games, characters), each with its own stores and components
-- **shared/** — Cross-feature services (error handling, resilience primitives), stores (UI, notifications), types, and components
+- **shared/** — Cross-feature pieces: the notification store + toaster, `ResourceList`, `AppShell`, shared types
 - **lib/** — Core infrastructure (auth setup, i18n config)
 
 ### State Management
 
 Zustand stores use a consistent pattern: `create<State>()(devtools(persist(...)))`. Domain stores live in `features/{domain}/stores/`, cross-cutting stores in `shared/stores/`. Always use `useShallow` for selectors to prevent infinite re-render loops. Only persist essential state via `partialize`.
 
-### Data access & resilience (shared/services)
+### Data access (the React Query seam)
 
 The app has **no REST API** — the web client reads and writes through the Supabase repositories in
-`@heist-mind/database` (see the Database section), which return a `Result<T>`. There is no `fetch`/
-`apiClient` wrapper. `shared/services` provides generic resilience primitives (`resilienceService`
-with retry + exponential backoff + jitter, circuit breaker, timeout) for wrapping any async operation,
-plus typed error classes (`AppError`, `ApiError`, `ValidationAppError`) that route to the notification
-store. Repository access is being consolidated behind a per-concept React Query data-access seam
-(`features/{concept}/data/`) so the datastore stays swappable.
+`@heist-mind/database`, which return a `Result<T>`. Repository access is confined (ESLint-enforced)
+to the per-concept data seam `features/{concept}/data/`: `queries.ts` (queryOptions factories +
+hooks, `skipToken` conditionals), `mutations.ts` (`useMutation` + `invalidateQueries`), and
+`api.ts` (the non-hook surface for Zustand store actions). `unwrap()` throws `RepositoryError`
+(React Query's registered error type). See `apps/web/src/features/README.md` for the full
+conventions (mutation call styles, staleness policy, cross-feature import rules).
 
 ### Database (packages/database)
 

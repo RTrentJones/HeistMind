@@ -1,6 +1,6 @@
 'use client';
 
-import { type Clock as ClockType } from '@heist-mind/database';
+import { type Clock as ClockType } from '@heist-mind/core';
 import { Alert, Badge, Card, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useClocksByGame } from '@/features/clocks/data/queries';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import type { CreationOption, CreationStep } from '@heist-mind/database';
+import type { CreationOption, CreationStep } from '@heist-mind/core';
 import { Badge, Card, Input, Stack } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';

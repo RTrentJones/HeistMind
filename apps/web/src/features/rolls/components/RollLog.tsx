@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { resistanceStress, type Roll } from '@heist-mind/database';
+import { resistanceStress, type Roll } from '@heist-mind/core';
 import { Badge, Card, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useCharactersByGame } from '@/features/characters/data/queries';
 import { useRollsByGame } from '@/features/rolls/data/queries';

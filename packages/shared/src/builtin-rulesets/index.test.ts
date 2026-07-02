@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CharacterData, RulesetContent } from '@heist-mind/database';
+import type { CharacterData, RulesetContent } from '@heist-mind/core';
 import { BUILTIN_RULESETS, getBuiltinById } from './index';
 import { validateRulesetContent } from '../ruleset-validation';
 import {
@@ -9,7 +9,7 @@ import {
   actionDotsSpent,
   deriveAttributes,
   usesActionRatings,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 
 /**
  * A legal creation-time action spread for an action-rating ruleset: raise the playbook's seeded
