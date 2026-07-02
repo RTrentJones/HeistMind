@@ -2,7 +2,7 @@
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
 import type { Crew, CreateCrewData, UpdateCrewData } from '../domain-types';
 import { clampCrewStat, clampNonNegative, normalizeHold } from '../crews';
-import { parseSupabaseDate } from './profile-adapter';
+import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
 
 type CrewRow = Tables<{ schema: 'development' }, 'crews'>;
 type CrewInsert = TablesInsert<{ schema: 'development' }, 'crews'>;
@@ -35,7 +35,7 @@ export function fromSupabaseCrew(row: CrewRow): Crew {
     hold: normalizeHold(row.hold),
     coin: row.coin ?? 0,
     vault: row.vault ?? 0,
-    crewAbilities: (row.crew_abilities as string[] | null) ?? [],
+    crewAbilities: parseSupabaseJson<string[]>(row.crew_abilities, []),
     claims: asStringArray(row.claims),
     cohorts: asStringArray(row.cohorts),
     resources: asNumberRecord(row.resources),

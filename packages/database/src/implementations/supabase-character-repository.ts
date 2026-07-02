@@ -1,6 +1,4 @@
 // Supabase CharacterRepository — core tables in the env schema, profiles in public.
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type {
   Character,
   CharacterWithDetails,
@@ -19,40 +17,14 @@ import {
 } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
-import { fromSupabaseProfile, toJson } from '../adapters/profile-adapter';
-import {
-  failFromError,
-  failFromCatch,
-  NO_ROWS,
-  type CoreSchema,
-  coreSchema,
-} from './result-helpers';
+import { fromSupabaseProfile, toJson, stubProfile } from '../adapters/profile-adapter';
+import { failFromError, NO_ROWS } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 import { newId } from './id';
 
-function stubProfile(id: string): Profile {
-  return {
-    id,
-    username: null,
-    displayName: null,
-    avatarUrl: null,
-    preferences: {},
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-}
-
-export class SupabaseCharacterRepository implements CharacterRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseCharacterRepository extends SupabaseRepositoryBase implements CharacterRepository {
   async create(userId: string, data: CreateCharacterData): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('characters')
         .insert(toSupabaseCharacterInsert(data, userId))
@@ -60,13 +32,11 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findById(id: string): Promise<Result<Character | null>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('characters')
         .select('*')
@@ -77,13 +47,11 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByGame(gameId: string): Promise<Result<Character[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('characters')
         .select('*')
@@ -91,13 +59,11 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseCharacter) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByPlayer(userId: string): Promise<Result<Character[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('characters')
         .select('*')
@@ -105,13 +71,11 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseCharacter) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findWithDetails(id: string): Promise<Result<CharacterWithDetails | null>> {
-    try {
+    return this.run(async () => {
       const { data: charRow, error } = await this.db
         .from('characters')
         .select('*')
@@ -166,13 +130,11 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         creator: creatorRow ? fromSupabaseProfile(creatorRow) : stubProfile(character.createdBy),
       };
       return { success: true, data: details };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async update(id: string, _userId: string, data: UpdateCharacterData): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('characters')
         .update(toSupabaseCharacterUpdate(data))
@@ -181,9 +143,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async addExperience(
@@ -192,7 +152,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
     amount: number,
     reason: string
   ): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const { data: charRow, error: readErr } = await this.db
         .from('characters')
         .select('*')
@@ -221,37 +181,31 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   // Link a standalone character into a campaign (single active campaign). The RPC enforces
   // ownership + active membership + ruleset match server-side (see migration 00014).
   async attachToGame(characterId: string, gameId: string): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db.rpc('attach_character_to_game', {
         p_character_id: characterId,
         p_game_id: gameId,
       });
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   // Return a character to standalone ("My Characters"). Owner-only, enforced by the RPC.
   async detachFromGame(characterId: string): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db.rpc('detach_character', {
         p_character_id: characterId,
       });
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   // Duplicate a character into a new STANDALONE character owned by the caller (Phase 5b). Copies the
@@ -262,7 +216,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
     userId: string,
     newName?: string
   ): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const source = await this.findById(characterId);
       if (!source.success) return source as Result<Character>;
       if (!source.data) return { success: false, error: { message: 'Character not found' } };
@@ -278,9 +232,7 @@ export class SupabaseCharacterRepository implements CharacterRepository {
         characterData: structuredClone(src.characterData),
         playbookType: src.playbookType,
       });
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
 }

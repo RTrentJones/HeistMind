@@ -1,6 +1,4 @@
 // Supabase RulesetRepository — queries the env schema via client.schema().
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type { Ruleset, CreateRulesetData, Result } from '../domain-types';
 import type { RulesetRepository } from '../repositories';
 import type { UpdateRulesetData } from '../domain-types';
@@ -9,28 +7,12 @@ import {
   toSupabaseRulesetInsert,
   toSupabaseRulesetUpdate,
 } from '../adapters/ruleset-adapter';
-import {
-  failFromError,
-  failFromCatch,
-  NO_ROWS,
-  type CoreSchema,
-  coreSchema,
-} from './result-helpers';
+import { failFromError, NO_ROWS } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
-export class SupabaseRulesetRepository implements RulesetRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  // Cast to the development schema (the only one with generated table types;
-  // production is created empty until that env is deployed).
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseRulesetRepository extends SupabaseRepositoryBase implements RulesetRepository {
   async create(userId: string, data: CreateRulesetData): Promise<Result<Ruleset>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('rulesets')
         .insert(toSupabaseRulesetInsert(data, userId))
@@ -38,26 +20,22 @@ export class SupabaseRulesetRepository implements RulesetRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseRuleset(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findById(id: string): Promise<Result<Ruleset | null>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db.from('rulesets').select('*').eq('id', id).single();
       if (error) {
         if (error.code === NO_ROWS) return { success: true, data: null };
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseRuleset(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByCreator(userId: string): Promise<Result<Ruleset[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('rulesets')
         .select('*')
@@ -65,15 +43,13 @@ export class SupabaseRulesetRepository implements RulesetRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseRuleset) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   // Update a ruleset's mutable fields (used to refresh a stale starter to the latest content).
   // RLS (`rulesets_update_policy`) restricts this to the owner; `_userId` is kept for the interface.
   async update(id: string, _userId: string, data: UpdateRulesetData): Promise<Result<Ruleset>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('rulesets')
         .update(toSupabaseRulesetUpdate(data))
@@ -82,8 +58,6 @@ export class SupabaseRulesetRepository implements RulesetRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseRuleset(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 }

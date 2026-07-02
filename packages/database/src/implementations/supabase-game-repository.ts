@@ -1,8 +1,6 @@
 // Supabase GameRepository — core tables live in the env schema; profiles live in
 // `public`. `findWithDetails` therefore stitches across schemas with separate
 // queries (cross-schema PostgREST embedding is unreliable).
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type {
   Game,
   GameWithDetails,
@@ -18,40 +16,14 @@ import {
   toSupabaseGameUpdate,
 } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
-import { fromSupabaseProfile } from '../adapters/profile-adapter';
+import { fromSupabaseProfile, stubProfile } from '../adapters/profile-adapter';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
-import {
-  failFromError,
-  failFromCatch,
-  NO_ROWS,
-  type CoreSchema,
-  coreSchema,
-} from './result-helpers';
+import { failFromError, NO_ROWS } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
-function stubProfile(id: string): Profile {
-  return {
-    id,
-    username: null,
-    displayName: null,
-    avatarUrl: null,
-    preferences: {},
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-}
-
-export class SupabaseGameRepository implements GameRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseGameRepository extends SupabaseRepositoryBase implements GameRepository {
   async create(userId: string, data: CreateGameData): Promise<Result<Game>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('games')
         .insert(toSupabaseGameInsert(data, userId))
@@ -59,26 +31,22 @@ export class SupabaseGameRepository implements GameRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseGame(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findById(id: string): Promise<Result<Game | null>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db.from('games').select('*').eq('id', id).single();
       if (error) {
         if (error.code === NO_ROWS) return { success: true, data: null };
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseGame(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByCreator(userId: string): Promise<Result<Game[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('games')
         .select('*')
@@ -86,13 +54,11 @@ export class SupabaseGameRepository implements GameRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseGame) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByPlayer(userId: string): Promise<Result<Game[]>> {
-    try {
+    return this.run(async () => {
       const { data: memberships, error: mErr } = await this.db
         .from('game_players')
         .select('game_id')
@@ -108,13 +74,11 @@ export class SupabaseGameRepository implements GameRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseGame) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findWithDetails(id: string): Promise<Result<GameWithDetails | null>> {
-    try {
+    return this.run(async () => {
       const { data: gameRow, error } = await this.db
         .from('games')
         .select('*')
@@ -173,13 +137,11 @@ export class SupabaseGameRepository implements GameRepository {
         canJoin: game.state === 'recruiting' && game.currentPlayers < game.maxPlayers,
       };
       return { success: true, data: details };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async updateState(id: string, _userId: string, state: GameState): Promise<Result<Game>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('games')
         .update(toSupabaseGameUpdate({ state }))
@@ -188,9 +150,7 @@ export class SupabaseGameRepository implements GameRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseGame(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
 }

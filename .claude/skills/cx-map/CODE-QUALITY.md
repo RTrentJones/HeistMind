@@ -34,7 +34,13 @@ broken placeholders). Nine CI-gated PRs:
   `games.updateState`, `profiles.{findByUsername,update,delete}`. Invite codes → crypto
   (rejection-sampled `crypto.getRandomValues`; they're bearer credentials). ProfileRepository
   rewritten onto `result-helpers` + the standard `client` naming.
-- **R2-PR3 ⏳** repo boilerplate collapse (`tryResult` + base class kills ~54 try/catch copies).
+- **R2-PR3 — repo boilerplate collapse (this PR).** `tryResult()` in `result-helpers` +
+  `SupabaseRepositoryBase` (client/schema pair, typed `db` accessor, `run()` wrapper): all 12 repos
+  converted — **58 hand-rolled try/catch blocks deleted**; method bodies now contain only the query
+  + Result mapping. `stubProfile` single-sourced into the profile adapter; the last 3 JSONB `as`
+  casts routed through `parseSupabaseJson`; the zero-consumer `adapters/index.ts` barrel removed
+  (rule: adapters are imported by path). Remaining try/catch in the package: only the auth service
+  (different envelope — out of the repo pattern's scope).
 - **R2-PR4 ⏳** tooling truth (lint/type-check/coverage gates made real; CI reproducibility).
 - **R2-PR5 ⏳** web dedup (SignInGate ×5, errorMessage ×20, GameCard, ClockManager, ResourceList,
   app→feature moves) + seeded RTL tests.

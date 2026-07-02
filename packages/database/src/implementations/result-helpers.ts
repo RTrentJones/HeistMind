@@ -11,7 +11,7 @@ import type { Database } from '../supabase-types';
 export type CoreSchema = 'development' | 'production';
 
 /** A PostgREST client scoped to one of the generated schemas. */
-type CoreDb = ReturnType<SupabaseClient<Database>['schema']>;
+export type CoreDb = ReturnType<SupabaseClient<Database>['schema']>;
 
 /**
  * A PostgREST client scoped to the env's core schema. The generated `Database` type only carries the
@@ -50,3 +50,16 @@ export function failFromCatch<T>(e: unknown): Result<T> {
 
 /** PostgREST "no rows" code from `.single()`. */
 export const NO_ROWS = 'PGRST116';
+
+/**
+ * Run a repository operation, mapping any thrown exception into a failed Result. The one
+ * try/catch for the whole data layer — method bodies return a Result themselves (using
+ * `failFromError` for PostgREST errors) and let this wrapper absorb throws.
+ */
+export async function tryResult<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
+  try {
+    return await fn();
+  } catch (e) {
+    return failFromCatch(e);
+  }
+}

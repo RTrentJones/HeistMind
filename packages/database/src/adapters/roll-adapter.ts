@@ -2,7 +2,7 @@
 import type { Tables, TablesInsert } from '../supabase-types';
 import type { Roll, CreateRollData } from '../domain-types';
 import type { RollKind, RollOutcome } from '../dice';
-import { parseSupabaseDate } from './profile-adapter';
+import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
 
 type RollRow = Tables<{ schema: 'development' }, 'rolls'>;
 type RollInsert = TablesInsert<{ schema: 'development' }, 'rolls'>;
@@ -16,7 +16,7 @@ export function fromSupabaseRoll(row: RollRow): Roll {
     kind: (row.kind as RollKind) ?? 'action',
     label: row.label ?? null,
     dice: row.dice ?? 0,
-    results: (row.results as number[] | null) ?? [],
+    results: parseSupabaseJson<number[]>(row.results, []),
     outcome: (row.outcome as RollOutcome) ?? 'bad',
     position: row.position ?? null,
     effect: row.effect ?? null,

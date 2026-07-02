@@ -1,6 +1,4 @@
 // Supabase InvitationRepository — invites + join codes, queried against the env schema.
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type {
   Invitation,
   GamePlayer,
@@ -11,13 +9,8 @@ import type {
 import type { InvitationRepository } from '../repositories';
 import { fromSupabaseInvitation, toSupabaseInvitationInsert } from '../adapters/invitation-adapter';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
-import {
-  failFromError,
-  failFromCatch,
-  NO_ROWS,
-  type CoreSchema,
-  coreSchema,
-} from './result-helpers';
+import { failFromError, NO_ROWS } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
 /**
  * Generate a short, human-shareable invite code (avoids ambiguous chars like O/0, I/1).
@@ -41,18 +34,9 @@ function generateInviteCode(): string {
   return code;
 }
 
-export class SupabaseInvitationRepository implements InvitationRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseInvitationRepository extends SupabaseRepositoryBase implements InvitationRepository {
   async create(userId: string, data: CreateInvitationData): Promise<Result<Invitation>> {
-    try {
+    return this.run(async () => {
       const insert = toSupabaseInvitationInsert(data, userId);
       // Generate a code for a public (non-targeted) invite when one wasn't supplied.
       if (!insert.invite_code && !insert.invited_player) insert.invite_code = generateInviteCode();
@@ -63,13 +47,11 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseInvitation(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findById(id: string): Promise<Result<Invitation | null>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('invitations')
         .select('*')
@@ -80,13 +62,11 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseInvitation(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByGame(gameId: string): Promise<Result<Invitation[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('invitations')
         .select('*')
@@ -94,14 +74,12 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseInvitation) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   /** Invitations targeted at this user (RLS exposes `invited_player = auth.uid()` rows). */
   async findByPlayer(userId: string): Promise<Result<Invitation[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('invitations')
         .select('*')
@@ -110,13 +88,11 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseInvitation) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByCode(inviteCode: string): Promise<Result<Invitation | null>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('invitations')
         .select('*')
@@ -127,14 +103,12 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseInvitation(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   /** Accept a targeted invite: add the caller to the game, then mark the invite accepted. */
   async accept(invitationId: string, userId: string): Promise<Result<GamePlayer>> {
-    try {
+    return this.run(async () => {
       const inv = await this.findById(invitationId);
       if (!inv.success) return inv;
       if (!inv.data)
@@ -153,9 +127,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         .eq('id', invitationId);
 
       return { success: true, data: fromSupabaseGamePlayer(gpRow) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async decline(invitationId: string, _userId: string): Promise<Result<Invitation>> {
@@ -170,7 +142,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
     invitationId: string,
     status: 'declined' | 'revoked'
   ): Promise<Result<Invitation>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('invitations')
         .update({ status, responded_at: new Date().toISOString() })
@@ -179,14 +151,12 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseInvitation(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   /** Redeem a public join code via the SECURITY DEFINER RPC (migration 00009). */
   async joinViaCode(data: JoinGameData, _userId: string): Promise<Result<GamePlayer>> {
-    try {
+    return this.run(async () => {
       const code = data.inviteCode;
       if (!code) {
         return {
@@ -216,9 +186,7 @@ export class SupabaseInvitationRepository implements InvitationRepository {
         success: true,
         data: fromSupabaseGamePlayer(row as Parameters<typeof fromSupabaseGamePlayer>[0]),
       };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
 }
