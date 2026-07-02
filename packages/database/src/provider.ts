@@ -1,7 +1,7 @@
 // Database Provider Factory
 // Implementation-agnostic database provider that can be configured with different backends
 
-import type { DatabaseProvider, DatabaseRepositories, DatabaseTransaction } from './repositories';
+import type { DatabaseProvider, DatabaseRepositories } from './repositories';
 import type { AuthService, AuthConfig } from './auth-types';
 import { SupabaseProfileRepository } from './implementations/supabase-profile-repository';
 import { SupabaseRulesetRepository } from './implementations/supabase-ruleset-repository';
@@ -71,17 +71,6 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
     this.connected = false;
   }
 
-  async migrate(): Promise<void> {
-    // Migrations are handled via Supabase CLI or SQL files
-    // This would typically run migration scripts
-    throw new Error('Migration should be handled via Supabase CLI');
-  }
-
-  async seed(): Promise<void> {
-    // Seeding would typically insert test/initial data
-    throw new Error('Seeding should be handled via Supabase CLI or separate scripts');
-  }
-
   async isHealthy(): Promise<boolean> {
     try {
       // Simple health check - try to query the profiles table
@@ -112,20 +101,11 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
       scores: new SupabaseScoreRepository(this.client, schema),
       characterManagement: new SupabaseCharacterManagementRepository(this.client, schema),
       invitations: new SupabaseInvitationRepository(this.client, schema),
-      // Aggregate repository is outside the current journey scope.
-      gameManagement: {} as any, // Placeholder
     };
   }
 
   createAuthService(): AuthService {
     return new SupabaseAuthService(this.client);
-  }
-
-  async beginTransaction(): Promise<DatabaseTransaction> {
-    // Supabase doesn't have explicit transactions in the JS client
-    // We would need to implement this using stored procedures or
-    // handle it at the application level
-    throw new Error('Transactions not yet implemented for Supabase provider');
   }
 }
 

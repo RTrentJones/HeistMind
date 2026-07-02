@@ -5,6 +5,52 @@ standing **architecture / code-quality** backlog from the 2026-06-29 FANG-bar au
 per page, frontend architecture, data layer) + direct verification. Items are tiered to the remediation
 PR sequence. Flip an item to `done @<sha>` when it ships.
 
+---
+
+## Round 2 (2026-07-02) — architect for the product (web + Discord bot)
+
+A fresh 3-lens re-audit + a reframe from the user: design for *"Avrae for FitD"* — the web app AND
+the future Discord bot (`apps/discord-bot` placeholder; `packages/shared` exists for it) driving the
+same rules engine and campaign state. **Target package graph:**
+`core` (domain types + pure rules) ← `database` (client-agnostic repos) ← `engine` (use-cases both
+clients call) ← { `web`, `discord-bot` }, with `shared` = cross-client ruleset content (deps: core)
+and `telemetry` = OTel-compatible error/log seam. Design rules: engine returns domain data (never
+copy); the repository surface is a **server contract, not a web contract** — implemented methods
+with a clear bot use are kept + documented; only lies die (`not implemented` throwers, stubs,
+broken placeholders). Nine CI-gated PRs:
+
+- **R2-PR1 ✅ done @24c4959 — dead-code purge (−3,551 LOC).** shared/services subgraph + class
+  error-boundary, ui-store, shared/utils, dead barrels/types/i18n hooks, dead email signIn/signUp +
+  updateProfile/refreshProfile auth actions (+ their profilesApi writes), ui ErrorBoundary/
+  ErrorFallbacks/scratch story, the bypassed shared character-validation shim. Audit corrections:
+  Header/ThemeToggle/Paragraph are in use (kept); ProgressRing kept as story-documented DS surface.
+- **R2-PR2 — repo contract truth (this PR).** Deleted the `temp-user-id` `ProfileRepository.create`
+  bug (profile creation = the DB trigger), the `gameManagement: {} as any` stub + its interface +
+  dashboard/Activity types, ALL 15 `not implemented` throwers + their interface decls (real C5),
+  the dead RepositoryFactory/QueryOptions/DatabaseTransaction contracts, and the orphaned
+  UserGameContext/GamePermissions/PaginatedResult/RulesetWithDetails/CreateProfileData types.
+  **Kept + documented as bot surface:** `GamePlayerRepository` (`isGameMaster` = the bot's authz
+  primitive), `invitations.{findByCode,accept,decline,revoke,findById,findByPlayer}`,
+  `games.updateState`, `profiles.{findByUsername,update,delete}`. Invite codes → crypto
+  (rejection-sampled `crypto.getRandomValues`; they're bearer credentials). ProfileRepository
+  rewritten onto `result-helpers` + the standard `client` naming.
+- **R2-PR3 ⏳** repo boilerplate collapse (`tryResult` + base class kills ~54 try/catch copies).
+- **R2-PR4 ⏳** tooling truth (lint/type-check/coverage gates made real; CI reproducibility).
+- **R2-PR5 ⏳** web dedup (SignInGate ×5, errorMessage ×20, GameCard, ClockManager, ResourceList,
+  app→feature moves) + seeded RTL tests.
+- **R2-PR6 ⏳** RQ v5 idioms (queryOptions, skipToken, typed errors, devtools, persist versioning).
+- **R2-PR7 ⏳** extract `@heist-mind/core` (types split per domain + rules; dependency flip).
+- **R2-PR8 ⏳** extract `@heist-mind/engine` (use-cases out of React; mocked-repo unit tests — the
+  bot's behavior spec).
+- **R2-PR9 ⏳** `packages/telemetry` (OTel seam, Sentry creds-guarded) + App Router error surfaces +
+  env validation + server-rendered landing + auth-store init extraction.
+
+Deliberate exclusions recorded: building the bot itself; full RSC of the auth-gated interior;
+full component-test buildout + property tests (follow-ups); Storybook CI; virtualization;
+optimistic updates (round-1 deviation stands); Discord-id→profile schema work.
+
+---
+
 > **Progress (2026-06-29):** Tier 1 (PR2, `c492cbf`) and Tier 2 (PR3, `bebe87f`) shipped. **C5** moved
 > into Tier 3/PR4 (the throwing methods are still called by the store loaders being reworked there).
 > **C11** (`<ResourceList>`) deferred — lower-priority list scaffolding, follow-up.

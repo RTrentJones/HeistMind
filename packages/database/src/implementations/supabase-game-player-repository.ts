@@ -3,7 +3,7 @@
 // read paths the journey needs are implemented.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
-import type { GamePlayer, UserGameContext, Result, GameRole, PlayerStatus } from '../domain-types';
+import type { GamePlayer, Result, GameRole, PlayerStatus } from '../domain-types';
 import type { GamePlayerRepository } from '../repositories';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
 import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
@@ -106,14 +106,4 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
     }
   }
 
-  // --- Outside the journey scope ---
-  async removePlayer(): Promise<Result<void>> {
-    throw new Error('SupabaseGamePlayerRepository.removePlayer not implemented');
-  }
-  async updateRole(): Promise<Result<GamePlayer>> {
-    throw new Error('SupabaseGamePlayerRepository.updateRole not implemented');
-  }
-  async getUserGameContext(): Promise<Result<UserGameContext>> {
-    throw new Error('SupabaseGamePlayerRepository.getUserGameContext not implemented');
-  }
 }

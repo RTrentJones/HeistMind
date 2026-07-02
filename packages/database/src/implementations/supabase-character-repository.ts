@@ -283,11 +283,4 @@ export class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
-  // --- Phase 5c (transfer as a distinct primitive; cross-ruleset) — not yet implemented ---
-  async delete(): Promise<Result<void>> {
-    throw new Error('SupabaseCharacterRepository.delete not implemented');
-  }
-  async transferToGame(): Promise<Result<Character>> {
-    throw new Error('SupabaseCharacterRepository.transferToGame not implemented');
-  }
 }

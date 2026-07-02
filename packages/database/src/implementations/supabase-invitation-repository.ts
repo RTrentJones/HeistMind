@@ -19,12 +19,24 @@ import {
   coreSchema,
 } from './result-helpers';
 
-/** Generate a short, human-shareable invite code (avoids ambiguous chars like O/0, I/1). */
+/**
+ * Generate a short, human-shareable invite code (avoids ambiguous chars like O/0, I/1).
+ * Cryptographically random — join codes are bearer credentials, so `Math.random()` (seedable,
+ * predictable) is not acceptable. Rejection-samples to keep the distribution uniform.
+ */
 function generateInviteCode(): string {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let code = '';
-  for (let i = 0; i < 8; i += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  while (code.length < 8) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      // Reject values beyond the largest multiple of alphabet.length to avoid modulo bias.
+      if (byte < 256 - (256 % alphabet.length)) {
+        code += alphabet[byte % alphabet.length];
+        if (code.length === 8) break;
+      }
+    }
   }
   return code;
 }
@@ -209,7 +221,4 @@ export class SupabaseInvitationRepository implements InvitationRepository {
     }
   }
 
-  async cleanupExpired(): Promise<Result<number>> {
-    throw new Error('SupabaseInvitationRepository.cleanupExpired not implemented');
-  }
 }

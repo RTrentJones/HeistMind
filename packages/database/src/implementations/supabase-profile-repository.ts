@@ -1,190 +1,72 @@
-// Supabase implementation of ProfileRepository
-// Uses adapters to transform between Supabase types and domain types
-
+// Supabase implementation of ProfileRepository.
+// Profiles live in the `public` schema (created by the on-signup DB trigger), so this repo talks to
+// the client directly instead of through the env-scoped `coreSchema` accessor the other repos use.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
-import type { Profile, CreateProfileData, UpdateProfileData, Result } from '../domain-types';
+import type { Profile, UpdateProfileData, Result } from '../domain-types';
 import type { ProfileRepository } from '../repositories';
-import {
-  fromSupabaseProfile,
-  toSupabaseProfileInsert,
-  toSupabaseProfileUpdate,
-} from '../adapters/profile-adapter';
+import { fromSupabaseProfile, toSupabaseProfileUpdate } from '../adapters/profile-adapter';
+import { failFromCatch, failFromError, NO_ROWS } from './result-helpers';
 
 export class SupabaseProfileRepository implements ProfileRepository {
-  constructor(private supabase: SupabaseClient<Database>) {}
-
-  async create(data: CreateProfileData): Promise<Result<Profile>> {
-    try {
-      // Note: In real implementation, you'd get userId from auth context
-      // This is just an example
-      const userId = 'temp-user-id';
-
-      const insertData = toSupabaseProfileInsert(data, userId);
-
-      const { data: profileRow, error } = await this.supabase
-        .from('profiles')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) {
-        return {
-          success: false,
-          error: {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          },
-        };
-      }
-
-      const profile = fromSupabaseProfile(profileRow);
-      return { success: true, data: profile };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          code: 'UNKNOWN_ERROR',
-        },
-      };
-    }
-  }
+  constructor(private readonly client: SupabaseClient<Database>) {}
 
   async findById(id: string): Promise<Result<Profile | null>> {
     try {
-      const { data: profileRow, error } = await this.supabase
+      const { data: row, error } = await this.client
         .from('profiles')
         .select('*')
         .eq('id', id)
         .single();
-
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned
-          return { success: true, data: null };
-        }
-
-        return {
-          success: false,
-          error: {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          },
-        };
+        if (error.code === NO_ROWS) return { success: true, data: null };
+        return failFromError(error);
       }
-
-      const profile = fromSupabaseProfile(profileRow);
-      return { success: true, data: profile };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          code: 'UNKNOWN_ERROR',
-        },
-      };
+      return { success: true, data: fromSupabaseProfile(row) };
+    } catch (e) {
+      return failFromCatch(e);
     }
   }
 
   async findByUsername(username: string): Promise<Result<Profile | null>> {
     try {
-      const { data: profileRow, error } = await this.supabase
+      const { data: row, error } = await this.client
         .from('profiles')
         .select('*')
         .eq('username', username)
         .single();
-
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned
-          return { success: true, data: null };
-        }
-
-        return {
-          success: false,
-          error: {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          },
-        };
+        if (error.code === NO_ROWS) return { success: true, data: null };
+        return failFromError(error);
       }
-
-      const profile = fromSupabaseProfile(profileRow);
-      return { success: true, data: profile };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          code: 'UNKNOWN_ERROR',
-        },
-      };
+      return { success: true, data: fromSupabaseProfile(row) };
+    } catch (e) {
+      return failFromCatch(e);
     }
   }
 
   async update(id: string, data: UpdateProfileData): Promise<Result<Profile>> {
     try {
-      const updateData = toSupabaseProfileUpdate(data);
-
-      const { data: profileRow, error } = await this.supabase
+      const { data: row, error } = await this.client
         .from('profiles')
-        .update(updateData)
+        .update(toSupabaseProfileUpdate(data))
         .eq('id', id)
         .select()
         .single();
-
-      if (error) {
-        return {
-          success: false,
-          error: {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          },
-        };
-      }
-
-      const profile = fromSupabaseProfile(profileRow);
-      return { success: true, data: profile };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          code: 'UNKNOWN_ERROR',
-        },
-      };
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseProfile(row) };
+    } catch (e) {
+      return failFromCatch(e);
     }
   }
 
   async delete(id: string): Promise<Result<void>> {
     try {
-      const { error } = await this.supabase.from('profiles').delete().eq('id', id);
-
-      if (error) {
-        return {
-          success: false,
-          error: {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          },
-        };
-      }
-
+      const { error } = await this.client.from('profiles').delete().eq('id', id);
+      if (error) return failFromError(error);
       return { success: true, data: undefined };
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          code: 'UNKNOWN_ERROR',
-        },
-      };
+    } catch (e) {
+      return failFromCatch(e);
     }
   }
 }

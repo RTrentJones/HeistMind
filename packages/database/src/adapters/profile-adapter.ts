@@ -2,11 +2,10 @@
 // Transforms between Supabase database types and clean domain types
 
 import type { Tables, TablesInsert, TablesUpdate, Json } from '../supabase-types';
-import type { Profile, CreateProfileData, UpdateProfileData } from '../domain-types';
+import type { Profile, UpdateProfileData } from '../domain-types';
 
 // Supabase type aliases for cleaner code
 type ProfileRow = Tables<'profiles'>;
-type ProfileInsert = TablesInsert<'profiles'>;
 type ProfileUpdate = TablesUpdate<'profiles'>;
 
 /**
@@ -21,18 +20,6 @@ export function fromSupabaseProfile(row: ProfileRow): Profile {
     preferences: {}, // Default empty preferences for now
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
     updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
-  };
-}
-
-/**
- * Transform domain CreateProfileData to Supabase insert format
- */
-export function toSupabaseProfileInsert(data: CreateProfileData, userId: string): ProfileInsert {
-  return {
-    id: userId,
-    username: data.username,
-    avatar_url: data.avatarUrl || null,
-    // Note: created_at and updated_at will be set by database defaults
   };
 }
 

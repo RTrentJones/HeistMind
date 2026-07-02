@@ -8,8 +8,6 @@ import type {
   GameWithDetails,
   GameState,
   CreateGameData,
-  UpdateGameData,
-  PaginatedResult,
   Profile,
   Result,
 } from '../domain-types';
@@ -195,17 +193,4 @@ export class SupabaseGameRepository implements GameRepository {
     }
   }
 
-  // --- Outside the journey scope ---
-  async findPublic(): Promise<Result<PaginatedResult<Game>>> {
-    throw new Error('SupabaseGameRepository.findPublic not implemented');
-  }
-  async update(): Promise<Result<Game>> {
-    throw new Error('SupabaseGameRepository.update not implemented');
-  }
-  async delete(): Promise<Result<void>> {
-    throw new Error('SupabaseGameRepository.delete not implemented');
-  }
-  async canUserJoin(): Promise<Result<boolean>> {
-    throw new Error('SupabaseGameRepository.canUserJoin not implemented');
-  }
 }
