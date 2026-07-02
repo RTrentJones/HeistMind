@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@heist-mind/ui';
 import { getQueryClient } from '@/lib/query/client';
 import { I18nProvider } from '@/lib/i18n/provider';
+import { NotificationToaster } from '@/shared/components/NotificationToaster';
 
 /**
  * Client-side provider stack for the whole app. Lives behind a `'use client'` boundary so the
@@ -25,7 +26,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultMode='dark'>
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider>
+          {children}
+          {/* The single mount point for notification-store toasts (fixed overlay, app-wide). */}
+          <NotificationToaster />
+        </I18nProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

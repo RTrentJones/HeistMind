@@ -13,6 +13,9 @@ import {
   ThemeToggle,
 } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { useNotificationStore } from '@/shared/stores/notification-store';
+import { errorMessage } from '@/lib/query/result';
+import i18n from '@/lib/i18n';
 import { LanguageSwitcher } from '@/shared/components/LanguageSwitcher';
 
 export function AuthHeader() {
@@ -20,11 +23,15 @@ export function AuthHeader() {
   const { signInWithProvider, signOut } = useAuthActions();
   const { t } = useTranslation();
 
+  // Failures surface as a toast (F58 — these were console-only, i.e. invisible to the user).
   const handleDiscordSignIn = async () => {
     try {
       await signInWithProvider('discord');
     } catch (error) {
       console.error('Discord sign in failed:', error);
+      useNotificationStore
+        .getState()
+        .error(i18n.t('errors:auth.signInFailed'), errorMessage(error) || undefined);
     }
   };
 
@@ -33,6 +40,9 @@ export function AuthHeader() {
       await signOut();
     } catch (error) {
       console.error('Sign out failed:', error);
+      useNotificationStore
+        .getState()
+        .error(i18n.t('errors:auth.signOutFailed'), errorMessage(error) || undefined);
     }
   };
 

@@ -17,6 +17,9 @@ import {
 } from '@heist-mind/ui';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { useAuthActions } from '@/features/auth/stores/auth-store';
+import { useNotificationStore } from '@/shared/stores/notification-store';
+import { errorMessage } from '@/lib/query/result';
+import i18n from '@/lib/i18n';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -29,8 +32,14 @@ export function HomePage() {
   const { t } = usePageTranslation();
   const { signInWithProvider } = useAuthActions();
 
+  // Failures surface as a toast (F58 — a silent console.error left the CTA looking like a no-op).
   const signIn = () => {
-    void signInWithProvider('discord').catch(err => console.error('Sign in failed:', err));
+    void signInWithProvider('discord').catch((err: unknown) => {
+      console.error('Sign in failed:', err);
+      useNotificationStore
+        .getState()
+        .error(i18n.t('errors:auth.signInFailed'), errorMessage(err) || undefined);
+    });
   };
 
   const dualCta = (size: 'lg' | 'default') => (

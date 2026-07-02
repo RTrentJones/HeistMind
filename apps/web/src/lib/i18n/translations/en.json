@@ -951,7 +951,9 @@
       "accountNotFound": "No account found with this email",
       "emailAlreadyExists": "An account with this email already exists",
       "weakPassword": "Password is too weak",
-      "tooManyAttempts": "Too many failed attempts. Please try again later."
+      "tooManyAttempts": "Too many failed attempts. Please try again later.",
+      "signInFailed": "Sign-in failed. Please try again.",
+      "signOutFailed": "Sign-out failed. Please try again."
     },
     "character": {
       "createFailed": "Failed to create character",
