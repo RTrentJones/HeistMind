@@ -421,7 +421,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** server state is hand-rolled (`useEffect`+`useState`+`getRepositories()` with a manual
   race-guard, ~11 copies, plus Zustand store loaders); mutations can only invalidate by full refetch.
 - **fix:** the React Query migration (see `CODE-QUALITY.md` PR4) — `useMutation` with optimistic update
-  - `invalidateQueries`, and a success toast via the notification store. **status:** open.
+  - `invalidateQueries`, and a success toast via the notification store.
+- **status:** **fixed** — the RQ data seam (#91–#100) replaced every `load()` refetch with targeted
+  `invalidateQueries` (no more full-surface reload), and PR4c (@9a2ae67) mounted `NotificationToaster`
+  so the notification store actually renders (the wizard's create toast now shows; silent sign-in/out
+  `console.error` paths also raise a toast). _Deliberate deviation:_ optimistic updates + blanket
+  success toasts were skipped — invalidation-refetch chosen for correctness; in-place updates are the
+  feedback (see `CODE-QUALITY.md` C16).
 
 ---
 

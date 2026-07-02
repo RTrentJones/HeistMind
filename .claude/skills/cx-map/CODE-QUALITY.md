@@ -25,13 +25,34 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 >   mutations + `characters` stress/retire mutations), #98 (CharacterSheet + LoadoutCard; added
 >   `useUpdateCharacter`/`useUpdateCharacterData`/`useAddExperience`; retired RollPanel's `onRolled`
 >   and RollLog's `refreshKey` props).
-> - **Seam state:** `features/{characters,games,rolls,scores,clocks,factions,crews,rulesets,profiles}/data/`
->   exist. **11 files still call `getRepositories()` directly** (the remainder of C15):
->   `app/{characters,games,rulesets}/page.tsx` (clone / join / rulesets-page loads), `GameForm` (create),
->   `AttachToCampaign` (the attach/detach RPC writes), `InviteCodeSection`, `RulesetUpload`,
->   `LoadBuiltinRulesetButton`, `CharacterEditor` (save/advance), `auth-store`,
->   `character-creation-store`. **C14 (the ESLint boundary rule) lands after those** — it must be the
->   last change so the rule passes with zero violations.
+> - **Seam state:** `features/{characters,games,rolls,scores,clocks,factions,crews,rulesets,profiles,invitations}/data/`
+>   exist. ~~11 files still call `getRepositories()` directly~~ → **zero** (Tier 3 close-out below).
+>
+> **Close-out (2026-07-01, same day):** Tier 3 finished across four more CI-gated slices:
+>
+> - **#99 (@96b09c6) — the simple writes:** new `games`/`invitations`/`rulesets` write seams + character
+>   clone/attach/detach mutations; migrated GameForm, join-by-code, InviteCodeSection, RulesetUpload,
+>   LoadBuiltinRulesetButton, the rulesets page read, My-Characters clone, AttachToCampaign. `unwrap()`
+>   now throws `RepositoryError` (carries the repo error code, so the `23505` duplicate-name mapping
+>   survives the seam). Dead-code sweep: the never-passed `onChanged` props, `rolesFor` reused by the
+>   dashboard, `useProfileNames` memoized.
+> - **#100 (@47ffbc4) — the stores + editor:** `lib/query/client.ts` `getQueryClient()` (browser
+>   singleton shared by the provider tree and the seam's **non-hook surface** —
+>   `features/{concept}/data/api.ts`, consumable from Zustand actions). `auth-store`'s 6 profile repo
+>   calls → `profiles/data/api.ts`; the wizard's `submit()` → `characters/data/api.ts`
+>   `createCharacterWithValidation` (invalidates, so the create shows everywhere); CharacterEditor →
+>   `useUpdateCharacterData` + new `useAdvanceCharacter`, retiring the `onSaved`/`refetch()` bridge.
+> - **#101 (@9a2ae67) — PR4c, notifications:** `NotificationToaster` mounted in `Providers` (the store
+>   was never rendered — wizard toasts went into the void); F58 sign-in/out `console.error` paths now
+>   also raise an error toast.
+> - **PR4b-8 (this slice) — C14:** the ESLint `no-restricted-imports` boundary rule (ban
+>   `getRepositories` + the 5 `@heist-mind/database` factory functions outside
+>   `src/features/*/data/**` + `src/lib/auth/**`; domain types/pure rules stay importable). Staleness
+>   tidy: `useCharactersByPlayer` back to the 30s default (single-user data, all writers invalidate);
+>   `useCharactersByGame`/`useCharacterDetail` stay load-on-view (shared campaign state other clients
+>   mutate — BRD model). First hook tests: `renderHook`+`QueryClientProvider` seam tests
+>   (`features/characters/data/__tests__/seam.test.tsx`) covering Result-unwrap success/error and
+>   mutation invalidation.
 >
 > ⚠️ **Migration lesson (hit twice — #97, #98):** a read migrated to `useQuery` inherits
 > `staleTime: 30_000`; if an **unmigrated writer** mutates that data and the flow navigates back to a
@@ -104,7 +125,7 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 - **C11** `<ResourceList>` (loading / empty / error scaffold) + one empty-state pattern; apply to games,
   characters, rulesets, dashboard (currently inconsistent: games = plain text, characters = card + CTA).
 
-## Tier 3 (PR4) — React Query foundation = the single client data-access seam 🔶 in flight (#91–#98)
+## Tier 3 (PR4) — React Query foundation = the single client data-access seam ✅ done (#91–#102)
 
 - **C12** ✅ done @e0ccfd8 (#91) — `QueryClientProvider` (one shared `QueryClient`) in
   `app/providers.tsx`; `staleTime: 30_000, retry: 1, refetchOnWindowFocus: false`.
@@ -114,15 +135,16 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
   keys (`['characters','game',gameId]`, …). _Deviation from the draft: queryFn uses RQ's built-in
   `retry: 1` rather than wrapping `resilienceService.executeWithResilience` — the resilience service
   remains available for non-query async work._
-- **C14** ⏳ pending — ESLint `no-restricted-imports` (or `boundaries`) rule: ban `getRepositories` /
-  repository imports outside `features/*/data/**` (domain types + pure rules stay allowed). **Must land
-  last**, after the 11 remaining call sites (see Progress note) migrate. This is the enforceable
-  "swap the DB at will" guarantee.
-- **C15** 🔶 mostly done — all inline `useEffect`/`active`-guard loaders and the coupled write surfaces
-  are on the seam (#92–#98); the dead `characters-store` + `games-store` were **deleted outright**
-  (#91 — simpler than the planned "retire the loader halves": they had no consumers at all). Remaining:
-  the 11 files listed in the Progress note (simple writes + `CharacterEditor` + the two stores).
-- **C16** 🔶 mostly done — every migrated write is a `useMutation` with `invalidateQueries` (kills
+- **C14** ✅ done (PR4b-8) — ESLint `no-restricted-imports` in `apps/web/eslint.config.mjs`: bans
+  `getRepositories` (from `@/lib/auth`) and the 5 provider-factory functions (from
+  `@heist-mind/database`) everywhere except `src/features/*/data/**` + `src/lib/auth/**`; the ban is
+  `importNames`-scoped so domain types + pure rules stay importable. Landed **last**, with zero
+  violations. This is the enforceable "swap the DB at will" guarantee.
+- **C15** ✅ done (#92–#100) — every loader and write surface is on the seam; the dead
+  `characters-store` + `games-store` were **deleted outright** (#91 — they had no consumers at all);
+  the two live stores (`auth-store`, `character-creation-store`) consume the seam's non-hook
+  `api.ts` surface. `grep getRepositories` outside the seam: zero.
+- **C16** ✅ done (with a recorded deviation) — every migrated write is a `useMutation` with `invalidateQueries` (kills
   the full-reload flicker and the `rollKey` re-render bridge). The notification store is now
   actually **rendered** (`NotificationToaster` mounted in `Providers` — before PR4c nothing
   subscribed to it, so the wizard's toasts were dispatched into the void), and the sign-in/out

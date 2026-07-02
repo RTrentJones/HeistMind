@@ -137,14 +137,15 @@ the character + attach/detach RPCs, standalone `/characters*` routes, and **5b**
   The async load-on-view model is sufficient and intentional for play-by-post.
 
 **In flight (2026-07-01): the code-quality remediation (`CODE-QUALITY.md`) is the active workstream.**
-Tiers 1–2 shipped; Tier 3 — the **React Query data-access seam** (`features/{concept}/data/` as the
-only repository-touching layer, writes as `useMutation` + `invalidateQueries`) — is mostly merged to
-`development` (#91–#98). Remaining before it closes: ~11 simple-write call sites + `CharacterEditor` +
-the auth/creation stores, then the **ESLint boundary rule** (lands last), then Tier 4 (god-component
-splits + F42 role-gating). See `CODE-QUALITY.md` for per-item status and the stale-read migration
-lesson.
+Tiers 1–3 shipped: the **React Query data-access seam** is complete on `development` (#91–#102) —
+`features/{concept}/data/` is the only repository-touching layer (hooks + a non-hook `api.ts`
+surface for the Zustand stores), every write is a `useMutation` with `invalidateQueries`, the
+notification store is actually rendered (`NotificationToaster`, F58), and an **ESLint
+`no-restricted-imports` boundary rule** now enforces the seam (zero violations — the "swap the
+datastore behind the provider factory" guarantee). Remaining: Tier 4 (god-component splits + F42
+role-gating). See `CODE-QUALITY.md` for per-item status and the stale-read migration lesson.
 
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-07-01 @ 0402001 (code-quality Tier 3 / RQ data seam mostly merged, #91–#98; CODE-QUALITY.md carries the live status)
+_Last verified:_ 2026-07-01 @ 9a2ae67 (code-quality Tier 3 / RQ data seam complete incl. the ESLint boundary rule, #91–#102; CODE-QUALITY.md carries the live status)

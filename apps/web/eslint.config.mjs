@@ -55,6 +55,48 @@ const eslintConfig = [
       ],
     },
   },
+  // The client data-access seam boundary (CODE-QUALITY C14): repositories may only be touched
+  // through the per-concept `features/{concept}/data/` modules (hooks + their non-hook `api.ts`
+  // surface). This is the enforceable "swap the datastore behind the provider factory with zero
+  // frontend changes" guarantee. Domain types + pure rules from `@heist-mind/database` stay
+  // importable everywhere — only the factory FUNCTIONS are banned (the ban is importNames-scoped).
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/lib/auth',
+              importNames: ['getRepositories'],
+              message:
+                'Repository access is confined to the data seam — consume a hook (or plain api function) from features/{concept}/data/ instead.',
+            },
+            {
+              name: '@heist-mind/database',
+              importNames: [
+                'createRepositories',
+                'createRepositoriesWithClient',
+                'createDatabaseProvider',
+                'createAuthService',
+                'createAuthServiceWithClient',
+              ],
+              message:
+                'Provider factories are wired once in lib/auth — consume the data seam (features/{concept}/data/) instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // The seam itself + the lib/auth wiring are the only code allowed to touch those imports.
+  {
+    files: ['src/features/*/data/**/*.{ts,tsx}', 'src/lib/auth/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;
