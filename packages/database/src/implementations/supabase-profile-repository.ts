@@ -6,13 +6,13 @@ import type { Database } from '../supabase-types';
 import type { Profile, UpdateProfileData, Result } from '../domain-types';
 import type { ProfileRepository } from '../repositories';
 import { fromSupabaseProfile, toSupabaseProfileUpdate } from '../adapters/profile-adapter';
-import { failFromCatch, failFromError, NO_ROWS } from './result-helpers';
+import { failFromError, NO_ROWS, tryResult } from './result-helpers';
 
 export class SupabaseProfileRepository implements ProfileRepository {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
   async findById(id: string): Promise<Result<Profile | null>> {
-    try {
+    return tryResult(async () => {
       const { data: row, error } = await this.client
         .from('profiles')
         .select('*')
@@ -23,13 +23,11 @@ export class SupabaseProfileRepository implements ProfileRepository {
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseProfile(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByUsername(username: string): Promise<Result<Profile | null>> {
-    try {
+    return tryResult(async () => {
       const { data: row, error } = await this.client
         .from('profiles')
         .select('*')
@@ -40,13 +38,11 @@ export class SupabaseProfileRepository implements ProfileRepository {
         return failFromError(error);
       }
       return { success: true, data: fromSupabaseProfile(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async update(id: string, data: UpdateProfileData): Promise<Result<Profile>> {
-    try {
+    return tryResult(async () => {
       const { data: row, error } = await this.client
         .from('profiles')
         .update(toSupabaseProfileUpdate(data))
@@ -55,18 +51,14 @@ export class SupabaseProfileRepository implements ProfileRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseProfile(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async delete(id: string): Promise<Result<void>> {
-    try {
+    return tryResult(async () => {
       const { error } = await this.client.from('profiles').delete().eq('id', id);
       if (error) return failFromError(error);
       return { success: true, data: undefined };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 }

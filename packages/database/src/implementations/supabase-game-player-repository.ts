@@ -1,51 +1,37 @@
 // Supabase GamePlayerRepository — reads from the env schema. Writes are handled
 // by DB triggers (auto_assign_game_master) / the invitation flow, so only the
 // read paths the journey needs are implemented.
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type { GamePlayer, Result, GameRole, PlayerStatus } from '../domain-types';
 import type { GamePlayerRepository } from '../repositories';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
-import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
+import { failFromError } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
-export class SupabaseGamePlayerRepository implements GamePlayerRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseGamePlayerRepository extends SupabaseRepositoryBase implements GamePlayerRepository {
   async findByGame(gameId: string): Promise<Result<GamePlayer[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('game_players')
         .select('*')
         .eq('game_id', gameId);
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseGamePlayer) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByPlayer(playerId: string): Promise<Result<GamePlayer[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('game_players')
         .select('*')
         .eq('player_id', playerId);
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseGamePlayer) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async isGameMaster(userId: string, gameId: string): Promise<Result<boolean>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('game_players')
         .select('id')
@@ -55,9 +41,7 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
         .eq('status', 'active');
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).length > 0 };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   /** Add a player to a game (the join flow). RLS allows a user to self-insert their own row. */
@@ -67,7 +51,7 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
     _invitedBy: string,
     role: GameRole = 'player'
   ): Promise<Result<GamePlayer>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('game_players')
         .insert({
@@ -81,9 +65,7 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseGamePlayer(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async updateStatus(
@@ -91,7 +73,7 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
     playerId: string,
     status: PlayerStatus
   ): Promise<Result<GamePlayer>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('game_players')
         .update({ status })
@@ -101,9 +83,7 @@ export class SupabaseGamePlayerRepository implements GamePlayerRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseGamePlayer(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
 }

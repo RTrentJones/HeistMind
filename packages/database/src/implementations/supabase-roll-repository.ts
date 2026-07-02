@@ -1,25 +1,15 @@
 // Supabase RollRepository — the per-game, append-only dice-roll log. The outcome is recomputed
 // server-side from the dice faces (rollOutcome), so a client can't persist a fake result.
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type { Roll, CreateRollData, Result } from '../domain-types';
 import type { RollRepository } from '../repositories';
 import { rollOutcome } from '../dice';
 import { fromSupabaseRoll, toSupabaseRollInsert } from '../adapters/roll-adapter';
-import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
+import { failFromError } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
-export class SupabaseRollRepository implements RollRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseRollRepository extends SupabaseRepositoryBase implements RollRepository {
   async create(userId: string, data: CreateRollData): Promise<Result<Roll>> {
-    try {
+    return this.run(async () => {
       const outcome = rollOutcome(data.results, { zeroDice: data.zeroDice });
       // Tag the event with the campaign's active score so the feed can group by operation. A caller
       // may override (an explicit id, e.g. a score's own start/end event, or null to skip); only when
@@ -41,13 +31,11 @@ export class SupabaseRollRepository implements RollRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseRoll(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByGame(gameId: string, limit = 50): Promise<Result<Roll[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('rolls')
         .select('*')
@@ -56,8 +44,6 @@ export class SupabaseRollRepository implements RollRepository {
         .limit(limit);
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseRoll) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 }

@@ -22,7 +22,7 @@ import type {
 import { fromSupabaseCharacter } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
-import { toJson } from '../adapters/profile-adapter';
+import { toJson, parseSupabaseJson } from '../adapters/profile-adapter';
 import { SupabaseCharacterRepository } from './supabase-character-repository';
 import {
   validateCharacter,
@@ -34,7 +34,8 @@ import {
   PLAYBOOK_TRACK,
   type CrewContext,
 } from '../character-rules';
-import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
+import { failFromError, type CoreSchema } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 import { newId } from './id';
 
 /** A failed Result carrying the joined validation error messages. */
@@ -45,18 +46,15 @@ function failValidation<T>(result: ValidationResult): Result<T> {
   };
 }
 
-export class SupabaseCharacterManagementRepository implements CharacterManagementRepository {
+export class SupabaseCharacterManagementRepository
+  extends SupabaseRepositoryBase
+  implements CharacterManagementRepository
+{
   private readonly characters: SupabaseCharacterRepository;
 
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {
+  constructor(client: SupabaseClient<Database>, schema: CoreSchema) {
+    super(client, schema);
     this.characters = new SupabaseCharacterRepository(client, schema);
-  }
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
   }
 
   /** Load ruleset content by id (rulesets.content). */
@@ -134,14 +132,14 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       .select('crew_abilities')
       .eq('game_id', gameId)
       .maybeSingle();
-    return data ? { crewAbilities: (data.crew_abilities as string[] | null) ?? [] } : null;
+    return data ? { crewAbilities: parseSupabaseJson<string[]>(data.crew_abilities, []) } : null;
   }
 
   async createCharacterWithValidation(
     userId: string,
     data: CreateCharacterData
   ): Promise<Result<CharacterWithDetails>> {
-    try {
+    return this.run(async () => {
       const ctx = await this.resolveCreationContext(data);
       if (!ctx.success) return ctx as Result<CharacterWithDetails>;
 
@@ -161,9 +159,7 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       return this.characters.findWithDetails(created.data.id) as Promise<
         Result<CharacterWithDetails>
       >;
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async updateCharacterWithValidation(
@@ -171,7 +167,7 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
     userId: string,
     data: UpdateCharacterData
   ): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const current = await this.characters.findById(characterId);
       if (!current.success) return current as Result<Character>;
       if (!current.data) return { success: false, error: { message: 'Character not found' } };
@@ -187,9 +183,7 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
       if (!result.isValid) return failValidation<Character>(result);
 
       return this.characters.update(characterId, userId, data);
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async advanceCharacter(
@@ -197,7 +191,7 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
     _userId: string,
     adv: CharacterAdvancement
   ): Promise<Result<Character>> {
-    try {
+    return this.run(async () => {
       const { data: charRow, error: readErr } = await this.db
         .from('characters')
         .select('*')
@@ -307,13 +301,11 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseCharacter(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async validateCharacterAgainstRuleset(characterId: string): Promise<Result<ValidationResult>> {
-    try {
+    return this.run(async () => {
       const current = await this.characters.findById(characterId);
       if (!current.success) return current as Result<ValidationResult>;
       if (!current.data) return { success: false, error: { message: 'Character not found' } };
@@ -327,8 +319,6 @@ export class SupabaseCharacterManagementRepository implements CharacterManagemen
         success: true,
         data: validateCharacter(rs.data, current.data.characterData, { mode: 'live', crew }),
       };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 }

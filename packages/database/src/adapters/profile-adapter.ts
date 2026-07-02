@@ -24,6 +24,22 @@ export function fromSupabaseProfile(row: ProfileRow): Profile {
 }
 
 /**
+ * A placeholder Profile for rows whose profile is unreadable/missing (RLS or a join race) — callers
+ * render "unknown player" from the null fields rather than failing the whole aggregate read.
+ */
+export function stubProfile(id: string): Profile {
+  return {
+    id,
+    username: null,
+    displayName: null,
+    avatarUrl: null,
+    preferences: {},
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+/**
  * Transform domain UpdateProfileData to Supabase update format
  */
 export function toSupabaseProfileUpdate(data: UpdateProfileData): ProfileUpdate {

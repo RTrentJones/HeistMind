@@ -1,8 +1,6 @@
 // Supabase ClockRepository — per-game progress clocks. Fills are clamped server-side through the
 // pure clock rules (clampFilled) so a tick can never overflow or go negative; the DB CHECK
 // (filled BETWEEN 0 AND segments) is the backstop. RLS restricts writes to the game's GM.
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type { Clock, CreateClockData, UpdateClockData, Result } from '../domain-types';
 import type { ClockRepository } from '../repositories';
 import { clampFilled } from '../clocks';
@@ -11,20 +9,12 @@ import {
   toSupabaseClockInsert,
   toSupabaseClockUpdate,
 } from '../adapters/clock-adapter';
-import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
+import { failFromError } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
-export class SupabaseClockRepository implements ClockRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseClockRepository extends SupabaseRepositoryBase implements ClockRepository {
   async create(userId: string, data: CreateClockData): Promise<Result<Clock>> {
-    try {
+    return this.run(async () => {
       const filled = clampFilled(data.filled ?? 0, data.segments);
       const { data: row, error } = await this.db
         .from('clocks')
@@ -33,13 +23,11 @@ export class SupabaseClockRepository implements ClockRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseClock(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findByGame(gameId: string): Promise<Result<Clock[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('clocks')
         .select('*')
@@ -47,13 +35,11 @@ export class SupabaseClockRepository implements ClockRepository {
         .order('created_at', { ascending: true });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseClock) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async update(id: string, data: UpdateClockData): Promise<Result<Clock>> {
-    try {
+    return this.run(async () => {
       // To clamp a fill we need the effective segment count — the new one if it's changing, else
       // the clock's current value. (Reading first also 404s a missing/forbidden clock cleanly.)
       let filled = data.filled;
@@ -74,18 +60,14 @@ export class SupabaseClockRepository implements ClockRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseClock(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async delete(id: string): Promise<Result<void>> {
-    try {
+    return this.run(async () => {
       const { error } = await this.db.from('clocks').delete().eq('id', id);
       if (error) return failFromError(error);
       return { success: true, data: undefined };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 }

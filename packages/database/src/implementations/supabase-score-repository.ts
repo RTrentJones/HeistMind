@@ -1,8 +1,6 @@
 // Supabase ScoreRepository — per-game scores / operations (the per-operation unit of play). At most
 // one score is 'active' per game (DB partial unique index is the backstop; `start` checks first for a
 // friendly error). RLS restricts writes to the game's GM.
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../supabase-types';
 import type { Score, CreateScoreData, UpdateScoreData, Result } from '../domain-types';
 import type { ScoreRepository } from '../repositories';
 import {
@@ -10,20 +8,12 @@ import {
   toSupabaseScoreInsert,
   toSupabaseScoreUpdate,
 } from '../adapters/score-adapter';
-import { failFromError, failFromCatch, type CoreSchema, coreSchema } from './result-helpers';
+import { failFromError } from './result-helpers';
+import { SupabaseRepositoryBase } from './repository-base';
 
-export class SupabaseScoreRepository implements ScoreRepository {
-  constructor(
-    private readonly client: SupabaseClient<Database>,
-    private readonly schema: CoreSchema
-  ) {}
-
-  private get db() {
-    return coreSchema(this.client, this.schema);
-  }
-
+export class SupabaseScoreRepository extends SupabaseRepositoryBase implements ScoreRepository {
   async findByGame(gameId: string): Promise<Result<Score[]>> {
-    try {
+    return this.run(async () => {
       const { data: rows, error } = await this.db
         .from('scores')
         .select('*')
@@ -31,13 +21,11 @@ export class SupabaseScoreRepository implements ScoreRepository {
         .order('created_at', { ascending: false });
       if (error) return failFromError(error);
       return { success: true, data: (rows ?? []).map(fromSupabaseScore) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async findActive(gameId: string): Promise<Result<Score | null>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('scores')
         .select('*')
@@ -46,13 +34,11 @@ export class SupabaseScoreRepository implements ScoreRepository {
         .maybeSingle();
       if (error) return failFromError(error);
       return { success: true, data: row ? fromSupabaseScore(row) : null };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async start(userId: string, data: CreateScoreData): Promise<Result<Score>> {
-    try {
+    return this.run(async () => {
       // One active score per game (the DB unique index is the backstop; this is the friendly guard).
       const active = await this.findActive(data.gameId);
       if (active.success && active.data)
@@ -70,9 +56,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseScore(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 
   async end(id: string): Promise<Result<Score>> {
@@ -80,7 +64,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
   }
 
   async update(id: string, data: UpdateScoreData): Promise<Result<Score>> {
-    try {
+    return this.run(async () => {
       const { data: row, error } = await this.db
         .from('scores')
         .update(toSupabaseScoreUpdate(data, new Date().toISOString()))
@@ -89,8 +73,6 @@ export class SupabaseScoreRepository implements ScoreRepository {
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseScore(row) };
-    } catch (e) {
-      return failFromCatch(e);
-    }
+    });
   }
 }
