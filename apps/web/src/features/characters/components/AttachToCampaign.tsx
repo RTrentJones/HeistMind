@@ -4,9 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CharacterWithDetails } from '@heist-mind/database';
 import { Alert, Button, Card, Heading, Select, Stack, Text } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import {
+  useAttachCharacter,
+  useDetachCharacter,
+} from '@/features/characters/data/mutations';
 import { useGamesByPlayer } from '@/features/games/data/queries';
+import { errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -25,10 +29,12 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   const router = useRouter();
   const inCampaign = !!character.gameId;
   const allGames = useGamesByPlayer(user?.id);
+  const attachMutation = useAttachCharacter();
+  const detachMutation = useDetachCharacter();
   const [gameId, setGameId] = useState('');
-  const [busy, setBusy] = useState(false);
   const [confirmingDetach, setConfirmingDetach] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const busy = attachMutation.isPending || detachMutation.isPending;
 
   // Eligible targets: the owner's campaigns on this character's ruleset, minus the current one.
   const games = useMemo(
@@ -46,27 +52,23 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
 
   const attach = async () => {
     if (!gameId) return;
-    setBusy(true);
     setError(null);
-    const r = await getRepositories().characters.attachToGame(character.id, gameId);
-    setBusy(false);
-    if (!r.success) {
-      setError(r.error?.message ?? t('components.attachToCampaign.failed'));
-      return;
+    try {
+      await attachMutation.mutateAsync({ characterId: character.id, gameId });
+      router.push(`/games/${gameId}/characters/${character.id}`);
+    } catch (err) {
+      setError(errorMessage(err) || t('components.attachToCampaign.failed'));
     }
-    router.push(`/games/${gameId}/characters/${character.id}`);
   };
 
   const detach = async () => {
-    setBusy(true);
     setError(null);
-    const r = await getRepositories().characters.detachFromGame(character.id);
-    setBusy(false);
-    if (!r.success) {
-      setError(r.error?.message ?? t('components.attachToCampaign.failedDetach'));
-      return;
+    try {
+      await detachMutation.mutateAsync(character.id);
+      router.push(`/characters/${character.id}`);
+    } catch (err) {
+      setError(errorMessage(err) || t('components.attachToCampaign.failedDetach'));
     }
-    router.push(`/characters/${character.id}`);
   };
 
   const hasTargets = games.length > 0;

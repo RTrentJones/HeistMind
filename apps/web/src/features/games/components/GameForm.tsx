@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, ErrorDisplay, Input, LoadingSpinner, Select, Stack, Text } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCreateGame } from '@/features/games/data/mutations';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
+import { errorCode, errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /** Create a campaign from one of the GM's rulesets. */
@@ -17,11 +18,11 @@ export function GameForm() {
 
   const rulesetsQuery = useRulesetsByCreator(user?.id);
   const rulesets = rulesetsQuery.data ?? null;
+  const createGame = useCreateGame();
   const [rulesetId, setRulesetId] = useState(preselect);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   // Default the picker to the first ruleset once loaded (unless a ?ruleset= preselect or a prior pick).
   useEffect(() => {
@@ -35,26 +36,22 @@ export function GameForm() {
     if (!rulesetId) return setError(t('forms.gameForm.pickRuleset'));
     if (!name.trim()) return setError(t('forms.gameForm.nameRequired'));
 
-    setSubmitting(true);
-    const created = await getRepositories().games.create(userId, {
-      rulesetId,
-      name: name.trim(),
-      description: description.trim() || undefined,
-    });
-    setSubmitting(false);
-    if (!created.success) {
+    try {
+      const created = await createGame.mutateAsync({
+        userId,
+        data: { rulesetId, name: name.trim(), description: description.trim() || undefined },
+      });
+      router.push(`/games/${created.id}`);
+    } catch (err) {
       // A game name is unique per creator; translate the raw constraint error to a clear prompt.
-      const raw = created.error?.message ?? '';
-      const duplicate =
-        created.error?.code === '23505' || /duplicate|already exists|unique/i.test(raw);
+      const raw = errorMessage(err);
+      const duplicate = errorCode(err) === '23505' || /duplicate|already exists|unique/i.test(raw);
       setError(
         duplicate
           ? t('forms.gameForm.duplicate', { name: name.trim() })
           : raw || t('forms.gameForm.createFailed')
       );
-      return;
     }
-    router.push(`/games/${created.data.id}`);
   };
 
   if (rulesetsQuery.isLoading) return <LoadingSpinner />;
@@ -100,7 +97,7 @@ export function GameForm() {
 
       {error && <ErrorDisplay title={t('forms.gameForm.errorTitle')} message={error} />}
 
-      <Button variant='ember' onClick={onSubmit} loading={submitting}>
+      <Button variant='ember' onClick={onSubmit} loading={createGame.isPending}>
         {t('forms.gameForm.createCta')}
       </Button>
     </Stack>

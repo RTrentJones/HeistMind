@@ -103,8 +103,45 @@ export function useRetireCharacter(gameId: string) {
         .then(unwrap);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: characterKeys.byGame(gameId) });
+      // Retiring changes roster, My-Characters, and the sheet — invalidate the whole concept.
+      qc.invalidateQueries({ queryKey: characterKeys.all });
       qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
+  });
+}
+
+/** Duplicate a character into a new standalone copy (Phase 5b — an exact snapshot, owner-only). */
+export function useCloneCharacter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { characterId: string; userId: string; name: string }): Promise<Character> =>
+      getRepositories()
+        .characters.cloneCharacter(vars.characterId, vars.userId, vars.name)
+        .then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+  });
+}
+
+/**
+ * Attach/move a character into a campaign (the `attach_character_to_game` SECURITY DEFINER RPC —
+ * ownership, membership, and ruleset match are re-checked server-side). Flips `gameId`, so every
+ * character query (detail, both rosters, My Characters) is invalidated.
+ */
+export function useAttachCharacter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { characterId: string; gameId: string }): Promise<Character> =>
+      getRepositories().characters.attachToGame(vars.characterId, vars.gameId).then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+  });
+}
+
+/** Return a character to standalone ("My Characters") via the `detach_character` RPC. */
+export function useDetachCharacter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (characterId: string): Promise<Character> =>
+      getRepositories().characters.detachFromGame(characterId).then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
   });
 }

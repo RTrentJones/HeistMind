@@ -17,10 +17,10 @@ import {
   Text,
   Tooltip,
 } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { useGamesByCreator, useGamesByPlayer } from '@/features/games/data/queries';
+import { useJoinViaCode } from '@/features/invitations/data/mutations';
 
 export default function GamesPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -30,24 +30,19 @@ export default function GamesPage() {
   // Created (GM) + joined (member, incl. GM'd games — filtered to player-only below).
   const created = useGamesByCreator(user?.id);
   const joined = useGamesByPlayer(user?.id);
+  const join = useJoinViaCode();
   const [code, setCode] = useState('');
-  const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
   const onJoin = async () => {
     const userId = user?.id;
     if (!userId || !code.trim()) return;
-    setJoining(true);
     setJoinError(null);
-    const result = await getRepositories().invitations.joinViaCode(
-      { gameId: '', inviteCode: code.trim() },
-      userId
-    );
-    setJoining(false);
-    if (result.success) {
+    try {
+      const member = await join.mutateAsync({ userId, inviteCode: code.trim() });
       setCode('');
-      router.push(`/games/${result.data.gameId}`);
-    } else {
+      router.push(`/games/${member.gameId}`);
+    } catch {
       setJoinError(t('gamesList.joinFailed'));
     }
   };
@@ -135,7 +130,12 @@ export default function GamesPage() {
                 onChange={e => setCode(e.target.value)}
                 placeholder={t('gamesList.joinPlaceholder')}
               />
-              <Button variant='default' onClick={onJoin} loading={joining} disabled={!code.trim()}>
+              <Button
+                variant='default'
+                onClick={onJoin}
+                loading={join.isPending}
+                disabled={!code.trim()}
+              >
                 {t('gamesList.joinCta')}
               </Button>
             </Stack>

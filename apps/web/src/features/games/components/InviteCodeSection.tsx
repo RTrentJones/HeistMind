@@ -1,45 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Invitation } from '@heist-mind/database';
+import { useMemo, useState } from 'react';
 import { Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useInvitesByGame } from '@/features/invitations/data/queries';
+import { useCreateInviteCode } from '@/features/invitations/data/mutations';
 import { useComponentTranslation } from '@/lib/i18n/hooks';
 
 /** GM-only: generate + share public join codes for a campaign. Players redeem them on /games. */
 export function InviteCodeSection({ gameId }: { gameId: string }) {
   const { user } = useAuth();
   const { t } = useComponentTranslation();
-  const [codes, setCodes] = useState<Invitation[]>([]);
-  const [creating, setCreating] = useState(false);
+  const invites = useInvitesByGame(gameId);
+  const createInvite = useCreateInviteCode(gameId);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const load = () => {
-    getRepositories()
-      .invitations.findByGame(gameId)
-      .then(result => {
-        if (result.success) {
-          setCodes(result.data.filter(inv => inv.inviteCode && inv.status === 'pending'));
-        }
-      });
-  };
+  const codes = useMemo(
+    () => (invites.data ?? []).filter(inv => inv.inviteCode && inv.status === 'pending'),
+    [invites.data]
+  );
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
-
-  const create = async () => {
+  const create = () => {
     const userId = user?.id;
     if (!userId) return;
-    setCreating(true);
     setError(null);
-    const result = await getRepositories().invitations.create(userId, { gameId, maxUses: 20 });
-    setCreating(false);
-    if (result.success) load();
-    else setError(t('inviteSection.generateFailed'));
+    createInvite.mutate(
+      { userId },
+      { onError: () => setError(t('inviteSection.generateFailed')) }
+    );
   };
 
   const copy = async (code: string) => {
@@ -86,7 +75,7 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
           variant='outline'
           size='sm'
           onClick={create}
-          loading={creating}
+          loading={createInvite.isPending}
           className='self-start'
         >
           {t('inviteSection.generate')}

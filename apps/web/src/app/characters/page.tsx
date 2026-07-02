@@ -14,12 +14,13 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
+import { useCloneCharacter } from '@/features/characters/data/mutations';
 import { useGamesByPlayer } from '@/features/games/data/queries';
+import { errorMessage } from '@/lib/query/result';
 
 /**
  * "My Characters" (Phase 5) — every character the user owns, standalone or in a campaign. The
@@ -36,23 +37,29 @@ export default function MyCharactersPage() {
     () => Object.fromEntries((games.data ?? []).map(g => [g.id, g.name])),
     [games.data]
   );
+  const clone = useCloneCharacter();
+  // Per-card spinner target: the mutation's isPending is global, the clicked card's id is not.
   const [cloning, setCloning] = useState<string | null>(null);
   const [cloneError, setCloneError] = useState<string | null>(null);
 
-  // Duplicate a character into a new standalone copy (Phase 5b), then open it. (Write → PR4b mutation.)
+  // Duplicate a character into a new standalone copy (Phase 5b), then open it.
   const duplicate = async (ch: Character) => {
     const userId = user?.id;
     if (!userId) return;
     setCloning(ch.id);
     setCloneError(null);
-    const r = await getRepositories().characters.cloneCharacter(
-      ch.id,
-      userId,
-      t('characters.copyName', { name: ch.name })
-    );
-    setCloning(null);
-    if (r.success) router.push(`/characters/${r.data.id}`);
-    else setCloneError(r.error?.message ?? t('characters.loadFailed'));
+    try {
+      const copy = await clone.mutateAsync({
+        characterId: ch.id,
+        userId,
+        name: t('characters.copyName', { name: ch.name }),
+      });
+      router.push(`/characters/${copy.id}`);
+    } catch (err) {
+      setCloneError(errorMessage(err) || t('characters.loadFailed'));
+    } finally {
+      setCloning(null);
+    }
   };
 
   if (!isAuthenticated) {

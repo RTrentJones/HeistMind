@@ -2,16 +2,18 @@
 
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import type { Character, Game, Roll } from '@heist-mind/database';
+import type { Character, Roll } from '@heist-mind/database';
 import i18n from '@/lib/i18n';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
-import { useGamesByCreator, useGamesByPlayer } from '@/features/games/data/queries';
+import {
+  rolesFor,
+  useGamesByCreator,
+  useGamesByPlayer,
+  type GameWithRole,
+} from '@/features/games/data/queries';
 import { rollsByGameOptions } from '@/features/rolls/data/queries';
 
-export interface DashboardCampaign {
-  game: Game;
-  role: 'gm' | 'player';
-}
+export type DashboardCampaign = GameWithRole;
 
 export interface DashboardActivity {
   roll: Roll;
@@ -43,16 +45,10 @@ export function useDashboardData(userId: string | undefined): DashboardData {
   const charactersQuery = useCharactersByPlayer(userId);
 
   // Union created (GM) + joined (member), deduped by id; role from createdBy.
-  const campaigns = useMemo<DashboardCampaign[]>(() => {
-    const byId = new Map<string, DashboardCampaign>();
-    for (const g of created.data ?? []) byId.set(g.id, { game: g, role: 'gm' });
-    for (const g of joined.data ?? []) {
-      if (!byId.has(g.id)) {
-        byId.set(g.id, { game: g, role: g.createdBy === userId ? 'gm' : 'player' });
-      }
-    }
-    return [...byId.values()];
-  }, [created.data, joined.data, userId]);
+  const campaigns = useMemo<DashboardCampaign[]>(
+    () => rolesFor(userId ?? '', created.data, joined.data),
+    [created.data, joined.data, userId]
+  );
 
   // Recent activity: a bounded fan-out of per-campaign rolls.
   const activityGames = campaigns.slice(0, MAX_ACTIVITY_GAMES);

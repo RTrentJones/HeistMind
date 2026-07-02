@@ -13,15 +13,7 @@ import { useTranslation } from '@/lib/i18n/hooks';
  * that per-score loadout hangs off. The GM starts one (at most one active at a time) and ends it;
  * start/end are logged to the campaign (roll) log. Sessions are real-life and not modelled.
  */
-export function ScorePanel({
-  gameId,
-  isGm,
-  onChanged,
-}: {
-  gameId: string;
-  isGm: boolean;
-  onChanged?: () => void;
-}) {
+export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const scoresQuery = useScoresByGame(gameId);
@@ -67,7 +59,6 @@ export function ScorePanel({
         t('components.scorePanel.startedNote'),
         created.id
       );
-      onChanged?.();
     } catch (e) {
       setError((e as Error).message ?? t('components.scorePanel.startFailed'));
     }
@@ -83,7 +74,6 @@ export function ScorePanel({
         t('components.scorePanel.endedNote'),
         active.id
       );
-      onChanged?.();
     } catch (e) {
       setError((e as Error).message ?? t('components.scorePanel.endFailed'));
     }

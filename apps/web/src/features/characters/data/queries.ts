@@ -13,11 +13,18 @@ export const characterKeys = {
   detail: (id: string) => ['characters', 'detail', id] as const,
 };
 
-/** Every character the user owns (standalone + in-campaign). */
+/**
+ * Every character the user owns (standalone + in-campaign). Load-on-view for now: the creation
+ * wizard (`character-creation-store`) is not yet on the write seam, so a just-created character
+ * can't invalidate this list — revalidate on every mount so My Characters + the dashboard always
+ * show it. Revert to the default staleTime once the wizard's write migrates (PR4b-8 close-out).
+ */
 export function useCharactersByPlayer(userId: string | undefined) {
   return useQuery({
     queryKey: characterKeys.byPlayer(userId ?? ''),
     enabled: !!userId,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: () => getRepositories().characters.findByPlayer(userId!).then(unwrap),
   });
 }
