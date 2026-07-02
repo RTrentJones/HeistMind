@@ -18,9 +18,7 @@ import {
 import {
   useComponentValidation,
   validateInputProps,
-  type ValidInputState,
 } from '../lib/validation';
-import type { ComponentProps, FormElementProps } from '../lib/types';
 
 const inputVariants = cva(
   [
@@ -130,7 +128,7 @@ const Input = React.memo(
         id,
         'aria-label': ariaLabel,
         'aria-describedby': ariaDescribedBy,
-        'aria-labelledby': ariaLabelledBy,
+        'aria-labelledby': _ariaLabelledBy,
         'aria-invalid': ariaInvalid,
         'aria-required': ariaRequired,
         ...props

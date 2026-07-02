@@ -14,8 +14,8 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   lastSignInAt: Date | null;
-  appMetadata: Record<string, any>;
-  userMetadata: Record<string, any>;
+  appMetadata: Record<string, unknown>;
+  userMetadata: Record<string, unknown>;
 }
 
 export interface Session {
@@ -33,8 +33,8 @@ export interface AuthResponse<T = Session> {
 
 export interface AuthError {
   message: string;
-  status?: number;
-  code?: string;
+  status?: number | undefined;
+  code?: string | undefined;
 }
 
 // ===========================
@@ -45,7 +45,7 @@ export interface SignUpData {
   email: string;
   password: string;
   options?: {
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
     redirectTo?: string;
     captchaToken?: string;
   };
@@ -86,7 +86,7 @@ export interface UpdateUserData {
   email?: string;
   password?: string;
   phone?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 // ===========================

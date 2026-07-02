@@ -19,7 +19,10 @@ export type RollKind =
  * more 6s is a critical), a 4–5 is a partial success, a 1–3 is a bad outcome. A **zero-dice** roll
  * (acting at rating 0) rolls two dice and takes the LOWEST, and can never crit.
  */
-export function rollOutcome(results: number[], opts: { zeroDice?: boolean } = {}): RollOutcome {
+export function rollOutcome(
+  results: number[],
+  opts: { zeroDice?: boolean | undefined } = {}
+): RollOutcome {
   if (results.length === 0) return 'bad';
   if (opts.zeroDice) {
     const low = Math.min(...results);

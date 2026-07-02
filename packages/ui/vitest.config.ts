@@ -1,20 +1,15 @@
 import { defineConfig } from 'vitest/config';
+import { createBaseConfig } from '../../configs/vitest.base';
 
-export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./test/setup.ts'],
-    globals: true,
-    pool: 'forks', // Use process forks for better isolation
-    coverage: {
-      threshold: {
-        global: {
-          statements: 80,
-          branches: 80,
-          functions: 80,
-          lines: 80,
-        },
-      },
-    },
-  },
+const base = createBaseConfig(__dirname, {
+  environment: 'jsdom',
+  setupFiles: ['./test/setup.ts'],
+  // Set from measured reality (see CODE-QUALITY.md R2-PR4) — ratchet upward, never down.
+  coverageThreshold: 0,
 });
+
+// Process forks for better isolation of DOM tests.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(base as any).test.pool = 'forks';
+
+export default defineConfig(base);

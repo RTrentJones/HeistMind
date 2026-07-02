@@ -3,7 +3,6 @@ import { Button } from './Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './Card';
 import { Input } from './Input';
 import { Badge } from './Badge';
-import { Tooltip } from './Tooltip';
 import { StressTracker, ActionDots, ProgressRing } from './StressTracker';
 import { Sun, Moon, Monitor, Star, Sword, Shield, Eye } from 'lucide-react';
 

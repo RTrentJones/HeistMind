@@ -28,7 +28,7 @@ export default function RulesetsPage() {
   const rulesetsQuery = useRulesetsByCreator(user?.id);
   const rulesets = rulesetsQuery.data ?? [];
   const error = rulesetsQuery.isError
-    ? ((rulesetsQuery.error as Error)?.message ?? t('pages.rulesetsCatalog.loadFailed'))
+    ? (rulesetsQuery.error?.message ?? t('pages.rulesetsCatalog.loadFailed'))
     : null;
 
   // Failures surface as a toast (F58 — these were console-only, i.e. invisible to the user).

@@ -43,7 +43,7 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
         <ErrorDisplay
           title={t('game.newCharLoadError')}
           message={
-            game.isError ? ((game.error as Error)?.message ?? t('game.loadFailed')) : t('game.notFound')
+            game.isError ? (game.error?.message ?? t('game.loadFailed')) : t('game.notFound')
           }
         />
       </Container>

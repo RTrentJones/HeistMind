@@ -62,7 +62,7 @@ export function RollPanel({
   const canResist = !!characterId;
   // Resistance is rolled against the character's own ratings when we have them, else the BitD trio.
   const resistOptions: ActionOption[] = hasActions
-    ? actions!
+    ? actions
     : STANDARD_ATTRIBUTES.map(name => ({ name, rating: 0 }));
   const modes: RollMode[] = [
     ...(hasActions ? (['action'] as const) : []),

@@ -3,9 +3,9 @@
  * Provides consistent testing setup and accessibility testing helpers
  */
 
-import React, { ReactElement } from 'react';
+import React, { type ReactElement } from 'react';
 import { vi } from 'vitest';
-import { render, RenderOptions, RenderResult, waitFor } from '@testing-library/react';
+import { render, type RenderOptions, type RenderResult, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -189,7 +189,7 @@ export const testLoadingStates = async (
 
   // Test loaded state - need to properly clear the loading state
   result.unmount();
-  const newResult = renderComponent(false);
+  renderComponent(false);
 
   // Wait for any async updates to complete
   await waitFor(() => {
@@ -214,9 +214,9 @@ export const testColorContrast = async (element: HTMLElement) => {
 /**
  * Component variant testing helper
  */
-export const testVariants = <T extends Record<string, any>>(
-  Component: React.ComponentType<T>,
-  variants: Array<{ props: T; expectedClasses: string[] }>
+export const testVariants = <P extends object>(
+  Component: React.ComponentType<P>,
+  variants: Array<{ props: NoInfer<P>; expectedClasses: string[] }>
 ) => {
   variants.forEach(({ props, expectedClasses }) => {
     const renderResult = customRender(<Component {...props} />);

@@ -3,7 +3,7 @@
  * Provides type-safe interfaces and utilities for consistent component APIs
  */
 
-import * as React from 'react';
+import type * as React from 'react';
 import { type VariantProps } from 'class-variance-authority';
 
 // Base component size variants used across all components
@@ -163,13 +163,13 @@ export type SpacingToken =
   | '24';
 
 // Component variant constraints
-export type ComponentVariant<T extends Record<string, any>> = keyof T;
+export type ComponentVariant<T extends Record<string, unknown>> = keyof T;
 
 // Utility type for extracting variant props
 export type ExtractVariants<T> = T extends VariantProps<infer U> ? U : never;
 
 // Generic component props with proper constraints
-export interface ComponentProps<TVariants extends Record<string, any> = Record<string, any>>
+export interface ComponentProps<TVariants extends Record<string, unknown> = Record<string, unknown>>
   extends BaseComponentProps,
     InteractiveProps,
     A11yProps {

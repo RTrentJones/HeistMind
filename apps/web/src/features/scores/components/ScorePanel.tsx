@@ -30,7 +30,7 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
   const busy = startScoreMut.isPending || endScoreMut.isPending || createRoll.isPending;
   const shownError =
     error ??
-    (scoresQuery.error as Error | null)?.message ??
+    scoresQuery.error?.message ??
     (scoresQuery.isError ? t('components.scorePanel.loadFailed') : null);
 
   // Score start/end is a settled campaign event → log it, tagged with that score explicitly (the

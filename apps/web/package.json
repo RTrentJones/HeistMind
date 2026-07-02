@@ -10,10 +10,12 @@
     "lint:fix": "next lint --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@heist-mind/database": "workspace:*",
+    "@heist-mind/shared": "workspace:*",
     "@heist-mind/ui": "workspace:*",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",

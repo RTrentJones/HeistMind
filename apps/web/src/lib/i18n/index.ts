@@ -10,7 +10,7 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
 
 // Initialize i18n
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   resources: translations,
   lng: DEFAULT_LANGUAGE,
   fallbackLng: DEFAULT_LANGUAGE,

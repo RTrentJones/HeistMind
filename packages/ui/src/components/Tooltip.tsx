@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
-import { useReducedMotion, type AriaAttributes } from '../lib/accessibility';
+import { useReducedMotion } from '../lib/accessibility';
 
 const TooltipProvider = TooltipPrimitive.Provider;
 

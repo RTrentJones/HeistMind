@@ -6,7 +6,6 @@ import type {
   UpdateCharacterData,
   AdvancementRecord,
   Game,
-  Profile,
   Result,
 } from '../domain-types';
 import type { CharacterRepository } from '../repositories';
@@ -225,10 +224,10 @@ export class SupabaseCharacterRepository extends SupabaseRepositoryBase implemen
       }
       const src = source.data;
       return this.create(userId, {
-        rulesetId: src.originalRulesetId ?? undefined,
+        ...(src.originalRulesetId != null ? { rulesetId: src.originalRulesetId } : {}),
         name: newName ?? `${src.name} (copy)`,
-        description: src.description ?? undefined,
-        avatarUrl: src.avatarUrl ?? undefined,
+        ...(src.description != null ? { description: src.description } : {}),
+        ...(src.avatarUrl != null ? { avatarUrl: src.avatarUrl } : {}),
         characterData: structuredClone(src.characterData),
         playbookType: src.playbookType,
       });

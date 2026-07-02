@@ -18,13 +18,7 @@
     "declarationMap": true
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "test",
-    "../../configs",
-    "vitest.config.ts",
-    "src/**/*.test.*",
-    "src/**/__tests__/**"
-  ],
+  "exclude": ["test", "../../configs", "vitest.config.ts"],
   "references": [
     {
       "path": "../shared"

@@ -12,7 +12,7 @@ export interface Profile {
   username: string | null;
   displayName: string | null;
   avatarUrl: string | null;
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,7 +30,7 @@ export interface Ruleset {
   status: RulesetStatus;
   isPublic: boolean;
   tags: string[];
-  compatibilityFlags: Record<string, any>;
+  compatibilityFlags: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,7 +46,7 @@ export interface Game {
   currentPlayers: number;
   allowCoGMs: boolean;
   allowSpectators: boolean;
-  ruleOverrides: Record<string, any>;
+  ruleOverrides: Record<string, unknown>;
   houseRules: string | null;
   inviteOnly: boolean;
   publicListing: boolean;
@@ -60,7 +60,7 @@ export interface GamePlayer {
   playerId: string;
   role: GameRole;
   status: PlayerStatus;
-  permissions: Record<string, any>;
+  permissions: Record<string, unknown>;
   invitedAt: Date;
   joinedAt: Date | null;
   leftAt: Date | null;
@@ -83,7 +83,7 @@ export interface Character {
   status: CharacterStatus;
   isTemplate: boolean;
   originalRulesetId: string | null;
-  adaptations: Record<string, any>;
+  adaptations: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -556,7 +556,7 @@ export interface CreationOption {
   id: string;
   name: string;
   description: string;
-  value?: any;
+  value?: unknown;
   cost?: number;
 }
 
@@ -569,7 +569,7 @@ export interface PointBuyRules {
 export interface CreationRestriction {
   field: string;
   condition: string;
-  value: any;
+  value: unknown;
   message: string;
 }
 
@@ -594,7 +594,7 @@ export interface CharacterData {
   /** BitD-style XP track marks (only when the ruleset opts into `advancement.xpTracks`). */
   xp?: CharacterXp;
   contacts: CharacterContact[];
-  custom: Record<string, any>;
+  custom: Record<string, unknown>;
 }
 
 export interface CharacterXp {
@@ -663,7 +663,7 @@ export interface UpdateProfileData {
   username?: string;
   displayName?: string;
   avatarUrl?: string;
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
 }
 
 export interface CreateRulesetData {
@@ -705,7 +705,7 @@ export interface UpdateGameData {
   maxPlayers?: number;
   allowCoGMs?: boolean;
   allowSpectators?: boolean;
-  ruleOverrides?: Record<string, any>;
+  ruleOverrides?: Record<string, unknown>;
   houseRules?: string;
   inviteOnly?: boolean;
   publicListing?: boolean;
@@ -773,8 +773,8 @@ export interface CharacterWithDetails extends Character {
 
 export interface DatabaseError {
   message: string;
-  code?: string;
-  details?: string;
+  code?: string | undefined;
+  details?: string | undefined;
 }
 
 export interface ValidationError {

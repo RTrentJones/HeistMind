@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { CharacterWithDetails } from '@heist-mind/database';
 import { Alert, Button, Card, Heading, Select, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import {
-  useAttachCharacter,
-  useDetachCharacter,
-} from '@/features/characters/data/mutations';
+import { useAttachCharacter, useDetachCharacter } from '@/features/characters/data/mutations';
 import { useGamesByPlayer } from '@/features/games/data/queries';
 import { errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';

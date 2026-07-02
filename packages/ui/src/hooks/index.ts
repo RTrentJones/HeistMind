@@ -6,7 +6,6 @@
 export { useHover } from './useHover';
 export { useKeyboardNavigation } from './useKeyboardNavigation';
 export { useFocusManagement } from './useFocusManagement';
-export { useValidation } from './useValidation';
 export { useElementSize } from './useElementSize';
 export { usePortal } from './usePortal';
 export { useMotionSafe } from './useMotionSafe';

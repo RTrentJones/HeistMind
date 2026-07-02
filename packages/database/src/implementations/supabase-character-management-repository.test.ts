@@ -62,7 +62,7 @@ function charData(o: Partial<CharacterData> = {}): CharacterData {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function charRow(o: any = {}): any {
   return {
     id: 'c1',
@@ -104,7 +104,7 @@ const gameRow = {
   updated_at: ISO,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function rulesetRow(c: RulesetContent): any {
   return {
     id: 'r1',
@@ -125,7 +125,7 @@ function rulesetRow(c: RulesetContent): any {
 
 // --- mock client ------------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Resp = { data: any; error: any };
 
 /** A chainable mock of the supabase-js query builder, sufficient for this repo's calls. */
@@ -136,20 +136,20 @@ function makeClient(reads: Record<string, Resp>): {
   let lastUpdatePayload: Resp | null = null;
   const builder = (table: string) => {
     let op: 'read' | 'insert' | 'update' = 'read';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let payload: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const b: any = {
       select: () => b,
       eq: () => b,
       order: () => b,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       insert: (r: any) => {
         op = 'insert';
         payload = r;
         return b;
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       update: (p: any) => {
         op = 'update';
         payload = p;
@@ -171,7 +171,7 @@ function makeClient(reads: Record<string, Resp>): {
   const client = {
     from: (t: string) => builder(t),
     schema: () => ({ from: (t: string) => builder(t) }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
   } as any as SupabaseClient<Database>;
   return { client, lastUpdate: () => lastUpdatePayload };
 }

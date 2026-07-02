@@ -243,7 +243,7 @@ describe('Button Component', () => {
 
   describe('Error Handling', () => {
     it('handles invalid onClick gracefully', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(<Button onClick={undefined as any}>Invalid click</Button>);
       const button = screen.getByRole('button');

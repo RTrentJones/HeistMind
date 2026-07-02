@@ -28,7 +28,7 @@ export function getAuthService(): AuthService {
   if (!authService) {
     ({ authService } = initializeAuth());
   }
-  return authService!;
+  return authService;
 }
 
 // Get repositories instance
@@ -36,7 +36,7 @@ export function getRepositories(): DatabaseRepositories {
   if (!repositories) {
     ({ repositories } = initializeAuth());
   }
-  return repositories!;
+  return repositories;
 }
 
 // Re-export types for convenience

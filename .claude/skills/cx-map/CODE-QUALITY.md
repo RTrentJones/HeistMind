@@ -41,7 +41,36 @@ broken placeholders). Nine CI-gated PRs:
   casts routed through `parseSupabaseJson`; the zero-consumer `adapters/index.ts` barrel removed
   (rule: adapters are imported by path). Remaining try/catch in the package: only the auth service
   (different envelope — out of the repo pattern's scope).
-- **R2-PR4 ⏳** tooling truth (lint/type-check/coverage gates made real; CI reproducibility).
+- **R2-PR4 — tooling truth (this PR).** Every gate now runs and tells the truth:
+  - **Lint**: one shared strict base (`configs/eslint.base.mjs` — typed rules via the project
+    service: no-explicit-any, no-floating-promises, consistent-type-imports, import/no-cycle,
+    no-non-null-assertion@warn until R2-PR6) run by EVERY workspace (`lint` scripts added; web
+    spreads it into its Next config). The old 271-line root config that no script executed is gone.
+    Fixing the newly-enforced rules cleaned ~120 violations incl. all remaining `any`s in
+    database/ui (domain JSONB bags → `unknown`, typed Supabase auth transforms) and deleted 4 more
+    dead ui modules the sweep exposed (`prop-utils`, `performance`, `runtime-validation`,
+    `useValidation` + test, ~700 LOC).
+  - **type-check**: `tsc --noEmit` scripts in every workspace (was a turbo no-op). Immediately
+    surfaced 25 latent type errors in ui tests (they were excluded from every tsconfig) — fixed;
+    ui's dev tsconfig now includes tests. Also exposed that **`@heist-mind/shared` was never a
+    declared dependency of the web app** (masked by tsconfig `paths` into package sources) — dep
+    declared, paths hack removed, web now consumes built `dist` types per the documented
+    architecture.
+  - **Coverage**: `thresholds.global` was not Vitest v2 API (parsed as a glob matching nothing) —
+    every gate except database's per-file globs silently gated NOTHING, and without `all: true`
+    only test-imported files were measured (web's "70%" was really **0.78%**). Now: `all: true`,
+    flat thresholds set to measured reality (shared 80, ui 40, web 0 + ratchet note, database
+    per-file 100% rules gates unchanged); ui's vitest config converged on the shared base.
+  - **tsconfig**: `noUnusedLocals` + `verbatimModuleSyntax` ON everywhere. _Deviation:_
+    `exactOptionalPropertyTypes` attempted and deferred — the cascade reaches every optional React
+    prop passed as a possibly-undefined expression (30+ fixes; revisit after R2-PR7/8 shrink the
+    surface).
+  - **CI/infra**: `--frozen-lockfile` in all workflows; Node pinned to 20.18.0 in lockstep with
+    `.nvmrc` (greenlight-verify stays 24 — the CLI's floor, commented); turbo `globalDependencies`
+    now include the shared configs (no more stale caches on config edits) + a real `lint:fix`
+    task; lint-staged runs `eslint --fix` before prettier; conservative `renovate.json` (weekly,
+    grouped non-major, majors behind the dashboard); Storybook's installed-but-disabled a11y addon
+    enabled.
 - **R2-PR5 ⏳** web dedup (SignInGate ×5, errorMessage ×20, GameCard, ClockManager, ResourceList,
   app→feature moves) + seeded RTL tests.
 - **R2-PR6 ⏳** RQ v5 idioms (queryOptions, skipToken, typed errors, devtools, persist versioning).

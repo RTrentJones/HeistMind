@@ -65,7 +65,7 @@ export default function NewStandaloneCharacterPage() {
         {rulesets.isError && (
           <ErrorDisplay
             title={t('characters.loadError')}
-            message={(rulesets.error as Error)?.message ?? t('characters.loadFailed')}
+            message={rulesets.error?.message ?? t('characters.loadFailed')}
           />
         )}
 

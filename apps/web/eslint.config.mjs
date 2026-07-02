@@ -2,6 +2,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 import i18next from 'eslint-plugin-i18next';
+import { baseConfig, baseIgnores } from '../../configs/eslint.base.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -11,7 +12,11 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  baseIgnores,
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  // The shared strict base (configs/eslint.base.mjs) — same rules every package runs. Placed after
+  // the Next presets so its typed rules + parserOptions win for src files.
+  ...baseConfig(__dirname, { omitPlugins: ['import', '@typescript-eslint'] }),
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [

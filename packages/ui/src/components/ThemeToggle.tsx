@@ -3,7 +3,6 @@ import { Moon, Sun, Monitor } from 'lucide-react';
 import { Button } from './Button';
 import { useTheme, type ThemeMode } from '../lib/theme';
 import { cn } from '../lib/utils';
-import { tokens } from '../lib/design-tokens';
 
 export interface ThemeToggleProps {
   className?: string;
@@ -92,7 +91,7 @@ export interface ThemeSelectProps {
 }
 
 export const ThemeSelect: React.FC<ThemeSelectProps> = ({ className }) => {
-  const { mode, setMode, resolvedMode } = useTheme();
+  const { mode, setMode } = useTheme();
 
   const themes: Array<{ mode: ThemeMode; label: string; icon: React.ReactNode }> = [
     { mode: 'light', label: 'Light', icon: <Sun className='h-4 w-4' /> },

@@ -197,7 +197,7 @@ describe('Card Components', () => {
     });
 
     it('handles invalid props gracefully', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       render(<Card variant={'invalid' as any}>Card with invalid variant</Card>);
 

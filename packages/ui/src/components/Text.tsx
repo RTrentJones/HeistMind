@@ -109,7 +109,7 @@ const Text = React.forwardRef<HTMLElement, TextProps>(
     );
 
     const content = (
-      <Element ref={ref as React.Ref<any>} className={textClasses} {...rest}>
+      <Element ref={ref as React.Ref<never>} className={textClasses} {...rest}>
         {children}
       </Element>
     );

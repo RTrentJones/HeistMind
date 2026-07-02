@@ -54,7 +54,12 @@ export class SupabaseClockRepository extends SupabaseRepositoryBase implements C
       }
       const { data: row, error } = await this.db
         .from('clocks')
-        .update(toSupabaseClockUpdate({ ...data, filled }, new Date().toISOString()))
+        .update(
+          toSupabaseClockUpdate(
+            { ...data, ...(filled !== undefined ? { filled } : {}) },
+            new Date().toISOString()
+          )
+        )
         .eq('id', id)
         .select()
         .single();

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { User, Profile } from '@heist-mind/database';
-import { LoadingState } from '@/shared/types';
+import { type User, type Profile } from '@heist-mind/database';
+import { type LoadingState } from '@/shared/types';
 import { getAuthService } from '@/lib/auth';
 // Profile reads go through the profiles data seam (its non-hook surface — this store's actions run
 // outside React); repositories are never touched here directly.
@@ -241,7 +241,7 @@ if (typeof window !== 'undefined') {
       window.location.pathname === '/auth/callback';
 
     if (!state.sessionChecked && !hasOAuthParams) {
-      state.checkSession();
+      void state.checkSession();
     }
   }, 100);
 }

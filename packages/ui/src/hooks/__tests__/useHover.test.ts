@@ -469,8 +469,6 @@ describe('useHover', () => {
 
       await waitForEffects();
 
-      const initialHandlers = result.current.handlers;
-
       // Multiple re-renders
       for (let i = 0; i < 5; i++) {
         rerender();

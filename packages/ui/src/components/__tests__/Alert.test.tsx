@@ -2,7 +2,6 @@
  * @vitest-environment jsdom
  */
 
-import React from 'react';
 import { vi } from 'vitest';
 import { act } from '@testing-library/react';
 import { Alert, AlertTitle, AlertDescription } from '../Alert';
@@ -219,7 +218,7 @@ describe('Alert Components', () => {
 
     it('maintains proper semantic structure', () => {
       render(
-        <Alert variant='error' dismissible>
+        <Alert variant='destructive' dismissible>
           <AlertTitle>Error Occurred</AlertTitle>
           <AlertDescription>Please check your input and try again.</AlertDescription>
         </Alert>
@@ -274,9 +273,9 @@ describe('Alert Components', () => {
     });
 
     it('handles invalid variant gracefully', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation();
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      render(<Alert variant={'invalid' as any}>Alert with invalid variant</Alert>);
+      render(<Alert variant={'invalid' as never}>Alert with invalid variant</Alert>);
 
       const alert = screen.getByRole('alert');
       expect(alert).toBeInTheDocument();

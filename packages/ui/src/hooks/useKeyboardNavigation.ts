@@ -3,8 +3,7 @@
  * Provides comprehensive keyboard navigation support for interactive components
  */
 
-import { useCallback, useEffect, useRef, KeyboardEvent } from 'react';
-import { useEventListener } from './useEventListener';
+import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 
 export interface KeyboardNavigationOptions {
   /** Whether to enable arrow key navigation */

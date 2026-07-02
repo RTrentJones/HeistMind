@@ -114,7 +114,7 @@ const Stack = React.forwardRef<HTMLDivElement, StackProps>(
 
     if (!animateChildren || prefersReducedMotion) {
       return (
-        <Element ref={ref as React.Ref<any>} className={stackClasses} {...rest}>
+        <Element ref={ref as React.Ref<never>} className={stackClasses} {...rest}>
           {children}
         </Element>
       );
@@ -122,7 +122,7 @@ const Stack = React.forwardRef<HTMLDivElement, StackProps>(
 
     // Animate children with stagger effect
     return (
-      <Element ref={ref as React.Ref<any>} className={stackClasses} {...rest}>
+      <Element ref={ref as React.Ref<never>} className={stackClasses} {...rest}>
         {React.Children.map(children, (child, index) => (
           <MotionDiv
             key={index}

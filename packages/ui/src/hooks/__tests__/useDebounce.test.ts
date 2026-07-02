@@ -184,9 +184,10 @@ describe('useDebounce', () => {
 
   describe('Edge Cases', () => {
     it('should handle null values', () => {
-      const { result, rerender } = renderHook(({ value }) => useDebounce(value, 500), {
-        initialProps: { value: null },
-      });
+      const { result, rerender } = renderHook(
+        ({ value }) => useDebounce<string | null>(value, 500),
+        { initialProps: { value: null as string | null } }
+      );
 
       rerender({ value: 'not null' });
 
@@ -198,9 +199,10 @@ describe('useDebounce', () => {
     });
 
     it('should handle undefined values', () => {
-      const { result, rerender } = renderHook(({ value }) => useDebounce(value, 500), {
-        initialProps: { value: undefined },
-      });
+      const { result, rerender } = renderHook(
+        ({ value }) => useDebounce<string | undefined>(value, 500),
+        { initialProps: { value: undefined as string | undefined } }
+      );
 
       rerender({ value: 'defined' });
 
@@ -212,9 +214,10 @@ describe('useDebounce', () => {
     });
 
     it('should handle changing from defined to undefined', () => {
-      const { result, rerender } = renderHook(({ value }) => useDebounce(value, 500), {
-        initialProps: { value: 'defined' },
-      });
+      const { result, rerender } = renderHook(
+        ({ value }) => useDebounce<string | undefined>(value, 500),
+        { initialProps: { value: 'defined' as string | undefined } }
+      );
 
       rerender({ value: undefined });
 
@@ -277,7 +280,7 @@ describe('useDebounce', () => {
     });
 
     it('should not update state after unmount', () => {
-      const { result, rerender, unmount } = renderHook(({ value }) => useDebounce(value, 500), {
+      const { rerender, unmount } = renderHook(({ value }) => useDebounce(value, 500), {
         initialProps: { value: 'initial' },
       });
 

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
 import { MotionDiv } from '../lib/motion-safe';
-import { useReducedMotion, type AriaAttributes } from '../lib/accessibility';
+import { useReducedMotion } from '../lib/accessibility';
 
 const containerVariants = cva(
   [
