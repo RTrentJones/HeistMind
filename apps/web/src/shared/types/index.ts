@@ -1,7 +1,10 @@
-import { ValidationError } from '@heist-mind/database';
+import type { ValidationError } from '@heist-mind/database';
 
-// Shared types across all features
-export * from '@heist-mind/database';
+// Shared cross-feature types. (This file used to blanket re-export all of `@heist-mind/database`,
+// which would have laundered the provider factories past the seam boundary rule — import domain
+// types directly from `@heist-mind/database` instead. `ValidationError` keeps a type-only re-export
+// for its existing consumers.)
+export type { ValidationError };
 
 // API Response types
 export interface ApiResponse<T = unknown> {

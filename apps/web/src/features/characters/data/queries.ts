@@ -14,27 +14,24 @@ export const characterKeys = {
 };
 
 /**
- * Every character the user owns (standalone + in-campaign). Load-on-view for now: the creation
- * wizard (`character-creation-store`) is not yet on the write seam, so a just-created character
- * can't invalidate this list — revalidate on every mount so My Characters + the dashboard always
- * show it. Revert to the default staleTime once the wizard's write migrates (PR4b-8 close-out).
+ * Every character the user owns (standalone + in-campaign). Single-user data whose writers (wizard
+ * create, clone, attach/detach, retire, editor) are all on the seam and invalidate `characterKeys`,
+ * so the default staleness is safe — no load-on-view override needed here.
  */
 export function useCharactersByPlayer(userId: string | undefined) {
   return useQuery({
     queryKey: characterKeys.byPlayer(userId ?? ''),
     enabled: !!userId,
-    staleTime: 0,
-    refetchOnMount: 'always',
     queryFn: () => getRepositories().characters.findByPlayer(userId!).then(unwrap),
   });
 }
 
 /**
- * All characters in a campaign (the roster). Shared campaign state that changes from outside this
- * client — most notably the character-creation wizard, which is not yet on the write seam and so
- * can't invalidate this query. Per the BRD's load-on-view model, treat it as never fresh: revalidate
- * on every mount so returning to the hub after a create/retire always shows the current roster.
- * (Cached data still renders instantly; the refetch is a background revalidation, no empty flicker.)
+ * All characters in a campaign (the roster). SHARED campaign state: other players and the GM write
+ * it from their own clients, and there is no realtime layer — in-app invalidation can never cover
+ * those writes. Per the BRD's load-on-view model, treat it as never fresh: revalidate on every
+ * mount so opening the hub always shows the current roster. (Cached data still renders instantly;
+ * the refetch is a background revalidation, no empty flicker.)
  */
 export function useCharactersByGame(gameId: string | undefined) {
   return useQuery({
@@ -47,11 +44,10 @@ export function useCharactersByGame(gameId: string | undefined) {
 }
 
 /**
- * A single character with its game (nullable) + ruleset + creator. Load-on-view for the same reason
- * as the roster: unmigrated writers mutate it and navigate to a possibly-cached sheet — most sharply
- * AttachToCampaign (attach/detach flips `gameId`, so a stale detail shows the wrong campaign mode),
- * plus CharacterEditor and the creation wizard. Revalidate on every mount so the sheet always
- * reflects the current character; the sheet's own edits still refresh in place via invalidation.
+ * A single character with its game (nullable) + ruleset + creator. Load-on-view for the same
+ * reason as the roster: the GM (a different client) can mutate a player's character, so a cached
+ * sheet may not reflect shared truth. Revalidate on every mount; the sheet's own edits still
+ * refresh in place via mutation invalidation.
  */
 export function useCharacterDetail(id: string | undefined) {
   return useQuery({

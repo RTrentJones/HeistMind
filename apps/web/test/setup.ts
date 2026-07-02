@@ -14,7 +14,8 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
-// Mock Supabase client
+// Mock the auth module (Supabase client + the data seam's repository accessor). Tests configure
+// `vi.mocked(getRepositories).mockReturnValue(...)` with just the repos they exercise.
 vi.mock('@/lib/auth', () => ({
   createClient: () => ({
     auth: {
@@ -22,6 +23,9 @@ vi.mock('@/lib/auth', () => ({
       signOut: vi.fn().mockResolvedValue({ error: null }),
     },
   }),
+  getRepositories: vi.fn(),
+  getAuthService: vi.fn(),
+  initializeAuth: vi.fn(),
 }));
 
 // Global test utilities
