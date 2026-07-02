@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@heist-mind/ui';
 import { getQueryClient } from '@/lib/query/client';
 import { I18nProvider } from '@/lib/i18n/provider';
@@ -30,6 +31,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           {children}
           {/* The single mount point for notification-store toasts (fixed overlay, app-wide). */}
           <NotificationToaster />
+          {/* Dev-only; compiled out of production bundles by the NODE_ENV check upstream. */}
+          <ReactQueryDevtools initialIsOpen={false} />
         </I18nProvider>
       </ThemeProvider>
     </QueryClientProvider>

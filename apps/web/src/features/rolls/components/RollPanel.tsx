@@ -129,7 +129,7 @@ export function RollPanel({
       }
 
       const isActionRoll = mode === 'action';
-      const rating = isActionRoll ? (actions!.find(a => a.name === action)?.rating ?? 0) : fortune;
+      const rating = isActionRoll ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune;
       // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2 take-lowest).
       const extraDice = isActionRoll ? (push ? 1 : 0) + (bargain ? 1 : 0) : 0;
       const { count, zeroDice } = isActionRoll
@@ -204,7 +204,7 @@ export function RollPanel({
               value={action}
               onChange={e => setAction(e.target.value)}
             >
-              {actions!.map(a => (
+              {(actions ?? []).map(a => (
                 <option key={a.name} value={a.name}>
                   {a.name} {t('components.rollPanel.diceSuffix', { count: a.rating })}
                 </option>

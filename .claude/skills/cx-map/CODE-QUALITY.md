@@ -86,7 +86,15 @@ broken placeholders). Nine CI-gated PRs:
   themselves: the database per-file gate failed the new `clampStress` until it had a test.
   _Note:_ the errorMessage-adoption item largely dissolved — PR-4's `no-unnecessary-type-assertion`
   autofix removed the ~20 `as Error` casts already; RQ types `query.error` as `Error` natively.
-- **R2-PR6 ⏳** RQ v5 idioms (queryOptions, skipToken, typed errors, devtools, persist versioning).
+- **R2-PR6 — RQ v5 idioms (this PR).** Every read seam now exposes a `{concept}Queries`
+  **`queryOptions` factory** (one definition of key+fn, reused by hooks and `useQueries` fan-outs —
+  generalizing the lone `rollsByGameOptions`); conditional queries use **`skipToken`** (all 14
+  `enabled`+`id!` assertion pairs gone; `no-non-null-assertion` flipped to **error** repo-wide,
+  with the last two prod assertions replaced by honest checks — env vars fail at boot naming the
+  missing key). Typed errors: `Register { defaultError: RepositoryError }` — components read
+  `query.error.message`/`.code` without casts. RQ devtools mounted (dev-only). Persist `version: 1`
+  on the auth + creation stores. `features/README.md` documents the seam, mutation conventions,
+  staleness policy, and cross-feature import rules.
 - **R2-PR7 ⏳** extract `@heist-mind/core` (types split per domain + rules; dependency flip).
 - **R2-PR8 ⏳** extract `@heist-mind/engine` (use-cases out of React; mocked-repo unit tests — the
   bot's behavior spec).

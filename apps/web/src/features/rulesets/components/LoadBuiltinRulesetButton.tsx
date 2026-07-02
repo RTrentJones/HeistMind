@@ -68,6 +68,13 @@ export function LoadBuiltinRulesetButton({
   );
 }
 
-/** The original brackwater-starter entry, for convenience where a single default is wanted. */
-export const BRACKWATER_BUILTIN =
-  BUILTIN_RULESETS.find(r => r.id === 'brackwater') ?? BUILTIN_RULESETS[0]!;
+/**
+ * The original brackwater-starter entry, for convenience where a single default is wanted. The
+ * catalog is a non-empty checked-in constant, so the fallback throw is unreachable in practice —
+ * it exists to satisfy the no-assertions rule honestly instead of hiding a `!`.
+ */
+export const BRACKWATER_BUILTIN = (() => {
+  const brackwater = BUILTIN_RULESETS.find(r => r.id === 'brackwater') ?? BUILTIN_RULESETS[0];
+  if (!brackwater) throw new Error('BUILTIN_RULESETS is empty');
+  return brackwater;
+})();

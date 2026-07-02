@@ -1,4 +1,13 @@
 import { QueryClient } from '@tanstack/react-query';
+import type { RepositoryError } from './result';
+
+// Every queryFn/mutationFn in the seam throws RepositoryError (via unwrap), so register it as THE
+// error type — components read `query.error.message`/`.code` without casts.
+declare module '@tanstack/react-query' {
+  interface Register {
+    defaultError: RepositoryError;
+  }
+}
 
 function makeQueryClient() {
   return new QueryClient({

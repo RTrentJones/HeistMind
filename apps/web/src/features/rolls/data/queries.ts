@@ -1,7 +1,7 @@
 'use client';
 
 // The rolls (campaign log) data-access seam (read side).
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import type { Roll } from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
@@ -17,17 +17,16 @@ export const rollKeys = {
 };
 
 /** Query options for a game's rolls — shared by the hook and `useQueries` fan-outs (e.g. dashboard). */
-export function rollsByGameOptions(gameId: string, limit = DEFAULT_ROLL_FEED_LIMIT) {
-  return {
-    queryKey: rollKeys.byGame(gameId, limit),
-    queryFn: (): Promise<Roll[]> => getRepositories().rolls.findByGame(gameId, limit).then(unwrap),
-  };
+export function rollsByGameOptions(gameId: string | undefined, limit = DEFAULT_ROLL_FEED_LIMIT) {
+  return queryOptions({
+    queryKey: rollKeys.byGame(gameId ?? '', limit),
+    queryFn: gameId
+      ? (): Promise<Roll[]> => getRepositories().rolls.findByGame(gameId, limit).then(unwrap)
+      : skipToken,
+  });
 }
 
 /** The reverse-chron campaign log for a game (most recent `limit`). */
 export function useRollsByGame(gameId: string | undefined, limit = DEFAULT_ROLL_FEED_LIMIT) {
-  return useQuery({
-    ...rollsByGameOptions(gameId ?? '', limit),
-    enabled: !!gameId,
-  });
+  return useQuery(rollsByGameOptions(gameId, limit));
 }

@@ -47,8 +47,9 @@ export function baseConfig(tsconfigRootDir, { omitPlugins = [] } = {}) {
         // ===== TYPE SAFETY =====
         '@typescript-eslint/no-explicit-any': 'error',
         '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-        // warn until R2-PR6 replaces the seam's `enabled`+`id!` pattern with skipToken → error.
-        '@typescript-eslint/no-non-null-assertion': 'warn',
+        // The seam uses skipToken for conditional queries (R2-PR6); assertions are banned outside
+        // tests (see the test-relaxation block below).
+        '@typescript-eslint/no-non-null-assertion': 'error',
 
         // ===== ASYNC CORRECTNESS =====
         '@typescript-eslint/no-floating-promises': 'error',
