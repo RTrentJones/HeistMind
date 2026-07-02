@@ -27,11 +27,9 @@ const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
 export function LoadoutCard({
   character,
   activeScore,
-  onChanged,
 }: {
   character: CharacterWithDetails;
   activeScore: Score | null;
-  onChanged?: () => void;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -90,8 +88,6 @@ export function LoadoutCard({
     } catch {
       // Loadout save is best-effort on the sheet (parity with the prior non-surfacing behavior);
       // the character-data mutation still invalidates the sheet so it reflects whatever landed.
-    } finally {
-      onChanged?.();
     }
   };
 

@@ -19,13 +19,11 @@ export function CharacterRoster({
   gmId,
   userId,
   characters,
-  onChanged,
 }: {
   gameId: string;
   gmId: string | undefined;
   userId: string | undefined;
   characters: Character[];
-  onChanged?: () => void;
 }) {
   const { t } = useTranslation();
   // Resolve each character's owner (createdBy) → a player name for attribution.
@@ -49,7 +47,6 @@ export function CharacterRoster({
         userId,
         note: t('components.roster.retiredNote'),
       });
-      onChanged?.();
     } finally {
       setBusy(null);
       setConfirming(null);

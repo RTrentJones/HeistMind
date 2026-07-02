@@ -1,8 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Ruleset } from '@heist-mind/database';
 import { BUILTIN_RULESETS } from '@heist-mind/shared';
 import {
   Badge,
@@ -15,34 +13,20 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
-import { getRepositories } from '@/lib/auth';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { LoadBuiltinRulesetButton } from '@/features/rulesets/components/LoadBuiltinRulesetButton';
+import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 export default function RulesetsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { signInWithProvider } = useAuthActions();
   const { t } = useTranslation();
-  const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadRulesets = useCallback(() => {
-    const userId = user?.id;
-    if (!userId) return;
-    setError(null);
-    getRepositories()
-      .rulesets.findByCreator(userId)
-      .then(result => {
-        if (!result.success)
-          setError(result.error?.message ?? t('pages.rulesetsCatalog.loadFailed'));
-        else setRulesets(result.data);
-      });
-  }, [user?.id, t]);
-
-  useEffect(() => {
-    loadRulesets();
-  }, [loadRulesets]);
+  const rulesetsQuery = useRulesetsByCreator(user?.id);
+  const rulesets = rulesetsQuery.data ?? [];
+  const error = rulesetsQuery.isError
+    ? ((rulesetsQuery.error as Error)?.message ?? t('pages.rulesetsCatalog.loadFailed'))
+    : null;
 
   const handleSignIn = async () => {
     try {
@@ -119,11 +103,7 @@ export default function RulesetsPage() {
                         </Text>
                       )}
                     </div>
-                    <LoadBuiltinRulesetButton
-                      builtin={b}
-                      variant='outline'
-                      onLoaded={loadRulesets}
-                    />
+                    <LoadBuiltinRulesetButton builtin={b} variant='outline' />
                   </Stack>
                 </Card>
               ))}
@@ -131,7 +111,7 @@ export default function RulesetsPage() {
           </Stack>
         </Card>
 
-        {rulesets === null ? (
+        {rulesetsQuery.isLoading ? (
           <LoadingSpinner />
         ) : rulesets.length === 0 ? (
           <Text variant='muted'>{t('pages.rulesetsCatalog.empty')}</Text>

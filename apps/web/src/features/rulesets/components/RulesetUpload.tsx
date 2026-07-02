@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Card, ErrorDisplay, Heading, Stack, Text, Textarea } from '@heist-mind/ui';
 import { parseAndValidateRuleset } from '@heist-mind/shared';
-import { getRepositories } from '@/lib/auth';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useCreateRuleset } from '@/features/rulesets/data/mutations';
+import { errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /** Upload (file or paste) → validate → persist a ruleset, then go to the list. */
@@ -14,9 +15,9 @@ export function RulesetUpload() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const createRuleset = useCreateRuleset();
   const [raw, setRaw] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,20 +39,20 @@ export function RulesetUpload() {
       return;
     }
 
-    setSubmitting(true);
-    const created = await getRepositories().rulesets.create(userId, {
-      name: result.content.metadata.name,
-      version: result.content.metadata.version,
-      description: result.content.metadata.description,
-      content: result.content,
-    });
-    setSubmitting(false);
-
-    if (!created.success) {
-      setErrors([created.error?.message ?? t('forms.rulesetUpload.saveFailed')]);
-      return;
+    try {
+      await createRuleset.mutateAsync({
+        userId,
+        data: {
+          name: result.content.metadata.name,
+          version: result.content.metadata.version,
+          description: result.content.metadata.description,
+          content: result.content,
+        },
+      });
+      router.push('/rulesets');
+    } catch (err) {
+      setErrors([errorMessage(err) || t('forms.rulesetUpload.saveFailed')]);
     }
-    router.push('/rulesets');
   };
 
   return (
@@ -109,7 +110,12 @@ export function RulesetUpload() {
       )}
 
       <Stack direction='row' gap='sm' align='center'>
-        <Button variant='ember' onClick={onSubmit} loading={submitting} disabled={!raw.trim()}>
+        <Button
+          variant='ember'
+          onClick={onSubmit}
+          loading={createRuleset.isPending}
+          disabled={!raw.trim()}
+        >
           {t('forms.rulesetUpload.uploadCta')}
         </Button>
         <Text variant='muted' size='sm'>
