@@ -21,7 +21,10 @@
     "clean": "rm -rf dist",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@heist-mind/database": "workspace:*"

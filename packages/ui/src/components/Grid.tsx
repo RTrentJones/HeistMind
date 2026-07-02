@@ -80,7 +80,7 @@ const Grid = React.forwardRef<HTMLDivElement, GridProps>(
     if (!animateChildren || prefersReducedMotion) {
       return (
         <Element
-          ref={ref as React.Ref<any>}
+          ref={ref as React.Ref<never>}
           className={cn(gridVariants({ cols, gap, align, justify }), className)}
           {...rest}
         >
@@ -92,7 +92,7 @@ const Grid = React.forwardRef<HTMLDivElement, GridProps>(
     // Animate children with stagger effect
     return (
       <Element
-        ref={ref as React.Ref<any>}
+        ref={ref as React.Ref<never>}
         className={cn(gridVariants({ cols, gap, align, justify }), className)}
         {...rest}
       >

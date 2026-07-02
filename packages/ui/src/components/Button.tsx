@@ -8,15 +8,12 @@ import {
   useComponentIds,
   useLoadingState,
   useInteractiveMotion,
-  type AriaAttributes,
 } from '../lib/accessibility';
 import { componentDefaults } from '../lib/design-tokens';
 import {
   useComponentValidation,
   validateButtonProps,
-  type ValidButtonCombination,
 } from '../lib/validation';
-import type { ComponentProps } from '../lib/types';
 
 const buttonVariants = cva(
   [
@@ -185,7 +182,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isDisabled = disabled || loading;
     const { ids } = useComponentIds('btn');
     const { loadingContent } = useLoadingState(loading, loadingText, announceStateChanges);
-    const { prefersReducedMotion, motionProps, getInitialAnimation, getTransitionDuration } =
+    const { motionProps, getInitialAnimation, getTransitionDuration } =
       useInteractiveMotion(isDisabled, loading);
 
     // Validate button props in development

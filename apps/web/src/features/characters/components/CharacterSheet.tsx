@@ -69,10 +69,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [viceNote, setViceNote] = useState<string | null>(null);
 
   const busy =
-    updateChar.isPending ||
-    updateCharData.isPending ||
-    addXpMut.isPending ||
-    createRoll.isPending;
+    updateChar.isPending || updateCharData.isPending || addXpMut.isPending || createRoll.isPending;
 
   const saveName = () => {
     const userId = user?.id;
@@ -81,8 +78,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       { userId, data: { name: name.trim() } },
       {
         onSuccess: () => setEditing(false),
-        onError: e =>
-          setError((e as Error).message ?? t('components.characterSheet.saveNameFailed')),
+        onError: e => setError(e.message ?? t('components.characterSheet.saveNameFailed')),
       }
     );
   };
@@ -92,7 +88,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     if (!userId) return;
     addXpMut.mutate(
       { userId, amount: 1, reason: 'Manual award' },
-      { onError: e => setError((e as Error).message ?? t('components.characterSheet.addXpFailed')) }
+      { onError: e => setError(e.message ?? t('components.characterSheet.addXpFailed')) }
     );
   };
 
@@ -105,8 +101,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     updateCharData.mutate(
       { userId, data: { characterData } },
       {
-        onError: e =>
-          setError((e as Error).message ?? t('components.characterSheet.saveStressFailed')),
+        onError: e => setError(e.message ?? t('components.characterSheet.saveStressFailed')),
       }
     );
   };
@@ -167,8 +162,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     updateCharData.mutate(
       { userId, data: { characterData: { ...character.characterData, xp } } },
       {
-        onError: e =>
-          setError((e as Error).message ?? t('components.characterSheet.markXpFailed')),
+        onError: e => setError(e.message ?? t('components.characterSheet.markXpFailed')),
       }
     );
   };

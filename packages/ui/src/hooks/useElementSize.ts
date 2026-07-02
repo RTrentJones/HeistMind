@@ -3,7 +3,7 @@
  * Tracks element dimensions with ResizeObserver
  */
 
-import { useState, useEffect, RefObject, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, type RefObject, useRef, useMemo } from 'react';
 
 export interface ElementSize {
   width: number;
@@ -34,9 +34,6 @@ export const useElementSize = <T extends HTMLElement = HTMLElement>(
     })
   );
 
-  // Store the ref value and trigger updates when it changes
-  const targetRef = elementRef || internalRef;
-
   // Create a ref object that directly updates element state when set
   const refObject = useMemo(() => {
     if (elementRef) {
@@ -54,7 +51,7 @@ export const useElementSize = <T extends HTMLElement = HTMLElement>(
           currentValue = value;
           internalRef.current = value;
           // Use functional update to ensure state change is detected
-          setElement(prev => value);
+          setElement(() => value);
         }
       },
     } as RefObject<T | null>;

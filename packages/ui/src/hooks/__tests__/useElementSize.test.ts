@@ -219,7 +219,7 @@ describe('useElementSize', () => {
       };
 
       act(() => {
-        mockResizeObserver.trigger([mockEntry1]);
+        mockResizeObserver!.trigger([mockEntry1]);
       });
 
       let [, size] = result.current;
@@ -246,7 +246,7 @@ describe('useElementSize', () => {
       };
 
       act(() => {
-        mockResizeObserver.trigger([mockEntry2]);
+        mockResizeObserver!.trigger([mockEntry2]);
       });
 
       [, size] = result.current;

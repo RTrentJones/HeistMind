@@ -51,7 +51,8 @@ export function rolesFor(
   const byId = new Map<string, GameWithRole>();
   for (const g of created ?? []) byId.set(g.id, { game: g, role: 'gm' });
   for (const g of joined ?? []) {
-    if (!byId.has(g.id)) byId.set(g.id, { game: g, role: g.createdBy === userId ? 'gm' : 'player' });
+    if (!byId.has(g.id))
+      byId.set(g.id, { game: g, role: g.createdBy === userId ? 'gm' : 'player' });
   }
   return [...byId.values()];
 }

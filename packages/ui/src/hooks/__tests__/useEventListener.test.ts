@@ -85,8 +85,8 @@ describe('useEventListener', () => {
       mockElement.dispatchEvent(mouseEvent);
 
       expect(handler).toHaveBeenCalledWith(mouseEvent);
-      expect(handler.mock.calls[0][0].clientX).toBe(100);
-      expect(handler.mock.calls[0][0].clientY).toBe(200);
+      expect(handler.mock.calls[0]![0]!.clientX).toBe(100);
+      expect(handler.mock.calls[0]![0]!.clientY).toBe(200);
     });
 
     it('should handle multiple event types on same element', () => {
@@ -124,7 +124,7 @@ describe('useEventListener', () => {
 
       const { rerender } = renderHook(
         ({ element }) => useEventListener('click', handler, element),
-        { initialProps: { element: mockElement } }
+        { initialProps: { element: mockElement as HTMLElement | null } }
       );
 
       rerender({ element: newElement });
@@ -140,12 +140,12 @@ describe('useEventListener', () => {
 
       const { rerender } = renderHook(
         ({ eventType }) => useEventListener(eventType, handler, mockElement),
-        { initialProps: { eventType: 'click' as const } }
+        { initialProps: { eventType: 'click' as 'click' | 'mousedown' } }
       );
 
       addEventListenerSpy.mockClear(); // Clear initial call
 
-      rerender({ eventType: 'mousedown' as const });
+      rerender({ eventType: 'mousedown' });
 
       expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function), undefined);
       expect(addEventListenerSpy).toHaveBeenCalledWith(
@@ -192,7 +192,7 @@ describe('useEventListener', () => {
 
       const { rerender } = renderHook(
         ({ element }) => useEventListener('click', handler, element),
-        { initialProps: { element: mockElement } }
+        { initialProps: { element: mockElement as HTMLElement | null } }
       );
 
       rerender({ element: null });
@@ -206,7 +206,7 @@ describe('useEventListener', () => {
 
       const { rerender } = renderHook(
         ({ element }) => useEventListener('click', handler, element),
-        { initialProps: { element: null } }
+        { initialProps: { element: null as HTMLElement | null } }
       );
 
       rerender({ element: mockElement });
@@ -230,13 +230,15 @@ describe('useEventListener', () => {
     it('should handle custom events', () => {
       const handler = vi.fn();
 
-      renderHook(() => useEventListener('custom-event', handler, mockElement));
+      renderHook(() =>
+        useEventListener('custom-event' as keyof HTMLElementEventMap, handler, mockElement)
+      );
 
       const customEvent = new CustomEvent('custom-event', { detail: { test: 'data' } });
       mockElement.dispatchEvent(customEvent);
 
       expect(handler).toHaveBeenCalledWith(customEvent);
-      expect((handler.mock.calls[0][0] as CustomEvent).detail).toEqual({ test: 'data' });
+      expect((handler.mock.calls[0]![0] as CustomEvent).detail).toEqual({ test: 'data' });
     });
 
     it('should handle window events', () => {
@@ -320,7 +322,7 @@ describe('useEventListener', () => {
 
       const { rerender } = renderHook(
         ({ options }) => useEventListener('click', handler, mockElement, options),
-        { initialProps: { options: { passive: true } } }
+        { initialProps: { options: { passive: true } as AddEventListenerOptions } }
       );
 
       addEventListenerSpy.mockClear(); // Clear initial call

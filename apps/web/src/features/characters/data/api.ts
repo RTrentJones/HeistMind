@@ -15,6 +15,6 @@ export async function createCharacterWithValidation(
   const character = await getRepositories()
     .characterManagement.createCharacterWithValidation(userId, data)
     .then(unwrap);
-  getQueryClient().invalidateQueries({ queryKey: characterKeys.all });
+  void getQueryClient().invalidateQueries({ queryKey: characterKeys.all });
   return character;
 }

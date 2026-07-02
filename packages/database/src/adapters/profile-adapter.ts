@@ -1,7 +1,7 @@
 // Type adapters for Profile entity
 // Transforms between Supabase database types and clean domain types
 
-import type { Tables, TablesInsert, TablesUpdate, Json } from '../supabase-types';
+import type { Tables, TablesUpdate, Json } from '../supabase-types';
 import type { Profile, UpdateProfileData } from '../domain-types';
 
 // Supabase type aliases for cleaner code
@@ -44,7 +44,7 @@ export function stubProfile(id: string): Profile {
  */
 export function toSupabaseProfileUpdate(data: UpdateProfileData): ProfileUpdate {
   return {
-    username: data.username,
+    ...(data.username !== undefined ? { username: data.username } : {}),
     avatar_url: data.avatarUrl || null,
     // Note: updated_at will be handled by trigger
   };

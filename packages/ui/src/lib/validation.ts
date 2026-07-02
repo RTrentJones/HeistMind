@@ -5,9 +5,6 @@
 
 import {
   isValidDesignToken,
-  type ValidDesignToken,
-  type ValidButtonCombination,
-  type ValidInputState,
 } from './variant-types';
 
 // Re-export constraint types for components
@@ -33,8 +30,8 @@ export function validateDesignToken(token: string, componentName: string): boole
 }
 
 export function validateVariantCombination(
-  props: Record<string, any>,
-  validCombinations: Record<string, any>[],
+  props: Record<string, unknown>,
+  validCombinations: Record<string, unknown>[],
   componentName: string
 ): boolean {
   if (!isDev) return true;
@@ -60,7 +57,7 @@ export function validateVariantCombination(
 }
 
 export function validateAccessibilityProps(
-  props: Record<string, any>,
+  props: Record<string, unknown>,
   componentName: string
 ): string[] {
   if (!isDev) return [];
@@ -102,7 +99,7 @@ export function validateAccessibilityProps(
 }
 
 export function validatePerformanceProps(
-  props: Record<string, any>,
+  props: Record<string, unknown>,
   componentName: string
 ): string[] {
   if (!isDev) return [];
@@ -155,7 +152,7 @@ export function isStateVariant(
 }
 
 // Component-specific validators
-export function validateButtonProps(props: Record<string, any>): boolean {
+export function validateButtonProps(props: Record<string, unknown>): boolean {
   const warnings: string[] = [];
 
   // Add button-specific validations
@@ -172,7 +169,7 @@ export function validateButtonProps(props: Record<string, any>): boolean {
   return warnings.length === 0;
 }
 
-export function validateInputProps(props: Record<string, any>): boolean {
+export function validateInputProps(props: Record<string, unknown>): boolean {
   const warnings: string[] = [];
 
   // Add input-specific validations
@@ -192,8 +189,8 @@ export function validateInputProps(props: Record<string, any>): boolean {
 // Hook for comprehensive prop validation
 export function useComponentValidation(
   componentName: string,
-  props: Record<string, any>,
-  additionalValidators: ((props: Record<string, any>) => boolean)[] = []
+  props: Record<string, unknown>,
+  additionalValidators: ((props: Record<string, unknown>) => boolean)[] = []
 ) {
   if (!isDev) return;
 

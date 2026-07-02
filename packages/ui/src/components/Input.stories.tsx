@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
-import { Search, User, Mail, Lock, Eye, Calendar, DollarSign } from 'lucide-react';
+import { Search, User, Mail, Lock, Calendar, DollarSign } from 'lucide-react';
 
 const meta: Meta<typeof Input> = {
   title: 'Components/Input',

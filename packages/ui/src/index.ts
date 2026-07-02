@@ -2,10 +2,8 @@
 export * from './lib/design-system';
 export * from './lib/utils';
 export * from './lib/design-tokens';
-export * from './lib/runtime-validation';
 export * from './lib/constants';
 export * from './lib/errors';
-export * from './lib/performance';
 
 // Validation system (excludes conflicting BadgeVariant)
 export {

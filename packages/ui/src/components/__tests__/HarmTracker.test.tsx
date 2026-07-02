@@ -2,7 +2,6 @@
  * @vitest-environment jsdom
  */
 
-import React from 'react';
 import { render, screen } from '../../lib/test-utils';
 import { HarmTracker } from '../HarmTracker';
 

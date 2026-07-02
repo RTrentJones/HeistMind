@@ -59,7 +59,7 @@ export function GameForm() {
     return (
       <ErrorDisplay
         title={t('forms.gameForm.errorTitle')}
-        message={(rulesetsQuery.error as Error)?.message ?? t('forms.gameForm.loadRulesetsFailed')}
+        message={rulesetsQuery.error?.message ?? t('forms.gameForm.loadRulesetsFailed')}
       />
     );
   }

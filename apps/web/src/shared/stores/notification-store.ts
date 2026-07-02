@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { Notification } from '../types';
+import { type Notification } from '../types';
 
 interface NotificationStore {
   notifications: Notification[];

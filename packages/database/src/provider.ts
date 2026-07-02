@@ -2,7 +2,7 @@
 // Implementation-agnostic database provider that can be configured with different backends
 
 import type { DatabaseProvider, DatabaseRepositories } from './repositories';
-import type { AuthService, AuthConfig } from './auth-types';
+import type { AuthService } from './auth-types';
 import { SupabaseProfileRepository } from './implementations/supabase-profile-repository';
 import { SupabaseRulesetRepository } from './implementations/supabase-ruleset-repository';
 import { SupabaseInvitationRepository } from './implementations/supabase-invitation-repository';
@@ -35,15 +35,18 @@ export interface DatabaseConfig {
 const DEFAULT_CONFIG: DatabaseConfig = {
   provider: 'supabase',
   supabase: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ...(process.env.NEXT_PUBLIC_SUPABASE_URL !== undefined
+      ? { url: process.env.NEXT_PUBLIC_SUPABASE_URL }
+      : {}),
+    ...(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== undefined
+      ? { key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY }
+      : {}),
   },
 };
 
 // Supabase implementation of DatabaseProvider
 class SupabaseDatabaseProvider implements DatabaseProvider {
   private client: SupabaseClient<Database>;
-  private connected = false;
 
   constructor(config: DatabaseConfig['supabase'] = {}) {
     if (config.client) {
@@ -60,16 +63,10 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
     }
   }
 
-  async connect(): Promise<void> {
-    // For Supabase, connection is handled automatically
-    // We could add a health check here if needed
-    this.connected = true;
-  }
+  // Supabase connects lazily and needs no explicit teardown; these satisfy the provider contract.
+  async connect(): Promise<void> {}
 
-  async disconnect(): Promise<void> {
-    // Supabase doesn't require explicit disconnection
-    this.connected = false;
-  }
+  async disconnect(): Promise<void> {}
 
   async isHealthy(): Promise<boolean> {
     try {

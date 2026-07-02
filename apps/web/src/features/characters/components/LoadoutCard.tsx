@@ -42,7 +42,10 @@ export function LoadoutCard({
   const data = character.characterData;
   const saved: CharacterLoadout = data.loadout ?? { level: 'normal', items: [] };
 
-  const [draft, setDraft] = useState<CharacterLoadout>({ level: saved.level, items: [...saved.items] });
+  const [draft, setDraft] = useState<CharacterLoadout>({
+    level: saved.level,
+    items: [...saved.items],
+  });
   const busy = updateChar.isPending || createRoll.isPending;
 
   const items = content.equipment?.items ?? [];
@@ -71,7 +74,10 @@ export function LoadoutCard({
     if (!userId) return;
     const tagged: CharacterLoadout = { ...next, scoreId: activeScore?.id };
     try {
-      await updateChar.mutateAsync({ userId, data: { characterData: { ...data, loadout: tagged } } });
+      await updateChar.mutateAsync({
+        userId,
+        data: { characterData: { ...data, loadout: tagged } },
+      });
       // Log the settled loadout change to the campaign feed (one entry per save). A standalone
       // character has no campaign feed; the loadout still saves on the sheet.
       if (character.gameId) {
@@ -138,7 +144,11 @@ export function LoadoutCard({
           </Badge>
         </Stack>
 
-        {over && <Alert variant='warning' size='sm'>{t('components.loadout.overCapacity')}</Alert>}
+        {over && (
+          <Alert variant='warning' size='sm'>
+            {t('components.loadout.overCapacity')}
+          </Alert>
+        )}
 
         <Stack direction='column' gap='xs'>
           {sortedGear.map(item => (

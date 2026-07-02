@@ -73,7 +73,7 @@ export function useDashboardData(userId: string | undefined): DashboardData {
   }, [activityQueries.map(q => q.dataUpdatedAt).join(','), campaigns]);
 
   const error = created.isError
-    ? ((created.error as Error)?.message ?? i18n.t('pages:dashboard.loadFailed'))
+    ? (created.error?.message ?? i18n.t('pages:dashboard.loadFailed'))
     : null;
 
   return {

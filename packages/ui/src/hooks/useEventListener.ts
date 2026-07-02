@@ -3,7 +3,7 @@
  * Provides type-safe event listener management
  */
 
-import { useEffect, useRef, RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 type EventHandler<T = Event> = (event: T) => void;
 

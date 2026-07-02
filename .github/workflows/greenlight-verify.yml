@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '24' # the greenlight CLI's floor — intentionally newer than the app's .nvmrc
 
       # The playwright mode shells out to `pnpm exec playwright test`, so deps + the browser must be
       # present before greenlight runs.
@@ -35,7 +35,7 @@ jobs:
           version: '9.15.0'
           run_install: false
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 

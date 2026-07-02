@@ -5,11 +5,7 @@ import { CLOCK_SEGMENTS, type Clock as ClockType, type ClockSegments } from '@he
 import { Alert, Badge, Button, Card, Clock, Input, Select, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useClocksByGame } from '@/features/clocks/data/queries';
-import {
-  useCreateClock,
-  useDeleteClock,
-  useUpdateClock,
-} from '@/features/clocks/data/mutations';
+import { useCreateClock, useDeleteClock, useUpdateClock } from '@/features/clocks/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -31,10 +27,10 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
   const clocks = (clocksQuery.data ?? []).filter(c => !c.linkedType);
   const busy = createClock.isPending || updateClock.isPending || deleteClock.isPending;
   const error =
-    (clocksQuery.error as Error | null)?.message ??
-    (createClock.error as Error | null)?.message ??
-    (updateClock.error as Error | null)?.message ??
-    (deleteClock.error as Error | null)?.message ??
+    clocksQuery.error?.message ??
+    createClock.error?.message ??
+    updateClock.error?.message ??
+    deleteClock.error?.message ??
     null;
 
   const create = () => {

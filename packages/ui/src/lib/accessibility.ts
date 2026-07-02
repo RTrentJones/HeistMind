@@ -4,6 +4,7 @@
  */
 
 import * as React from 'react';
+import type { TargetAndTransition } from 'framer-motion';
 
 // Common ARIA attributes interface - compatible with React.AriaAttributes
 export interface AriaAttributes {
@@ -222,7 +223,7 @@ export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, isActiv
     const container = containerRef.current;
     const focusableElements = container.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    ) as NodeListOf<HTMLElement>;
+    );
 
     if (focusableElements.length === 0) return;
 
@@ -601,7 +602,7 @@ export function useInteractiveMotion(disabled = false, loading = false) {
   }, [isInteractive, prefersReducedMotion]);
 
   const getInitialAnimation = React.useCallback(
-    (defaultInitial: any = { opacity: 0, y: 10 }) => {
+    (defaultInitial: TargetAndTransition = { opacity: 0, y: 10 }) => {
       return prefersReducedMotion ? { opacity: 1 } : defaultInitial;
     },
     [prefersReducedMotion]

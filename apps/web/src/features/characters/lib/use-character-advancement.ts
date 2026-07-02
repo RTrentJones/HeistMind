@@ -19,10 +19,7 @@ import { useTranslation } from '@/lib/i18n/hooks';
  * validated repo path server-side) and XP-spend advancement (abilities / action dots). Owns the
  * shared saving/error state so view components stay presentational.
  */
-export function useCharacterAdvancement(
-  character: CharacterWithDetails,
-  crew: CrewContext | null
-) {
+export function useCharacterAdvancement(character: CharacterWithDetails, crew: CrewContext | null) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const updateData = useUpdateCharacterData(character.id);

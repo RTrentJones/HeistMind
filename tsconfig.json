@@ -6,6 +6,10 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    // exactOptionalPropertyTypes attempted 2026-07-02: the cascade reaches every optional React
+    // prop passed as a possibly-undefined expression (30+ fixes across ui/web) — deferred, see
+    // CODE-QUALITY.md R2-PR4 deviations.
     // Module System
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
@@ -16,6 +20,7 @@
     "noEmit": false,
     "sourceMap": true,
     // Interop
+    "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,

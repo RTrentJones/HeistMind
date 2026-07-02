@@ -68,7 +68,21 @@
     },
     "clean": {
       "cache": false
+    },
+    "lint:fix": {
+      "dependsOn": ["^build"],
+      "cache": false
     }
   },
-  "globalDependencies": ["pnpm-workspace.yaml", "tsconfig.json", ".env", ".env.local"]
+  "globalDependencies": [
+    "pnpm-workspace.yaml",
+    "tsconfig.json",
+    ".env",
+    ".env.local",
+    "configs/tsconfig.base.json",
+    "configs/eslint.base.mjs",
+    "configs/vitest.base.ts",
+    "eslint.config.mjs",
+    ".prettierrc"
+  ]
 }

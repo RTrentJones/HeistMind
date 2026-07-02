@@ -96,7 +96,7 @@ const Section = React.forwardRef<HTMLElement, SectionProps>(
 
     const sectionContent = (
       <Element
-        ref={ref as React.Ref<any>}
+        ref={ref as React.Ref<never>}
         className={cn(sectionVariants({ variant, padding, spacing, width, position }), className)}
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}

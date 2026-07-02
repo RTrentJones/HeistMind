@@ -2,44 +2,43 @@
 // Database-agnostic data access contracts
 
 import {
-  Profile,
-  Ruleset,
-  Game,
-  GamePlayer,
-  Character,
-  Invitation,
-  Roll,
-  CreateRollData,
-  Clock,
-  CreateClockData,
-  UpdateClockData,
-  Crew,
-  CreateCrewData,
-  UpdateCrewData,
-  Faction,
-  CreateFactionData,
-  UpdateFactionData,
-  Score,
-  CreateScoreData,
-  UpdateScoreData,
-  UpdateProfileData,
-  CreateRulesetData,
-  UpdateRulesetData,
-  CreateGameData,
-  CreateCharacterData,
-  UpdateCharacterData,
-  CreateInvitationData,
-  JoinGameData,
-  GameWithDetails,
-  CharacterWithDetails,
-  Result,
-  DatabaseError,
-  ValidationError,
-  GameRole,
-  PlayerStatus,
-  GameState,
-  RulesetStatus,
+  type Profile,
+  type Ruleset,
+  type Game,
+  type GamePlayer,
+  type Character,
+  type Invitation,
+  type Roll,
+  type CreateRollData,
+  type Clock,
+  type CreateClockData,
+  type UpdateClockData,
+  type Crew,
+  type CreateCrewData,
+  type UpdateCrewData,
+  type Faction,
+  type CreateFactionData,
+  type UpdateFactionData,
+  type Score,
+  type CreateScoreData,
+  type UpdateScoreData,
+  type UpdateProfileData,
+  type CreateRulesetData,
+  type UpdateRulesetData,
+  type CreateGameData,
+  type CreateCharacterData,
+  type UpdateCharacterData,
+  type CreateInvitationData,
+  type JoinGameData,
+  type GameWithDetails,
+  type CharacterWithDetails,
+  type Result,
+  type ValidationError,
+  type GameRole,
+  type PlayerStatus,
+  type GameState,
 } from './domain-types';
+import type { AuthService } from './auth-types';
 
 // ===========================
 // REPOSITORY INTERFACES
@@ -181,7 +180,7 @@ export interface ValidationResult {
 export interface ValidationWarning {
   field: string;
   message: string;
-  suggestion?: string;
+  suggestion?: string | undefined;
 }
 
 // ===========================
@@ -250,5 +249,5 @@ export interface DatabaseProvider {
   disconnect(): Promise<void>;
   isHealthy(): Promise<boolean>;
   createRepositories(): DatabaseRepositories;
-  createAuthService(): import('./auth-types').AuthService;
+  createAuthService(): AuthService;
 }

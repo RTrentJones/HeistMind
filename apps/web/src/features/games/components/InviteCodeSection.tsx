@@ -25,10 +25,7 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
     const userId = user?.id;
     if (!userId) return;
     setError(null);
-    createInvite.mutate(
-      { userId },
-      { onError: () => setError(t('inviteSection.generateFailed')) }
-    );
+    createInvite.mutate({ userId }, { onError: () => setError(t('inviteSection.generateFailed')) });
   };
 
   const copy = async (code: string) => {

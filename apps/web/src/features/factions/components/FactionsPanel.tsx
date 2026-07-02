@@ -56,8 +56,7 @@ export function FactionsPanel({
 
   const factions = factionsQuery.data ?? [];
   const clocks = clocksQuery.data ?? [];
-  const shownError =
-    error ?? (factionsQuery.error as Error | null)?.message ?? null;
+  const shownError = error ?? factionsQuery.error?.message ?? null;
 
   const addSuggested = () => {
     const userId = user?.id;
@@ -68,7 +67,7 @@ export function FactionsPanel({
       { userId, data: { gameId, name: pick, factionType: def?.type, tier: def?.tier ?? 0 } },
       {
         onSuccess: () => setPick(''),
-        onError: e => setError((e as Error).message ?? t('components.factionsPanel.addFailed')),
+        onError: e => setError(e.message ?? t('components.factionsPanel.addFailed')),
       }
     );
   };
@@ -162,7 +161,10 @@ function FactionCard({
     createClock.isPending ||
     updateClock.isPending ||
     deleteClock.isPending;
-  const onErr = { onError: (e: unknown) => onError((e as Error).message ?? t('components.factionsPanel.updateFailed')) };
+  const onErr = {
+    onError: (e: unknown) =>
+      onError((e as Error).message ?? t('components.factionsPanel.updateFailed')),
+  };
 
   const setStatus = (delta: number) =>
     updateFaction.mutate({ id: faction.id, patch: { status: faction.status + delta } }, onErr);
@@ -286,7 +288,9 @@ function FactionCard({
                       size='sm'
                       aria-label={t('components.factionsPanel.reduceClockAria', { name: c.name })}
                       disabled={busy || c.filled <= 0}
-                      onClick={() => updateClock.mutate({ id: c.id, patch: { filled: c.filled - 1 } }, onErr)}
+                      onClick={() =>
+                        updateClock.mutate({ id: c.id, patch: { filled: c.filled - 1 } }, onErr)
+                      }
                     >
                       −1
                     </Button>
@@ -295,7 +299,9 @@ function FactionCard({
                       size='sm'
                       aria-label={t('components.factionsPanel.advanceClockAria', { name: c.name })}
                       disabled={busy || c.filled >= c.segments}
-                      onClick={() => updateClock.mutate({ id: c.id, patch: { filled: c.filled + 1 } }, onErr)}
+                      onClick={() =>
+                        updateClock.mutate({ id: c.id, patch: { filled: c.filled + 1 } }, onErr)
+                      }
                     >
                       +1
                     </Button>

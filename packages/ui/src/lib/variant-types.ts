@@ -4,10 +4,10 @@
  */
 
 import { type VariantProps } from 'class-variance-authority';
-import { buttonVariants } from '../components/Button';
-import { cardVariants } from '../components/Card';
-import { badgeVariants } from '../components/Badge';
-import { inputVariants } from '../components/Input';
+import { type buttonVariants } from '../components/Button';
+import { type cardVariants } from '../components/Card';
+import { type badgeVariants } from '../components/Badge';
+import { type inputVariants } from '../components/Input';
 
 // Extract variant types from CVA definitions
 export type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>['variant']>;
@@ -127,7 +127,7 @@ export type ValidNonInteractiveProps = {
 export type InteractiveConstraint = ValidInteractiveProps | ValidNonInteractiveProps;
 
 // Validation utility functions
-export function isValidVariantCombination<T extends Record<string, any>>(
+export function isValidVariantCombination<T extends Record<string, unknown>>(
   props: T,
   allowedCombinations: T[]
 ): props is T {

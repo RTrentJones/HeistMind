@@ -46,10 +46,7 @@ export function useUpdateCharacterData(characterId: string) {
 export function useAdvanceCharacter(characterId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: {
-      userId: string;
-      advancement: CharacterAdvancement;
-    }): Promise<Character> =>
+    mutationFn: (vars: { userId: string; advancement: CharacterAdvancement }): Promise<Character> =>
       getRepositories()
         .characterManagement.advanceCharacter(characterId, vars.userId, vars.advancement)
         .then(unwrap),
@@ -127,8 +124,8 @@ export function useRetireCharacter(gameId: string) {
     },
     onSuccess: () => {
       // Retiring changes roster, My-Characters, and the sheet — invalidate the whole concept.
-      qc.invalidateQueries({ queryKey: characterKeys.all });
-      qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }

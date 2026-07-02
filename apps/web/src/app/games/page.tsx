@@ -157,7 +157,7 @@ export default function GamesPage() {
         {created.isError && (
           <ErrorDisplay
             title={t('gamesList.loadError')}
-            message={(created.error as Error)?.message ?? t('gamesList.loadFailed')}
+            message={created.error?.message ?? t('gamesList.loadFailed')}
           />
         )}
 

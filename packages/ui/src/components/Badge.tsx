@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
-import { type ComponentProps, type IconProps, type MotionSafeProps } from '../lib/types';
+import { type IconProps, type MotionSafeProps } from '../lib/types';
 import { MotionDiv } from '../lib/motion-safe';
 import {
   useReducedMotion,
@@ -132,9 +132,10 @@ export interface BadgeProps
   extends MotionSafeProps,
     IconProps,
     VariantProps<typeof badgeVariants>,
-    AriaAttributes {
+    // MotionSafeProps re-declares a few handlers with HTMLElement targets, so omit the overlap.
+    Omit<React.HTMLAttributes<HTMLDivElement>, keyof MotionSafeProps> {
   /** Badge content */
-  children: React.ReactNode;
+  children?: React.ReactNode;
   /** Callback when remove button is clicked. Shows a remove button when provided. */
   onRemove?: () => void;
   /** Whether the badge should pulse with animation */

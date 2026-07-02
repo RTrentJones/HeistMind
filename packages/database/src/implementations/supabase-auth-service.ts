@@ -1,7 +1,11 @@
 // Supabase implementation of AuthService
 // Handles authentication for both web and Discord bot applications
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type {
+  SupabaseClient,
+  Session as SupabaseSession,
+  User as SupabaseUser,
+} from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
 import type {
   AuthService,
@@ -19,7 +23,6 @@ import type {
   AuthEventCallback,
   DiscordAuthData,
   OAuthProvider,
-  AuthResult,
 } from '../auth-types';
 
 export class SupabaseAuthService implements AuthService {
@@ -29,7 +32,7 @@ export class SupabaseAuthService implements AuthService {
     // Set up auth state change listener
     this.supabase.auth.onAuthStateChange((event, session) => {
       const authEvent: AuthEvent = {
-        event: event as any,
+        event: event as AuthEvent['event'],
         session: session ? this.transformSupabaseSession(session) : null,
         user: session?.user ? this.transformSupabaseUser(session.user) : null,
       };
@@ -75,7 +78,7 @@ export class SupabaseAuthService implements AuthService {
     const { data: authData, error } = await this.supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: data.options,
+      ...(data.options !== undefined ? { options: data.options } : {}),
     });
 
     if (error) {
@@ -143,7 +146,7 @@ export class SupabaseAuthService implements AuthService {
       const discordTokenResponse = await this.exchangeDiscordCode(data.code, data.redirectUri);
 
       // Get Discord user info
-      const discordUser = await this.getDiscordUser(discordTokenResponse.access_token);
+      await this.getDiscordUser(discordTokenResponse.access_token);
 
       // For Discord bot integration, we need to handle this differently
       // This is a simplified version - in practice, you'd need to:
@@ -304,7 +307,7 @@ export class SupabaseAuthService implements AuthService {
     }
   }
 
-  async unlinkDiscordAccount(userId: string): Promise<AuthResponse<User>> {
+  async unlinkDiscordAccount(_userId: string): Promise<AuthResponse<User>> {
     try {
       const { data: userData, error } = await this.supabase.auth.updateUser({
         data: {
@@ -414,32 +417,37 @@ export class SupabaseAuthService implements AuthService {
   // PRIVATE HELPERS
   // ===========================
 
-  private transformSupabaseUser(user: any): User {
+  private transformSupabaseUser(user: SupabaseUser): User {
     return {
       id: user.id,
       email: user.email || null,
       emailVerified: user.email_confirmed_at !== null,
       phone: user.phone || null,
       phoneVerified: user.phone_confirmed_at !== null,
-      createdAt: new Date(user.created_at),
-      updatedAt: new Date(user.updated_at),
+      createdAt: user.created_at ? new Date(user.created_at) : new Date(),
+      updatedAt: user.updated_at ? new Date(user.updated_at) : new Date(),
       lastSignInAt: user.last_sign_in_at ? new Date(user.last_sign_in_at) : null,
       appMetadata: user.app_metadata || {},
       userMetadata: user.user_metadata || {},
     };
   }
 
-  private transformSupabaseSession(session: any): Session {
+  private transformSupabaseSession(session: SupabaseSession): Session {
     return {
       accessToken: session.access_token,
       refreshToken: session.refresh_token,
-      expiresAt: new Date(session.expires_at * 1000),
+      expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : new Date(0),
       tokenType: session.token_type,
       user: this.transformSupabaseUser(session.user),
     };
   }
 
-  private transformSupabaseError(error: any): AuthError {
+  private transformSupabaseError(error: {
+    message: string;
+    status?: number | undefined;
+    code?: string | undefined;
+    error_code?: string | undefined;
+  }): AuthError {
     return {
       message: error.message,
       status: error.status,
@@ -457,7 +465,7 @@ export class SupabaseAuthService implements AuthService {
     });
   }
 
-  private async exchangeDiscordCode(code: string, redirectUri: string): Promise<any> {
+  private async exchangeDiscordCode(code: string, redirectUri: string): Promise<{ access_token: string }> {
     const clientId = process.env.DISCORD_CLIENT_ID!;
     const clientSecret = process.env.DISCORD_CLIENT_SECRET!;
 
@@ -482,7 +490,7 @@ export class SupabaseAuthService implements AuthService {
     return response.json();
   }
 
-  private async getDiscordUser(accessToken: string): Promise<any> {
+  private async getDiscordUser(accessToken: string): Promise<Record<string, unknown>> {
     const response = await fetch('https://discord.com/api/users/@me', {
       headers: {
         Authorization: `Bearer ${accessToken}`,

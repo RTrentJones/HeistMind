@@ -3,7 +3,7 @@
  * Provides hover state management with accessibility considerations
  */
 
-import { useState, useRef, useEffect, RefObject } from 'react';
+import { useState, useRef, useEffect, type RefObject } from 'react';
 import { useEventListener } from './useEventListener';
 
 export interface UseHoverOptions {

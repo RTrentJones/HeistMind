@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import type { CrewRules, UpdateCrewData } from '@heist-mind/database';
-import { applyHeat, advanceTier, incarcerate, REP_PER_TIER, CREW_LIMITS } from '@heist-mind/database';
+import {
+  applyHeat,
+  advanceTier,
+  incarcerate,
+  REP_PER_TIER,
+  CREW_LIMITS,
+} from '@heist-mind/database';
 import { Alert, Badge, Button, Heading, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCrewByGame } from '@/features/crews/data/queries';
@@ -40,9 +46,9 @@ export function CrewSheet({
   const crew = crewQuery.data ?? null;
   const busy = createCrewMut.isPending || updateCrewMut.isPending;
   const error =
-    (crewQuery.error as Error | null)?.message ??
-    (createCrewMut.error as Error | null)?.message ??
-    (updateCrewMut.error as Error | null)?.message ??
+    crewQuery.error?.message ??
+    createCrewMut.error?.message ??
+    updateCrewMut.error?.message ??
     null;
 
   const createCrew = () => {

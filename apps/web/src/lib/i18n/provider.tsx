@@ -29,7 +29,7 @@ export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
       setIsInitialized(true);
     };
 
-    initializeI18n();
+    void initializeI18n();
   }, [initialLanguage]);
 
   // Show loading until i18n is initialized
