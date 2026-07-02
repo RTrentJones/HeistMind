@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { diceForRating, resistanceStress } from '@heist-mind/core';
+import { diceForRating } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useApplyCharacterStress } from '@/features/characters/data/mutations';
-import { useCreateRoll } from '@/features/rolls/data/mutations';
+import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 interface ActionOption {
@@ -56,8 +55,8 @@ export function RollPanel({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const createRoll = useCreateRoll(gameId);
-  const applyStressMut = useApplyCharacterStress();
+  const actionRoll = useActionRoll(gameId);
+  const resistanceRoll = useResistanceRoll(gameId);
   const hasActions = !!actions?.length;
   const canResist = !!characterId;
   // Resistance is rolled against the character's own ratings when we have them, else the BitD trio.
@@ -92,13 +91,6 @@ export function RollPanel({
   const realize = (count: number) =>
     Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
 
-  // Add the resist's stress cost to the character, clamped to the ruleset's stress max (no-op without
-  // a character or cost). The read-modify-write lives behind the characters seam.
-  const applyStressCost = (userId: string, stress: number) => {
-    if (!characterId || stress <= 0) return;
-    return applyStressMut.mutateAsync({ characterId, userId, stress });
-  };
-
   const roll = async () => {
     const userId = user?.id;
     if (!userId) return;
@@ -106,24 +98,20 @@ export function RollPanel({
     setError(null);
 
     try {
+      // The sequenced parts (persist + stress consequences) are ENGINE use-cases; the panel
+      // realizes the dice and phrases the feed copy.
       if (mode === 'resistance') {
         const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
         const { count, zeroDice } = diceForRating(opt?.rating ?? 0);
         const results = realize(count);
-        const stress = resistanceStress(results);
-        const created = await createRoll.mutateAsync({
+        const { roll: created, stress } = await resistanceRoll.mutateAsync({
           userId,
-          data: {
-            gameId,
-            characterId,
-            kind: 'resistance',
-            label: opt?.name,
-            dice: count,
-            results,
-            zeroDice,
-          },
+          ...(characterId !== undefined ? { characterId } : {}),
+          ...(opt?.name !== undefined ? { label: opt.name } : {}),
+          dice: count,
+          results,
+          zeroDice,
         });
-        await applyStressCost(userId, stress);
         setLast({ outcome: created.outcome, results: created.results, stress });
         return;
       }
@@ -145,23 +133,19 @@ export function RollPanel({
             ? t('components.rollPanel.bargainNote', { note: bargainNote.trim() })
             : t('components.rollPanel.bargainNoteEmpty')
         );
-      const created = await createRoll.mutateAsync({
+      const created = await actionRoll.mutateAsync({
         userId,
-        data: {
-          gameId,
-          characterId,
-          kind: isActionRoll ? 'action' : 'fortune',
-          label: isActionRoll ? action : 'Fortune',
-          dice: count,
-          results,
-          zeroDice,
-          position: isActionRoll ? position : undefined,
-          effect: isActionRoll ? effect : undefined,
-          note: notes.length > 0 ? notes.join(' · ') : undefined,
-        },
+        ...(characterId !== undefined ? { characterId } : {}),
+        kind: isActionRoll ? 'action' : 'fortune',
+        label: isActionRoll ? action : 'Fortune',
+        dice: count,
+        results,
+        zeroDice,
+        ...(isActionRoll ? { position, effect } : {}),
+        ...(notes.length > 0 ? { note: notes.join(' · ') } : {}),
+        // Pushing yourself costs 2 stress, applied win or lose (the engine charges it).
+        pushed: isActionRoll && push,
       });
-      // Pushing yourself costs 2 stress, applied win or lose.
-      if (isActionRoll && push) await applyStressCost(userId, 2);
       setLast({ outcome: created.outcome, results: created.results });
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));

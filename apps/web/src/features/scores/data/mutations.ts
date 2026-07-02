@@ -1,26 +1,62 @@
 'use client';
 
-// The scores data-access seam (write side). Start/end invalidate the game's score list; the caller
-// also writes a matching campaign-log event via the rolls seam (logged start/end of an operation).
+// The scores data-access seam (write side). Start/end run through the ENGINE use-cases (score
+// lifecycle + its campaign-log event in one sequenced operation — the same implementation the
+// Discord bot will drive); the mutations invalidate the score list AND the log.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateScoreData, Score } from '@heist-mind/core';
+import type { Score } from '@heist-mind/core';
+import { endScore, startScore } from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
+import { rollKeys } from '@/features/rolls/data/queries';
 import { scoreKeys } from './queries';
 
 export function useStartScore(gameId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { userId: string; data: CreateScoreData }): Promise<Score> =>
-      getRepositories().scores.start(vars.userId, vars.data).then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) }),
+    mutationFn: async (vars: {
+      userId: string;
+      name?: string;
+      logLabel: string;
+      logNote: string;
+    }): Promise<Score> =>
+      unwrap(
+        await startScore(getRepositories(), {
+          gameId,
+          userId: vars.userId,
+          ...(vars.name !== undefined ? { name: vars.name } : {}),
+          logLabel: vars.logLabel,
+          logNote: vars.logNote,
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) });
+      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
   });
 }
 
 export function useEndScore(gameId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string): Promise<Score> => getRepositories().scores.end(id).then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) }),
+    mutationFn: async (vars: {
+      userId: string;
+      scoreId: string;
+      logLabel: string;
+      logNote: string;
+    }): Promise<Score> =>
+      unwrap(
+        await endScore(getRepositories(), {
+          gameId,
+          userId: vars.userId,
+          scoreId: vars.scoreId,
+          logLabel: vars.logLabel,
+          logNote: vars.logNote,
+        })
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) });
+      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
   });
 }

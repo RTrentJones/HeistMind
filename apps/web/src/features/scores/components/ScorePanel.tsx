@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Alert, Badge, Button, Input, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useCreateRoll } from '@/features/rolls/data/mutations';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useEndScore, useStartScore } from '@/features/scores/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -21,7 +20,6 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
   const scoresQuery = useScoresByGame(gameId);
   const startScoreMut = useStartScore(gameId);
   const endScoreMut = useEndScore(gameId);
-  const createRoll = useCreateRoll(gameId);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -29,53 +27,43 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
   // At most one score is active at a time; recent = the last few completed ones.
   const active = scores.find(s => s.status === 'active') ?? null;
   const recent = scores.filter(s => s.status === 'completed').slice(0, RECENT_SCORES_SHOWN);
-  const busy = startScoreMut.isPending || endScoreMut.isPending || createRoll.isPending;
+  const busy = startScoreMut.isPending || endScoreMut.isPending;
   const shownError =
     error ??
     scoresQuery.error?.message ??
     (scoresQuery.isError ? t('components.scorePanel.loadFailed') : null);
 
-  // Score start/end is a settled campaign event → log it, tagged with that score explicitly (the
-  // end event fires after the score is no longer active, so we can't rely on auto-tagging).
-  const logScoreEvent = (label: string, note: string, scoreId: string) => {
-    const userId = user?.id;
-    if (!userId) return;
-    return createRoll.mutateAsync({
-      userId,
-      data: { gameId, kind: 'score', label, dice: 0, results: [], note, scoreId },
-    });
-  };
-
+  // Start/end are ENGINE use-cases: the score lifecycle and its campaign-log event happen in one
+  // sequenced operation — the panel just supplies the localized copy for the feed entry.
   const startScore = async () => {
     const userId = user?.id;
     if (!userId) return;
     setError(null);
     try {
-      const created = await startScoreMut.mutateAsync({
+      const trimmed = name.trim();
+      await startScoreMut.mutateAsync({
         userId,
-        data: { gameId, name: name.trim() || undefined },
+        ...(trimmed ? { name: trimmed } : {}),
+        logLabel: trimmed || t('components.scorePanel.unnamed'),
+        logNote: t('components.scorePanel.startedNote'),
       });
       setName('');
-      await logScoreEvent(
-        created.name ?? t('components.scorePanel.unnamed'),
-        t('components.scorePanel.startedNote'),
-        created.id
-      );
     } catch (e) {
       setError((e as Error).message ?? t('components.scorePanel.startFailed'));
     }
   };
 
   const endScore = async () => {
-    if (!active) return;
+    const userId = user?.id;
+    if (!active || !userId) return;
     setError(null);
     try {
-      await endScoreMut.mutateAsync(active.id);
-      await logScoreEvent(
-        active.name ?? t('components.scorePanel.unnamed'),
-        t('components.scorePanel.endedNote'),
-        active.id
-      );
+      await endScoreMut.mutateAsync({
+        userId,
+        scoreId: active.id,
+        logLabel: active.name ?? t('components.scorePanel.unnamed'),
+        logNote: t('components.scorePanel.endedNote'),
+      });
     } catch (e) {
       setError((e as Error).message ?? t('components.scorePanel.endFailed'));
     }

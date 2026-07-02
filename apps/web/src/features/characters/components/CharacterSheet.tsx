@@ -6,10 +6,7 @@ import {
   stressBounds,
   usesActionRatings,
   rulesetActions,
-  deriveAttributes,
-  diceForRating,
   viceStressCleared,
-  isOverindulged,
   usesXpTracks,
   xpTrackSize,
   xpMarks,
@@ -32,10 +29,11 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCharacterDetail } from '@/features/characters/data/queries';
 import {
   useAddExperience,
+  useIndulgeVice,
   useUpdateCharacter,
   useUpdateCharacterData,
 } from '@/features/characters/data/mutations';
-import { useCreateRoll } from '@/features/rolls/data/mutations';
+import { viceDicePool } from '@heist-mind/engine';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
@@ -61,7 +59,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const updateChar = useUpdateCharacter(characterId);
   const updateCharData = useUpdateCharacterData(characterId);
   const addXpMut = useAddExperience(characterId);
-  const createRoll = useCreateRoll(character?.gameId ?? '');
+  const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
 
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -70,7 +68,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [viceNote, setViceNote] = useState<string | null>(null);
 
   const busy =
-    updateChar.isPending || updateCharData.isPending || addXpMut.isPending || createRoll.isPending;
+    updateChar.isPending ||
+    updateCharData.isPending ||
+    addXpMut.isPending ||
+    indulgeViceMut.isPending;
 
   const saveName = () => {
     const userId = user?.id;
@@ -109,44 +110,25 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     );
   };
 
-  // Downtime — Indulge Vice (FitD A3): clear ALL stress through the same validated write path the
-  // tracker uses, then log a no-dice "downtime" entry so the indulgence shows in the shared feed.
+  // Downtime — Indulge Vice (FitD A3), an ENGINE use-case: the sheet realizes the dice (pool =
+  // lowest attribute) and phrases the copy; the engine clears stress through the validated write
+  // and logs the downtime to the shared feed.
   const indulgeVice = async () => {
     const userId = user?.id;
     if (!userId || !character) return;
-    // BitD vice roll: roll dice equal to your LOWEST attribute rating, clear stress = highest die.
-    const stress = character.characterData?.stress ?? 0;
-    const attrs = Object.values(
-      deriveAttributes(character.ruleset.content, character.characterData)
-    );
-    const lowest = attrs.length > 0 ? Math.min(...attrs) : 0;
-    const { count, zeroDice } = diceForRating(lowest);
+    const { count, zeroDice } = viceDicePool(character);
     const results = Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
     const cleared = viceStressCleared(results, { zeroDice });
-    const overindulged = isOverindulged(cleared, stress);
-    const nextStress = Math.max(0, stress - cleared);
     try {
-      await updateCharData.mutateAsync({
+      const outcome = await indulgeViceMut.mutateAsync({
+        character,
         userId,
-        data: { characterData: { ...character.characterData, stress: nextStress } },
+        results,
+        zeroDice,
+        logLabel: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
       });
-      // Log the downtime to the campaign feed — only when the character is in a campaign (a
-      // standalone character still clears stress, it just has no shared log to write to).
-      if (character.gameId) {
-        await createRoll.mutateAsync({
-          userId,
-          data: {
-            gameId: character.gameId,
-            characterId: character.id,
-            kind: 'downtime',
-            label: t('components.downtime.indulgeVice.logLabel', { count: cleared }),
-            dice: count,
-            results,
-          },
-        });
-      }
       // Overindulging (cleared more than was marked) is a real consequence the GM narrates.
-      setViceNote(overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
+      setViceNote(outcome.overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
     } catch (e) {
       setError((e as Error).message ?? t('components.downtime.indulgeVice.failed'));
     }

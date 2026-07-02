@@ -105,8 +105,20 @@ broken placeholders). Nine CI-gated PRs:
   re-export layer. Proofs: `packages/shared` imports zero from database; `packages/core` contains
   zero supabase references; the ESLint seam ban is unchanged (factories still banned outside the
   seam; core freely importable). The bot can now roll dice without supabase-js.
-- **R2-PR8 ⏳** extract `@heist-mind/engine` (use-cases out of React; mocked-repo unit tests — the
-  bot's behavior spec).
+- **R2-PR8 — `@heist-mind/engine` extracted (this PR, the bot enabler).** New `packages/engine`:
+  the MULTI-STEP game operations as platform-agnostic use-cases over
+  `(repos: DatabaseRepositories, input) → Result` — `rollAction` (persist + push cost),
+  `rollResistance` (persist + `6 − highest` stress), `applyStress` (clamped read-modify-write),
+  `indulgeVice` (+ `viceDicePool`), `retireCharacter` (status + stash + note), `startScore`/
+  `endScore` (lifecycle + explicitly-tagged log event), `saveLoadout` (save + feed entry).
+  Contract: use-cases return DOMAIN DATA (log copy arrives as client-localized inputs); dice are
+  realized by the caller (each client owns randomness; deterministic engine). Single-call writes
+  deliberately have NO use-case — the repository contract is the shared surface there (recorded
+  deviation from the plan's advanceCharacter/createCharacter/joinViaCode list: pass-through
+  wrappers add indirection without behavior). **14 mocked-repo tests = the Discord bot's behavior
+  spec** (99.8% line coverage; gates at 90/90/90/60 measured). Web mutations are now thin engine
+  wrappers + invalidation; RollPanel/ScorePanel/CharacterSheet/LoadoutCard shed their sequencing
+  (zero multi-step orchestration left in web mutationFns).
 - **R2-PR9 ⏳** `packages/telemetry` (OTel seam, Sentry creds-guarded) + App Router error surfaces +
   env validation + server-rendered landing + auth-store init extraction.
 

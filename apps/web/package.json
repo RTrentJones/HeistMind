@@ -30,7 +30,8 @@
     "react-i18next": "^15.2.0",
     "tailwind-merge": "^2.0.0",
     "zustand": "^5.0.5",
-    "@heist-mind/core": "workspace:*"
+    "@heist-mind/core": "workspace:*",
+    "@heist-mind/engine": "workspace:*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
