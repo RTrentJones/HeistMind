@@ -9,7 +9,7 @@ import {
   actionDotsSpent,
   deriveAttributes,
   usesActionRatings,
-} from './character-validation';
+} from '@heist-mind/database';
 
 const ACTIONS = rulesetActions(DEFAULT_RULESET);
 const abilityIds = new Set(DEFAULT_RULESET.specialAbilities.map(a => a.id));

@@ -6,13 +6,9 @@ import type {
   TranslationKey,
   InterpolationParams,
   TranslationFunction,
-  CommonKeys,
-  NavigationKeys,
   ComponentKeys,
   AuthKeys,
   PageKeys,
-  FormKeys,
-  ErrorKeys,
 } from '@/lib/i18n/translations';
 
 /**
@@ -68,34 +64,6 @@ export function useTranslation(): {
  * Namespace-specific hooks for better organization and performance
  */
 
-export function useCommonTranslation(): {
-  t: (key: CommonKeys, params?: InterpolationParams) => string;
-  isLoading: boolean;
-} {
-  const { t: i18nT, ready } = useI18nTranslation('common');
-
-  const t = useCallback(
-    (key: CommonKeys, params?: InterpolationParams) => i18nT(key, params),
-    [i18nT]
-  );
-
-  return { t, isLoading: !ready };
-}
-
-export function useNavigationTranslation(): {
-  t: (key: NavigationKeys, params?: InterpolationParams) => string;
-  isLoading: boolean;
-} {
-  const { t: i18nT, ready } = useI18nTranslation('navigation');
-
-  const t = useCallback(
-    (key: NavigationKeys, params?: InterpolationParams) => i18nT(key, params),
-    [i18nT]
-  );
-
-  return { t, isLoading: !ready };
-}
-
 export function useComponentTranslation(): {
   t: (key: ComponentKeys, params?: InterpolationParams) => string;
   isLoading: boolean;
@@ -138,34 +106,6 @@ export function usePageTranslation(): {
   return { t, isLoading: !ready };
 }
 
-export function useFormTranslation(): {
-  t: (key: FormKeys, params?: InterpolationParams) => string;
-  isLoading: boolean;
-} {
-  const { t: i18nT, ready } = useI18nTranslation('forms');
-
-  const t = useCallback(
-    (key: FormKeys, params?: InterpolationParams) => i18nT(key, params),
-    [i18nT]
-  );
-
-  return { t, isLoading: !ready };
-}
-
-export function useErrorTranslation(): {
-  t: (key: ErrorKeys, params?: InterpolationParams) => string;
-  isLoading: boolean;
-} {
-  const { t: i18nT, ready } = useI18nTranslation('errors');
-
-  const t = useCallback(
-    (key: ErrorKeys, params?: InterpolationParams) => i18nT(key, params),
-    [i18nT]
-  );
-
-  return { t, isLoading: !ready };
-}
-
 /**
  * Utility hook for language switching
  */
@@ -185,12 +125,4 @@ export function useLanguageSwitcher() {
     changeLanguage,
     supportedLanguages: ['en', 'es', 'fr', 'de'] as const,
   };
-}
-
-/**
- * Hook for loading states during translation initialization
- */
-export function useTranslationReady() {
-  const { ready } = useI18nTranslation();
-  return ready;
 }

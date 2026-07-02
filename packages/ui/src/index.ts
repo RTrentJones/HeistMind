@@ -105,9 +105,6 @@ export * from './components/Badge';
 export * from './components/Tooltip';
 export * from './components/ThemeToggle';
 
-// Error handling
-export * from './components/ErrorBoundary';
-export * from './components/ErrorFallbacks';
 
 // Game-specific components
 export * from './components/StressTracker';

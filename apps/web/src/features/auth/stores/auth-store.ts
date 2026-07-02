@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { User, Profile, CreateProfileData } from '@heist-mind/database';
+import { User, Profile } from '@heist-mind/database';
 import { LoadingState } from '@/shared/types';
 import { getAuthService } from '@/lib/auth';
-// Profile reads/writes go through the profiles data seam (its non-hook surface — this store's
-// actions run outside React); repositories are never touched here directly.
+// Profile reads go through the profiles data seam (its non-hook surface — this store's actions run
+// outside React); repositories are never touched here directly.
 import * as profilesApi from '@/features/profiles/data/api';
 
 export interface AuthUser extends User {
@@ -21,15 +21,10 @@ interface AuthState extends LoadingState {
   // Session state
   sessionChecked: boolean;
 
-  // Auth actions
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData?: Partial<CreateProfileData>) => Promise<void>;
+  // Auth actions (Discord OAuth is the only sign-in method — see BRD; the profile row is created
+  // by the DB trigger on first sign-in, so there is no client-side signup/profile-create path).
   signOut: () => Promise<void>;
   signInWithProvider: (provider: 'google' | 'discord') => Promise<void>;
-
-  // Profile actions
-  updateProfile: (data: Partial<Profile>) => Promise<void>;
-  refreshProfile: () => Promise<void>;
 
   // Session management
   checkSession: () => Promise<void>;
@@ -56,82 +51,6 @@ export const useAuthStore = create<AuthState>()(
         lastUpdated: undefined,
 
         // Auth actions
-        signIn: async (email: string, password: string) => {
-          set({ isLoading: true, error: null });
-          try {
-            const authService = getAuthService();
-
-            const authResult = await authService.signIn({ email, password });
-
-            if (authResult.error || !authResult.data) {
-              throw new Error(authResult.error?.message || 'Sign in failed');
-            }
-
-            const user = authResult.data.user;
-
-            // Get user profile
-            const profile = await profilesApi.fetchProfile(user.id);
-
-            set({
-              user: { ...user, profile: profile || undefined },
-              profile,
-              isAuthenticated: true,
-              isLoading: false,
-              lastUpdated: new Date(),
-            });
-          } catch (error) {
-            set({
-              error: error instanceof Error ? error.message : 'Sign in failed',
-              isLoading: false,
-            });
-            throw error;
-          }
-        },
-
-        signUp: async (email: string, password: string, userData?: Partial<CreateProfileData>) => {
-          set({ isLoading: true, error: null });
-          try {
-            const authService = getAuthService();
-
-            const authResult = await authService.signUp({
-              email,
-              password,
-              options: { data: userData },
-            });
-
-            if (authResult.error || !authResult.data) {
-              throw new Error(authResult.error?.message || 'Sign up failed');
-            }
-
-            const user = authResult.data.user;
-
-            // Create or get user profile
-            let profile: Profile | null = null;
-            if (userData) {
-              profile = await profilesApi.createProfile({
-                username: userData.username || `user_${user.id.slice(0, 8)}`,
-                displayName: userData.displayName,
-                avatarUrl: userData.avatarUrl,
-                preferences: userData.preferences || {},
-              });
-            }
-
-            set({
-              user: { ...user, profile: profile || undefined },
-              profile,
-              isAuthenticated: true,
-              isLoading: false,
-              lastUpdated: new Date(),
-            });
-          } catch (error) {
-            set({
-              error: error instanceof Error ? error.message : 'Sign up failed',
-              isLoading: false,
-            });
-            throw error;
-          }
-        },
-
         signOut: async () => {
           set({ isLoading: true, error: null });
           try {
@@ -177,59 +96,6 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
             throw error;
-          }
-        },
-
-        // Profile actions
-        updateProfile: async (data: Partial<Profile>) => {
-          const { profile } = get();
-          if (!profile) throw new Error('No profile to update');
-
-          set({ isLoading: true, error: null });
-          try {
-            const profileData = {
-              username: data.username === null ? undefined : data.username,
-              displayName: data.displayName === null ? undefined : data.displayName,
-              avatarUrl: data.avatarUrl === null ? undefined : data.avatarUrl,
-              preferences: data.preferences,
-            };
-
-            const updatedProfile = await profilesApi.updateProfile(profile.id, profileData);
-
-            set((state: AuthState) => ({
-              profile: updatedProfile,
-              user: state.user ? { ...state.user, profile: updatedProfile } : null,
-              isLoading: false,
-              lastUpdated: new Date(),
-            }));
-          } catch (error) {
-            set({
-              error: error instanceof Error ? error.message : 'Profile update failed',
-              isLoading: false,
-            });
-            throw error;
-          }
-        },
-
-        refreshProfile: async () => {
-          const { user } = get();
-          if (!user?.id) return;
-
-          set({ isLoading: true, error: null });
-          try {
-            const profile = await profilesApi.fetchProfile(user.id);
-
-            set((state: AuthState) => ({
-              profile,
-              user: state.user ? { ...state.user, profile: profile || undefined } : null,
-              isLoading: false,
-              lastUpdated: new Date(),
-            }));
-          } catch (error) {
-            set({
-              error: error instanceof Error ? error.message : 'Profile refresh failed',
-              isLoading: false,
-            });
           }
         },
 
@@ -395,12 +261,8 @@ export const useAuth = () =>
 export const useAuthActions = () =>
   useAuthStore(
     useShallow(state => ({
-      signIn: state.signIn,
-      signUp: state.signUp,
       signOut: state.signOut,
       signInWithProvider: state.signInWithProvider,
-      updateProfile: state.updateProfile,
-      refreshProfile: state.refreshProfile,
       checkSession: state.checkSession,
     }))
   );
