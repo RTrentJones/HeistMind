@@ -1,5 +1,6 @@
 'use client';
 
+import { captureError } from '@heist-mind/telemetry';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import { errorMessage } from '@/lib/query/result';
@@ -18,7 +19,7 @@ export function useSignIn() {
     try {
       await signInWithProvider('discord');
     } catch (err) {
-      console.error('Sign in failed:', err);
+      captureError(err, { 'error.surface': 'auth.sign-in' });
       useNotificationStore
         .getState()
         .error(i18n.t('errors:auth.signInFailed'), errorMessage(err) || undefined);

@@ -136,6 +136,16 @@ the character + attach/detach RPCs, standalone `/characters*` routes, and **5b**
 - **Deferred (separate future plan):** realtime presence / live multiplayer via Supabase Realtime.
   The async load-on-view model is sufficient and intentional for play-by-post.
 
+**Complete (2026-07-02): code-quality ROUND 2 — the product-shaped re-architecture.** The monorepo
+now has the Avrae-target package graph: **`core`** (pure FitD domain + rules) ← **`database`**
+(client-agnostic repositories) ← **`engine`** (the multi-step game operations both clients drive;
+its mocked-repo tests are the Discord bot's behavior spec) ← `web`, with **`shared`** (cross-client
+ruleset content, deps: core) and **`telemetry`** (OTel-shaped seam, Sentry creds-guarded in web).
+Every tool gate is real (lint/type-check/coverage measured honestly, frozen-lockfile CI); two
+shipped bugs fixed (temp-user-id profile create, `{} as any` repository), ~6,000 LOC of dead code
+and duplication removed, App Router error boundaries + a server-rendered landing added. The
+Discord bot is now an ADDITIVE client. Full record: `CODE-QUALITY.md` "Round 2".
+
 **Complete (2026-07-01): the code-quality remediation (`CODE-QUALITY.md`), Tiers 1–4.**
 The **React Query data-access seam** is complete on `development` (#91–#102) —
 `features/{concept}/data/` is the only repository-touching layer (hooks + a non-hook `api.ts`
@@ -150,4 +160,4 @@ and **role-gated the sheet's write affordances** (F42: owner/GM edit, others rea
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-07-01 (code-quality remediation complete, Tiers 1–4: RQ data seam + ESLint boundary #91–#102, concept-card splits + F42 role-gating in PR5; CODE-QUALITY.md carries the full record)
+_Last verified:_ 2026-07-02 (round 2 complete, #104–#112: core/engine/telemetry packages, honest tool gates, server-rendered landing; CODE-QUALITY.md carries the full record)

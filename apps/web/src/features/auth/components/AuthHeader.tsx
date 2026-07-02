@@ -14,6 +14,7 @@ import {
   ThemeToggle,
 } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { captureError } from '@heist-mind/telemetry';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import { errorMessage } from '@/lib/query/result';
 import i18n from '@/lib/i18n';
@@ -29,7 +30,7 @@ export function AuthHeader() {
     try {
       await signOut();
     } catch (error) {
-      console.error('Sign out failed:', error);
+      captureError(error, { 'error.surface': 'auth.sign-out' });
       useNotificationStore
         .getState()
         .error(i18n.t('errors:auth.signOutFailed'), errorMessage(error) || undefined);

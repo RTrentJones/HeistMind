@@ -119,8 +119,18 @@ broken placeholders). Nine CI-gated PRs:
   spec** (99.8% line coverage; gates at 90/90/90/60 measured). Web mutations are now thin engine
   wrappers + invalidation; RollPanel/ScorePanel/CharacterSheet/LoadoutCard shed their sequencing
   (zero multi-step orchestration left in web mutationFns).
-- **R2-PR9 ⏳** `packages/telemetry` (OTel seam, Sentry creds-guarded) + App Router error surfaces +
-  env validation + server-rendered landing + auth-store init extraction.
+- **R2-PR9 — observability + shell (this PR, closes the round).** `packages/telemetry`: the
+  OTel-shaped seam (`captureError`/`logEvent` + `setTelemetryBackend`) every client calls — Sentry
+  (itself OTel-based) installs as the web backend via Next instrumentation, **creds-guarded**: no
+  `NEXT_PUBLIC_SENTRY_DSN` → clean no-op with console echoes (CI/previews need no secrets; add the
+  DSN whenever). App Router error surfaces: `app/error.tsx` (i18n'd, reports via the seam, retry),
+  `global-error.tsx` (provider-free last resort), `not-found.tsx`. Boot-time env assertion in
+  `instrumentation.ts` (missing Supabase vars fail the server start BY NAME). Landing: `/` is now
+  a SERVER page with real per-route metadata; the marketing sections server-render and the tiny
+  client `HomeSwitch` swaps to the Dashboard post-hydration (auth is browser-held, so the swap is
+  necessarily client-side). Auth-store's import-time side effects extracted into
+  `initAuthListener()` mounted via `<AuthListener/>` (testability). Remaining `console.error`
+  sites route through `captureError`. _Stretch skipped as planned:_ the ui `CloseButton` dedup.
 
 Deliberate exclusions recorded: building the bot itself; full RSC of the auth-gated interior;
 full component-test buildout + property tests (follow-ups); Storybook CI; virtualization;

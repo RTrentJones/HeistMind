@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { type Profile } from '@heist-mind/core';
 import { type User } from '@heist-mind/database';
 import { type LoadingState } from '@/shared/types';
+import { captureError } from '@heist-mind/telemetry';
 import { getAuthService } from '@/lib/auth';
 // Profile reads go through the profiles data seam (its non-hook surface — this store's actions run
 // outside React); repositories are never touched here directly.
@@ -192,8 +193,16 @@ export const useAuthStore = create<AuthState>()(
 /** Grace period letting the OAuth listener claim the session before the manual check runs. */
 const SESSION_CHECK_DELAY_MS = 100;
 
-// Set up auth state change listener to handle OAuth automatically
-if (typeof window !== 'undefined') {
+let listenerInstalled = false;
+
+/**
+ * Install the OAuth session listener + the delayed manual session check. Called from the
+ * `<AuthListener/>` client component in Providers (NOT at module import — import-time I/O made
+ * every test that touched `useAuth` fire network calls and timers).
+ */
+export function initAuthListener(): void {
+  if (listenerInstalled || typeof window === 'undefined') return;
+  listenerInstalled = true;
   const authService = getAuthService();
 
   // Listen for auth state changes and update store accordingly
@@ -216,7 +225,7 @@ if (typeof window !== 'undefined') {
           lastUpdated: new Date(),
         });
       } catch (error) {
-        console.error('Error fetching profile after auth:', error);
+        captureError(error, { 'error.surface': 'auth.oauth-profile' });
         useAuthStore.setState({
           user: { ...user },
           profile: null,

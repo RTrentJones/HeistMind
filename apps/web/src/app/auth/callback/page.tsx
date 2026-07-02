@@ -13,6 +13,7 @@ import {
   Heading,
   Text,
 } from '@heist-mind/ui';
+import { captureError } from '@heist-mind/telemetry';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAuthTranslation } from '@/lib/i18n/hooks';
 
@@ -29,7 +30,10 @@ export default function AuthCallback() {
     const errorDescription = searchParams.get('error_description');
 
     if (errorParam) {
-      console.error('OAuth error from URL:', errorParam, errorDescription);
+      captureError(new Error(`OAuth callback error: ${errorParam}`), {
+        'error.surface': 'auth.callback',
+        'oauth.description': errorDescription ?? undefined,
+      });
       setError(errorDescription || t('callback.failed'));
       setTimeout(() => {
         router.push('/?error=auth_failed');
@@ -54,7 +58,6 @@ export default function AuthCallback() {
   useEffect(() => {
     // Redirect when authentication succeeds
     if (isAuthenticated) {
-      console.log('OAuth success - redirecting to home');
       router.push('/');
     }
   }, [isAuthenticated, router]);

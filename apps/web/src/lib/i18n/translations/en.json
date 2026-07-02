@@ -949,6 +949,8 @@
     "network": "Network error. Please check your connection.",
     "unauthorized": "You are not authorized to perform this action.",
     "notFound": "The requested resource was not found.",
+    "notFoundTitle": "Lost in the shadows",
+    "backHome": "Back to the lair",
     "serverError": "Server error. Please try again later.",
     "auth": {
       "invalidCredentials": "Invalid email or password",
