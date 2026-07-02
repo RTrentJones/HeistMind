@@ -11,8 +11,7 @@ import {
 } from '@heist-mind/core';
 import { Alert, Badge, Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useUpdateCharacter } from '@/features/characters/data/mutations';
-import { useCreateRoll } from '@/features/rolls/data/mutations';
+import { useSaveLoadout } from '@/features/characters/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 const LOAD_LEVELS: LoadLevel[] = ['light', 'normal', 'heavy'];
@@ -36,8 +35,7 @@ export function LoadoutCard({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const updateChar = useUpdateCharacter(character.id);
-  const createRoll = useCreateRoll(character.gameId ?? '');
+  const saveLoadoutMut = useSaveLoadout(character.gameId);
   const content = character.ruleset.content;
   const data = character.characterData;
   const saved: CharacterLoadout = data.loadout ?? { level: 'normal', items: [] };
@@ -46,7 +44,7 @@ export function LoadoutCard({
     level: saved.level,
     items: [...saved.items],
   });
-  const busy = updateChar.isPending || createRoll.isPending;
+  const busy = saveLoadoutMut.isPending;
 
   const items = content.equipment?.items ?? [];
   if (items.length === 0) return null;
@@ -69,34 +67,17 @@ export function LoadoutCard({
   // A score has started since this loadout was last set → it belongs to a previous operation.
   const stale = !!activeScore && saved.items.length > 0 && saved.scoreId !== activeScore.id;
 
+  // Save + feed entry are one ENGINE use-case; the card supplies the loadout (tagged with the
+  // active score) and the localized note.
   const persist = async (next: CharacterLoadout, note: string) => {
     const userId = user?.id;
     if (!userId) return;
     const tagged: CharacterLoadout = { ...next, scoreId: activeScore?.id };
     try {
-      await updateChar.mutateAsync({
-        userId,
-        data: { characterData: { ...data, loadout: tagged } },
-      });
-      // Log the settled loadout change to the campaign feed (one entry per save). A standalone
-      // character has no campaign feed; the loadout still saves on the sheet.
-      if (character.gameId) {
-        await createRoll.mutateAsync({
-          userId,
-          data: {
-            gameId: character.gameId,
-            characterId: character.id,
-            kind: 'loadout',
-            label: character.name,
-            dice: 0,
-            results: [],
-            note,
-          },
-        });
-      }
+      await saveLoadoutMut.mutateAsync({ character, userId, loadout: tagged, logNote: note });
     } catch {
       // Loadout save is best-effort on the sheet (parity with the prior non-surfacing behavior);
-      // the character-data mutation still invalidates the sheet so it reflects whatever landed.
+      // the mutation still invalidates the sheet so it reflects whatever landed.
     }
   };
 

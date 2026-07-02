@@ -3,12 +3,20 @@
 // The characters data-access seam (write side). Keeps every character repo write — including the
 // read-modify-write ones (stress, retire) — inside the seam so components never touch a repo.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  clampStress,
-  type Character,
-  type CharacterAdvancement,
-  type UpdateCharacterData,
+import type {
+  Character,
+  CharacterAdvancement,
+  CharacterLoadout,
+  CharacterWithDetails,
+  UpdateCharacterData,
 } from '@heist-mind/core';
+import {
+  applyStress,
+  indulgeVice,
+  retireCharacter,
+  saveLoadout,
+  type IndulgeViceOutcome,
+} from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { rollKeys } from '@/features/rolls/data/queries';
@@ -67,60 +75,76 @@ export function useAddExperience(characterId: string) {
 }
 
 /**
- * Apply a resistance/push stress cost to a character, clamped to the ruleset max. Reads the live
- * character (for current stress + max) then writes — kept here so RollPanel never touches a repo.
+ * Apply a resistance/push stress cost to a character via the ENGINE use-case (clamped
+ * read-modify-write) — the same implementation the Discord bot will drive.
  */
 export function useApplyCharacterStress() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { characterId: string; userId: string; stress: number }) => {
-      if (vars.stress <= 0) return;
-      const char = await getRepositories()
-        .characters.findWithDetails(vars.characterId)
-        .then(unwrap);
-      if (!char) return;
-      const current = char.characterData?.stress ?? 0;
-      const next = clampStress(char.ruleset.content, current + vars.stress);
-      if (next === current) return;
-      await getRepositories()
-        .characterManagement.updateCharacterWithValidation(vars.characterId, vars.userId, {
-          characterData: { ...char.characterData, stress: next },
-        })
-        .then(unwrap);
-    },
+    mutationFn: async (vars: { characterId: string; userId: string; stress: number }) =>
+      unwrap(await applyStress(getRepositories(), vars)),
     onSuccess: (_d, vars) =>
       qc.invalidateQueries({ queryKey: characterKeys.detail(vars.characterId) }),
   });
 }
 
 /**
- * Retire a character: status → retired, carried coin banked into stash (BitD), plus a campaign-log
- * note. Invalidates the roster (status moved them to the retired section) and the log (the note).
+ * Indulge Vice (FitD downtime) via the ENGINE use-case: clear stress through the validated write
+ * path, then log the downtime to the campaign feed. The component realizes the dice (pool from
+ * `viceDicePool`) and phrases the copy; the outcome comes back as data.
+ */
+export function useIndulgeVice(gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      character: CharacterWithDetails;
+      userId: string;
+      results: number[];
+      zeroDice: boolean;
+      logLabel: string;
+    }): Promise<IndulgeViceOutcome> => unwrap(await indulgeVice(getRepositories(), vars)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * Persist the per-score loadout via the ENGINE use-case (save + one feed entry per save).
+ */
+export function useSaveLoadout(gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      character: CharacterWithDetails;
+      userId: string;
+      loadout: CharacterLoadout;
+      logNote: string;
+    }): Promise<Character> => unwrap(await saveLoadout(getRepositories(), vars)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * Retire a character via the ENGINE use-case: status → retired, carried coin banked into stash
+ * (BitD), plus a campaign-log note.
  */
 export function useRetireCharacter(gameId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { character: Character; userId: string; note: string }) => {
-      const data = vars.character.characterData;
-      const coins = data?.coins ?? 0;
-      await getRepositories()
-        .characters.update(vars.character.id, vars.userId, {
-          status: 'retired',
-          characterData: { ...data, stash: (data?.stash ?? 0) + coins, coins: 0 },
-        })
-        .then(unwrap);
-      await getRepositories()
-        .rolls.create(vars.userId, {
+    mutationFn: async (vars: { character: Character; userId: string; note: string }) =>
+      unwrap(
+        await retireCharacter(getRepositories(), {
+          character: vars.character,
+          userId: vars.userId,
           gameId,
-          characterId: vars.character.id,
-          kind: 'note',
-          label: vars.character.name,
-          dice: 0,
-          results: [],
-          note: vars.note,
+          logNote: vars.note,
         })
-        .then(unwrap);
-    },
+      ),
     onSuccess: () => {
       // Retiring changes roster, My-Characters, and the sheet — invalidate the whole concept.
       void qc.invalidateQueries({ queryKey: characterKeys.all });

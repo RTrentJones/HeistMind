@@ -1,0 +1,37 @@
+{
+  "name": "@heist-mind/engine",
+  "version": "1.0.0",
+  "description": "HeistMind's application use-cases: the multi-step game operations (roll → stress, scores, retire, loadout, vice) every client — web now, the Discord bot next — drives through one implementation. Pure orchestration over the repository contracts; returns domain data, never UI copy.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@heist-mind/core": "workspace:*",
+    "@heist-mind/database": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.9"
+  }
+}
