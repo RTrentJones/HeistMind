@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import {
   stressBounds,
-  harmBounds,
   usesActionRatings,
   rulesetActions,
   deriveAttributes,
@@ -13,9 +12,7 @@ import {
   usesXpTracks,
   xpTrackSize,
   xpMarks,
-  xpTrackFull,
   markXp,
-  PLAYBOOK_TRACK,
 } from '@heist-mind/database';
 import {
   Alert,
@@ -23,7 +20,6 @@ import {
   Button,
   Card,
   ErrorDisplay,
-  HarmTracker,
   Heading,
   Input,
   LoadingSpinner,
@@ -31,8 +27,6 @@ import {
   StressTracker,
   Text,
 } from '@heist-mind/ui';
-
-const EMPTY_HARM = { lesser: [], moderate: [], severe: [] };
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCharacterDetail } from '@/features/characters/data/queries';
 import {
@@ -48,6 +42,9 @@ import { RollLog } from '@/features/rolls/components/RollLog';
 import { CharacterEditor } from './CharacterEditor';
 import { LoadoutCard } from './LoadoutCard';
 import { AttachToCampaign } from './AttachToCampaign';
+import { GearCard } from './cards/GearCard';
+import { HarmCard } from './cards/HarmCard';
+import { XpTracksCard } from './cards/XpTracksCard';
 
 /** View a character and modify it (rename, award XP, and edit the validated build). */
 export function CharacterSheet({ characterId }: { characterId: string }) {
@@ -196,6 +193,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
   const attributes = character.characterData?.attributes ?? {};
   const abilities = character.characterData?.specialAbilities ?? [];
+  // F42 — mirror the RLS write policy (owner OR the campaign's GM) so viewers see a read-only
+  // sheet instead of controls that render and then fail server-side.
+  const canEdit =
+    user?.id != null && (user.id === character.createdBy || user.id === character.game?.createdBy);
 
   return (
     <Stack direction='column' gap='lg'>
@@ -236,19 +237,25 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   </Badge>
                 )}
               </Stack>
-              <Stack direction='row' gap='sm' align='center'>
-                <Button variant='outline' size='sm' onClick={() => {
-                    setEditing(true);
-                    setName(character.name);
-                  }}>
-                  {t('common.actions.edit')}
-                </Button>
-                <Button variant='outline' size='sm' onClick={() => setShowEditor(s => !s)}>
-                  {showEditor
-                    ? t('components.characterSheet.closeEditor')
-                    : t('components.characterSheet.editBuild')}
-                </Button>
-              </Stack>
+              {canEdit && (
+                <Stack direction='row' gap='sm' align='center'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      setEditing(true);
+                      setName(character.name);
+                    }}
+                  >
+                    {t('common.actions.edit')}
+                  </Button>
+                  <Button variant='outline' size='sm' onClick={() => setShowEditor(s => !s)}>
+                    {showEditor
+                      ? t('components.characterSheet.closeEditor')
+                      : t('components.characterSheet.editBuild')}
+                  </Button>
+                </Stack>
+              )}
             </Stack>
           )}
 
@@ -262,9 +269,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               <Badge variant='gold'>
                 {t('components.characterSheet.xpBadge', { xp: character.experiencePoints })}
               </Badge>
-              <Button variant='outline' size='sm' onClick={addXp} loading={busy}>
-                {t('components.characterSheet.addXp')}
-              </Button>
+              {canEdit && (
+                <Button variant='outline' size='sm' onClick={addXp} loading={busy}>
+                  {t('components.characterSheet.addXp')}
+                </Button>
+              )}
             </Stack>
           )}
 
@@ -332,21 +341,23 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           <StressTracker
             current={character.characterData?.stress ?? 0}
             max={stressBounds(character.ruleset.content).max}
-            interactive
+            interactive={canEdit}
             showNumbers
             size='lg'
             onChange={v => void setStress(v)}
           />
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Button
-              variant='outline'
-              size='sm'
-              loading={busy}
-              disabled={(character.characterData?.stress ?? 0) === 0}
-              onClick={() => void indulgeVice()}
-            >
-              {t('components.downtime.indulgeVice.action')}
-            </Button>
+            {canEdit && (
+              <Button
+                variant='outline'
+                size='sm'
+                loading={busy}
+                disabled={(character.characterData?.stress ?? 0) === 0}
+                onClick={() => void indulgeVice()}
+              >
+                {t('components.downtime.indulgeVice.action')}
+              </Button>
+            )}
             {character.characterData?.vice && (
               <Text variant='muted' size='sm'>
                 {t('components.downtime.indulgeVice.viceLabel', {
@@ -360,164 +371,23 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               {viceNote}
             </Alert>
           )}
-          <div>
-            <Text as='strong'>{t('components.characterSheet.harm')}</Text>
-            <HarmTracker
-              harm={character.characterData?.harm ?? EMPTY_HARM}
-              bounds={harmBounds(character.ruleset.content)}
-            />
-          </div>
-          {(character.characterData?.trauma?.length ?? 0) > 0 && (
-            <div>
-              <Text as='strong'>{t('components.characterSheet.trauma')}</Text>
-              <Stack direction='row' gap='sm' className='flex-wrap'>
-                {character.characterData.trauma.map(condition => (
-                  <Badge key={condition} variant='stress-critical'>
-                    {condition}
-                  </Badge>
-                ))}
-              </Stack>
-            </div>
-          )}
+          <HarmCard content={character.ruleset.content} data={character.characterData} />
         </Stack>
       </Card>
 
-      {usesXpTracks(character.ruleset.content) &&
-        (() => {
-          const content = character.ruleset.content;
-          const data = character.characterData;
-          const triggers = content.advancement?.xpTriggers ?? [];
-          const pbFull = xpTrackFull(content, data, PLAYBOOK_TRACK);
-          return (
-            <Card variant='outline'>
-              <Stack direction='column' gap='md'>
-                <Heading level='h3'>{t('components.characterSheet.experience')}</Heading>
-                <Text variant='muted' size='sm'>
-                  {t('components.characterSheet.markXpPre')}
-                  <strong>{t('components.characterSheet.markXpBold')}</strong>
-                  {t('components.characterSheet.markXpPost')}
-                </Text>
-
-                <div data-testid='xp-track-playbook'>
-                  <Stack direction='row' gap='sm' align='center'>
-                    <Text as='strong'>{t('components.characterSheet.playbook')}</Text>
-                    {pbFull && (
-                      <Badge variant='gold'>
-                        {t('components.characterSheet.fullReadyToAdvance')}
-                      </Badge>
-                    )}
-                  </Stack>
-                  <StressTracker
-                    current={xpMarks(data, PLAYBOOK_TRACK)}
-                    max={xpTrackSize(content, PLAYBOOK_TRACK)}
-                    interactive
-                    showNumbers
-                    showLabel={false}
-                    onChange={v => void setXp(PLAYBOOK_TRACK, v)}
-                  />
-                </div>
-
-                {triggers.length > 0 && (
-                  <Stack direction='column' gap='xs'>
-                    {triggers.map(trigger => (
-                      <Stack
-                        key={trigger.id}
-                        direction='row'
-                        gap='sm'
-                        align='center'
-                        justify='between'
-                      >
-                        <Text variant='muted' size='sm'>
-                          {trigger.description}
-                        </Text>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          disabled={busy || pbFull}
-                          onClick={() =>
-                            void setXp(
-                              PLAYBOOK_TRACK,
-                              xpMarks(data, PLAYBOOK_TRACK) + trigger.value
-                            )
-                          }
-                        >
-                          +{trigger.value}
-                        </Button>
-                      </Stack>
-                    ))}
-                  </Stack>
-                )}
-
-                {content.attributes.map(attr => (
-                  <div key={attr.id} data-testid={`xp-track-${attr.id}`}>
-                    <Stack direction='row' gap='sm' align='center'>
-                      <Text as='strong'>{attr.name}</Text>
-                      {xpTrackFull(content, data, attr.id) && (
-                        <Badge variant='gold'>
-                          {t('components.characterSheet.fullReadyToAdvance')}
-                        </Badge>
-                      )}
-                    </Stack>
-                    <StressTracker
-                      current={xpMarks(data, attr.id)}
-                      max={xpTrackSize(content, attr.id)}
-                      interactive
-                      showNumbers
-                      showLabel={false}
-                      onChange={v => void setXp(attr.id, v)}
-                    />
-                  </div>
-                ))}
-              </Stack>
-            </Card>
-          );
-        })()}
+      <XpTracksCard
+        content={character.ruleset.content}
+        data={character.characterData}
+        busy={busy}
+        canEdit={canEdit}
+        onMarkXp={setXp}
+      />
 
       {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
           build editor. Resets against the campaign's active score. */}
-      <LoadoutCard character={character} activeScore={activeScore} />
+      <LoadoutCard character={character} activeScore={activeScore} canEdit={canEdit} />
 
-      {(() => {
-        const data = character.characterData;
-        const friend = data?.contacts?.find(c => c.relationship === 'friend')?.name;
-        const rival = data?.contacts?.find(c => c.relationship === 'rival')?.name;
-        const hasGear = (data?.coins ?? 0) > 0 || (data?.stash ?? 0) > 0 || friend || rival;
-        if (!hasGear) return null;
-        return (
-          <Card variant='outline'>
-            <Stack direction='column' gap='md'>
-              <Heading level='h3'>{t('components.characterSheet.gearAndCoin')}</Heading>
-              <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                <Badge variant='gold'>
-                  {t('components.characterSheet.coin', { coins: data?.coins ?? 0 })}
-                </Badge>
-                {(data?.stash ?? 0) > 0 && (
-                  <Badge variant='gold'>
-                    {t('components.characterSheet.stash', { stash: data.stash ?? 0 })}
-                  </Badge>
-                )}
-              </Stack>
-              {(friend || rival) && (
-                <div>
-                  <Text as='strong'>{t('components.characterSheet.friendsRivals')}</Text>
-                  <Stack direction='row' gap='sm' className='flex-wrap'>
-                    {friend && (
-                      <Badge variant='success'>
-                        {t('components.characterSheet.friend', { name: friend })}
-                      </Badge>
-                    )}
-                    {rival && (
-                      <Badge variant='stress-critical'>
-                        {t('components.characterSheet.rival', { name: rival })}
-                      </Badge>
-                    )}
-                  </Stack>
-                </div>
-              )}
-            </Stack>
-          </Card>
-        );
-      })()}
+      <GearCard data={character.characterData} />
 
       {/* Dice + shared campaign log: only in a campaign. A standalone character (Phase 5) has no
           shared feed — its sheet is the rules-valid build, brought to a table when you attach it. */}
@@ -542,7 +412,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Card>
       )}
 
-      {showEditor && <CharacterEditor character={character} />}
+      {showEditor && canEdit && <CharacterEditor character={character} />}
     </Stack>
   );
 }

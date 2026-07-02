@@ -164,6 +164,12 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; **set the per-score loadout**
   (level + items, Save); roll an action **or resist** (stress applies live to the `StressTracker`);
   **Indulge vice** (downtime) to clear stress to 0, logged to the feed; edit build.
+- **Role-gating (F42, 2026-07-01):** write affordances mirror the RLS policy — the **owner or the
+  campaign's GM** sees the edit controls (rename, edit build, stress tracker, indulge vice, XP
+  marking, loadout save); any other member gets a **read-only sheet** (values + trackers visible,
+  no dead buttons). Internally the sheet/editor are now thin compositions over shared concept cards
+  (`cards/XpTracksCard|GearCard|HarmCard` — one implementation each for view + edit — plus
+  `useCharacterAdvancement`); `CrewSheet` got the same card split (`crews/components/cards/`).
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
   stress-release half of the FitD pressure loop (MVP downtime).
@@ -225,7 +231,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
 
-_Last verified:_ 2026-06-29 @ 00014 (Phase 5 portable characters: /characters routes + attach; 5b move/detach/clone)
+_Last verified:_ 2026-07-01 (F42 role-gated sheet affordances + concept-card splits; previously 2026-06-29 @ 00014 for Phase 5 portable characters)
 
 ---
 

@@ -136,16 +136,18 @@ the character + attach/detach RPCs, standalone `/characters*` routes, and **5b**
 - **Deferred (separate future plan):** realtime presence / live multiplayer via Supabase Realtime.
   The async load-on-view model is sufficient and intentional for play-by-post.
 
-**In flight (2026-07-01): the code-quality remediation (`CODE-QUALITY.md`) is the active workstream.**
-Tiers 1–3 shipped: the **React Query data-access seam** is complete on `development` (#91–#102) —
+**Complete (2026-07-01): the code-quality remediation (`CODE-QUALITY.md`), Tiers 1–4.**
+The **React Query data-access seam** is complete on `development` (#91–#102) —
 `features/{concept}/data/` is the only repository-touching layer (hooks + a non-hook `api.ts`
 surface for the Zustand stores), every write is a `useMutation` with `invalidateQueries`, the
 notification store is actually rendered (`NotificationToaster`, F58), and an **ESLint
-`no-restricted-imports` boundary rule** now enforces the seam (zero violations — the "swap the
-datastore behind the provider factory" guarantee). Remaining: Tier 4 (god-component splits + F42
-role-gating). See `CODE-QUALITY.md` for per-item status and the stale-read migration lesson.
+`no-restricted-imports` boundary rule** enforces the seam (zero violations — the "swap the
+datastore behind the provider factory" guarantee). Tier 4 (PR5) split the god components into
+shared concept cards (character sheet/editor 742+548 → thin compositions; crew sheet 502 → 241)
+and **role-gated the sheet's write affordances** (F42: owner/GM edit, others read-only). See
+`CODE-QUALITY.md` for the full per-item record and the stale-read migration lesson.
 
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-07-01 @ 9a2ae67 (code-quality Tier 3 / RQ data seam complete incl. the ESLint boundary rule, #91–#102; CODE-QUALITY.md carries the live status)
+_Last verified:_ 2026-07-01 (code-quality remediation complete, Tiers 1–4: RQ data seam + ESLint boundary #91–#102, concept-card splits + F42 role-gating in PR5; CODE-QUALITY.md carries the full record)
