@@ -18,6 +18,6 @@ bindings + a `class Component extends DCLogic` script). It needs the Claude Desi
 to render; it's kept here as the **design reference**, not as buildable code. The buildable
 React port is the rest of `features/characters/` — see `../README.md`.
 
-> Direction note: design-sync is one-way (repo → Claude Design). Bringing designs *back*
+> Direction note: design-sync is one-way (repo → Claude Design). Bringing designs _back_
 > is a manual design→code port (translate the `.dc.html` to React, keep the ruleset-driven
 > store/route/repository wiring).

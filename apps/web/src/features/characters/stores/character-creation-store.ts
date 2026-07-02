@@ -363,6 +363,9 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
       }),
       {
         name: 'character-creation-store',
+        // Bump when the persisted draft shape changes; an old in-progress draft is dropped rather
+        // than resurrected into an incompatible wizard.
+        version: 1,
         // Persist only the in-progress draft — never the (large, live) ruleset.
         partialize: state => ({
           gameId: state.gameId,

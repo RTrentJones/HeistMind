@@ -1,7 +1,7 @@
 'use client';
 
 // The crew data-access seam (read side).
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 
@@ -10,11 +10,16 @@ export const crewKeys = {
   byGame: (gameId: string) => ['crews', 'game', gameId] as const,
 };
 
+export const crewQueries = {
+  /** The one crew for a game (or null). `skipToken` parks the query until a gameId exists. */
+  byGame: (gameId: string | undefined) =>
+    queryOptions({
+      queryKey: crewKeys.byGame(gameId ?? ''),
+      queryFn: gameId ? () => getRepositories().crews.findByGame(gameId).then(unwrap) : skipToken,
+    }),
+};
+
 /** The one crew for a game (or null). */
 export function useCrewByGame(gameId: string | undefined) {
-  return useQuery({
-    queryKey: crewKeys.byGame(gameId ?? ''),
-    enabled: !!gameId,
-    queryFn: () => getRepositories().crews.findByGame(gameId!).then(unwrap),
-  });
+  return useQuery(crewQueries.byGame(gameId));
 }

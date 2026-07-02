@@ -1,7 +1,7 @@
 'use client';
 
 // The games data-access seam (read side).
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import type { Game } from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
@@ -13,31 +13,41 @@ export const gameKeys = {
   detail: (gameId: string) => ['games', 'detail', gameId] as const,
 };
 
+export const gameQueries = {
+  byCreator: (userId: string | undefined) =>
+    queryOptions({
+      queryKey: gameKeys.byCreator(userId ?? ''),
+      queryFn: userId
+        ? () => getRepositories().games.findByCreator(userId).then(unwrap)
+        : skipToken,
+    }),
+  byPlayer: (userId: string | undefined) =>
+    queryOptions({
+      queryKey: gameKeys.byPlayer(userId ?? ''),
+      queryFn: userId ? () => getRepositories().games.findByPlayer(userId).then(unwrap) : skipToken,
+    }),
+  detail: (gameId: string | undefined) =>
+    queryOptions({
+      queryKey: gameKeys.detail(gameId ?? ''),
+      queryFn: gameId
+        ? () => getRepositories().games.findWithDetails(gameId).then(unwrap)
+        : skipToken,
+    }),
+};
+
 /** Campaigns the user created (GM). */
 export function useGamesByCreator(userId: string | undefined) {
-  return useQuery({
-    queryKey: gameKeys.byCreator(userId ?? ''),
-    enabled: !!userId,
-    queryFn: () => getRepositories().games.findByCreator(userId!).then(unwrap),
-  });
+  return useQuery(gameQueries.byCreator(userId));
 }
 
 /** Campaigns the user is an active member of (includes ones they GM). */
 export function useGamesByPlayer(userId: string | undefined) {
-  return useQuery({
-    queryKey: gameKeys.byPlayer(userId ?? ''),
-    enabled: !!userId,
-    queryFn: () => getRepositories().games.findByPlayer(userId!).then(unwrap),
-  });
+  return useQuery(gameQueries.byPlayer(userId));
 }
 
 /** A campaign + its ruleset/crew/etc. */
 export function useGameDetail(gameId: string | undefined) {
-  return useQuery({
-    queryKey: gameKeys.detail(gameId ?? ''),
-    enabled: !!gameId,
-    queryFn: () => getRepositories().games.findWithDetails(gameId!).then(unwrap),
-  });
+  return useQuery(gameQueries.detail(gameId));
 }
 
 /** Convenience: the user's campaigns unioned with a GM/player role (the dashboard + My-Characters shape). */

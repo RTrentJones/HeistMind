@@ -170,6 +170,9 @@ export const useAuthStore = create<AuthState>()(
       }),
       {
         name: 'auth-store',
+        // Bump when the persisted shape changes; rehydration drops older versions (a fresh
+        // checkSession rebuilds the session state).
+        version: 1,
         partialize: state => ({
           // Only persist essential auth state
           user: state.user,

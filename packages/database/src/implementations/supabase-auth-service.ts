@@ -465,9 +465,15 @@ export class SupabaseAuthService implements AuthService {
     });
   }
 
-  private async exchangeDiscordCode(code: string, redirectUri: string): Promise<{ access_token: string }> {
-    const clientId = process.env.DISCORD_CLIENT_ID!;
-    const clientSecret = process.env.DISCORD_CLIENT_SECRET!;
+  private async exchangeDiscordCode(
+    code: string,
+    redirectUri: string
+  ): Promise<{ access_token: string }> {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      throw new Error('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET are not configured.');
+    }
 
     const response = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
