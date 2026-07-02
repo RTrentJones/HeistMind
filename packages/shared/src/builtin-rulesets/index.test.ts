@@ -9,7 +9,7 @@ import {
   actionDotsSpent,
   deriveAttributes,
   usesActionRatings,
-} from '../character-validation';
+} from '@heist-mind/database';
 
 /**
  * A legal creation-time action spread for an action-rating ruleset: raise the playbook's seeded

@@ -124,16 +124,6 @@ export interface A11yProps {
   'aria-haspopup'?: boolean | 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog';
 }
 
-// Error boundary props
-export interface ErrorBoundaryProps {
-  /** Fallback component to render on error */
-  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
-  /** Callback when error occurs */
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  /** Children to wrap */
-  children: React.ReactNode;
-}
-
 // Design system color token type
 export type ColorToken =
   | 'background'

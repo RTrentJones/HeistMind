@@ -1,46 +1,15 @@
-import type { ValidationError } from '@heist-mind/database';
+// Shared cross-feature types — only what the app actually consumes lives here (domain types come
+// from `@heist-mind/database` directly; this file must never re-export them, or it would launder
+// the provider factories past the data-seam boundary rule).
 
-// Shared cross-feature types. (This file used to blanket re-export all of `@heist-mind/database`,
-// which would have laundered the provider factories past the seam boundary rule — import domain
-// types directly from `@heist-mind/database` instead. `ValidationError` keeps a type-only re-export
-// for its existing consumers.)
-export type { ValidationError };
-
-// API Response types
-export interface ApiResponse<T = unknown> {
-  data: T;
-  success: boolean;
-  message?: string;
-  errors?: ValidationError[];
-}
-
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
-export interface PaginatedApiResponse<T = unknown> extends ApiResponse<T> {
-  meta: PaginationMeta;
-}
-
-// UI State types
+// Loading/error envelope for the Zustand stores.
 export interface LoadingState {
   isLoading: boolean;
   error: string | null;
   lastUpdated?: Date;
 }
 
-export interface FormState<T = Record<string, unknown>> extends LoadingState {
-  data: T;
-  isDirty: boolean;
-  isValid: boolean;
-  errors: Record<string, string[]>;
-}
-
-// Notification types
+// Notification types (the notification store + NotificationToaster).
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
 export interface Notification {
@@ -57,16 +26,4 @@ export interface NotificationAction {
   label: string;
   action: () => void;
   variant?: 'primary' | 'secondary';
-}
-
-// Theme types
-export type ThemeMode = 'light' | 'dark' | 'system';
-
-// Route types
-export interface AppRoute {
-  path: string;
-  label: string;
-  icon?: string;
-  requiresAuth?: boolean;
-  roles?: string[];
 }
