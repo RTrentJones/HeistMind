@@ -18,6 +18,9 @@ import {
   Tooltip,
 } from '@heist-mind/ui';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
+import { useNotificationStore } from '@/shared/stores/notification-store';
+import { errorMessage } from '@/lib/query/result';
+import i18n from '@/lib/i18n';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { useGamesByCreator, useGamesByPlayer } from '@/features/games/data/queries';
 import { useJoinViaCode } from '@/features/invitations/data/mutations';
@@ -47,11 +50,15 @@ export default function GamesPage() {
     }
   };
 
+  // Failures surface as a toast (F58 — these were console-only, i.e. invisible to the user).
   const handleSignIn = async () => {
     try {
       await signInWithProvider('discord');
     } catch (err) {
       console.error('Sign in failed:', err);
+      useNotificationStore
+        .getState()
+        .error(i18n.t('errors:auth.signInFailed'), errorMessage(err) || undefined);
     }
   };
 

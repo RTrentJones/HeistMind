@@ -122,11 +122,14 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
   are on the seam (#92–#98); the dead `characters-store` + `games-store` were **deleted outright**
   (#91 — simpler than the planned "retire the loader halves": they had no consumers at all). Remaining:
   the 11 files listed in the Progress note (simple writes + `CharacterEditor` + the two stores).
-- **C16** 🔶 partial — every migrated write is a `useMutation` with `invalidateQueries` (kills the
-  full-reload flicker and the `rollKey` re-render bridge). _Not yet done:_ optimistic updates and
-  success toasts (invalidation-refetch was chosen first for correctness; optimism/toasts are a
-  follow-up polish pass), and the notification-store standardization for sign-in `console.error`
-  paths (F58) — fold into the remaining-writes slice or PR5.
+- **C16** 🔶 mostly done — every migrated write is a `useMutation` with `invalidateQueries` (kills
+  the full-reload flicker and the `rollKey` re-render bridge). The notification store is now
+  actually **rendered** (`NotificationToaster` mounted in `Providers` — before PR4c nothing
+  subscribed to it, so the wizard's toasts were dispatched into the void), and the sign-in/out
+  `console.error`-only paths (F58: AuthHeader, HomePage, games/rulesets pages) now also raise an
+  error toast. _Deliberate deviation:_ **no optimistic updates and no blanket success toasts** this
+  round — invalidation-refetch was chosen for correctness and in-place UI updates are the feedback;
+  optimism/success-toasts remain an available follow-up polish pass.
 
 ## Tier 4 (PR5) — reusable per-concept view/edit + god-component splits
 
