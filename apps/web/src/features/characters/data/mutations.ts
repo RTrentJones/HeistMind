@@ -3,7 +3,12 @@
 // The characters data-access seam (write side). Keeps every character repo write — including the
 // read-modify-write ones (stress, retire) — inside the seam so components never touch a repo.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { stressBounds, type Character, type UpdateCharacterData } from '@heist-mind/database';
+import {
+  stressBounds,
+  type Character,
+  type CharacterAdvancement,
+  type UpdateCharacterData,
+} from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { rollKeys } from '@/features/rolls/data/queries';
@@ -29,6 +34,24 @@ export function useUpdateCharacterData(characterId: string) {
     mutationFn: (vars: { userId: string; data: UpdateCharacterData }): Promise<Character> =>
       getRepositories()
         .characterManagement.updateCharacterWithValidation(characterId, vars.userId, vars.data)
+        .then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+  });
+}
+
+/**
+ * Spend XP on an advancement (ability purchase / action dot) through the validated repo path —
+ * the server gates on cost, prerequisites, and (for action dots) the track being full.
+ */
+export function useAdvanceCharacter(characterId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      userId: string;
+      advancement: CharacterAdvancement;
+    }): Promise<Character> =>
+      getRepositories()
+        .characterManagement.advanceCharacter(characterId, vars.userId, vars.advancement)
         .then(unwrap),
     onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
   });

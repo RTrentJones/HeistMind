@@ -3,7 +3,10 @@ import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { User, Profile, CreateProfileData } from '@heist-mind/database';
 import { LoadingState } from '@/shared/types';
-import { getAuthService, getRepositories } from '@/lib/auth';
+import { getAuthService } from '@/lib/auth';
+// Profile reads/writes go through the profiles data seam (its non-hook surface — this store's
+// actions run outside React); repositories are never touched here directly.
+import * as profilesApi from '@/features/profiles/data/api';
 
 export interface AuthUser extends User {
   profile?: Profile;
@@ -57,7 +60,6 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           try {
             const authService = getAuthService();
-            const repositories = getRepositories();
 
             const authResult = await authService.signIn({ email, password });
 
@@ -68,8 +70,7 @@ export const useAuthStore = create<AuthState>()(
             const user = authResult.data.user;
 
             // Get user profile
-            const profileResult = await repositories.profiles.findById(user.id);
-            const profile = profileResult.success ? profileResult.data : null;
+            const profile = await profilesApi.fetchProfile(user.id);
 
             set({
               user: { ...user, profile: profile || undefined },
@@ -91,7 +92,6 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           try {
             const authService = getAuthService();
-            const repositories = getRepositories();
 
             const authResult = await authService.signUp({
               email,
@@ -108,13 +108,12 @@ export const useAuthStore = create<AuthState>()(
             // Create or get user profile
             let profile: Profile | null = null;
             if (userData) {
-              const profileResult = await repositories.profiles.create({
+              profile = await profilesApi.createProfile({
                 username: userData.username || `user_${user.id.slice(0, 8)}`,
                 displayName: userData.displayName,
                 avatarUrl: userData.avatarUrl,
                 preferences: userData.preferences || {},
               });
-              profile = profileResult.success ? profileResult.data : null;
             }
 
             set({
@@ -188,7 +187,6 @@ export const useAuthStore = create<AuthState>()(
 
           set({ isLoading: true, error: null });
           try {
-            const repositories = getRepositories();
             const profileData = {
               username: data.username === null ? undefined : data.username,
               displayName: data.displayName === null ? undefined : data.displayName,
@@ -196,13 +194,7 @@ export const useAuthStore = create<AuthState>()(
               preferences: data.preferences,
             };
 
-            const result = await repositories.profiles.update(profile.id, profileData);
-
-            if (!result.success) {
-              throw new Error(result.error?.message || 'Profile update failed');
-            }
-
-            const updatedProfile = result.data;
+            const updatedProfile = await profilesApi.updateProfile(profile.id, profileData);
 
             set((state: AuthState) => ({
               profile: updatedProfile,
@@ -225,10 +217,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({ isLoading: true, error: null });
           try {
-            const repositories = getRepositories();
-            const result = await repositories.profiles.findById(user.id);
-
-            const profile = result.success ? result.data : null;
+            const profile = await profilesApi.fetchProfile(user.id);
 
             set((state: AuthState) => ({
               profile,
@@ -251,13 +240,11 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           try {
             const authService = getAuthService();
-            const repositories = getRepositories();
 
             const session = await authService.getCurrentSession();
 
             if (session?.user) {
-              const profileResult = await repositories.profiles.findById(session.user.id);
-              const profile = profileResult.success ? profileResult.data : null;
+              const profile = await profilesApi.fetchProfile(session.user.id);
 
               set({
                 user: { ...session.user, profile: profile || undefined },
@@ -342,12 +329,9 @@ if (typeof window !== 'undefined') {
 
     if (session && user) {
       // User signed in via OAuth or other means
-      const repositories = getRepositories();
-
       try {
         // Get user profile
-        const profileResult = await repositories.profiles.findById(user.id);
-        const profile = profileResult.success ? profileResult.data : null;
+        const profile = await profilesApi.fetchProfile(user.id);
 
         useAuthStore.setState({
           user: { ...user, profile: profile || undefined },

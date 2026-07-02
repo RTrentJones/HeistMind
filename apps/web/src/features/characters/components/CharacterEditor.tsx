@@ -33,9 +33,13 @@ import {
 } from '@heist-mind/ui';
 
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
-import { getRepositories } from '@/lib/auth';
+import {
+  useAdvanceCharacter,
+  useUpdateCharacterData,
+} from '@/features/characters/data/mutations';
 import { useCrewByGame } from '@/features/crews/data/queries';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 type Section = 'build' | 'stress' | 'gear' | 'advancement';
@@ -45,25 +49,23 @@ type Section = 'build' | 'stress' | 'gear' | 'advancement';
  * (`updateCharacterWithValidation` / `advanceCharacter`), so the editor can only ever persist a
  * legal config. Post-creation enforcement is the "live" invariant set (attribute caps,
  * prerequisites, stress/trauma bounds); growth happens via XP-spend advancement, not free points.
+ * Writes invalidate the character queries, so the sheet's detail query refetches and the fresh
+ * `character` prop resyncs the draft below — no save callback needed.
  */
-export function CharacterEditor({
-  character,
-  onSaved,
-}: {
-  character: CharacterWithDetails;
-  onSaved: () => void;
-}) {
+export function CharacterEditor({ character }: { character: CharacterWithDetails }) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const content = character.ruleset.content;
   const bounds = stressBounds(content);
+  const updateData = useUpdateCharacterData(character.id);
+  const advanceChar = useAdvanceCharacter(character.id);
 
   const [section, setSection] = useState<Section>('build');
   const [draft, setDraft] = useState<CharacterData>(() => structuredClone(character.characterData));
   const [traumaInput, setTraumaInput] = useState('');
   const [harmInput, setHarmInput] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const saving = updateData.isPending || advanceChar.isPending;
 
   // The campaign's crew, so level-ups validate in context: its abilities RAISE the live bounds —
   // Mastery lifts the action cap (so a member can advance an action to 4), Deadly grants bonus dots,
@@ -118,17 +120,11 @@ export function CharacterEditor({
       setError(result.errors.map(e => e.message).join(' '));
       return;
     }
-    setSaving(true);
-    const r = await getRepositories().characterManagement.updateCharacterWithValidation(
-      character.id,
-      userId,
-      { characterData: draft }
-    );
-    setSaving(false);
-    if (!r.success) setError(r.error?.message ?? t('components.characterEditor.saveFailed'));
-    else {
+    try {
+      await updateData.mutateAsync({ userId, data: { characterData: draft } });
       setError(null);
-      onSaved();
+    } catch (err) {
+      setError(errorMessage(err) || t('components.characterEditor.saveFailed'));
     }
   };
 
@@ -141,17 +137,11 @@ export function CharacterEditor({
       cost,
       description: `Learn ${name}`,
     };
-    setSaving(true);
-    const r = await getRepositories().characterManagement.advanceCharacter(
-      character.id,
-      userId,
-      adv
-    );
-    setSaving(false);
-    if (!r.success) setError(r.error?.message ?? t('components.characterEditor.advancementFailed'));
-    else {
+    try {
+      await advanceChar.mutateAsync({ userId, advancement: adv });
       setError(null);
-      onSaved();
+    } catch (err) {
+      setError(errorMessage(err) || t('components.characterEditor.advancementFailed'));
     }
   };
 
@@ -166,17 +156,11 @@ export function CharacterEditor({
       cost: 0,
       description: `Add a dot to ${action}`,
     };
-    setSaving(true);
-    const r = await getRepositories().characterManagement.advanceCharacter(
-      character.id,
-      userId,
-      adv
-    );
-    setSaving(false);
-    if (!r.success) setError(r.error?.message ?? t('components.characterEditor.advancementFailed'));
-    else {
+    try {
+      await advanceChar.mutateAsync({ userId, advancement: adv });
       setError(null);
-      onSaved();
+    } catch (err) {
+      setError(errorMessage(err) || t('components.characterEditor.advancementFailed'));
     }
   };
 

@@ -13,8 +13,10 @@ import {
   type CharacterData,
   type CreateCharacterData,
 } from '@heist-mind/database';
-import { getRepositories } from '@/lib/auth';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
+// The write goes through the characters data seam (its non-hook surface — this store's submit()
+// runs outside React); it invalidates the character queries so the new character shows everywhere.
+import { createCharacterWithValidation } from '@/features/characters/data/api';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import i18n from '@/lib/i18n';
 import type { LoadingState } from '@/shared/types';
@@ -337,14 +339,7 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
               playbookType: draft.playbook,
             };
             // Route through the validated create so the server enforces the same rules.
-            const result =
-              await getRepositories().characterManagement.createCharacterWithValidation(
-                userId,
-                data
-              );
-            if (!result.success) {
-              throw new Error(result.error?.message || i18n.t('pages:characters.createFailed'));
-            }
+            const character = await createCharacterWithValidation(userId, data);
             set({ isLoading: false, lastUpdated: new Date() });
             useNotificationStore
               .getState()
@@ -352,10 +347,12 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
                 i18n.t('pages:characters.createdTitle'),
                 i18n.t('pages:characters.createdBody', { name: name.trim() })
               );
-            return result.data.id;
+            return character.id;
           } catch (err) {
             const message =
-              err instanceof Error ? err.message : i18n.t('pages:characters.createFailed');
+              err instanceof Error && err.message
+                ? err.message
+                : i18n.t('pages:characters.createFailed');
             set({ error: message, isLoading: false });
             useNotificationStore
               .getState()

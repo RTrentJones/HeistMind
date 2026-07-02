@@ -542,7 +542,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Card>
       )}
 
-      {showEditor && <CharacterEditor character={character} onSaved={() => void characterQuery.refetch()} />}
+      {showEditor && <CharacterEditor character={character} />}
     </Stack>
   );
 }
