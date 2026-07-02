@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@heist-mind/ui';
+import { getQueryClient } from '@/lib/query/client';
 import { I18nProvider } from '@/lib/i18n/provider';
 
 /**
@@ -17,20 +17,10 @@ import { I18nProvider } from '@/lib/i18n/provider';
  * the app's tooltip-bearing components rely on.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
-  // One client per app instance (created lazily so it's stable across renders, fresh per request).
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            // Load-on-view is intentional (no realtime); keep data briefly fresh + retry once.
-            staleTime: 30_000,
-            retry: 1,
-            refetchOnWindowFocus: false,
-          },
-        },
-      })
-  );
+  // The shared client from lib/query/client — a browser singleton (stable across renders) so the
+  // seam's non-hook surfaces (Zustand store actions) invalidate the same cache; fresh per request
+  // on the server.
+  const queryClient = getQueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
