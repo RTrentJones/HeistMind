@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { Game } from '@heist-mind/database';
+import type { Game } from '@heist-mind/core';
 import { Badge, Button, Card, Heading, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

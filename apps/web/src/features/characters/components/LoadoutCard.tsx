@@ -8,7 +8,7 @@ import {
   type CharacterLoadout,
   type LoadLevel,
   type Score,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Alert, Badge, Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useUpdateCharacter } from '@/features/characters/data/mutations';

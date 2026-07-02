@@ -5,7 +5,7 @@ import {
   xpTrackFull,
   type CharacterWithDetails,
   type CrewContext,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Button, Card, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

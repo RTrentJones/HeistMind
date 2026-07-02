@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Ruleset } from '@heist-mind/database';
+import type { Ruleset } from '@heist-mind/core';
 import {
   Button,
   Card,

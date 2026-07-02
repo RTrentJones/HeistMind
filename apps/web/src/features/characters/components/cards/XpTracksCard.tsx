@@ -8,7 +8,7 @@ import {
   PLAYBOOK_TRACK,
   type CharacterData,
   type RulesetContent,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Badge, Button, Card, Heading, Stack, StressTracker, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

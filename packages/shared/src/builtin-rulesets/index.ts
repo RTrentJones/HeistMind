@@ -8,7 +8,7 @@
 // Licensing: every ruleset here is either openly licensed (with the required attribution recorded on
 // the entry) or original HeistMind content. Game *mechanics* are not copyrightable; only specific
 // expression is — so where a source isn't openly licensed we reimplement mechanics in original words.
-import type { RulesetContent } from '@heist-mind/database';
+import type { RulesetContent } from '@heist-mind/core';
 import { DEFAULT_RULESET } from '../default-ruleset';
 import { BLADES_IN_THE_DARK } from './blades-in-the-dark';
 import { WICKED_ONES } from './wicked-ones';

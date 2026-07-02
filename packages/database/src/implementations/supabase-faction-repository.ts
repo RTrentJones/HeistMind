@@ -2,7 +2,7 @@
 // through the pure faction bounds (in the adapter); the DB CHECK constraints are the backstop.
 // RLS restricts writes to the game's GM. Faction "projects" reuse the clocks table (a clock with
 // linked_type='faction', linked_id=<faction>).
-import type { Faction, CreateFactionData, UpdateFactionData, Result } from '../domain-types';
+import type { Faction, CreateFactionData, UpdateFactionData, Result } from '@heist-mind/core';
 import type { FactionRepository } from '../repositories';
 import {
   fromSupabaseFaction,

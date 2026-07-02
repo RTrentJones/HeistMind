@@ -1,6 +1,6 @@
 'use client';
 
-import type { Clock as ClockType } from '@heist-mind/database';
+import type { Clock as ClockType } from '@heist-mind/core';
 import { Button, Clock, Stack } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

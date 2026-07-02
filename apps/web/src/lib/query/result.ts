@@ -1,4 +1,4 @@
-import type { Result } from '@heist-mind/database';
+import type { Result } from '@heist-mind/core';
 
 /**
  * Error thrown by `unwrap` — preserves the repository error code (e.g. Postgres `23505` unique

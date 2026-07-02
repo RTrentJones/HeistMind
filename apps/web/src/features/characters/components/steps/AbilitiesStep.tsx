@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import {
-  abilityChoiceLimit,
-  isAbilityUnlocked,
-  type AbilityDefinition,
-} from '@heist-mind/database';
+import { abilityChoiceLimit, isAbilityUnlocked, type AbilityDefinition } from '@heist-mind/core';
 import { Badge, Button, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';

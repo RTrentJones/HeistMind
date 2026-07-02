@@ -7,7 +7,7 @@ import {
   type CharacterData,
   type CharacterWithDetails,
   type CrewContext,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAdvanceCharacter, useUpdateCharacterData } from '@/features/characters/data/mutations';
 import { errorMessage } from '@/lib/query/result';

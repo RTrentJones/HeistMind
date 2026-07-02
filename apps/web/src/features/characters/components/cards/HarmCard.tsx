@@ -7,7 +7,7 @@ import {
   type CharacterData,
   type CharacterHarm,
   type RulesetContent,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Badge, Button, HarmTracker, Heading, Input, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { Character } from '@heist-mind/database';
+import type { Character } from '@heist-mind/core';
 import { Button, Stack, Text } from '@heist-mind/ui';
 import { useRetireCharacter } from '@/features/characters/data/mutations';
 import { useProfileNames } from '@/features/profiles/data/queries';

@@ -8,7 +8,7 @@ import {
   type Character,
   type CharacterAdvancement,
   type UpdateCharacterData,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { rollKeys } from '@/features/rolls/data/queries';

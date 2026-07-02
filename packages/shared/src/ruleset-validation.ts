@@ -4,7 +4,7 @@
 // on — it is intentionally NOT a full schema check (content is stored as JSONB and
 // the wizard reads what it needs). Returns either the typed content or a flat list
 // of human-readable errors for the upload UI to display.
-import type { RulesetContent } from '@heist-mind/database';
+import type { RulesetContent } from '@heist-mind/core';
 
 export type RulesetValidationResult =
   | { ok: true; content: RulesetContent }

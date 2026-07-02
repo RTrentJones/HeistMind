@@ -1,28 +1,13 @@
-// HeistMind Database Package
-// Clean abstraction layer for database operations
+// HeistMind Database Package — the client-agnostic data-access layer.
+// Domain types + the pure FitD rules live in @heist-mind/core (import them from there);
+// this package exposes the persistence surface only: repository CONTRACTS, the auth-service
+// contract, and the provider factories. Implementation-specific types (Supabase, etc.) stay
+// internal so the datastore can swap behind the factories.
 
-// Re-export domain types (application-facing)
-export * from './domain-types';
-
-// Re-export repository interfaces (for dependency injection)
+// Repository interfaces (for dependency injection)
 export * from './repositories';
 
-// Re-export the pure character-validity rules (shared by the web UI + the DB layer)
-export * from './character-rules';
-
-// Re-export the pure dice resolution (shared by the web UI + the roll repository)
-export * from './dice';
-
-// Re-export the pure progress-clock rules (shared by the web UI + the clock repository)
-export * from './clocks';
-
-// Re-export the pure crew-sheet bounds (shared by the web UI + the crew repository)
-export * from './crews';
-
-// Re-export the pure faction bounds (shared by the web UI + the faction repository)
-export * from './factions';
-
-// Re-export authentication types and interfaces
+// Authentication types and interfaces
 export * from './auth-types';
 
 // Database provider factory (implementation-agnostic)
@@ -34,6 +19,3 @@ export {
   createAuthServiceWithClient,
   type DatabaseConfig,
 } from './provider';
-
-// NOTE: All implementation-specific types (Supabase, etc.) are kept internal
-// Only domain types, repository interfaces, and auth interfaces are exposed to maintain clean boundaries

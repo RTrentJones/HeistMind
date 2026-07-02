@@ -1,6 +1,6 @@
 // Type adapter for the Invitation entity (development/production schema).
 import type { Tables, TablesInsert } from '../supabase-types';
-import type { Invitation, InvitationStatus, CreateInvitationData } from '../domain-types';
+import type { Invitation, InvitationStatus, CreateInvitationData } from '@heist-mind/core';
 import { parseSupabaseDate } from './profile-adapter';
 
 type InvitationRow = Tables<{ schema: 'development' }, 'invitations'>;

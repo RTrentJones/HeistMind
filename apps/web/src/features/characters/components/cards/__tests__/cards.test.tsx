@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { CharacterData, RulesetContent } from '@heist-mind/database';
+import type { CharacterData, RulesetContent } from '@heist-mind/core';
 import '@/lib/i18n';
 import { GearCard } from '../GearCard';
 import { HarmCard } from '../HarmCard';

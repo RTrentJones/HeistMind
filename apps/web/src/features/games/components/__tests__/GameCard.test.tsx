@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { Game } from '@heist-mind/database';
+import type { Game } from '@heist-mind/core';
 import { TooltipProvider } from '@heist-mind/ui';
 import '@/lib/i18n';
 import { GameCard } from '../GameCard';

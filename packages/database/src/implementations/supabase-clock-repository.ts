@@ -1,9 +1,9 @@
 // Supabase ClockRepository — per-game progress clocks. Fills are clamped server-side through the
 // pure clock rules (clampFilled) so a tick can never overflow or go negative; the DB CHECK
 // (filled BETWEEN 0 AND segments) is the backstop. RLS restricts writes to the game's GM.
-import type { Clock, CreateClockData, UpdateClockData, Result } from '../domain-types';
+import type { Clock, CreateClockData, UpdateClockData, Result } from '@heist-mind/core';
 import type { ClockRepository } from '../repositories';
-import { clampFilled } from '../clocks';
+import { clampFilled } from '@heist-mind/core';
 import {
   fromSupabaseClock,
   toSupabaseClockInsert,

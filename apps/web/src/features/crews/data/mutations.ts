@@ -2,7 +2,7 @@
 
 // The crew data-access seam (write side). Invalidates the game's crew query on success.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateCrewData, UpdateCrewData } from '@heist-mind/database';
+import type { CreateCrewData, UpdateCrewData } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { crewKeys } from './queries';

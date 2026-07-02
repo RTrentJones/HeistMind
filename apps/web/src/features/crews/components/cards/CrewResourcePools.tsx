@@ -1,6 +1,6 @@
 'use client';
 
-import type { Crew, CrewRules, UpdateCrewData } from '@heist-mind/database';
+import type { Crew, CrewRules, UpdateCrewData } from '@heist-mind/core';
 import { Badge, Button, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

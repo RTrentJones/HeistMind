@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CharacterData } from '@heist-mind/database';
+import type { CharacterData } from '@heist-mind/core';
 import { DEFAULT_RULESET } from './default-ruleset';
 import { validateRulesetContent } from './ruleset-validation';
 import {
@@ -9,7 +9,7 @@ import {
   actionDotsSpent,
   deriveAttributes,
   usesActionRatings,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 
 const ACTIONS = rulesetActions(DEFAULT_RULESET);
 const abilityIds = new Set(DEFAULT_RULESET.specialAbilities.map(a => a.id));

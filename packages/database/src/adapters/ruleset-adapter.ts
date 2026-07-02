@@ -6,7 +6,7 @@ import type {
   CreateRulesetData,
   UpdateRulesetData,
   RulesetStatus,
-} from '../domain-types';
+} from '@heist-mind/core';
 import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type RulesetRow = Tables<{ schema: 'development' }, 'rulesets'>;

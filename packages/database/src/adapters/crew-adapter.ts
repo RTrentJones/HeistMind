@@ -1,7 +1,7 @@
 // Type adapters for the Crew entity (development/production schema).
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
-import type { Crew, CreateCrewData, UpdateCrewData } from '../domain-types';
-import { clampCrewStat, clampNonNegative, normalizeHold } from '../crews';
+import type { Crew, CreateCrewData, UpdateCrewData } from '@heist-mind/core';
+import { clampCrewStat, clampNonNegative, normalizeHold } from '@heist-mind/core';
 import { parseSupabaseDate, parseSupabaseJson } from './profile-adapter';
 
 type CrewRow = Tables<{ schema: 'development' }, 'crews'>;

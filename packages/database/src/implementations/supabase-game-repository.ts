@@ -8,7 +8,7 @@ import type {
   CreateGameData,
   Profile,
   Result,
-} from '../domain-types';
+} from '@heist-mind/core';
 import type { GameRepository } from '../repositories';
 import {
   fromSupabaseGame,
@@ -152,5 +152,4 @@ export class SupabaseGameRepository extends SupabaseRepositoryBase implements Ga
       return { success: true, data: fromSupabaseGame(row) };
     });
   }
-
 }

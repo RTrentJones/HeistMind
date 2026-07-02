@@ -7,7 +7,7 @@ import {
   CREW_XP_TRACK,
   type Crew,
   type UpdateCrewData,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Badge, Button, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { usesActionRatings, type Ruleset } from '@heist-mind/database';
+import { usesActionRatings, type Ruleset } from '@heist-mind/core';
 import { stepKind, type WizardStepMeta } from '../lib/creation-steps';
 import { AbilitiesStep } from './steps/AbilitiesStep';
 import { ActionRatingsStep } from './steps/ActionRatingsStep';

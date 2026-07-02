@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CLOCK_SEGMENTS, type ClockSegments } from '@heist-mind/database';
+import { CLOCK_SEGMENTS, type ClockSegments } from '@heist-mind/core';
 import { Button, Input, Select, Stack } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

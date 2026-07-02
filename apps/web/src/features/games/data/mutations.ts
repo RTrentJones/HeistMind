@@ -2,7 +2,7 @@
 
 // The games data-access seam (write side).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateGameData } from '@heist-mind/database';
+import type { CreateGameData } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { gameKeys } from './queries';

@@ -1,7 +1,7 @@
 // Supabase ScoreRepository — per-game scores / operations (the per-operation unit of play). At most
 // one score is 'active' per game (DB partial unique index is the backstop; `start` checks first for a
 // friendly error). RLS restricts writes to the game's GM.
-import type { Score, CreateScoreData, UpdateScoreData, Result } from '../domain-types';
+import type { Score, CreateScoreData, UpdateScoreData, Result } from '@heist-mind/core';
 import type { ScoreRepository } from '../repositories';
 import {
   fromSupabaseScore,

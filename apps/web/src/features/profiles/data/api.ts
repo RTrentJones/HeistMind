@@ -2,7 +2,7 @@
 // actions + the module-level OAuth listener), so it consumes these plain functions instead of
 // hooks. (Profile creation is the DB trigger's job on first OAuth sign-in; profile editing has no
 // surface yet — add a write function here with QueryClient invalidation when it does.)
-import type { Profile } from '@heist-mind/database';
+import type { Profile } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 
 /**

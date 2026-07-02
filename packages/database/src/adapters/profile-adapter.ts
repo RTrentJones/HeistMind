@@ -2,7 +2,7 @@
 // Transforms between Supabase database types and clean domain types
 
 import type { Tables, TablesUpdate, Json } from '../supabase-types';
-import type { Profile, UpdateProfileData } from '../domain-types';
+import type { Profile, UpdateProfileData } from '@heist-mind/core';
 
 // Supabase type aliases for cleaner code
 type ProfileRow = Tables<'profiles'>;

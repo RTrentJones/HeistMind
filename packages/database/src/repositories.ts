@@ -33,11 +33,12 @@ import {
   type GameWithDetails,
   type CharacterWithDetails,
   type Result,
-  type ValidationError,
   type GameRole,
   type PlayerStatus,
   type GameState,
-} from './domain-types';
+  type CharacterAdvancement,
+  type ValidationResult,
+} from '@heist-mind/core';
 import type { AuthService } from './auth-types';
 
 // ===========================
@@ -108,11 +109,7 @@ export interface CharacterRepository {
   ): Promise<Result<Character>>;
   /** Duplicate a character into a new STANDALONE character owned by `userId` (Phase 5b). Copies the
    * build verbatim (an exact snapshot — not re-validated). Owner-only. */
-  cloneCharacter(
-    characterId: string,
-    userId: string,
-    newName?: string
-  ): Promise<Result<Character>>;
+  cloneCharacter(characterId: string, userId: string, newName?: string): Promise<Result<Character>>;
   /** Link a standalone character into a campaign (single active campaign). The DB RPC enforces
    * ownership + active membership + ruleset match server-side. (Phase 5 — portable characters.) */
   attachToGame(characterId: string, gameId: string): Promise<Result<Character>>;
@@ -157,30 +154,6 @@ export interface CharacterManagementRepository {
     advancementData: CharacterAdvancement
   ): Promise<Result<Character>>;
   validateCharacterAgainstRuleset(characterId: string): Promise<Result<ValidationResult>>;
-}
-
-// ===========================
-// SUPPORTING TYPES
-// ===========================
-
-export interface CharacterAdvancement {
-  type: 'attribute' | 'skill' | 'ability' | 'playbook';
-  target: string;
-  value?: number;
-  cost: number;
-  description: string;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
-}
-
-export interface ValidationWarning {
-  field: string;
-  message: string;
-  suggestion?: string | undefined;
 }
 
 // ===========================

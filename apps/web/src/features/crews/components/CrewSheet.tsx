@@ -1,14 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { CrewRules, UpdateCrewData } from '@heist-mind/database';
-import {
-  applyHeat,
-  advanceTier,
-  incarcerate,
-  REP_PER_TIER,
-  CREW_LIMITS,
-} from '@heist-mind/database';
+import type { CrewRules, UpdateCrewData } from '@heist-mind/core';
+import { applyHeat, advanceTier, incarcerate, REP_PER_TIER, CREW_LIMITS } from '@heist-mind/core';
 import { Alert, Badge, Button, Heading, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCrewByGame } from '@/features/crews/data/queries';

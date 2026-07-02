@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import type { Character, Roll } from '@heist-mind/database';
+import type { Character, Roll } from '@heist-mind/core';
 import i18n from '@/lib/i18n';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
 import {

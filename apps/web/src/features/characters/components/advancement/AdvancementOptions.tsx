@@ -5,7 +5,7 @@ import {
   xpTrackFull,
   PLAYBOOK_TRACK,
   type CharacterWithDetails,
-} from '@heist-mind/database';
+} from '@heist-mind/core';
 import { Badge, Button, Card, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

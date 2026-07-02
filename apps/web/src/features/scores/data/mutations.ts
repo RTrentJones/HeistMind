@@ -3,7 +3,7 @@
 // The scores data-access seam (write side). Start/end invalidate the game's score list; the caller
 // also writes a matching campaign-log event via the rolls seam (logged start/end of an operation).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateScoreData, Score } from '@heist-mind/database';
+import type { CreateScoreData, Score } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { scoreKeys } from './queries';

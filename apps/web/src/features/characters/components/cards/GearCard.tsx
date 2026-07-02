@@ -1,6 +1,6 @@
 'use client';
 
-import type { CharacterData, ContactDefinition } from '@heist-mind/database';
+import type { CharacterData, ContactDefinition } from '@heist-mind/core';
 import { Badge, Card, Heading, Input, Select, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 

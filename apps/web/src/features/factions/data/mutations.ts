@@ -2,7 +2,7 @@
 
 // The factions data-access seam (write side). Each mutation invalidates the game's factions query.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateFactionData, UpdateFactionData } from '@heist-mind/database';
+import type { CreateFactionData, UpdateFactionData } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { factionKeys } from './queries';

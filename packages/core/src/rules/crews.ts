@@ -1,7 +1,7 @@
 // Pure crew-sheet bounds (no I/O), so the UI and the DB layer enforce identical FitD limits.
 // The repository clamps every write through these; the DB CHECK constraints are the backstop.
 
-import type { CrewHold } from './domain-types';
+import type { CrewHold } from '../domain';
 
 /** Upper bounds for the capped crew stats (FitD). Lower bound is always 0. */
 export const CREW_LIMITS = { tier: 4, heat: 9, wanted: 4 } as const;

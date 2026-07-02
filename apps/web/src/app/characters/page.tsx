@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Character } from '@heist-mind/database';
+import type { Character } from '@heist-mind/core';
 import {
   Button,
   Card,

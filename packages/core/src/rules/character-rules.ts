@@ -17,13 +17,13 @@ import type {
   HarmRules,
   LoadLevel,
   ValidationError,
-} from './domain-types';
+} from '../domain';
 
 /** A minimal crew shape for crew-aware validation — just the abilities the crew currently holds. */
 export interface CrewContext {
   crewAbilities?: string[];
 }
-import type { ValidationResult, ValidationWarning, CharacterAdvancement } from './repositories';
+import type { ValidationResult, ValidationWarning, CharacterAdvancement } from '../domain';
 
 /** Blades-in-the-Dark defaults, used when a ruleset omits `stress`. */
 export const DEFAULT_STRESS: StressRules = { max: 9, traumaMax: 4 };

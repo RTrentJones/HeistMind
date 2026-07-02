@@ -1,12 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  factionStatusLabel,
-  type Clock as ClockType,
-  type Faction,
-  type FactionDefinition,
-} from '@heist-mind/database';
+import { factionStatusLabel, type Faction, type FactionDefinition } from '@heist-mind/core';
+import { type Clock as ClockType } from '@heist-mind/core';
 import { Alert, Badge, Button, Card, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useClocksByGame } from '@/features/clocks/data/queries';

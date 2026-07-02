@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { type User, type Profile } from '@heist-mind/database';
+import { type Profile } from '@heist-mind/core';
+import { type User } from '@heist-mind/database';
 import { type LoadingState } from '@/shared/types';
 import { getAuthService } from '@/lib/auth';
 // Profile reads go through the profiles data seam (its non-hook surface — this store's actions run

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CharacterWithDetails } from '@heist-mind/database';
+import type { CharacterWithDetails } from '@heist-mind/core';
 import { Alert, Button, Card, Heading, Select, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAttachCharacter, useDetachCharacter } from '@/features/characters/data/mutations';
