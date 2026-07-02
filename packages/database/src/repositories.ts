@@ -22,21 +22,16 @@ import {
   Score,
   CreateScoreData,
   UpdateScoreData,
-  CreateProfileData,
   UpdateProfileData,
   CreateRulesetData,
   UpdateRulesetData,
   CreateGameData,
-  UpdateGameData,
   CreateCharacterData,
   UpdateCharacterData,
   CreateInvitationData,
   JoinGameData,
   GameWithDetails,
   CharacterWithDetails,
-  RulesetWithDetails,
-  UserGameContext,
-  PaginatedResult,
   Result,
   DatabaseError,
   ValidationError,
@@ -50,8 +45,13 @@ import {
 // REPOSITORY INTERFACES
 // ===========================
 
+/**
+ * Profiles are CREATED by the DB trigger on first (Discord OAuth) sign-in — there is deliberately
+ * no client-side create. `findByUsername`/`update`/`delete` have no web caller yet; they are the
+ * server contract for the Discord bot (name lookup) and future profile-editing / account-deletion
+ * surfaces.
+ */
 export interface ProfileRepository {
-  create(data: CreateProfileData): Promise<Result<Profile>>;
   findById(id: string): Promise<Result<Profile | null>>;
   findByUsername(username: string): Promise<Result<Profile | null>>;
   update(id: string, data: UpdateProfileData): Promise<Result<Profile>>;
@@ -62,12 +62,7 @@ export interface RulesetRepository {
   create(userId: string, data: CreateRulesetData): Promise<Result<Ruleset>>;
   findById(id: string): Promise<Result<Ruleset | null>>;
   findByCreator(userId: string): Promise<Result<Ruleset[]>>;
-  findPublic(limit?: number, cursor?: string): Promise<Result<PaginatedResult<Ruleset>>>;
-  findWithDetails(id: string): Promise<Result<RulesetWithDetails | null>>;
   update(id: string, userId: string, data: UpdateRulesetData): Promise<Result<Ruleset>>;
-  delete(id: string, userId: string): Promise<Result<void>>;
-  searchByTags(tags: string[]): Promise<Result<Ruleset[]>>;
-  checkUsage(id: string): Promise<Result<{ isUsed: boolean; gameCount: number }>>;
 }
 
 export interface GameRepository {
@@ -75,14 +70,17 @@ export interface GameRepository {
   findById(id: string): Promise<Result<Game | null>>;
   findByCreator(userId: string): Promise<Result<Game[]>>;
   findByPlayer(userId: string): Promise<Result<Game[]>>;
-  findPublic(limit?: number, cursor?: string): Promise<Result<PaginatedResult<Game>>>;
   findWithDetails(id: string, userId?: string): Promise<Result<GameWithDetails | null>>;
-  update(id: string, userId: string, data: UpdateGameData): Promise<Result<Game>>;
-  delete(id: string, userId: string): Promise<Result<void>>;
+  /** No web caller yet — the campaign-lifecycle contract (pause/complete) for GM tooling + the bot. */
   updateState(id: string, userId: string, state: GameState): Promise<Result<Game>>;
-  canUserJoin(gameId: string, userId: string): Promise<Result<boolean>>;
 }
 
+/**
+ * Campaign membership. No web caller today (the web reads membership through games/characters and
+ * joins via the invite RPC) — this is the SERVER surface the Discord bot builds on:
+ * `isGameMaster` is the bot's authorization primitive for GM-only commands, `findByGame`/
+ * `findByPlayer` resolve who is in a campaign, `addPlayer`/`updateStatus` manage membership.
+ */
 export interface GamePlayerRepository {
   addPlayer(
     gameId: string,
@@ -90,17 +88,9 @@ export interface GamePlayerRepository {
     invitedBy: string,
     role?: GameRole
   ): Promise<Result<GamePlayer>>;
-  removePlayer(gameId: string, playerId: string, removedBy: string): Promise<Result<void>>;
-  updateRole(
-    gameId: string,
-    playerId: string,
-    newRole: GameRole,
-    updatedBy: string
-  ): Promise<Result<GamePlayer>>;
   updateStatus(gameId: string, playerId: string, status: PlayerStatus): Promise<Result<GamePlayer>>;
   findByGame(gameId: string): Promise<Result<GamePlayer[]>>;
   findByPlayer(playerId: string): Promise<Result<GamePlayer[]>>;
-  getUserGameContext(userId: string, gameId: string): Promise<Result<UserGameContext>>;
   isGameMaster(userId: string, gameId: string): Promise<Result<boolean>>;
 }
 
@@ -111,17 +101,11 @@ export interface CharacterRepository {
   findByPlayer(userId: string): Promise<Result<Character[]>>;
   findWithDetails(id: string): Promise<Result<CharacterWithDetails | null>>;
   update(id: string, userId: string, data: UpdateCharacterData): Promise<Result<Character>>;
-  delete(id: string, userId: string): Promise<Result<void>>;
   addExperience(
     id: string,
     userId: string,
     amount: number,
     reason: string
-  ): Promise<Result<Character>>;
-  transferToGame(
-    characterId: string,
-    targetGameId: string,
-    userId: string
   ): Promise<Result<Character>>;
   /** Duplicate a character into a new STANDALONE character owned by `userId` (Phase 5b). Copies the
    * build verbatim (an exact snapshot — not re-validated). Owner-only. */
@@ -137,6 +121,11 @@ export interface CharacterRepository {
   detachFromGame(characterId: string): Promise<Result<Character>>;
 }
 
+/**
+ * Invitations. The web uses `create`/`findByGame` (GM join codes) and `joinViaCode` (redeem).
+ * `findByCode` (the bot's `/join <code>` lookup), `findById`/`findByPlayer`, and the targeted
+ * `accept`/`decline`/`revoke` flow are implemented server surface for the bot + invite management.
+ */
 export interface InvitationRepository {
   create(userId: string, data: CreateInvitationData): Promise<Result<Invitation>>;
   findById(id: string): Promise<Result<Invitation | null>>;
@@ -147,23 +136,11 @@ export interface InvitationRepository {
   decline(invitationId: string, userId: string): Promise<Result<Invitation>>;
   revoke(invitationId: string, userId: string): Promise<Result<Invitation>>;
   joinViaCode(data: JoinGameData, userId: string): Promise<Result<GamePlayer>>;
-  cleanupExpired(): Promise<Result<number>>; // Returns count of cleaned up invitations
 }
 
 // ===========================
 // AGGREGATE REPOSITORIES
 // ===========================
-
-export interface GameManagementRepository {
-  createGameWithRuleset(
-    userId: string,
-    gameData: CreateGameData,
-    rulesetData?: CreateRulesetData
-  ): Promise<Result<GameWithDetails>>;
-  getGameDashboard(gameId: string, userId: string): Promise<Result<GameDashboard>>;
-  getPlayerDashboard(userId: string): Promise<Result<PlayerDashboard>>;
-  getGameMasterDashboard(userId: string): Promise<Result<GameMasterDashboard>>;
-}
 
 export interface CharacterManagementRepository {
   createCharacterWithValidation(
@@ -181,33 +158,6 @@ export interface CharacterManagementRepository {
     advancementData: CharacterAdvancement
   ): Promise<Result<Character>>;
   validateCharacterAgainstRuleset(characterId: string): Promise<Result<ValidationResult>>;
-}
-
-// ===========================
-// DASHBOARD TYPES
-// ===========================
-
-export interface GameDashboard {
-  game: GameWithDetails;
-  characters: Character[];
-  pendingInvitations: Invitation[];
-  recentActivity: Activity[];
-  canManage: boolean;
-}
-
-export interface PlayerDashboard {
-  activeGames: GameWithDetails[];
-  characters: CharacterWithDetails[];
-  pendingInvitations: Invitation[];
-  recentActivity: Activity[];
-}
-
-export interface GameMasterDashboard {
-  createdGames: GameWithDetails[];
-  rulesets: RulesetWithDetails[];
-  totalPlayers: number;
-  totalCharacters: number;
-  recentActivity: Activity[];
 }
 
 // ===========================
@@ -232,22 +182,6 @@ export interface ValidationWarning {
   field: string;
   message: string;
   suggestion?: string;
-}
-
-export interface Activity {
-  id: string;
-  type:
-    | 'game_created'
-    | 'player_joined'
-    | 'character_created'
-    | 'character_advanced'
-    | 'invitation_sent';
-  description: string;
-  userId: string;
-  gameId?: string;
-  characterId?: string;
-  timestamp: Date;
-  metadata?: Record<string, any>;
 }
 
 // ===========================
@@ -304,60 +238,7 @@ export interface DatabaseRepositories {
   crews: CrewRepository;
   factions: FactionRepository;
   scores: ScoreRepository;
-  gameManagement: GameManagementRepository;
   characterManagement: CharacterManagementRepository;
-}
-
-export interface RepositoryFactory {
-  create(): Promise<DatabaseRepositories>;
-  createWithTransaction(): Promise<
-    DatabaseRepositories & { commit(): Promise<void>; rollback(): Promise<void> }
-  >;
-}
-
-// ===========================
-// QUERY OPTIONS
-// ===========================
-
-export interface QueryOptions {
-  limit?: number;
-  offset?: number;
-  cursor?: string;
-  orderBy?: string;
-  orderDirection?: 'asc' | 'desc';
-  includeDeleted?: boolean;
-}
-
-export interface GameQueryOptions extends QueryOptions {
-  state?: GameState[];
-  rulesetId?: string;
-  creatorId?: string;
-  publicOnly?: boolean;
-}
-
-export interface RulesetQueryOptions extends QueryOptions {
-  status?: RulesetStatus[];
-  creatorId?: string;
-  tags?: string[];
-  publicOnly?: boolean;
-  systemType?: string;
-}
-
-export interface CharacterQueryOptions extends QueryOptions {
-  gameId?: string;
-  creatorId?: string;
-  playbookType?: string;
-  status?: string[];
-}
-
-// ===========================
-// TRANSACTION INTERFACE
-// ===========================
-
-export interface DatabaseTransaction {
-  repositories: DatabaseRepositories;
-  commit(): Promise<void>;
-  rollback(): Promise<void>;
 }
 
 // ===========================
@@ -367,10 +248,7 @@ export interface DatabaseTransaction {
 export interface DatabaseProvider {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
-  migrate(): Promise<void>;
-  seed(): Promise<void>;
   isHealthy(): Promise<boolean>;
   createRepositories(): DatabaseRepositories;
   createAuthService(): import('./auth-types').AuthService;
-  beginTransaction(): Promise<DatabaseTransaction>;
 }

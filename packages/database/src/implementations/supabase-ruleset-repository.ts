@@ -1,13 +1,7 @@
 // Supabase RulesetRepository — queries the env schema via client.schema().
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
-import type {
-  Ruleset,
-  CreateRulesetData,
-  RulesetWithDetails,
-  PaginatedResult,
-  Result,
-} from '../domain-types';
+import type { Ruleset, CreateRulesetData, Result } from '../domain-types';
 import type { RulesetRepository } from '../repositories';
 import type { UpdateRulesetData } from '../domain-types';
 import {
@@ -76,13 +70,6 @@ export class SupabaseRulesetRepository implements RulesetRepository {
     }
   }
 
-  // --- Outside the journey scope ---
-  async findPublic(): Promise<Result<PaginatedResult<Ruleset>>> {
-    throw new Error('SupabaseRulesetRepository.findPublic not implemented');
-  }
-  async findWithDetails(): Promise<Result<RulesetWithDetails | null>> {
-    throw new Error('SupabaseRulesetRepository.findWithDetails not implemented');
-  }
   // Update a ruleset's mutable fields (used to refresh a stale starter to the latest content).
   // RLS (`rulesets_update_policy`) restricts this to the owner; `_userId` is kept for the interface.
   async update(id: string, _userId: string, data: UpdateRulesetData): Promise<Result<Ruleset>> {
@@ -98,14 +85,5 @@ export class SupabaseRulesetRepository implements RulesetRepository {
     } catch (e) {
       return failFromCatch(e);
     }
-  }
-  async delete(): Promise<Result<void>> {
-    throw new Error('SupabaseRulesetRepository.delete not implemented');
-  }
-  async searchByTags(): Promise<Result<Ruleset[]>> {
-    throw new Error('SupabaseRulesetRepository.searchByTags not implemented');
-  }
-  async checkUsage(): Promise<Result<{ isUsed: boolean; gameCount: number }>> {
-    throw new Error('SupabaseRulesetRepository.checkUsage not implemented');
   }
 }

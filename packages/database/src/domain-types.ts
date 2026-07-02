@@ -655,36 +655,9 @@ export interface AdvancementRecord {
 // BUSINESS LOGIC TYPES
 // ===========================
 
-export interface UserGameContext {
-  userId: string;
-  gameId: string;
-  role: GameRole | 'none';
-  status: PlayerStatus | 'none';
-  permissions: GamePermissions;
-}
-
-export interface GamePermissions {
-  canViewGame: boolean;
-  canEditGame: boolean;
-  canInvitePlayers: boolean;
-  canCreateCharacters: boolean;
-  canEditOwnCharacters: boolean;
-  canEditAllCharacters: boolean;
-  canViewAllCharacters: boolean;
-  canManageInvitations: boolean;
-  canPromoteToCoGM: boolean;
-}
-
 // ===========================
 // INPUT/OUTPUT TYPES
 // ===========================
-
-export interface CreateProfileData {
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-  preferences?: Record<string, any>;
-}
 
 export interface UpdateProfileData {
   username?: string;
@@ -792,19 +765,6 @@ export interface CharacterWithDetails extends Character {
   game: Game | null;
   ruleset: Ruleset;
   creator: Profile;
-}
-
-export interface RulesetWithDetails extends Ruleset {
-  creator: Profile;
-  gameCount: number;
-  isUsed: boolean;
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  count: number;
-  hasMore: boolean;
-  nextCursor?: string;
 }
 
 // ===========================
