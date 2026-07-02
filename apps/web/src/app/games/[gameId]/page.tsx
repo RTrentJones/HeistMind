@@ -13,6 +13,7 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useCharactersByGame } from '@/features/characters/data/queries';
 import { useGameDetail } from '@/features/games/data/queries';
 import { usePageTranslation } from '@/lib/i18n/hooks';
@@ -37,11 +38,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   const characters = charactersQuery.data ?? [];
 
   if (!isAuthenticated) {
-    return (
-      <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('game.viewAuthPrompt')}</Text>
-      </Container>
-    );
+    return <SignInGate prompt={t('game.viewAuthPrompt')} />;
   }
   if (gameQuery.isLoading) {
     return (

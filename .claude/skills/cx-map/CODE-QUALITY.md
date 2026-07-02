@@ -71,8 +71,21 @@ broken placeholders). Nine CI-gated PRs:
     task; lint-staged runs `eslint --fix` before prettier; conservative `renovate.json` (weekly,
     grouped non-major, majors behind the dashboard); Storybook's installed-but-disabled a11y addon
     enabled.
-- **R2-PR5 ⏳** web dedup (SignInGate ×5, errorMessage ×20, GameCard, ClockManager, ResourceList,
-  app→feature moves) + seeded RTL tests.
+- **R2-PR5 — web dedup + app→feature moves (this PR).** One implementation per pattern:
+  `SignInGate` + `useSignIn()` replace the 5 copy-pasted Discord handlers AND upgrade the two
+  button-less gates (My Characters, campaign hub) to a working sign-in (CX win); `GameCard`
+  single-sources the campaign row + role-badge mapping (games page + dashboard); `ClockTile` +
+  `NewClockForm` single-source the clock controls (FactionsPanel's ~100-line re-implementation
+  deleted); `ResourceList` (the round-1 C11 deferral) scaffolds loading/error/empty on the games
+  page; `JoinByCodeCard` moves the join flow out of `app/games/page.tsx` (the page is now a
+  composition). `clampStress` joins the rules (3 inline clamps deleted); magic numbers named
+  (roll-feed limit, recent scores, copy flash, profile staleness, session-check delay).
+  **Seeded RTL tests** (web 1→6 suites, 5→20 tests): SignInGate, ResourceList, GameCard,
+  NotificationToaster, HarmCard + GearCard view/edit — on an automatic-JSX vitest runtime with
+  jest-dom's vitest matchers typed into `tsc --noEmit`. The honest gates immediately re-proved
+  themselves: the database per-file gate failed the new `clampStress` until it had a test.
+  _Note:_ the errorMessage-adoption item largely dissolved — PR-4's `no-unnecessary-type-assertion`
+  autofix removed the ~20 `as Error` casts already; RQ types `query.error` as `Error` natively.
 - **R2-PR6 ⏳** RQ v5 idioms (queryOptions, skipToken, typed errors, devtools, persist versioning).
 - **R2-PR7 ⏳** extract `@heist-mind/core` (types split per domain + rules; dependency flip).
 - **R2-PR8 ⏳** extract `@heist-mind/engine` (use-cases out of React; mocked-repo unit tests — the

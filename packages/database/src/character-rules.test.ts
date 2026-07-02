@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { RulesetContent, CharacterData } from './domain-types';
 import {
+  clampStress,
   validateCharacter,
   pointBuySpent,
   abilityChoiceLimit,
@@ -885,5 +886,15 @@ describe('XP tracks', () => {
       attributes: { force: 6, cunning: 2 },
     });
     expect(clearXpTrack(c, 'force')).toEqual({ playbook: 8, attributes: { force: 0, cunning: 2 } });
+  });
+});
+
+describe('clampStress', () => {
+  const content = {} as RulesetContent; // defaults → BitD 9-stress track
+
+  it('clamps into the ruleset track', () => {
+    expect(clampStress(content, -2)).toBe(0);
+    expect(clampStress(content, 4)).toBe(4);
+    expect(clampStress(content, 99)).toBe(9);
   });
 });

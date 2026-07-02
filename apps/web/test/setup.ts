@@ -1,4 +1,5 @@
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
+import { vi } from 'vitest';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -24,7 +25,14 @@ vi.mock('@/lib/auth', () => ({
     },
   }),
   getRepositories: vi.fn(),
-  getAuthService: vi.fn(),
+  // Benign default: the auth store registers a listener + schedules a session check AT IMPORT
+  // TIME (see auth-store.ts), so any component test that touches useAuth needs these to exist.
+  getAuthService: vi.fn(() => ({
+    onAuthStateChange: vi.fn(),
+    getCurrentSession: vi.fn().mockResolvedValue(null),
+    signInWithOAuth: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signOut: vi.fn().mockResolvedValue({ error: null }),
+  })),
   initializeAuth: vi.fn(),
 }));
 

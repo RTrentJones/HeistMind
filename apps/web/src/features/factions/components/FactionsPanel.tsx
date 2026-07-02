@@ -2,28 +2,17 @@
 
 import { useState } from 'react';
 import {
-  CLOCK_SEGMENTS,
   factionStatusLabel,
   type Clock as ClockType,
-  type ClockSegments,
   type Faction,
   type FactionDefinition,
 } from '@heist-mind/database';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Clock,
-  Input,
-  Select,
-  Stack,
-  Text,
-  Tooltip,
-} from '@heist-mind/ui';
+import { Alert, Badge, Button, Card, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useClocksByGame } from '@/features/clocks/data/queries';
 import { useCreateClock, useDeleteClock, useUpdateClock } from '@/features/clocks/data/mutations';
+import { ClockTile } from '@/features/clocks/components/ClockTile';
+import { NewClockForm } from '@/features/clocks/components/NewClockForm';
 import { useFactionsByGame } from '@/features/factions/data/queries';
 import {
   useCreateFaction,
@@ -147,8 +136,6 @@ function FactionCard({
   onError: (m: string) => void;
 }) {
   const { t } = useTranslation();
-  const [clockName, setClockName] = useState('');
-  const [segments, setSegments] = useState<ClockSegments>(4);
   const updateFaction = useUpdateFaction(faction.gameId);
   const deleteFaction = useDeleteFaction(faction.gameId);
   const createClock = useCreateClock(faction.gameId);
@@ -279,93 +266,50 @@ function FactionCard({
         {clocks.length > 0 && (
           <Stack direction='row' gap='md' className='flex-wrap'>
             {clocks.map(c => (
-              <Stack key={c.id} direction='column' gap='xs' align='center'>
-                <Clock segments={c.segments} filled={c.filled} label={c.name} size={72} />
-                {isGm && (
-                  <Stack direction='row' gap='xs' align='center'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      aria-label={t('components.factionsPanel.reduceClockAria', { name: c.name })}
-                      disabled={busy || c.filled <= 0}
-                      onClick={() =>
-                        updateClock.mutate({ id: c.id, patch: { filled: c.filled - 1 } }, onErr)
-                      }
-                    >
-                      −1
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      aria-label={t('components.factionsPanel.advanceClockAria', { name: c.name })}
-                      disabled={busy || c.filled >= c.segments}
-                      onClick={() =>
-                        updateClock.mutate({ id: c.id, patch: { filled: c.filled + 1 } }, onErr)
-                      }
-                    >
-                      +1
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      aria-label={t('components.factionsPanel.removeClockAria', { name: c.name })}
-                      disabled={busy}
-                      onClick={() => deleteClock.mutate(c.id, onErr)}
-                    >
-                      ×
-                    </Button>
-                  </Stack>
-                )}
-              </Stack>
+              <ClockTile
+                key={c.id}
+                clock={c}
+                isGm={isGm}
+                busy={busy}
+                size={72}
+                removeLabel='×'
+                onTick={(clock, delta) =>
+                  updateClock.mutate(
+                    { id: clock.id, patch: { filled: clock.filled + delta } },
+                    onErr
+                  )
+                }
+                onRemove={id => deleteClock.mutate(id, onErr)}
+              />
             ))}
           </Stack>
         )}
 
         {isGm && (
-          <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-            <Input
-              label={t('components.factionsPanel.projectClockLabel', { name: faction.name })}
-              value={clockName}
-              onChange={e => setClockName(e.target.value)}
-              placeholder={t('components.factionsPanel.projectClockPlaceholder')}
-            />
-            <Select
-              label={t('components.factionsPanel.segments')}
-              value={segments}
-              onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
-            >
-              {CLOCK_SEGMENTS.map(s => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-            <Button
-              variant='outline'
-              size='sm'
-              aria-label={t('components.factionsPanel.addClockForAria', { name: faction.name })}
-              disabled={busy || !clockName.trim() || !userId}
-              onClick={() => {
-                const name = clockName.trim();
-                if (!userId || !name) return;
-                createClock.mutate(
-                  {
-                    userId,
-                    data: {
-                      gameId: faction.gameId,
-                      name,
-                      segments,
-                      linkedType: 'faction',
-                      linkedId: faction.id,
-                    },
+          <NewClockForm
+            label={t('components.factionsPanel.projectClockLabel', { name: faction.name })}
+            placeholder={t('components.factionsPanel.projectClockPlaceholder')}
+            cta={t('components.factionsPanel.addClock')}
+            ctaAriaLabel={t('components.factionsPanel.addClockForAria', { name: faction.name })}
+            ctaVariant='outline'
+            busy={busy}
+            onCreate={(name, segments) => {
+              if (!userId) return;
+              createClock.mutate(
+                {
+                  userId,
+                  data: {
+                    gameId: faction.gameId,
+                    name,
+                    segments,
+                    linkedType: 'faction',
+                    linkedId: faction.id,
                   },
-                  { onSuccess: () => setClockName(''), ...onErr }
-                );
-              }}
-            >
-              {t('components.factionsPanel.addClock')}
-            </Button>
-          </Stack>
+                },
+                onErr
+              );
+            }}
+          />
         )}
       </Stack>
     </Card>

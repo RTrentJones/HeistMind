@@ -4,7 +4,7 @@
 // read-modify-write ones (stress, retire) — inside the seam so components never touch a repo.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  stressBounds,
+  clampStress,
   type Character,
   type CharacterAdvancement,
   type UpdateCharacterData,
@@ -79,9 +79,8 @@ export function useApplyCharacterStress() {
         .characters.findWithDetails(vars.characterId)
         .then(unwrap);
       if (!char) return;
-      const max = stressBounds(char.ruleset.content).max;
       const current = char.characterData?.stress ?? 0;
-      const next = Math.max(0, Math.min(current + vars.stress, max));
+      const next = clampStress(char.ruleset.content, current + vars.stress);
       if (next === current) return;
       await getRepositories()
         .characterManagement.updateCharacterWithValidation(vars.characterId, vars.userId, {

@@ -185,6 +185,9 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
+/** Grace period letting the OAuth listener claim the session before the manual check runs. */
+const SESSION_CHECK_DELAY_MS = 100;
+
 // Set up auth state change listener to handle OAuth automatically
 if (typeof window !== 'undefined') {
   const authService = getAuthService();
@@ -243,7 +246,7 @@ if (typeof window !== 'undefined') {
     if (!state.sessionChecked && !hasOAuthParams) {
       void state.checkSession();
     }
-  }, 100);
+  }, SESSION_CHECK_DELAY_MS);
 }
 
 // Convenience selectors using useShallow to prevent infinite loops

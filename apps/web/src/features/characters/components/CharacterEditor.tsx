@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
+  clampStress,
   stressBounds,
   usesXpTracks,
   xpTrackSize,
@@ -157,7 +158,7 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
               interactive
               showNumbers
               size='lg'
-              onChange={v => patch({ stress: Math.max(0, Math.min(v, bounds.max)) })}
+              onChange={v => patch({ stress: clampStress(content, v) })}
             />
             {draft.stress >= bounds.max && (
               <Alert variant='warning' size='sm'>
