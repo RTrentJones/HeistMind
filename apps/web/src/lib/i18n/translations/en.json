@@ -589,6 +589,10 @@
     }
   },
   "auth": {
+    "gate": {
+      "heading": "Sign in to continue",
+      "signInCta": "Sign In with Discord"
+    },
     "signIn": {
       "title": "Enter the Shadows",
       "subtitle": "Choose your path into the underworld",

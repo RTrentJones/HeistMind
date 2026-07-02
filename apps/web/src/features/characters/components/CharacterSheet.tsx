@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  clampStress,
   stressBounds,
   usesActionRatings,
   rulesetActions,
@@ -96,8 +97,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const setStress = (v: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
-    const max = stressBounds(character.ruleset.content).max;
-    const characterData = { ...character.characterData, stress: Math.max(0, Math.min(v, max)) };
+    const characterData = {
+      ...character.characterData,
+      stress: clampStress(character.ruleset.content, v),
+    };
     updateCharData.mutate(
       { userId, data: { characterData } },
       {

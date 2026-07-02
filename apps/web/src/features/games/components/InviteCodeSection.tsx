@@ -8,6 +8,8 @@ import { useCreateInviteCode } from '@/features/invitations/data/mutations';
 import { useComponentTranslation } from '@/lib/i18n/hooks';
 
 /** GM-only: generate + share public join codes for a campaign. Players redeem them on /games. */
+const COPY_FLASH_MS = 1500;
+
 export function InviteCodeSection({ gameId }: { gameId: string }) {
   const { user } = useAuth();
   const { t } = useComponentTranslation();
@@ -32,7 +34,7 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(code);
-      setTimeout(() => setCopied(null), 1500);
+      setTimeout(() => setCopied(null), COPY_FLASH_MS);
     } catch {
       // Clipboard may be unavailable (e.g. insecure context) — the code is still shown to copy by hand.
     }

@@ -7,6 +7,9 @@ import { useQueries } from '@tanstack/react-query';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 
+/** Player names are stable — cache lookups for a while. */
+const PROFILE_NAME_STALE_MS = 5 * 60_000;
+
 export const profileKeys = {
   all: ['profiles'] as const,
   detail: (id: string) => ['profiles', 'detail', id] as const,
@@ -19,7 +22,7 @@ export function useProfileNames(ids: string[]): Record<string, string> {
     queries: unique.map(id => ({
       queryKey: profileKeys.detail(id),
       queryFn: () => getRepositories().profiles.findById(id).then(unwrap),
-      staleTime: 5 * 60_000,
+      staleTime: PROFILE_NAME_STALE_MS,
     })),
   });
   // Memoize the map so consumers get a stable reference between renders. `results` (and often

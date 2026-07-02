@@ -20,6 +20,8 @@ export const createBaseConfig = (
   } = options;
 
   return {
+    // Match Next/tsup's automatic JSX runtime — component sources don't import React.
+    esbuild: { jsx: 'automatic' },
     test: {
       globals: true,
       environment,

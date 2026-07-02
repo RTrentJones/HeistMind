@@ -13,17 +13,14 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
-import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
-import { useNotificationStore } from '@/shared/stores/notification-store';
-import { errorMessage } from '@/lib/query/result';
-import i18n from '@/lib/i18n';
+import { useAuth } from '@/features/auth/stores/auth-store';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { LoadBuiltinRulesetButton } from '@/features/rulesets/components/LoadBuiltinRulesetButton';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 export default function RulesetsPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const { signInWithProvider } = useAuthActions();
+  const { user, isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const rulesetsQuery = useRulesetsByCreator(user?.id);
   const rulesets = rulesetsQuery.data ?? [];
@@ -31,33 +28,12 @@ export default function RulesetsPage() {
     ? (rulesetsQuery.error?.message ?? t('pages.rulesetsCatalog.loadFailed'))
     : null;
 
-  // Failures surface as a toast (F58 — these were console-only, i.e. invisible to the user).
-  const handleSignIn = async () => {
-    try {
-      await signInWithProvider('discord');
-    } catch (err) {
-      console.error('Sign in failed:', err);
-      useNotificationStore
-        .getState()
-        .error(i18n.t('errors:auth.signInFailed'), errorMessage(err) || undefined);
-    }
-  };
-
   if (!isAuthenticated) {
     return (
-      <Container maxWidth='md' padding='lg'>
-        <Card variant='outline'>
-          <Stack direction='column' gap='md' align='start'>
-            <Heading level='h2' variant='hero'>
-              {t('pages.rulesetsCatalog.authHeading')}
-            </Heading>
-            <Text variant='muted'>{t('pages.rulesetsCatalog.authPrompt')}</Text>
-            <Button variant='default' onClick={handleSignIn} loading={isLoading}>
-              {t('pages.rulesetsCatalog.signInCta')}
-            </Button>
-          </Stack>
-        </Card>
-      </Container>
+      <SignInGate
+        heading={t('pages.rulesetsCatalog.authHeading')}
+        prompt={t('pages.rulesetsCatalog.authPrompt')}
+      />
     );
   }
 

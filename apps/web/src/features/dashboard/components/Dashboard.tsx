@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  Badge,
   Button,
   Card,
   Container,
@@ -18,6 +17,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
+import { GameCard } from '@/features/games/components/GameCard';
 import {
   useDashboardData,
   type DashboardActivity,
@@ -54,27 +54,7 @@ export function Dashboard() {
   const now = Date.now();
 
   const campaignCard = (c: DashboardCampaign) => (
-    <Card key={c.game.id} variant='outline'>
-      <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-        <div>
-          <Heading level='h3'>{c.game.name}</Heading>
-          {c.game.description && (
-            <Text variant='muted' size='sm'>
-              {c.game.description}
-            </Text>
-          )}
-        </div>
-        <Stack direction='row' gap='sm' align='center'>
-          <Badge variant={c.role === 'gm' ? 'ember' : 'steel'}>
-            {c.role === 'gm' ? t('pages.gamesList.gmBadge') : t('pages.gamesList.playerBadge')}
-          </Badge>
-          <Badge variant='outline'>{c.game.state}</Badge>
-          <Button asChild variant='outline' size='sm'>
-            <Link href={`/games/${c.game.id}`}>{t('pages.dashboard.open')}</Link>
-          </Button>
-        </Stack>
-      </Stack>
-    </Card>
+    <GameCard key={c.game.id} game={c.game} role={c.role} />
   );
 
   const characterCard = (ch: (typeof characters)[number]) => (

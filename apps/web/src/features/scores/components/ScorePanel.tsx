@@ -13,6 +13,8 @@ import { useTranslation } from '@/lib/i18n/hooks';
  * that per-score loadout hangs off. The GM starts one (at most one active at a time) and ends it;
  * start/end are logged to the campaign (roll) log. Sessions are real-life and not modelled.
  */
+const RECENT_SCORES_SHOWN = 5;
+
 export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -26,7 +28,7 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
   const scores = scoresQuery.data ?? [];
   // At most one score is active at a time; recent = the last few completed ones.
   const active = scores.find(s => s.status === 'active') ?? null;
-  const recent = scores.filter(s => s.status === 'completed').slice(0, 5);
+  const recent = scores.filter(s => s.status === 'completed').slice(0, RECENT_SCORES_SHOWN);
   const busy = startScoreMut.isPending || endScoreMut.isPending || createRoll.isPending;
   const shownError =
     error ??

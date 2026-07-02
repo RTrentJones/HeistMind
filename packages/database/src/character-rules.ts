@@ -188,6 +188,11 @@ export function isAbilityUnlocked(
   return true;
 }
 
+/** Clamp a stress value into the ruleset's track (0..max). */
+export function clampStress(content: RulesetContent, value: number): number {
+  return Math.max(0, Math.min(value, stressBounds(content).max));
+}
+
 /** Stress/trauma bounds, defaulting to BitD values when the ruleset omits `stress`. */
 export function stressBounds(ruleset: RulesetContent): StressRules {
   return ruleset.stress ?? DEFAULT_STRESS;

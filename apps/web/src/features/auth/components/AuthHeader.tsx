@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
+import { useSignIn } from '@/features/auth/hooks/use-sign-in';
 import {
   Button,
   Header,
@@ -20,20 +21,9 @@ import { LanguageSwitcher } from '@/shared/components/LanguageSwitcher';
 
 export function AuthHeader() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const { signInWithProvider, signOut } = useAuthActions();
+  const { signOut } = useAuthActions();
   const { t } = useTranslation();
-
-  // Failures surface as a toast (F58 — these were console-only, i.e. invisible to the user).
-  const handleDiscordSignIn = async () => {
-    try {
-      await signInWithProvider('discord');
-    } catch (error) {
-      console.error('Discord sign in failed:', error);
-      useNotificationStore
-        .getState()
-        .error(i18n.t('errors:auth.signInFailed'), errorMessage(error) || undefined);
-    }
-  };
+  const { signIn: handleDiscordSignIn } = useSignIn();
 
   const handleSignOut = async () => {
     try {

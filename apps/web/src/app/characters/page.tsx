@@ -15,6 +15,7 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
@@ -63,11 +64,7 @@ export default function MyCharactersPage() {
   };
 
   if (!isAuthenticated) {
-    return (
-      <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('characters.authPrompt')}</Text>
-      </Container>
-    );
+    return <SignInGate prompt={t('characters.authPrompt')} />;
   }
 
   const card = (ch: Character) => (
