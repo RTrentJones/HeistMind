@@ -23,6 +23,8 @@ export function fromSupabaseGame(row: GameRow): Game {
     houseRules: row.house_rules,
     inviteOnly: row.invite_only ?? true,
     publicListing: row.public_listing ?? false,
+    discordGuildId: row.discord_guild_id,
+    discordChannelId: row.discord_channel_id,
     createdAt: parseSupabaseDate(row.created_at),
     updatedAt: parseSupabaseDate(row.updated_at),
   };

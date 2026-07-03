@@ -6,6 +6,7 @@ import type {
   GameWithDetails,
   GameState,
   CreateGameData,
+  DiscordLink,
   Profile,
   Result,
 } from '@heist-mind/core';
@@ -146,6 +147,44 @@ export class SupabaseGameRepository extends SupabaseRepositoryBase implements Ga
         .from('games')
         .update(toSupabaseGameUpdate({ state }))
         .eq('id', id)
+        .select()
+        .single();
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseGame(row) };
+    });
+  }
+
+  async findByDiscordChannel(
+    guildId: string,
+    candidateChannelIds: string[]
+  ): Promise<Result<Game | null>> {
+    return this.run(async () => {
+      // One roundtrip: every link in this guild, then precedence in code — the channel, its
+      // category, then the guild-wide default (discord_channel_id NULL).
+      const { data: rows, error } = await this.db
+        .from('games')
+        .select('*')
+        .eq('discord_guild_id', guildId);
+      if (error) return failFromError(error);
+      const games = (rows ?? []).map(fromSupabaseGame);
+      for (const candidate of candidateChannelIds) {
+        const match = games.find(g => g.discordChannelId === candidate);
+        if (match) return { success: true, data: match };
+      }
+      const guildDefault = games.find(g => g.discordChannelId === null) ?? null;
+      return { success: true, data: guildDefault };
+    });
+  }
+
+  async setDiscordLink(gameId: string, link: DiscordLink | null): Promise<Result<Game>> {
+    return this.run(async () => {
+      const { data: row, error } = await this.db
+        .from('games')
+        .update({
+          discord_guild_id: link?.guildId ?? null,
+          discord_channel_id: link?.channelId ?? null,
+        })
+        .eq('id', gameId)
         .select()
         .single();
       if (error) return failFromError(error);
