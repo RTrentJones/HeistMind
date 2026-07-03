@@ -51,6 +51,30 @@ export const copy = {
   rollNeedsDiceOrAction: 'Give me a pool (`/roll dice:3`) or an action (`/roll action:Skirmish`).',
   accountStatus: (username: string, activeCharacter: string | null) =>
     `Linked as **${username}**. Active character: ${activeCharacter ? `**${activeCharacter}**` : 'none — `/character use` picks one'}.`,
+  guildOnly: 'That works inside a server channel, not here.',
+  gmOnly: 'Only the campaign’s GM can do that.',
+  notLinked: 'Nothing is linked here yet — the GM can run `/heist link`.',
+  notMember: 'This channel is linked to a HeistMind campaign you’re not a member of.',
+  campaignNotFound: (name: string) =>
+    `No campaign of yours is named “${name}”. Try the autocomplete suggestions.`,
+  noCategoryHere: 'This channel isn’t inside a category — link the channel or the whole server instead.',
+  alreadyLinked: 'That Discord surface is already linked to a campaign — unlink it first.',
+  linked: (campaign: string, scope: string) =>
+    `**${campaign}** is now linked to this ${scope}. Rolls and \`/log\` entries here land in its campaign log.`,
+  unlinked: (campaign: string) => `**${campaign}** is no longer linked here.`,
+  linkFeedNote: (scope: string) => `Discord ${scope} linked`,
+  unlinkFeedNote: 'Discord link removed',
+  logRecorded: (text: string) => `Logged to the campaign: _${text}_`,
+  statusTitle: (campaign: string) => `${campaign} — campaign status`,
+  statusState: 'State',
+  statusScore: 'Active score',
+  statusNoScore: 'Between scores',
+  statusCrew: 'Crew',
+  statusCrewLine: (tier: number, heat: number, wanted: number) =>
+    `Tier ${tier} · Heat ${heat}/9 · Wanted ${wanted}/4`,
+  statusNoCrew: 'No crew sheet yet',
+  statusClocks: 'Running clocks',
+  statusNoClocks: 'None',
   rollNeedsActiveCharacter: (siteUrl: string) =>
     `Sheet rolls need an active character — \`/character use\` picks one (or sign in with Discord at ${siteUrl} first).`,
   unknownAction: (name: string) =>

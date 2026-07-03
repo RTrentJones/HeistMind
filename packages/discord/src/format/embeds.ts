@@ -12,6 +12,42 @@ export const OUTCOME_COLOR: Record<RollOutcome, number> = {
 
 const NEUTRAL_COLOR = 0x8b949e;
 
+/** The /heist status snapshot: the campaign facts a table asks mid-play. */
+export function campaignStatusEmbed(input: {
+  game: { name: string; state: string };
+  activeScore: { name: string | null } | null;
+  crew: { tier: number; heat: number; wanted: number } | null;
+  clocks: { name: string; filled: number; segments: number }[];
+}): APIEmbed {
+  const running = input.clocks.filter(c => c.filled < c.segments);
+  return {
+    title: copy.statusTitle(input.game.name),
+    color: NEUTRAL_COLOR,
+    fields: [
+      { name: copy.statusState, value: input.game.state, inline: true },
+      {
+        name: copy.statusScore,
+        value: input.activeScore ? (input.activeScore.name ?? '—') : copy.statusNoScore,
+        inline: true,
+      },
+      {
+        name: copy.statusCrew,
+        value: input.crew
+          ? copy.statusCrewLine(input.crew.tier, input.crew.heat, input.crew.wanted)
+          : copy.statusNoCrew,
+        inline: true,
+      },
+      {
+        name: copy.statusClocks,
+        value:
+          running.length > 0
+            ? running.map(c => `${c.name} ${c.filled}/${c.segments}`).join(' · ')
+            : copy.statusNoClocks,
+      },
+    ],
+  };
+}
+
 /** The /character show sheet card: identity + the live-condition numbers a table asks about. */
 export function characterSheetEmbed(character: CharacterWithDetails): APIEmbed {
   const data = character.characterData;

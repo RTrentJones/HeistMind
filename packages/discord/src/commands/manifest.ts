@@ -188,6 +188,60 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
         name: 'account',
         description: 'Your linked HeistMind account and active character',
       },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'link',
+        description: 'GM: link a campaign to this channel, its category, or the whole server',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'campaign',
+            description: 'One of your campaigns',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'scope',
+            description: 'What this link covers (default: this channel)',
+            choices: [
+              { name: 'channel', value: 'channel' },
+              { name: 'category', value: 'category' },
+              { name: 'server', value: 'server' },
+            ],
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'unlink',
+        description: 'GM: remove the campaign link for this surface',
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'status',
+        description: 'The linked campaign at a glance: score, crew, clocks',
+      },
+    ],
+  },
+  {
+    name: 'log',
+    description: 'Record a settled result into the linked campaign’s log',
+    integration_types: [
+      ApplicationIntegrationType.GuildInstall,
+      ApplicationIntegrationType.UserInstall,
+    ],
+    // Guild-only: /log writes to the campaign linked to THIS server surface.
+    contexts: [InteractionContextType.Guild],
+    options: [
+      {
+        type: ApplicationCommandOptionType.String,
+        name: 'text',
+        description: 'What happened (attributed to you; tagged to the active score)',
+        required: true,
+        max_length: 500,
+      },
     ],
   },
 ];

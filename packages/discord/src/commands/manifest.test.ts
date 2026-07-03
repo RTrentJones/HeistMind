@@ -28,10 +28,11 @@ describe('COMMAND_MANIFEST', () => {
     }
   });
 
-  it('every command is registered for guild AND user install, all contexts', () => {
+  it('every command is registered for guild AND user install; /log is guild-context only', () => {
     for (const command of COMMAND_MANIFEST) {
       expect(command.integration_types).toEqual([0, 1]);
-      expect(command.contexts).toEqual([0, 1, 2]);
+      // /log writes to the campaign linked to a SERVER surface — meaningless in DMs.
+      expect(command.contexts).toEqual(command.name === 'log' ? [0] : [0, 1, 2]);
     }
   });
 
