@@ -204,6 +204,32 @@ export type Database = {
           },
         ]
       }
+      discord_players: {
+        Row: {
+          active_character_id: string | null
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          active_character_id?: string | null
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          active_character_id?: string | null
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_players_active_character_id_fkey"
+            columns: ["active_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       factions: {
         Row: {
           created_at: string | null
@@ -703,7 +729,7 @@ export type Database = {
           created_by: string
           description: string | null
           experience_points: number | null
-          game_id: string
+          game_id: string | null
           id: string
           is_template: boolean | null
           name: string
@@ -721,7 +747,7 @@ export type Database = {
           created_by: string
           description?: string | null
           experience_points?: number | null
-          game_id: string
+          game_id?: string | null
           id?: string
           is_template?: boolean | null
           name: string
@@ -739,7 +765,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           experience_points?: number | null
-          game_id?: string
+          game_id?: string | null
           id?: string
           is_template?: boolean | null
           name?: string
@@ -879,6 +905,32 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: true
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_players: {
+        Row: {
+          active_character_id: string | null
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          active_character_id?: string | null
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          active_character_id?: string | null
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_players_active_character_id_fkey"
+            columns: ["active_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
             referencedColumns: ["id"]
           },
         ]
@@ -1268,6 +1320,60 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      attach_character_to_game: {
+        Args: { p_character_id: string; p_game_id: string }
+        Returns: {
+          adaptations: Json | null
+          advancement_history: Json | null
+          avatar_url: string | null
+          character_data: Json
+          created_at: string | null
+          created_by: string
+          description: string | null
+          experience_points: number | null
+          game_id: string | null
+          id: string
+          is_template: boolean | null
+          name: string
+          original_ruleset_id: string | null
+          playbook_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "characters"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      detach_character: {
+        Args: { p_character_id: string }
+        Returns: {
+          adaptations: Json | null
+          advancement_history: Json | null
+          avatar_url: string | null
+          character_data: Json
+          created_at: string | null
+          created_by: string
+          description: string | null
+          experience_points: number | null
+          game_id: string | null
+          id: string
+          is_template: boolean | null
+          name: string
+          original_ruleset_id: string | null
+          playbook_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "characters"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_game_role: {
         Args: { game_id: string; user_id: string }
         Returns: string
@@ -1492,3 +1598,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

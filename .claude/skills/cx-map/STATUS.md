@@ -136,6 +136,19 @@ the character + attach/detach RPCs, standalone `/characters*` routes, and **5b**
 - **Deferred (separate future plan):** realtime presence / live multiplayer via Supabase Realtime.
   The async load-on-view model is sufficient and intentional for play-by-post.
 
+**In build (2026-07-03): the DISCORD BOT (BRD Phase 4, the four-phase plan).** Phase 0 is
+**complete** (#121–#123): `packages/discord` (Ed25519 verify over raw bytes, router, the manual
+FitD roller — `/roll`, `/resist`, `/fortune`, `/dice`, `/heist about` — registered for guild AND
+user install, so rolls work in any server/DM), the `/api/discord` interactions endpoint in
+`apps/web` (creds-guarded 503 without `DISCORD_PUBLIC_KEY`), the tunnel-free signed-POST local
+harness (`scripts/discord-post.mjs` — which immediately caught F64, the zero-dice resistance
+bug live since round 1), the branch-mapped command-registration workflow, and a real-signature
+endpoint E2E. Companion infra PR (RTrentJones.dev #29) wires `DISCORD_PUBLIC_KEY` per Vercel
+target. Remaining operator steps to go live: create the two Discord apps (dev→beta, prod→prod),
+`greenlight secrets gather heistmind`, the four GitHub registration secrets, then the endpoint
+URLs (see `packages/discord/README.md`). Phase 1 (account link + one active character) is in
+build; Phases 2–3 (campaign links + logged rolls; gameplay parity) follow the approved plan.
+
 **Complete (2026-07-03): ROUND 3 — the post-round-2 second pass (#113–#119).** A clean-slate
 3-lens review (packages / web / product-alignment; every claim grep-verified, rules claims
 SRD-verified) followed by seven CI-gated PRs. What changed: **gate truth restored** (database's

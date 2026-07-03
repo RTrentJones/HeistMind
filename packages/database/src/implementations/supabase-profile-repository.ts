@@ -41,6 +41,21 @@ export class SupabaseProfileRepository implements ProfileRepository {
     });
   }
 
+  async findByDiscordId(discordId: string): Promise<Result<Profile | null>> {
+    return tryResult(async () => {
+      const { data: row, error } = await this.client
+        .from('profiles')
+        .select('*')
+        .eq('discord_id', discordId)
+        .single();
+      if (error) {
+        if (error.code === NO_ROWS) return { success: true, data: null };
+        return failFromError(error);
+      }
+      return { success: true, data: fromSupabaseProfile(row) };
+    });
+  }
+
   async update(id: string, data: UpdateProfileData): Promise<Result<Profile>> {
     return tryResult(async () => {
       const { data: row, error } = await this.client

@@ -49,13 +49,27 @@ import type { AuthService } from './auth-types';
  * Profiles are CREATED by the DB trigger on first (Discord OAuth) sign-in — there is deliberately
  * no client-side create. `findByUsername`/`update`/`delete` have no web caller yet; they are the
  * server contract for the Discord bot (name lookup) and future profile-editing / account-deletion
- * surfaces.
+ * surfaces. `findByDiscordId` is the bot's actor resolution (one indexed query on the unique
+ * `discord_id` the OAuth signup populates — no auth.admin round-trip needed).
  */
 export interface ProfileRepository {
   findById(id: string): Promise<Result<Profile | null>>;
   findByUsername(username: string): Promise<Result<Profile | null>>;
+  findByDiscordId(discordId: string): Promise<Result<Profile | null>>;
   update(id: string, data: UpdateProfileData): Promise<Result<Profile>>;
   delete(id: string): Promise<Result<void>>;
+}
+
+/**
+ * Per-profile Discord-bot state: the ACTIVE character pointer (/character use — one at a time,
+ * structural via the PK). Bot-only surface, written through the bot's service-role client; the
+ * table has no anon/authenticated grants and no RLS policies.
+ */
+export interface DiscordPlayerRepository {
+  getActiveCharacterId(profileId: string): Promise<Result<string | null>>;
+  /** Upsert: first use creates the row, later uses repoint it. */
+  setActiveCharacter(profileId: string, characterId: string): Promise<Result<void>>;
+  clearActiveCharacter(profileId: string): Promise<Result<void>>;
 }
 
 export interface RulesetRepository {
@@ -211,6 +225,7 @@ export interface DatabaseRepositories {
   factions: FactionRepository;
   scores: ScoreRepository;
   characterManagement: CharacterManagementRepository;
+  discordPlayers: DiscordPlayerRepository;
 }
 
 // ===========================
