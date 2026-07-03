@@ -13,8 +13,10 @@ The **scope-of-record is `.claude/skills/cx-map/BRD.md`** (product requirements 
 pnpm workspaces + Turborepo monorepo (workspaces: `apps/*`, `packages/*`):
 
 - **apps/web** — Next.js 15 (App Router) with React 19, the main web application
-- **apps/discord-bot** — planned future Discord bot client (directory not yet created; the
-  `apps/*` workspace glob reserves the slot — see BRD Phase 4 for the spec + platform prerequisites)
+- **packages/discord** — the Discord client: Ed25519 request verification, the interaction
+  router, slash-command handlers, and the command manifest + registration script. The web app's
+  `/api/discord` route is a thin transport over this package (no separate bot app — Discord
+  interactions are HTTP webhooks, not a gateway process; see BRD Phase 4)
 - **packages/core** — the pure domain: FitD types (split per domain) + the rules engines
   (dice/clocks/crews/factions/character-rules). No I/O, no framework — every client (web, the
   future Discord bot) and the data layer build on it
