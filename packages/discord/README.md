@@ -1,0 +1,53 @@
+# @heist-mind/discord
+
+HeistMind's Discord client: Ed25519 request verification, the interaction router, the slash-command
+handlers, and the command manifest + registration script. The web app's `/api/discord` route
+(`apps/web/src/app/api/discord/route.ts`) is a thin transport over this package — Discord
+interactions are signed HTTP webhooks, so there is **no gateway process and no separate bot app**.
+
+## Local development — no tunnel, no Discord app
+
+```bash
+node scripts/discord-post.mjs ping          # first run generates .discord-dev-keys.json
+# put the printed DISCORD_PUBLIC_KEY in .env.local, then:
+pnpm dev:web
+node scripts/discord-post.mjs roll --dice 3 --position risky --effect standard
+node scripts/discord-post.mjs forged        # expect HTTP 401
+```
+
+The E2E suite does the same automatically: `playwright.config.ts` generates
+`e2e/.discord-test-keys.json`, hands the public key to the managed dev server, and
+`e2e/specs/discord.spec.ts` signs real requests with it.
+
+## Operator runbook — the two Discord applications
+
+One Discord application has ONE interactions endpoint URL, so beta and prod each get their own app
+(test on beta with the dev app before promoting):
+
+| | Dev app ("HeistMind Dev") | Prod app ("HeistMind") |
+|---|---|---|
+| Interactions endpoint | `https://<beta domain>/api/discord` | `https://<prod domain>/api/discord` |
+| Registered from branch | `development` | `main` |
+| GitHub Actions secrets | `DISCORD_DEV_APP_ID`, `DISCORD_DEV_BOT_TOKEN` | `DISCORD_APP_ID`, `DISCORD_BOT_TOKEN` |
+| Vercel env (per target) | `DISCORD_PUBLIC_KEY` (preview/beta) | `DISCORD_PUBLIC_KEY` (production) |
+
+Setup, per app, in the [Discord developer portal](https://discord.com/developers/applications):
+
+1. Create the application. Under **Installation**, enable BOTH install contexts (Guild Install +
+   **User Install**) — user-install is what makes `/roll` work in any server or DM.
+2. Copy the **Public Key** → the matching Vercel target's `DISCORD_PUBLIC_KEY` env var (managed in
+   the sibling repo's `infra/heistmind.tf` alongside the Supabase vars). Redeploy.
+3. Copy the **Application ID** and a **Bot token** → the GitHub Actions secrets above, then run the
+   `Discord commands` workflow (or push a manifest change) to register the slash commands.
+4. Only now set the **Interactions Endpoint URL** — Discord validates it on save with a PING and
+   forged-signature probes, so the deployment must already hold the public key.
+5. Sanity check in Discord: `/heist about` shows the deployed commit SHA.
+
+Never point the dev app at localhost — Discord re-validates the URL on save and you'd break beta.
+Use `scripts/discord-post.mjs` for local iteration instead.
+
+## Phases
+
+Phase 0 (this): manual FitD roller, no account link. Phase 1: active-character rolls. Phase 2:
+channel/category/server↔campaign links + logged rolls. Phase 3: gameplay parity. See the BRD
+Phase-4 appendix (`.claude/skills/cx-map/BRD.md`).

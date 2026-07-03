@@ -157,3 +157,4 @@ ds-bundle/
 
 # Local Discord signing keypair (scripts/discord-post.mjs)
 .discord-dev-keys.json
+e2e/.discord-test-keys.json
