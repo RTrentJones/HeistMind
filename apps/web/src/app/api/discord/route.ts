@@ -9,7 +9,6 @@
 // authz prelude (resolve actor → assert ownership/membership) is the guard; the transport never
 // hands repos to anything but handleInteraction.
 import { after } from 'next/server';
-import { createDatabaseProvider, type DatabaseRepositories } from '@heist-mind/database';
 import {
   handleInteraction,
   makeFollowUpClient,
@@ -18,26 +17,17 @@ import {
   type APIInteraction,
   type BotContext,
 } from '@heist-mind/discord';
+import { createServiceRepositories } from '@/lib/auth/service-repositories';
 
 // Node runtime (webcrypto Ed25519 + the service-role Supabase client).
 export const runtime = 'nodejs';
-
-function buildRepos(): DatabaseRepositories | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) return null;
-  return createDatabaseProvider({
-    provider: 'supabase',
-    supabase: { url, key: serviceKey },
-  }).createRepositories();
-}
 
 function buildContext(): BotContext {
   return {
     realize: realizeD6,
     deploySha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
     siteUrl: process.env.SITE_URL ?? 'http://localhost:3000',
-    repos: buildRepos(),
+    repos: createServiceRepositories(),
   };
 }
 
