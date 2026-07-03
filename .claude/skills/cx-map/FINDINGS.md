@@ -429,6 +429,37 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   success toasts were skipped — invalidation-refetch chosen for correctness; in-place updates are the
   feedback (see `CODE-QUALITY.md` C16).
 
+### F61 — Critical resistance didn't clear 1 stress (RAW deviation)
+
+- **severity:** S2 · **type:** FitD-gap
+- **where:** `core/rules/dice.ts` `resistanceStress` floored at 0, conflating a crit (two+ 6s) with
+  a single 6. RAW: _"if you get a critical result, you also clear 1 stress"_
+  ([SRD, Resistance & Armor](https://bladesinthedark.com/resistance-armor)).
+- **status:** **fixed (round-3 PR-4)** — `resistanceStress` returns **−1** on a crit; the engine's
+  `applyStress` accepts negative deltas (clamped at 0); RollPanel/RollLog phrase it ("critical —
+  cleared 1 stress") instead of rendering "-1 stress".
+
+### F62 — One crew veteran grant unlocked unlimited cross-playbook picks
+
+- **severity:** S2 · **type:** FitD-gap
+- **where:** `core/rules/character-rules.ts` summed `veteran` effects but only checked `> 0` —
+  a single grant unlocked ANY number of tier-2 cross-playbook abilities (bounded only by the
+  ability-choice limit). RAW: each veteran advance = ONE ability from another playbook.
+- **status:** **fixed (round-3 PR-4)** — veteran grants are a **budget**: held cross-playbook picks
+  (tier ≥ 2, outside the playbook roster, no held prerequisite) must fit within the summed grants;
+  `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
+  over-budget set (`veteranPicksUsed` in character-rules).
+
+### F63 — Heat "remainder carry" flagged as a deviation — REFUTED, it is RAW
+
+- **severity:** S4 · **type:** FitD-gap (audit correction)
+- **where:** the round-3 review claimed `crews.ts` `applyHeat` deviates from RAW by carrying excess
+  heat past a wanted-level increment. The SRD says the opposite: excess heat **rolls over** ("if
+  your heat was 7 and you took 4 heat, you'd reset with 2 heat marked" —
+  [SRD, Heat](https://bladesinthedark.com/heat)).
+- **status:** **closed — no change**; the implementation was already correct. Kept as a reminder to
+  verify rule claims against the SRD before "fixing" them.
+
 ---
 
 ## S3 — minor
@@ -477,8 +508,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Now "Add &lt;name&gt; to my rulesets" with a clarifying tooltip, across the whole built-in catalog.
   `LoadBuiltinRulesetButton.tsx`. **fixed @69180e1**
 - **F37** · CX · No first-run onboarding: a new signed-in user with no rulesets/games gets no guided
-  next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open — scoped as
-  its own follow-up (not part of the 2026-06-29 code-quality round).**
+  next step. **fixed (round-3 PR-6)** — the ruleset-prerequisite wall is gone: `/characters/new` and
+  `/games/new` embed the built-in catalog inline (`StarterCatalogInline` — one click loads a starter
+  and CONTINUES IN PLACE into the wizard / form, no `/rulesets` detour), and the dashboard shows a
+  guided "Start here" 1-2-3 (build a character · create a campaign · join a game) for a user with
+  nothing. Covered by the `inline starter catalog` E2E spec.
 - **F38** · CX · Landing doesn't convey the async play-by-post value prop or FitD specifics.
   `app/page.tsx:28–34` → messaging + an "async play" feature. **fixed (PR #59)** — hero + the three
   feature cards + CTA now lead with async, Discord-style play-by-post (rulesets, shared rolls/clocks/

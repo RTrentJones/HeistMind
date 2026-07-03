@@ -2,10 +2,20 @@
 // browser. These tests are also the Discord bot's contract: a command wrapping a use-case can rely
 // on exactly this sequencing.
 import { describe, expect, it, vi } from 'vitest';
-import type { Character, CharacterWithDetails, Result } from '@heist-mind/core';
+import type {
+  Character,
+  CharacterWithDetails,
+  Clock,
+  Crew,
+  Faction,
+  Result,
+} from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { applyStress, retireCharacter } from './characters';
+import { advanceCharacter, applyStress, markXp, retireCharacter } from './characters';
+import { tickClock } from './clocks';
+import { advanceCrewTier, applyCrewHeat, incarcerateCrew } from './crews';
 import { indulgeVice, viceDicePool } from './downtime';
+import { setFactionStatus } from './factions';
 import { saveLoadout } from './loadout';
 import { rollAction, rollResistance } from './rolls';
 import { endScore, startScore } from './scores';
@@ -63,6 +73,22 @@ describe('applyStress', () => {
     expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 0 })).toEqual(ok(null));
     expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 })).toEqual(ok(null));
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('a negative delta CLEARS stress, clamped at 0', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const atOne = {
+      ...CHARACTER,
+      characterData: { ...CHARACTER.characterData, stress: 1 },
+    } as CharacterWithDetails;
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(atOne)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    await applyStress(r, { characterId: 'c1', userId: 'u1', stress: -3 });
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 0 }),
+    });
   });
 });
 
@@ -137,7 +163,7 @@ describe('rollResistance', () => {
     });
   });
 
-  it('charges nothing on a crit resist (highest die 6)', async () => {
+  it('charges nothing on a single 6 (resists for free)', async () => {
     const update = vi.fn();
     const r = repos({
       rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
@@ -153,6 +179,29 @@ describe('rollResistance', () => {
     });
     expect(out.success && out.data.stress).toBe(0);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('a CRITICAL resist (two 6s) CLEARS 1 stress, per RAW', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollResistance(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      dice: 2,
+      results: [6, 6],
+      zeroDice: false,
+    });
+    expect(out.success && out.data.stress).toBe(-1);
+    // CHARACTER sits at stress 6 → the crit clears one → 5.
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 5 }),
+    });
   });
 });
 
@@ -256,10 +305,13 @@ describe('scores', () => {
 });
 
 describe('saveLoadout', () => {
-  it('persists the loadout and logs to the campaign feed', async () => {
+  it('persists the loadout through the VALIDATED path and logs to the campaign feed', async () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
-    const r = repos({ characters: { update }, rolls: { create } });
+    const r = repos({
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
     const out = await saveLoadout(r, {
       character: CHARACTER,
       userId: 'u1',
@@ -279,7 +331,10 @@ describe('saveLoadout', () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const create = vi.fn();
     const standalone = { ...CHARACTER, gameId: null } as CharacterWithDetails;
-    const r = repos({ characters: { update }, rolls: { create } });
+    const r = repos({
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
     const out = await saveLoadout(r, {
       character: standalone,
       userId: 'u1',
@@ -287,6 +342,210 @@ describe('saveLoadout', () => {
       logNote: 'x',
     });
     expect(out.success).toBe(true);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+// ----- feed-completeness use-cases (round 3): crew / faction / clock / XP -----------------------
+
+const CREW = {
+  id: 'cr1',
+  gameId: 'g1',
+  name: 'The Silver Nails',
+  tier: 1,
+  rep: 13,
+  heat: 8,
+  wanted: 2,
+} as unknown as Crew;
+
+describe('crew progression', () => {
+  it('applyCrewHeat runs the heat→wanted cascade and logs a crew event', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    const out = await applyCrewHeat(r, {
+      crew: CREW,
+      userId: 'u1',
+      amount: 1,
+      logLabel: 'Crew',
+      logNote: 'heat',
+    });
+    expect(out.success).toBe(true);
+    // 8 + 1 fills the 9-heat track → +1 wanted, heat resets to the remainder (0).
+    expect(update).toHaveBeenCalledWith('cr1', { heat: 0, wanted: 3 });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ gameId: 'g1', kind: 'crew', label: 'Crew', note: 'heat' })
+    );
+  });
+
+  it('advanceCrewTier spends a full Rep track and logs', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    await advanceCrewTier(r, { crew: CREW, userId: 'u1', logLabel: 'l', logNote: 'n' });
+    expect(update).toHaveBeenCalledWith('cr1', { tier: 2, rep: 1 });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'crew' }));
+  });
+
+  it('incarcerateCrew clears heat, drops wanted, and logs; a failed write never logs', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    await incarcerateCrew(r, { crew: CREW, userId: 'u1', logLabel: 'l', logNote: 'n' });
+    expect(update).toHaveBeenCalledWith('cr1', { heat: 0, wanted: 1 });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'crew' }));
+
+    const failing = repos({
+      crews: { update: vi.fn().mockResolvedValue(fail('rls')) },
+      rolls: { create: vi.fn() },
+    });
+    const out = await incarcerateCrew(failing, {
+      crew: CREW,
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: 'n',
+    });
+    expect(out.success).toBe(false);
+    expect((failing as unknown as { rolls: { create: unknown } }).rolls.create).not
+      .toHaveBeenCalled;
+  });
+});
+
+describe('setFactionStatus', () => {
+  const FACTION = { id: 'f1', gameId: 'g1', name: 'The Hive', status: 1 } as unknown as Faction;
+
+  it('clamps into the FitD band, persists, and logs a faction event', async () => {
+    const update = vi.fn().mockResolvedValue(ok(FACTION));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ factions: { update }, rolls: { create } });
+    const out = await setFactionStatus(r, {
+      faction: FACTION,
+      userId: 'u1',
+      status: 7,
+      logLabel: 'The Hive',
+      logNote: 'allied',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('f1', { status: 3 });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ gameId: 'g1', kind: 'faction', label: 'The Hive' })
+    );
+  });
+});
+
+describe('tickClock', () => {
+  const CLOCK = {
+    id: 'k1',
+    gameId: 'g1',
+    name: 'The Alarm',
+    segments: 4,
+    filled: 3,
+  } as unknown as Clock;
+
+  it('logs a clock event only when the tick FILLS the clock', async () => {
+    const update = vi.fn().mockResolvedValue(ok({ ...CLOCK, filled: 4 }));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ clocks: { update }, rolls: { create } });
+    const out = await tickClock(r, {
+      clock: CLOCK,
+      userId: 'u1',
+      delta: 1,
+      logLabel: 'The Alarm',
+      logNote: 'filled',
+    });
+    expect(update).toHaveBeenCalledWith('k1', { filled: 4 });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'clock' }));
+    expect(out.success && out.data.completed).toBe(true);
+  });
+
+  it('a routine (non-completing) tick clamps and stays out of the feed', async () => {
+    const midway = { ...CLOCK, filled: 1 } as Clock;
+    const update = vi.fn().mockResolvedValue(ok({ ...midway, filled: 2 }));
+    const create = vi.fn();
+    const r = repos({ clocks: { update }, rolls: { create } });
+    const out = await tickClock(r, {
+      clock: midway,
+      userId: 'u1',
+      delta: 1,
+      logLabel: 'x',
+      logNote: 'x',
+    });
+    expect(create).not.toHaveBeenCalled();
+    expect(out.success && out.data.completed).toBe(false);
+
+    // An under-tick clamps at 0 (and an already-not-complete clock stays out of the feed).
+    await tickClock(r, { clock: midway, userId: 'u1', delta: -99, logLabel: 'x', logNote: 'x' });
+    expect(update).toHaveBeenLastCalledWith('k1', { filled: 0 });
+  });
+});
+
+describe('XP economy', () => {
+  it('markXp records the award and logs an xp event for a campaign character', async () => {
+    const addExperience = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: 'g1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ characters: { addExperience }, rolls: { create } });
+    const out = await markXp(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      amount: 1,
+      reason: 'Manual award',
+      logLabel: 'Silks',
+      logNote: 'Marked 1 XP',
+    });
+    expect(out.success).toBe(true);
+    expect(addExperience).toHaveBeenCalledWith('c1', 'u1', 1, 'Manual award');
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ gameId: 'g1', characterId: 'c1', kind: 'xp' })
+    );
+  });
+
+  it('markXp skips the feed for a standalone character', async () => {
+    const addExperience = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: null } as Character));
+    const create = vi.fn();
+    const r = repos({ characters: { addExperience }, rolls: { create } });
+    const out = await markXp(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      amount: 1,
+      reason: 'x',
+      logLabel: 'x',
+      logNote: 'x',
+    });
+    expect(out.success).toBe(true);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('advanceCharacter routes through the validated advance and logs an xp event', async () => {
+    const advance = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: 'g1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ characterManagement: { advanceCharacter: advance }, rolls: { create } });
+    const out = await advanceCharacter(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      advancement: { type: 'ability', target: 'battleborn', cost: 1, description: 'Learn it' },
+      logLabel: 'Silks',
+      logNote: 'Spent XP: learned Battleborn',
+    });
+    expect(out.success).toBe(true);
+    expect(advance).toHaveBeenCalledWith('c1', 'u1', expect.objectContaining({ type: 'ability' }));
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'xp' }));
+  });
+
+  it('advanceCharacter forwards a gated (rejected) advance without logging', async () => {
+    const advance = vi.fn().mockResolvedValue(fail('track not full'));
+    const create = vi.fn();
+    const r = repos({ characterManagement: { advanceCharacter: advance }, rolls: { create } });
+    const out = await advanceCharacter(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      advancement: { type: 'skill', target: 'prowl', value: 1, cost: 0, description: 'x' },
+      logLabel: 'x',
+      logNote: 'x',
+    });
+    expect(out.success).toBe(false);
     expect(create).not.toHaveBeenCalled();
   });
 });

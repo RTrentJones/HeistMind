@@ -161,11 +161,41 @@ function prerequisiteSatisfied(
   return data.specialAbilities.includes(ability.prerequisite);
 }
 
+/** Whether the ability would consume a veteran slot: tier ≥ 2, outside the playbook's own roster,
+ * and not unlocked by a held prerequisite. */
+function consumesVeteranSlot(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  abilityId: string
+): boolean {
+  const ability = findAbility(ruleset, abilityId);
+  if (!ability || (ability.tier ?? 1) < 2) return false;
+  const inPlaybookRoster = !!findPlaybook(ruleset, data.playbook)?.specialAbilities?.includes(
+    abilityId
+  );
+  const prereqHeld = !!ability.prerequisite && data.specialAbilities.includes(ability.prerequisite);
+  return !inPlaybookRoster && !prereqHeld;
+}
+
+/** How many veteran slots the HELD abilities consume, optionally excluding one (the candidate
+ * under evaluation, so a held ability doesn't count against its own slot). */
+export function veteranPicksUsed(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  excludeAbilityId?: string
+): number {
+  return data.specialAbilities.filter(
+    id => id !== excludeAbilityId && consumesVeteranSlot(ruleset, data, id)
+  ).length;
+}
+
 /**
  * Whether an ability is selectable AT CREATION (prerequisite + creation-tier gating).
  * Creation-tier is 1, so tier ≥ 2 requires a satisfied prerequisite, membership in the chosen
- * playbook's own ability roster, OR a "veteran" pick granted by the crew (BitD: a crew advancement
- * lets a member take an ability from another playbook). Pass the campaign's crew for that last case.
+ * playbook's own ability roster, OR a free "veteran" slot granted by the crew (BitD: EACH veteran
+ * advance lets a member take ONE ability from another playbook — grants are a budget, not a
+ * boolean, so a single grant can't unlock unlimited cross-playbook picks). Pass the campaign's
+ * crew for that last case.
  */
 export function isAbilityUnlocked(
   ruleset: RulesetContent,
@@ -176,14 +206,11 @@ export function isAbilityUnlocked(
   const ability = findAbility(ruleset, abilityId);
   if (!ability) return true;
   if (!prerequisiteSatisfied(ruleset, data, ability)) return false;
-  if ((ability.tier ?? 1) >= 2) {
-    const inPlaybookRoster = !!findPlaybook(ruleset, data.playbook)?.specialAbilities?.includes(
-      abilityId
-    );
-    const prereqHeld =
-      !!ability.prerequisite && data.specialAbilities.includes(ability.prerequisite);
-    const veteranGranted = collectAbilityEffects(ruleset, data, crew).veteran > 0;
-    if (!inPlaybookRoster && !prereqHeld && !veteranGranted) return false;
+  if (consumesVeteranSlot(ruleset, data, abilityId)) {
+    const granted = collectAbilityEffects(ruleset, data, crew).veteran;
+    // Slots consumed by the OTHER held picks must leave one for this ability (works both for a
+    // held ability being re-validated and for a candidate the wizard is offering).
+    if (veteranPicksUsed(ruleset, data, abilityId) >= granted) return false;
   }
   return true;
 }

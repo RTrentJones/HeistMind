@@ -23,7 +23,7 @@ export function useCharacterAdvancement(character: CharacterWithDetails, crew: C
   const { user } = useAuth();
   const { t } = useTranslation();
   const updateData = useUpdateCharacterData(character.id);
-  const advanceChar = useAdvanceCharacter(character.id);
+  const advanceChar = useAdvanceCharacter(character.id, character.gameId);
   const [error, setError] = useState<string | null>(null);
   const saving = updateData.isPending || advanceChar.isPending;
   const content = character.ruleset.content;
@@ -44,11 +44,16 @@ export function useCharacterAdvancement(character: CharacterWithDetails, crew: C
     }
   };
 
-  const advance = async (advancement: CharacterAdvancement) => {
+  const advance = async (advancement: CharacterAdvancement, logNote: string) => {
     const userId = user?.id;
     if (!userId) return;
     try {
-      await advanceChar.mutateAsync({ userId, advancement });
+      await advanceChar.mutateAsync({
+        userId,
+        advancement,
+        logLabel: character.name,
+        logNote,
+      });
       setError(null);
     } catch (err) {
       setError(errorMessage(err) || t('components.characterEditor.advancementFailed'));
@@ -56,17 +61,17 @@ export function useCharacterAdvancement(character: CharacterWithDetails, crew: C
   };
 
   const buyAbility = (abilityId: string, cost: number, name: string) =>
-    void advance({ type: 'ability', target: abilityId, cost, description: `Learn ${name}` });
+    void advance(
+      { type: 'ability', target: abilityId, cost, description: `Learn ${name}` },
+      t('components.characterEditor.logAdvanceAbility', { name })
+    );
 
   // Spend a full attribute XP track on an action dot (server gates on the track being full).
   const advanceAction = (action: string) =>
-    void advance({
-      type: 'skill',
-      target: action,
-      value: 1,
-      cost: 0,
-      description: `Add a dot to ${action}`,
-    });
+    void advance(
+      { type: 'skill', target: action, value: 1, cost: 0, description: `Add a dot to ${action}` },
+      t('components.characterEditor.logAdvanceAction', { action })
+    );
 
   return { saving, error, saveBuild, buyAbility, advanceAction };
 }
