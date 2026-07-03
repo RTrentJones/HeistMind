@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI script: stdout IS the operator interface */
 // Registers the command manifest with Discord: a bulk PUT (atomic + idempotent — the full set
 // replaces whatever was registered). Run per app: the dev application from `development`, the
 // prod application from `main` (each Discord app has ONE interactions endpoint URL).
