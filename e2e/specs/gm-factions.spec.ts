@@ -39,9 +39,15 @@ test.describe('GM: factions + status', () => {
     });
     await expect(gmPage.getByText('Neutral')).toBeVisible();
 
-    // Shift status one step toward allied → Friendly.
+    // Shift status one step toward allied → Friendly. The badge is the status of record; the
+    // shift ALSO lands in the campaign feed (round-3 PR-3), so bare getByText('Friendly') would
+    // be ambiguous with the feed note.
+    const statusBadge = gmPage.locator('[data-testid^="faction-status-"]');
     await gmPage.getByRole('button', { name: 'Raise The Tidewatch status' }).click();
-    await expect(gmPage.getByText('Friendly')).toBeVisible({ timeout: 10_000 });
+    await expect(statusBadge).toHaveText('+1', { timeout: 10_000 });
+    await expect(gmPage.getByText('Status shifted to +1 (Friendly)')).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Attach a faction project clock and tick it.
     await gmPage.getByLabel('Project clock for The Tidewatch').fill('Hunt the crew');
@@ -50,9 +56,12 @@ test.describe('GM: factions + status', () => {
     await gmPage.getByRole('button', { name: 'Advance Hunt the crew' }).click();
     await expect(gmPage.getByText('Hunt the crew 1/4')).toBeVisible({ timeout: 10_000 });
 
-    // All of it persists (DB-backed shared state).
+    // All of it persists (DB-backed shared state) — status badge AND the feed event.
     await gmPage.goto(gameUrl);
-    await expect(gmPage.getByText('Friendly')).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.locator('[data-testid^="faction-status-"]')).toHaveText('+1', {
+      timeout: 15_000,
+    });
     await expect(gmPage.getByText('Hunt the crew 1/4')).toBeVisible();
+    await expect(gmPage.getByText('Status shifted to +1 (Friendly)')).toBeVisible();
   });
 });
