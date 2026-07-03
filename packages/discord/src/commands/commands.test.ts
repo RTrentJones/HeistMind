@@ -82,6 +82,11 @@ describe('/resist', () => {
     const res = await handleResist(ctx([6, 1]), cmd('resist', [int('dice', 2)]));
     expect(embedOf(res).description).toContain('0 stress');
   });
+
+  it('a 0-attribute resist takes the LOWEST die (F64)', async () => {
+    const res = await handleResist(ctx([1, 6]), cmd('resist', [int('dice', 0)]));
+    expect(embedOf(res).description).toContain('mark **5 stress**');
+  });
 });
 
 describe('/fortune', () => {

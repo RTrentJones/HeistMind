@@ -49,9 +49,13 @@ export function diceForRating(rating: number): { count: number; zeroDice: boolea
  * A single 6 resists for free (0); a CRITICAL (two or more 6s) **clears 1 stress** — returned as
  * −1, per RAW ("if you get a critical result, you also clear 1 stress",
  * https://bladesinthedark.com/resistance-armor). A roll with **no dice** (empty) takes the full 6.
+ * A **zero-dice** resistance (attribute rating 0) takes the LOWEST die and can never crit — the
+ * same rule `rollOutcome` applies (F64: without this, a 0-attribute resist showing a 6 was
+ * computed as free instead of `6 − lowest`).
  */
-export function resistanceStress(results: number[]): number {
+export function resistanceStress(results: number[], opts: { zeroDice?: boolean } = {}): number {
   if (results.length === 0) return 6;
+  if (opts.zeroDice) return Math.max(0, 6 - Math.min(...results));
   if (results.filter(die => die === 6).length >= 2) return -1;
   return Math.max(0, 6 - Math.max(...results));
 }

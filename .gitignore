@@ -154,3 +154,6 @@ greenlight-playwright-suite.patch
 .design-sync/node_modules
 .ds-sync/
 ds-bundle/
+
+# Local Discord signing keypair (scripts/discord-post.mjs)
+.discord-dev-keys.json

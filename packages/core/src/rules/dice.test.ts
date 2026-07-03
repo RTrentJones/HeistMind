@@ -61,6 +61,12 @@ describe('resistanceStress', () => {
     expect(resistanceStress([6, 6, 6])).toBe(-1); // still just 1 cleared
     expect(resistanceStress([6, 6, 1])).toBe(-1);
   });
+
+  it('a ZERO-DICE resist takes the LOWEST die and can never crit (F64)', () => {
+    expect(resistanceStress([1, 6], { zeroDice: true })).toBe(5);
+    expect(resistanceStress([6, 6], { zeroDice: true })).toBe(0); // best case: free, not a crit
+    expect(resistanceStress([3, 5], { zeroDice: true })).toBe(3);
+  });
 });
 
 describe('viceStressCleared', () => {
