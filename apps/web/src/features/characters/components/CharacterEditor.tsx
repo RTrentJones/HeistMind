@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   clampStress,
   stressBounds,
@@ -63,11 +63,28 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
     crew
   );
 
-  // Resync the editable draft whenever the character reloads (e.g. after an advancement),
-  // keeping the active section. Saves persist, so clobbering unsaved edits here is acceptable.
+  // Resync the editable draft when the character reloads — but only while the draft is CLEAN.
+  // The three-way check tells apart: (a) draft already matches the incoming state (our save
+  // landed / no-op reload) → just re-anchor; (b) draft matches the state it was based on (clean)
+  // → follow the remote change; (c) anything else is the player's in-progress edit — NEVER
+  // clobber it (a same-sheet stress roll or a focus-refetch used to reset unsaved build edits).
+  const draftBaseRef = useRef(JSON.stringify(character.characterData));
   useEffect(() => {
-    setDraft(structuredClone(character.characterData));
-  }, [character.id, character.updatedAt]);
+    const incoming = character.characterData;
+    const incomingJson = JSON.stringify(incoming);
+    setDraft(prev => {
+      const prevJson = JSON.stringify(prev);
+      if (prevJson === incomingJson) {
+        draftBaseRef.current = incomingJson;
+        return prev;
+      }
+      if (prevJson === draftBaseRef.current) {
+        draftBaseRef.current = incomingJson;
+        return structuredClone(incoming);
+      }
+      return prev;
+    });
+  }, [character.id, character.updatedAt, character.characterData]);
 
   const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
 

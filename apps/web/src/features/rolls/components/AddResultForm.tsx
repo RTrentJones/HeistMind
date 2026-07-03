@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Select, Stack } from '@heist-mind/ui';
+import { Alert, Button, Input, Select, Stack } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCreateRoll } from '@/features/rolls/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -52,36 +52,44 @@ export function AddResultForm({
   };
 
   return (
-    <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-      {characters.length > 0 && (
-        <Select
-          label={t('components.addResult.character')}
-          value={characterId}
-          onChange={e => setCharacterId(e.target.value)}
+    <Stack direction='column' gap='sm'>
+      <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+        {characters.length > 0 && (
+          <Select
+            label={t('components.addResult.character')}
+            value={characterId}
+            onChange={e => setCharacterId(e.target.value)}
+          >
+            <option value=''>{t('components.addResult.noCharacter')}</option>
+            {characters.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        )}
+        <Input
+          label={t('components.addResult.resultLabel')}
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder={t('components.addResult.placeholder')}
+        />
+        <Button
+          variant='outline'
+          size='sm'
+          loading={createRoll.isPending}
+          disabled={!text.trim()}
+          onClick={add}
         >
-          <option value=''>{t('components.addResult.noCharacter')}</option>
-          {characters.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
+          {t('components.addResult.add')}
+        </Button>
+      </Stack>
+      {/* A failed write must not vanish silently — the entered text stays for a retry. */}
+      {createRoll.isError && (
+        <Alert variant='destructive' size='sm'>
+          {t('components.addResult.addFailed', { message: createRoll.error.message })}
+        </Alert>
       )}
-      <Input
-        label={t('components.addResult.resultLabel')}
-        value={text}
-        onChange={e => setText(e.target.value)}
-        placeholder={t('components.addResult.placeholder')}
-      />
-      <Button
-        variant='outline'
-        size='sm'
-        loading={createRoll.isPending}
-        disabled={!text.trim()}
-        onClick={add}
-      >
-        {t('components.addResult.add')}
-      </Button>
     </Stack>
   );
 }

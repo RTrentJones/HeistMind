@@ -41,7 +41,16 @@ first-run ruleset detour. Seven CI-gated PRs:
 - **R3-PR2 — async-play staleness.** (pending)
 - **R3-PR3 — feed completeness via engine use-cases.** (pending)
 - **R3-PR4 — rules-RAW fixes (crit-resist clears 1, heat resets on wanted, veteran as budget).** (pending)
-- **R3-PR5 — error surfacing + draft-clobber guards.** (pending)
+- **R3-PR5 — error surfacing + draft-clobber guards (this PR).** No silent failures: `LoadoutCard`
+  drops its swallow-everything catch (a failed save keeps the dirty draft + shows a destructive
+  Alert with the message); `AddResultForm` renders its mutation error (entered text kept for
+  retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local drafts on a
+  character reload ONLY while clean, via a three-way check (draft == incoming → re-anchor;
+  draft == base → follow remote; else it's the player's in-progress work — untouched). The
+  same-sheet stress-roll → build-edit reset is gone. Verified non-issue: the suspected
+  `sessionChecked` rehydrate edge is covered — the auth service forwards `INITIAL_SESSION`
+  (incl. null session) to the store listener, which signs out; an expired session self-corrects
+  right after rehydrate (optimistic-rehydrate tradeoff kept, no change).
 - **R3-PR6 — first-run onboarding (inline starter catalog).** (pending)
 - **R3-PR7 — high-value unit tests + web ratchet.** (pending)
 

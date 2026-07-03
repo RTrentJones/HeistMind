@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   loadUsed,
   effectiveLoadLimit,
@@ -46,6 +46,29 @@ export function LoadoutCard({
   });
   const busy = saveLoadoutMut.isPending;
 
+  // Order-insensitive fingerprint for the clean/dirty three-way check below.
+  const fingerprint = (l: CharacterLoadout) =>
+    JSON.stringify({ level: l.level, items: [...l.items].sort() });
+  // The saved state the current draft is based on: a draft matching it is CLEAN (safe to follow a
+  // remote reload); anything else is the player's in-progress picks — never clobbered.
+  const draftBaseRef = useRef(fingerprint(saved));
+  const savedKey = fingerprint(saved);
+  useEffect(() => {
+    setDraft(prev => {
+      const prevKey = fingerprint(prev);
+      if (prevKey === savedKey) {
+        draftBaseRef.current = savedKey;
+        return prev;
+      }
+      if (prevKey === draftBaseRef.current) {
+        draftBaseRef.current = savedKey;
+        return { level: saved.level, items: [...saved.items] };
+      }
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey]);
+
   const items = content.equipment?.items ?? [];
   if (items.length === 0) return null;
   const playbook = content.playbooks.find(p => p.id === data.playbook);
@@ -68,24 +91,23 @@ export function LoadoutCard({
   const stale = !!activeScore && saved.items.length > 0 && saved.scoreId !== activeScore.id;
 
   // Save + feed entry are one ENGINE use-case; the card supplies the loadout (tagged with the
-  // active score) and the localized note.
-  const persist = async (next: CharacterLoadout, note: string) => {
+  // active score) and the localized note. A failed save keeps the dirty draft and surfaces the
+  // error below (no more silent best-effort).
+  const persist = (next: CharacterLoadout, note: string) => {
     const userId = user?.id;
     if (!userId) return;
     const tagged: CharacterLoadout = { ...next, scoreId: activeScore?.id };
-    try {
-      await saveLoadoutMut.mutateAsync({ character, userId, loadout: tagged, logNote: note });
-    } catch {
-      // Loadout save is best-effort on the sheet (parity with the prior non-surfacing behavior);
-      // the mutation still invalidates the sheet so it reflects whatever landed.
-    }
+    saveLoadoutMut.mutate(
+      { character, userId, loadout: tagged, logNote: note },
+      { onSuccess: () => (draftBaseRef.current = fingerprint(tagged)) }
+    );
   };
 
   const saveLoadout = () =>
-    void persist(draft, t('components.loadout.changedNote', { level: draft.level, used, limit }));
+    persist(draft, t('components.loadout.changedNote', { level: draft.level, used, limit }));
   const resetLoadout = () => {
     setDraft({ level: draft.level, items: [] });
-    void persist({ level: draft.level, items: [] }, t('components.loadout.clearedNote'));
+    persist({ level: draft.level, items: [] }, t('components.loadout.clearedNote'));
   };
 
   return (
@@ -128,6 +150,12 @@ export function LoadoutCard({
         {over && (
           <Alert variant='warning' size='sm'>
             {t('components.loadout.overCapacity')}
+          </Alert>
+        )}
+
+        {saveLoadoutMut.isError && (
+          <Alert variant='destructive' size='sm'>
+            {t('components.loadout.saveFailed', { message: saveLoadoutMut.error.message })}
           </Alert>
         )}
 
