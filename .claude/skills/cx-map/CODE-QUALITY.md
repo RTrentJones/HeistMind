@@ -84,7 +84,17 @@ first-run ruleset detour. Seven CI-gated PRs:
   continue in place. Dashboard: a guided "Start here" 1-2-3 for a brand-new user. BRD Phase-5
   open decision #3 resolved as "inline offer, not pre-grant" (à-la-carte preserved). New E2E:
   `inline starter catalog` builds a character with no `/rulesets` visit.
-- **R3-PR7 — high-value unit tests + web ratchet.** (pending)
+- **R3-PR7 — high-value unit tests + web ratchet (this PR).** The pure logic E2E can't cheaply
+  cover: `character-creation-store` (11 tests — point-buy affordability incl. cross-attribute
+  cost accounting, action-dot budget + at-creation caps + attribute re-derivation, BitD radio
+  ability semantics + tier-lock no-ops, resume/reset); RollPanel's pool math extracted to the
+  pure `rollPool` (`features/rolls/lib/roll-pool.ts`, 4 tests — push/bargain stacking, the
+  pushed-0-rating pool becoming a real die, fortune floor, resistance ignoring moves) — a smaller,
+  honest cut of the planned `useRoll` extraction (the remaining `roll()` body is engine calls +
+  setState, already covered by engine tests + E2E); `LoadoutCard` (6 tests — gauge, over-capacity
+  refusal, dirty-gating + tagged save payload, stale-score flag, the PR-5 error surface,
+  read-only mode). Web suite 20→41 tests; coverage threshold ratcheted 0→11 (measured 11.51
+  lines / 37.4 branches / 16.56 functions; upward-only).
 
 ---
 
