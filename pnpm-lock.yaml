@@ -101,6 +101,9 @@ importers:
       '@heist-mind/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@heist-mind/discord':
+        specifier: workspace:*
+        version: link:../../packages/discord
       '@heist-mind/engine':
         specifier: workspace:*
         version: link:../../packages/engine

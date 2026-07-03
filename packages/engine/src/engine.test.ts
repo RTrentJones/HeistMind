@@ -203,6 +203,29 @@ describe('rollResistance', () => {
       characterData: expect.objectContaining({ stress: 5 }),
     });
   });
+
+  it('a ZERO-DICE resist takes the LOWEST die (F64)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollResistance(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      dice: 0,
+      results: [1, 6], // take-lowest → effective 1 → 5 stress (NOT free)
+      zeroDice: true,
+    });
+    expect(out.success && out.data.stress).toBe(5);
+    // 6 + 5 clamps to the default 9-stress track.
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 9 }),
+    });
+  });
 });
 
 describe('indulgeVice', () => {

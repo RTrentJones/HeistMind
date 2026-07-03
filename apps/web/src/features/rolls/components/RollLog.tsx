@@ -79,8 +79,9 @@ export function RollLog({ gameId }: { gameId: string }) {
     const posEffect =
       r.position && r.effect ? `${r.position}/${r.effect}` : (r.position ?? r.effect ?? '');
     // A critical resistance CLEARS 1 stress (resistanceStress returns −1) — phrase it, don't
-    // render "-1 stress".
-    const resistDelta = r.kind === 'resistance' ? resistanceStress(r.results) : null;
+    // render "-1 stress". A 0-dice pool (r.dice === 0) takes the LOWEST die (F64).
+    const resistDelta =
+      r.kind === 'resistance' ? resistanceStress(r.results, { zeroDice: r.dice === 0 }) : null;
     const resisted =
       resistDelta === null
         ? null

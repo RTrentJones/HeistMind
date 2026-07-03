@@ -450,6 +450,20 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
   over-budget set (`veteranPicksUsed` in character-rules).
 
+### F64 — Zero-dice resistance computed stress from the HIGHEST die (should be lowest)
+
+- **severity:** S2 · **type:** FitD-gap
+- **where:** `core/rules/dice.ts` `resistanceStress` always used `Math.max(...results)`, but a
+  0-attribute resistance rolls 2d and takes the **LOWEST** (the same zero-dice rule `rollOutcome`
+  applies). A `[1, 6]` zero-dice resist was computed as *free* instead of **5 stress** — and two
+  6s on 0d even "crit-cleared". Affected core → engine (`rollResistance`) → web (`RollLog`
+  display) → bot, since round 1.
+- **found by:** the Discord bot's local signed-POST harness on `/resist dice:0` (bot phase-0
+  PR-2 manual verification).
+- **status:** **fixed (bot phase-0 PR-2)** — `resistanceStress(results, { zeroDice })` takes the
+  lowest and never crits on 0d; engine forwards its input's `zeroDice`; RollLog infers it from
+  `r.dice === 0`; covered in core/engine/bot tests.
+
 ### F63 — Heat "remainder carry" flagged as a deviation — REFUTED, it is RAW
 
 - **severity:** S4 · **type:** FitD-gap (audit correction)

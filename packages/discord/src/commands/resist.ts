@@ -13,7 +13,7 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
 
   const { count, zeroDice } = diceForRating(dice);
   const results = ctx.realize(count);
-  const stress = resistanceStress(results);
+  const stress = resistanceStress(results, { zeroDice });
 
   return replyEmbed(
     rollEmbed({

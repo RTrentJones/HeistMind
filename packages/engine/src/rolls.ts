@@ -73,7 +73,7 @@ export async function rollResistance(
   repos: DatabaseRepositories,
   input: ResistanceRollInput
 ): Promise<Result<{ roll: Roll; stress: number }>> {
-  const stress = resistanceStress(input.results);
+  const stress = resistanceStress(input.results, { zeroDice: input.zeroDice });
   const created = await repos.rolls.create(input.userId, {
     gameId: input.gameId,
     ...(input.characterId !== undefined ? { characterId: input.characterId } : {}),
