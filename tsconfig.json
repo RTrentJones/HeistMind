@@ -39,6 +39,9 @@
       "path": "./packages/database"
     },
     {
+      "path": "./packages/discord"
+    },
+    {
       "path": "./packages/engine"
     },
     {

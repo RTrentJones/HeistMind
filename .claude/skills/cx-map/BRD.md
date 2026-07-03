@@ -231,9 +231,12 @@ SET NULL`), binds the ruleset on the character (`original_ruleset_id`), and adds
 
 ## Appendix — Phase 4: Discord integration (detailed BRD)
 
-**Status:** specified, **not built**. `apps/discord-bot` does not exist yet (the monorepo's
-`apps/*` workspace glob reserves the slot). This appendix is the spec to build from when the
-Discord app credentials are available; nothing here is implemented yet.
+**Status:** **in build (2026-07-03, the phased bot plan).** The client lives in
+**`packages/discord`** (verify/router/handlers/manifest — unit-tested; the web `/api/discord`
+route is a thin transport), NOT a separate `apps/discord-bot` — Discord interactions are HTTP
+webhooks, no gateway process. Phases: **0** harness + manual FitD roller, no account link
+(shipping now); **1** active-character rolls; **2** the channel/category/server↔campaign link +
+logged rolls (this appendix's core); **3** gameplay parity.
 
 **Platform prerequisites (verified 2026-07-02 — none exist yet):** (1) a **service-role client
 path** in `packages/database` — every current factory reads only the anon key, and
