@@ -34,7 +34,7 @@ first-run ruleset detour. Seven CI-gated PRs:
   `blades-in-the-dark-complete-json.ts` deleted (zero importers); `useLanguageSwitcher` now derives
   `supportedLanguages` from `AVAILABLE_LANGUAGES` (was advertising es/fr/de with no messages);
   auth-callback `console.warn` → `logEvent`. **Docs:** BRD/STATUS/CLAUDE.md corrected — the bot
-  app *does not exist* (was "stub"/"placeholder"); "attribution is free" now names the unwired
+  app _does not exist_ (was "stub"/"placeholder"); "attribution is free" now names the unwired
   service-role prerequisite; Phase-2 unified-log claim carries the XP caveat; the Phase-4 appendix
   lists the four verified platform prerequisites (service-role client path, engine-level authz to
   replace bypassed RLS, channel↔campaign migration, interactions endpoint).
@@ -62,7 +62,19 @@ first-run ruleset detour. Seven CI-gated PRs:
   (F63 — the review's claim refuted by the SRD's own example; no change, recorded). Recorded
   deviation kept: `advanceTier` ignores coin cost + rival-hold Rep discount (helper
   simplification). Core 108 tests green under the 100% rules gates; engine spec 24→28.
-- **R3-PR5 — error surfacing + draft-clobber guards.** (pending)
+- **R3-PR5 — error surfacing + draft-clobber guards (this PR).** No silent failures: `LoadoutCard`
+  drops its swallow-everything catch (a failed save keeps the dirty draft + shows a destructive
+  Alert with the message); `AddResultForm` renders its mutation error (entered text kept for
+  retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local drafts on a
+  character reload ONLY while clean, via a three-way check (draft == incoming → re-anchor;
+  draft == base → follow remote; else it's the player's in-progress work — untouched). The
+  same-sheet stress-roll → build-edit reset is gone. Write-side counterpart (caught by the
+  `gm-loadout` E2E): the editor's full-object save could persist a pre-refetch draft and wipe a
+  loadout the sheet had just saved — the editor doesn't OWN loadout, so every editor save now
+  carries the live `character.characterData.loadout`. Verified non-issue: the suspected
+  `sessionChecked` rehydrate edge is covered — the auth service forwards `INITIAL_SESSION`
+  (incl. null session) to the store listener, which signs out; an expired session self-corrects
+  right after rehydrate (optimistic-rehydrate tradeoff kept, no change).
 - **R3-PR6 — first-run onboarding (this PR).** The product P0 (F37): the ruleset-prerequisite wall
   in front of the flagship "build a character in minutes" job is gone. `StarterCatalogInline`
   extracted (single implementation; `/rulesets` reuses it) and embedded in `/characters/new`
@@ -78,7 +90,7 @@ first-run ruleset detour. Seven CI-gated PRs:
 
 ## Round 2 (2026-07-02) — architect for the product (web + Discord bot)
 
-A fresh 3-lens re-audit + a reframe from the user: design for *"Avrae for FitD"* — the web app AND
+A fresh 3-lens re-audit + a reframe from the user: design for _"Avrae for FitD"_ — the web app AND
 the future Discord bot (not yet created — the `apps/*` workspace reserves the slot; `packages/shared` exists for it) driving the
 same rules engine and campaign state. **Target package graph:**
 `core` (domain types + pure rules) ← `database` (client-agnostic repos) ← `engine` (use-cases both
@@ -106,10 +118,10 @@ broken placeholders). Nine CI-gated PRs:
 - **R2-PR3 — repo boilerplate collapse (this PR).** `tryResult()` in `result-helpers` +
   `SupabaseRepositoryBase` (client/schema pair, typed `db` accessor, `run()` wrapper): all 12 repos
   converted — **58 hand-rolled try/catch blocks deleted**; method bodies now contain only the query
-  + Result mapping. `stubProfile` single-sourced into the profile adapter; the last 3 JSONB `as`
-  casts routed through `parseSupabaseJson`; the zero-consumer `adapters/index.ts` barrel removed
-  (rule: adapters are imported by path). Remaining try/catch in the package: only the auth service
-  (different envelope — out of the repo pattern's scope).
+  - Result mapping. `stubProfile` single-sourced into the profile adapter; the last 3 JSONB `as`
+    casts routed through `parseSupabaseJson`; the zero-consumer `adapters/index.ts` barrel removed
+    (rule: adapters are imported by path). Remaining try/catch in the package: only the auth service
+    (different envelope — out of the repo pattern's scope).
 - **R2-PR4 — tooling truth (this PR).** Every gate now runs and tells the truth:
   - **Lint**: one shared strict base (`configs/eslint.base.mjs` — typed rules via the project
     service: no-explicit-any, no-floating-promises, consistent-type-imports, import/no-cycle,
@@ -241,8 +253,7 @@ optimistic updates (round-1 deviation stands); Discord-id→profile schema work.
 > - **#100 (@47ffbc4) — the stores + editor:** `lib/query/client.ts` `getQueryClient()` (browser
 >   singleton shared by the provider tree and the seam's **non-hook surface** —
 >   `features/{concept}/data/api.ts`, consumable from Zustand actions). `auth-store`'s 6 profile repo
->   calls → `profiles/data/api.ts`; the wizard's `submit()` → `characters/data/api.ts`
->   `createCharacterWithValidation` (invalidates, so the create shows everywhere); CharacterEditor →
+>   calls → `profiles/data/api.ts`; the wizard's `submit()` → `characters/data/api.ts` > `createCharacterWithValidation` (invalidates, so the create shows everywhere); CharacterEditor →
 >   `useUpdateCharacterData` + new `useAdvanceCharacter`, retiring the `onSaved`/`refetch()` bridge.
 > - **#101 (@9a2ae67) — PR4c, notifications:** `NotificationToaster` mounted in `Providers` (the store
 >   was never rendered — wizard toasts went into the void); F58 sign-in/out `console.error` paths now

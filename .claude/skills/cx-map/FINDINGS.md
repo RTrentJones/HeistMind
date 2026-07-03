@@ -433,7 +433,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 - **severity:** S2 · **type:** FitD-gap
 - **where:** `core/rules/dice.ts` `resistanceStress` floored at 0, conflating a crit (two+ 6s) with
-  a single 6. RAW: *"if you get a critical result, you also clear 1 stress"*
+  a single 6. RAW: _"if you get a critical result, you also clear 1 stress"_
   ([SRD, Resistance & Armor](https://bladesinthedark.com/resistance-armor)).
 - **status:** **fixed (round-3 PR-4)** — `resistanceStress` returns **−1** on a crit; the engine's
   `applyStress` accepts negative deltas (clamped at 0); RollPanel/RollLog phrase it ("critical —

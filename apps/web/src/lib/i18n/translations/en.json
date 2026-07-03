@@ -434,7 +434,8 @@
       "noCharacter": "— (no character)",
       "resultLabel": "What happened",
       "placeholder": "e.g. Tense Skirmish — partial; took 2 stress",
-      "add": "Add to log"
+      "add": "Add to log",
+      "addFailed": "Couldn't record the result ({{message}}) — your text is kept, try again."
     },
     "roster": {
       "unknownPlayer": "Unknown player",
@@ -486,7 +487,8 @@
       "save": "Save loadout",
       "clear": "Clear",
       "changedNote": "Loadout set ({{level}}, {{used}}/{{limit}})",
-      "clearedNote": "Loadout cleared"
+      "clearedNote": "Loadout cleared",
+      "saveFailed": "Couldn't save the loadout ({{message}}) — your picks are kept, try again."
     },
     "clocksPanel": {
       "loadFailed": "Failed to load clocks",

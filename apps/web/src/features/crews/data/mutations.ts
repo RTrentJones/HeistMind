@@ -59,8 +59,7 @@ export function useApplyCrewHeat(gameId: string) {
 export function useAdvanceCrewTier(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
   return useMutation({
-    mutationFn: async (vars: CrewOpVars) =>
-      unwrap(await advanceCrewTier(getRepositories(), vars)),
+    mutationFn: async (vars: CrewOpVars) => unwrap(await advanceCrewTier(getRepositories(), vars)),
     onSuccess: invalidate,
   });
 }

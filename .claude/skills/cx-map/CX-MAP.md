@@ -6,10 +6,11 @@ The living map of every page and user flow. Maintained per the `cx-map` skill (`
 the stable "what it does"; that file is the churn of "what's wrong."
 
 Stack: Next.js 15 App Router (`apps/web`), React 19, Tailwind CSS 4, Radix UI (`packages/ui`),
-Supabase (auth + RLS + per-env schema). Product goal (see `BRD.md`): a **rules-driven FitD character
-+ crew manager** that doubles as the **mechanical layer for async, play-by-post games on Discord** —
-all shared state is DB-backed and loaded on view (no realtime), with a dice roller and a score-grouped
-campaign log. Narrative lives in Discord prose; mechanics live here. *("Avrae for Forged in the Dark.")*
+Supabase (auth + RLS + per-env schema). Product goal (see `BRD.md`): a \*\*rules-driven FitD character
+
+- crew manager** that doubles as the **mechanical layer for async, play-by-post games on Discord\*_ —
+  all shared state is DB-backed and loaded on view (no realtime), with a dice roller and a score-grouped
+  campaign log. Narrative lives in Discord prose; mechanics live here. _("Avrae for Forged in the Dark.")\*
 
 ## Roles
 
@@ -45,14 +46,14 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   page arrives as server-rendered HTML. `AppShell` steps aside on `/`, so each side renders its own
   `AuthHeader` + `<main>`.
 - **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
-  two-mode landing. Hero *"The mechanical home for your Forged-in-the-Dark crew,"* a **dual CTA**
-  (*Run a campaign* / *Join with a code* — both kick off Discord OAuth), **two "how you'll use it"
-  tracks** (*At your table* (Mode 1) and *Play-by-post on Discord* (Mode 2, tagged *"Like Avrae for
-  D&D — but built for Forged in the Dark"*)), and **three pillars** (rules-driven · track from
+  two-mode landing. Hero _"The mechanical home for your Forged-in-the-Dark crew,"_ a **dual CTA**
+  (_Run a campaign_ / _Join with a code_ — both kick off Discord OAuth), **two "how you'll use it"
+  tracks** (_At your table_ (Mode 1) and _Play-by-post on Discord_ (Mode 2, tagged _"Like Avrae for
+  D&D — but built for Forged in the Dark"_)), and **three pillars** (rules-driven · track from
   anywhere · take what you want). Copy lives in `pages.landing.*`.
 - **Signed in — `Dashboard`** (`apps/web/src/features/dashboard/components/Dashboard.tsx` +
   `features/dashboard/hooks/use-dashboard-data.ts`): the personal home (the OAuth callback redirects
-  to `/`). Header *"Welcome back, {name}"*; **quick actions** (create campaign · join a game ·
+  to `/`). Header _"Welcome back, {name}"_; **quick actions** (create campaign · join a game ·
   rulesets · upload ruleset); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
   state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
   · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
@@ -67,7 +68,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **Nav:** → `/auth/callback` (after OAuth) → back to `/` (now the dashboard); → `/games`,
   `/games/new`, `/rulesets`, `/rulesets/new`, `/games/[gameId]`, character sheets.
 - **CX intent:** logged out, communicate the two ways to use HeistMind above the fold (not "play the
-  whole game here"); signed in, open to *your* campaigns + characters, not marketing.
+  whole game here"); signed in, open to _your_ campaigns + characters, not marketing.
 
 ### `/auth/callback` — OAuth return
 
@@ -132,13 +133,13 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
     player sees it on load): shows **who** (character name; "Fortune"/"GM") and **when** (relative time
-    + timestamp tooltip), annotates resistance ("resisted — N stress"), and renders non-dice events
-    (downtime / loadout / score / **crew** / **faction** / **clock** / **xp** / note) with a neutral
-    kind badge. **Every mechanical change reaches the feed** (round-3 PR-3, via engine use-cases):
-    crew heat/tier/incarceration, faction status shifts, a clock **filling** (routine ticks stay
-    panel-only), and XP marks/advances — alongside rolls, downtime, loadout, and score lifecycle.
-    Entries are **grouped by score** (newest operation first, under its name); with no scores in
-    play it falls back to a flat feed.
+    - timestamp tooltip), annotates resistance ("resisted — N stress"), and renders non-dice events
+      (downtime / loadout / score / **crew** / **faction** / **clock** / **xp** / note) with a neutral
+      kind badge. **Every mechanical change reaches the feed** (round-3 PR-3, via engine use-cases):
+      crew heat/tier/incarceration, faction status shifts, a clock **filling** (routine ticks stay
+      panel-only), and XP marks/advances — alongside rolls, downtime, loadout, and score lifecycle.
+      Entries are **grouped by score** (newest operation first, under its name); with no scores in
+      play it falls back to a flat feed.
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -166,7 +167,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   special abilities (expandable rules), identity, contacts, coin/load; plus a
   character-scoped `RollPanel` + `RollLog`. **`LoadoutCard`**
   (`apps/web/src/features/characters/components/LoadoutCard.tsx`) — the character's **current-score
-  loadout**, chosen *per operation as you go* (BitD: load is not a build/advancement choice, so it
+  loadout**, chosen _per operation as you go_ (BitD: load is not a build/advancement choice, so it
   **left the build editor**). Pick a load level, equip items up to the limit, then **Save** (one
   campaign-log entry per save). When a new score has started the loadout is flagged stale and can be
   **reset** for it; with no active score it's a resettable "current" loadout. Loadout changes/clears
@@ -243,7 +244,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 
 - **File:** `apps/web/src/app/characters/[characterId]/page.tsx` — reuses `CharacterSheet`. With no
   campaign, the active-score + shared dice/roll-log sections hide. The **`AttachToCampaign`** card is
-  the **owner's campaign-membership control** (shown on both standalone *and* in-campaign sheets):
+  the **owner's campaign-membership control** (shown on both standalone _and_ in-campaign sheets):
   standalone → **"Bring to a campaign"**; in-campaign (Phase 5b) → **"Move to another campaign"**
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
@@ -252,11 +253,11 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 
 - **Files:** `apps/web/src/app/{error,global-error,not-found}.tsx`.
 - **Route errors** (`error.tsx`): a render/data throw below the root layout lands on an i18n'd,
-  DS-styled card (*"errors.boundary.title"* + fallback copy) with a **Try again** button (Next
+  DS-styled card (_"errors.boundary.title"_ + fallback copy) with a **Try again** button (Next
   re-renders the segment); the error is reported through the telemetry seam. `global-error.tsx` is
   the provider-free last resort for root-layout throws (own `<html>/<body>`, inline-styled, same
   copy via the bare i18n instance).
-- **404** (`not-found.tsx`): *"Lost in the shadows"* + **Back to the lair** → `/`
+- **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
 _Last verified:_ 2026-07-02 (server-rendered landing via HomeSwitch + per-route `/` metadata + error/404 surfaces, round-2 PR-9; previously 2026-07-01 F42 role-gated sheet affordances)
@@ -319,8 +320,7 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
 
 1. GM **starts a score** (`ScorePanel`) and seeds clocks for obstacles. 2. Players **set their
    per-score loadout** on their sheets (`LoadoutCard`: level + items → Save). 3. Players roll actions
-   from their sheets (`RollPanel`: action → rating → roll → logged, auto-tagged with the active score).
-   4. When a consequence lands, the player **resists** (`RollPanel` resistance mode → `6 − highest die`
+   from their sheets (`RollPanel`: action → rating → roll → logged, auto-tagged with the active score). 4. When a consequence lands, the player **resists** (`RollPanel` resistance mode → `6 − highest die`
    stress applied live). 5. GM makes fortune/GM rolls from the hub `RollPanel`. 6. Anything settled **in
    person or on Discord** gets recorded via `AddResultForm` so the log stays complete. 7. All events
    land in `RollLog`, grouped under the score, with who + when (every player sees on reload). 8. GM
