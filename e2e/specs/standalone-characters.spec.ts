@@ -55,6 +55,25 @@ test.describe('Phase 5: portable characters', () => {
     );
   });
 
+  test('inline starter catalog: builds a character with NO /rulesets detour (F37)', async ({
+    gmPage,
+  }) => {
+    // Straight to character creation — the built-in catalog is inline there, and loading one
+    // continues DIRECTLY into the wizard. Works for both the zero-ruleset empty state and the
+    // "add another system" section, so no empty-account precondition is needed.
+    await gmPage.goto('/characters/new');
+    await gmPage
+      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+      .first()
+      .click();
+    await expect(gmPage.getByLabel('Character name')).toBeVisible({ timeout: 30_000 });
+
+    const charName = uniqueName('No Detour');
+    await buildBrackwaterCharacter(gmPage, charName);
+    await gmPage.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
+    await expect(gmPage.getByRole('heading', { name: charName })).toBeVisible();
+  });
+
   test('builds a standalone character and lists it in My Characters', async ({ gmPage }) => {
     await addBrackwater(gmPage);
 

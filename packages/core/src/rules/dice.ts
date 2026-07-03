@@ -3,8 +3,10 @@
 // can't be faked by the client. Re-exported via @heist-mind/shared for the web UI.
 
 export type RollOutcome = 'crit' | 'success' | 'partial' | 'bad';
-// 'loadout' / 'score' / 'note' are non-dice campaign-log events (no roll) — a 'note' is a manually
-// recorded result (settled IRL or on Discord) — carried in the same append-only log.
+// Everything after 'downtime' is a non-dice campaign-log event (no roll) carried in the same
+// append-only log: 'loadout'/'score' lifecycle entries, 'crew'/'faction'/'clock' mechanical
+// changes, 'xp' marks + advances, and 'note' — a manually recorded result (settled IRL or on
+// Discord). Kinds are mirrored by the rolls table's kind CHECK (widened per migration).
 export type RollKind =
   | 'action'
   | 'resistance'
@@ -12,6 +14,10 @@ export type RollKind =
   | 'downtime'
   | 'loadout'
   | 'score'
+  | 'crew'
+  | 'faction'
+  | 'clock'
+  | 'xp'
   | 'note';
 
 /**
@@ -39,12 +45,14 @@ export function diceForRating(rating: number): { count: number; zeroDice: boolea
 }
 
 /**
- * Stress taken when resisting a consequence (BitD "Armor 2" resistance roll): stress equals
- * `6 − the HIGHEST die rolled`. Roll a 6 (or a crit) and you take 0 stress; the worst single die
- * takes 5. A roll with **no dice** (empty) takes the full 6. Never returns less than 0.
+ * Stress DELTA when resisting a consequence (BitD resistance roll): `6 − the HIGHEST die rolled`.
+ * A single 6 resists for free (0); a CRITICAL (two or more 6s) **clears 1 stress** — returned as
+ * −1, per RAW ("if you get a critical result, you also clear 1 stress",
+ * https://bladesinthedark.com/resistance-armor). A roll with **no dice** (empty) takes the full 6.
  */
 export function resistanceStress(results: number[]): number {
   if (results.length === 0) return 6;
+  if (results.filter(die => die === 6).length >= 2) return -1;
   return Math.max(0, 6 - Math.max(...results));
 }
 

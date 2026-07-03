@@ -15,14 +15,17 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
 
 /**
- * Standalone character creation (Phase 5). Pick one of your rulesets, then the same creation wizard
- * runs with no campaign — the new character lands in "My Characters" and can be brought to a table
- * later. (To create directly inside a campaign, use the game's "Create character".)
+ * Standalone character creation (Phase 5). Pick one of your rulesets — or grab a built-in with one
+ * click (the inline starter catalog, F37: a brand-new user builds a character with NO /rulesets
+ * detour) — then the same creation wizard runs with no campaign; the new character lands in
+ * "My Characters" and can be brought to a table later. (To create directly inside a campaign, use
+ * the game's "Create character".)
  */
 export default function NewStandaloneCharacterPage() {
   const { user, isAuthenticated } = useAuth();
@@ -72,14 +75,18 @@ export default function NewStandaloneCharacterPage() {
         {rulesets.isLoading ? (
           <LoadingSpinner />
         ) : !rulesets.data || rulesets.data.length === 0 ? (
-          <Card variant='outline'>
-            <Stack direction='column' gap='sm' align='start'>
-              <Text variant='muted'>{t('characters.noRulesets')}</Text>
-              <Button asChild variant='ember' size='sm'>
-                <Link href='/rulesets'>{t('characters.addRuleset')}</Link>
-              </Button>
-            </Stack>
-          </Card>
+          // No rulesets yet — the flagship first-run path: one click on a built-in continues
+          // STRAIGHT into the wizard (no /rulesets detour).
+          <Stack direction='column' gap='sm'>
+            <Text variant='muted'>{t('characters.startWithBuiltin')}</Text>
+            <StarterCatalogInline onLoaded={setPicked} />
+            <Text variant='muted' size='sm'>
+              {t('characters.orUpload')}{' '}
+              <Link href='/rulesets/new' className='underline'>
+                {t('characters.uploadLink')}
+              </Link>
+            </Text>
+          </Stack>
         ) : (
           <Stack direction='column' gap='md'>
             {rulesets.data.map(rs => (
@@ -97,6 +104,12 @@ export default function NewStandaloneCharacterPage() {
                 </Stack>
               </Card>
             ))}
+            {/* The catalog stays reachable with rulesets present too — grab another system and
+                continue straight into the wizard. */}
+            <Stack direction='column' gap='sm'>
+              <Heading level='h3'>{t('characters.moreSystems')}</Heading>
+              <StarterCatalogInline onLoaded={setPicked} />
+            </Stack>
           </Stack>
         )}
       </Stack>

@@ -291,6 +291,58 @@ describe('validateCharacter — creation mode', () => {
     expect(r.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
   });
 
+  it('veteran grants are a BUDGET: one grant cannot cover two cross-playbook picks', () => {
+    const rs = ruleset({
+      characterCreation: { steps: [], abilityChoices: 5 },
+      crew: {
+        types: [],
+        abilities: [{ id: 'crew-vet', name: 'Veteran', description: '', effects: { veteran: 1 } }],
+      },
+    });
+    // A second tier-2 ability outside the Razor's roster, alongside ghost-step.
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'shadow-form', name: 'Shadow Form', description: '', tier: 2 },
+    ];
+    const twoPicks = character({ specialAbilities: ['ghost-step', 'shadow-form'] });
+    const over = validateCharacter(rs, twoPicks, {
+      mode: 'creation',
+      crew: { crewAbilities: ['crew-vet'] },
+    });
+    expect(over.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(true);
+
+    // Two grants cover both picks.
+    rs.crew!.abilities = [
+      { id: 'crew-vet', name: 'Veteran', description: '', effects: { veteran: 2 } },
+    ];
+    const covered = validateCharacter(rs, twoPicks, {
+      mode: 'creation',
+      crew: { crewAbilities: ['crew-vet'] },
+    });
+    expect(covered.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
+  });
+
+  it('isAbilityUnlocked offers a candidate only while a veteran slot is free', () => {
+    const rs = ruleset({
+      crew: {
+        types: [],
+        abilities: [{ id: 'crew-vet', name: 'Veteran', description: '', effects: { veteran: 1 } }],
+      },
+    });
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'shadow-form', name: 'Shadow Form', description: '', tier: 2 },
+    ];
+    const crew = { crewAbilities: ['crew-vet'] };
+    // Slot free → the candidate is offered.
+    expect(isAbilityUnlocked(rs, character(), 'ghost-step', crew)).toBe(true);
+    // Slot consumed by ghost-step → a second cross-playbook candidate is locked, but the HELD
+    // pick itself still validates (it occupies the slot it consumed).
+    const holding = character({ specialAbilities: ['ghost-step'] });
+    expect(isAbilityUnlocked(rs, holding, 'shadow-form', crew)).toBe(false);
+    expect(isAbilityUnlocked(rs, holding, 'ghost-step', crew)).toBe(true);
+  });
+
   it('crew Mastery raises the action cap from 3 to 4', () => {
     const rs = actionRuleset({
       crew: {

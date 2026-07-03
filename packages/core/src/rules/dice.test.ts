@@ -55,9 +55,11 @@ describe('resistanceStress', () => {
     expect(resistanceStress([])).toBe(6);
   });
 
-  it('never returns less than 0 (a 6 still floors at 0)', () => {
+  it('a single 6 resists for free; a CRITICAL (two+ 6s) clears 1 stress (RAW)', () => {
     expect(resistanceStress([6])).toBe(0);
-    expect(resistanceStress([6, 6])).toBe(0);
+    expect(resistanceStress([6, 6])).toBe(-1);
+    expect(resistanceStress([6, 6, 6])).toBe(-1); // still just 1 cleared
+    expect(resistanceStress([6, 6, 1])).toBe(-1);
   });
 });
 

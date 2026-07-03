@@ -34,34 +34,63 @@ first-run ruleset detour. Seven CI-gated PRs:
   `blades-in-the-dark-complete-json.ts` deleted (zero importers); `useLanguageSwitcher` now derives
   `supportedLanguages` from `AVAILABLE_LANGUAGES` (was advertising es/fr/de with no messages);
   auth-callback `console.warn` → `logEvent`. **Docs:** BRD/STATUS/CLAUDE.md corrected — the bot
-  app *does not exist* (was "stub"/"placeholder"); "attribution is free" now names the unwired
+  app _does not exist_ (was "stub"/"placeholder"); "attribution is free" now names the unwired
   service-role prerequisite; Phase-2 unified-log claim carries the XP caveat; the Phase-4 appendix
   lists the four verified platform prerequisites (service-role client path, engine-level authz to
   replace bypassed RLS, channel↔campaign migration, interactions endpoint).
-- **R3-PR2 — async-play staleness.** (pending)
-- **R3-PR3 — feed completeness via engine use-cases.** (pending)
-- **R3-PR4 — rules-RAW fixes (crit-resist clears 1, heat resets on wanted, veteran as budget).** (pending)
-- **R3-PR5 — error surfacing + draft-clobber guards (this PR).** No silent failures: `LoadoutCard`
-  drops its swallow-everything catch (a failed save keeps the dirty draft + shows a destructive
-  Alert with the message); `AddResultForm` renders its mutation error (entered text kept for
-  retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local drafts on a
-  character reload ONLY while clean, via a three-way check (draft == incoming → re-anchor;
-  draft == base → follow remote; else it's the player's in-progress work — untouched). The
-  same-sheet stress-roll → build-edit reset is gone. Write-side counterpart (caught by the
+- **R3-PR2 ✅ done @e8e1000 — async-play staleness.** The named `sharedCampaignState` policy
+  (`lib/query/policies.ts`: staleTime 0, refetchOnMount 'always', refetchOnWindowFocus true —
+  returning to the tab is the async-play "check the table" gesture) spread into all seven
+  shared-state factories (clocks/factions/scores/crews/rolls/characters byGame+detail) — a second
+  player's open hub no longer shows a stale feed. User-owned reads stay on client defaults
+  (deliberate, audited).
+- **R3-PR3 — feed completeness via engine use-cases (this PR).** BRD R-E1 made true: crew
+  heat/tier/incarceration (`engine/crews.ts`), faction status (`engine/factions.ts`), a clock
+  filling (`engine/clocks.ts` — completion only; routine ticks stay panel-only), and XP
+  marks/advances (`markXp`/`advanceCharacter` in `engine/characters.ts`) each persist AND write a
+  campaign-log event in one use-case; web mutations are thin wrappers with feed invalidation and
+  localized log copy. New RollKinds crew/faction/clock/xp (migration `00015` widens the kind
+  CHECK — constraint-only, no type regen). `saveLoadout` now writes through
+  `updateCharacterWithValidation` — the last unvalidated character write path is gone. Engine
+  contract note updated: single-call writes stay repo-direct UNLESS they belong in the shared
+  feed. Engine spec grew 14→24 mocked-repo tests (still the Discord bot's contract).
+- **R3-PR4 — rules-RAW fixes (this PR).** Two real fixes + one refuted claim (all SRD-verified
+  before touching the rules): **crit resistance clears 1 stress** (F61 — `resistanceStress` → −1
+  on two+ 6s; engine `applyStress` accepts negative deltas clamped at 0; RollPanel/RollLog phrase
+  the clear); **veteran as a budget** (F62 — held cross-playbook picks must fit the summed grants,
+  `veteranPicksUsed`; one grant no longer unlocks unlimited picks); **heat remainder-carry is RAW**
+  (F63 — the review's claim refuted by the SRD's own example; no change, recorded). Recorded
+  deviation kept: `advanceTier` ignores coin cost + rival-hold Rep discount (helper
+  simplification). Core 108 tests green under the 100% rules gates; engine spec 24→28.
+- **R3-PR5 — error surfacing + draft-clobber guards (in CI, #116).** No silent failures:
+  `LoadoutCard` drops its swallow-everything catch (a failed save keeps the dirty draft + shows a
+  destructive Alert with the message); `AddResultForm` renders its mutation error (entered text
+  kept for retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local
+  drafts on a character reload ONLY while clean, via a three-way check (draft == incoming →
+  re-anchor; draft == base → follow remote; else it's the player's in-progress work — untouched).
+  The same-sheet stress-roll → build-edit reset is gone. Write-side counterpart (caught by the
   `gm-loadout` E2E): the editor's full-object save could persist a pre-refetch draft and wipe a
   loadout the sheet had just saved — the editor doesn't OWN loadout, so every editor save now
   carries the live `character.characterData.loadout`. Verified non-issue: the suspected
   `sessionChecked` rehydrate edge is covered — the auth service forwards `INITIAL_SESSION`
   (incl. null session) to the store listener, which signs out; an expired session self-corrects
   right after rehydrate (optimistic-rehydrate tradeoff kept, no change).
-- **R3-PR6 — first-run onboarding (inline starter catalog).** (pending)
+- **R3-PR6 — first-run onboarding (this PR).** The product P0 (F37): the ruleset-prerequisite wall
+  in front of the flagship "build a character in minutes" job is gone. `StarterCatalogInline`
+  extracted (single implementation; `/rulesets` reuses it) and embedded in `/characters/new`
+  (zero rulesets → the catalog IS the page, one click continues straight into the wizard; with
+  rulesets → an "Add another system" section) and in `GameForm`'s empty state (was a bare
+  dead-end Text). `useLoadBuiltinRuleset` now returns the OWNED ruleset row so inline flows
+  continue in place. Dashboard: a guided "Start here" 1-2-3 for a brand-new user. BRD Phase-5
+  open decision #3 resolved as "inline offer, not pre-grant" (à-la-carte preserved). New E2E:
+  `inline starter catalog` builds a character with no `/rulesets` visit.
 - **R3-PR7 — high-value unit tests + web ratchet.** (pending)
 
 ---
 
 ## Round 2 (2026-07-02) — architect for the product (web + Discord bot)
 
-A fresh 3-lens re-audit + a reframe from the user: design for *"Avrae for FitD"* — the web app AND
+A fresh 3-lens re-audit + a reframe from the user: design for _"Avrae for FitD"_ — the web app AND
 the future Discord bot (not yet created — the `apps/*` workspace reserves the slot; `packages/shared` exists for it) driving the
 same rules engine and campaign state. **Target package graph:**
 `core` (domain types + pure rules) ← `database` (client-agnostic repos) ← `engine` (use-cases both
@@ -89,10 +118,10 @@ broken placeholders). Nine CI-gated PRs:
 - **R2-PR3 — repo boilerplate collapse (this PR).** `tryResult()` in `result-helpers` +
   `SupabaseRepositoryBase` (client/schema pair, typed `db` accessor, `run()` wrapper): all 12 repos
   converted — **58 hand-rolled try/catch blocks deleted**; method bodies now contain only the query
-  + Result mapping. `stubProfile` single-sourced into the profile adapter; the last 3 JSONB `as`
-  casts routed through `parseSupabaseJson`; the zero-consumer `adapters/index.ts` barrel removed
-  (rule: adapters are imported by path). Remaining try/catch in the package: only the auth service
-  (different envelope — out of the repo pattern's scope).
+  - Result mapping. `stubProfile` single-sourced into the profile adapter; the last 3 JSONB `as`
+    casts routed through `parseSupabaseJson`; the zero-consumer `adapters/index.ts` barrel removed
+    (rule: adapters are imported by path). Remaining try/catch in the package: only the auth service
+    (different envelope — out of the repo pattern's scope).
 - **R2-PR4 — tooling truth (this PR).** Every gate now runs and tells the truth:
   - **Lint**: one shared strict base (`configs/eslint.base.mjs` — typed rules via the project
     service: no-explicit-any, no-floating-promises, consistent-type-imports, import/no-cycle,
@@ -224,8 +253,7 @@ optimistic updates (round-1 deviation stands); Discord-id→profile schema work.
 > - **#100 (@47ffbc4) — the stores + editor:** `lib/query/client.ts` `getQueryClient()` (browser
 >   singleton shared by the provider tree and the seam's **non-hook surface** —
 >   `features/{concept}/data/api.ts`, consumable from Zustand actions). `auth-store`'s 6 profile repo
->   calls → `profiles/data/api.ts`; the wizard's `submit()` → `characters/data/api.ts`
->   `createCharacterWithValidation` (invalidates, so the create shows everywhere); CharacterEditor →
+>   calls → `profiles/data/api.ts`; the wizard's `submit()` → `characters/data/api.ts` > `createCharacterWithValidation` (invalidates, so the create shows everywhere); CharacterEditor →
 >   `useUpdateCharacterData` + new `useAdvanceCharacter`, retiring the `onSaved`/`refetch()` bridge.
 > - **#101 (@9a2ae67) — PR4c, notifications:** `NotificationToaster` mounted in `Providers` (the store
 >   was never rendered — wizard toasts went into the void); F58 sign-in/out `console.error` paths now
