@@ -4,6 +4,7 @@
 // (active + recent) and the RollLog (scoreId → name, for grouping the feed by operation).
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import { getRepositories } from '@/lib/auth';
+import { sharedCampaignState } from '@/lib/query/policies';
 import { unwrap } from '@/lib/query/result';
 
 export const scoreKeys = {
@@ -12,9 +13,11 @@ export const scoreKeys = {
 };
 
 export const scoreQueries = {
+  /** The score lifecycle is GM-written shared state — load-on-view per `sharedCampaignState`. */
   byGame: (gameId: string | undefined) =>
     queryOptions({
       queryKey: scoreKeys.byGame(gameId ?? ''),
+      ...sharedCampaignState,
       queryFn: gameId ? () => getRepositories().scores.findByGame(gameId).then(unwrap) : skipToken,
     }),
 };

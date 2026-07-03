@@ -4,6 +4,7 @@
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import type { Roll } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
+import { sharedCampaignState } from '@/lib/query/policies';
 import { unwrap } from '@/lib/query/result';
 
 /** How many feed entries a campaign log loads per page-view (bounded, newest first). */
@@ -16,10 +17,15 @@ export const rollKeys = {
   byGame: (gameId: string, limit: number) => ['rolls', 'game', gameId, limit] as const,
 };
 
-/** Query options for a game's rolls — shared by the hook and `useQueries` fan-outs (e.g. dashboard). */
+/**
+ * Query options for a game's rolls — shared by the hook and `useQueries` fan-outs (e.g.
+ * dashboard). The feed is THE shared play-by-post surface (every player writes it) —
+ * load-on-view per `sharedCampaignState`.
+ */
 export function rollsByGameOptions(gameId: string | undefined, limit = DEFAULT_ROLL_FEED_LIMIT) {
   return queryOptions({
     queryKey: rollKeys.byGame(gameId ?? '', limit),
+    ...sharedCampaignState,
     queryFn: gameId
       ? (): Promise<Roll[]> => getRepositories().rolls.findByGame(gameId, limit).then(unwrap)
       : skipToken,
