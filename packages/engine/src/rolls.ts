@@ -65,8 +65,9 @@ export interface ResistanceRollInput {
 }
 
 /**
- * Persist a resistance roll and apply its stress cost (`6 − highest die`, FitD) to the resisting
- * character. Returns the roll plus the stress actually charged.
+ * Persist a resistance roll and apply its stress delta (`6 − highest die`; a CRITICAL clears 1,
+ * per RAW) to the resisting character. Returns the roll plus the delta actually applied
+ * (−1 on a crit).
  */
 export async function rollResistance(
   repos: DatabaseRepositories,
@@ -83,7 +84,7 @@ export async function rollResistance(
     zeroDice: input.zeroDice,
   });
   if (!created.success) return created as Result<never>;
-  if (input.characterId !== undefined && stress > 0) {
+  if (input.characterId !== undefined && stress !== 0) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
       userId: input.userId,

@@ -12,20 +12,21 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 export interface ApplyStressInput {
   characterId: string;
   userId: string;
-  /** Stress to ADD (a cost). Zero/negative is a no-op success. */
+  /** Stress DELTA: positive is a cost, negative CLEARS stress (a crit resist clears 1). Zero is a no-op. */
   stress: number;
 }
 
 /**
- * Apply a stress cost to a character, clamped into the ruleset's track. Reads the live character
- * (current stress + bounds) then writes through the validated path. Resolves `data: null` when
- * nothing needed writing (no cost, character gone, or already at the clamp).
+ * Apply a stress delta to a character, clamped into the ruleset's track (a clear never goes below
+ * 0). Reads the live character (current stress + bounds) then writes through the validated path.
+ * Resolves `data: null` when nothing needed writing (no delta, character gone, or already at the
+ * clamp).
  */
 export async function applyStress(
   repos: DatabaseRepositories,
   input: ApplyStressInput
 ): Promise<Result<Character | null>> {
-  if (input.stress <= 0) return { success: true, data: null };
+  if (input.stress === 0) return { success: true, data: null };
   const found = await repos.characters.findWithDetails(input.characterId);
   if (!found.success) return found;
   if (!found.data) return { success: true, data: null };

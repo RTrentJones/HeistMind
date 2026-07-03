@@ -78,10 +78,15 @@ export function RollLog({ gameId }: { gameId: string }) {
     // Only join position/effect with a slash when both are present (no trailing "position/").
     const posEffect =
       r.position && r.effect ? `${r.position}/${r.effect}` : (r.position ?? r.effect ?? '');
+    // A critical resistance CLEARS 1 stress (resistanceStress returns −1) — phrase it, don't
+    // render "-1 stress".
+    const resistDelta = r.kind === 'resistance' ? resistanceStress(r.results) : null;
     const resisted =
-      r.kind === 'resistance'
-        ? t('components.rollLog.resisted', { count: resistanceStress(r.results) })
-        : null;
+      resistDelta === null
+        ? null
+        : resistDelta < 0
+          ? t('components.rollLog.critResisted')
+          : t('components.rollLog.resisted', { count: resistDelta });
     const created = new Date(r.createdAt);
     return (
       <Card key={r.id} variant='outline'>

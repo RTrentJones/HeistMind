@@ -301,9 +301,14 @@ export function RollPanel({
       {last && (
         <Stack direction='row' gap='sm' align='center'>
           {last.stress != null ? (
-            <Badge variant='stress-critical'>
-              {t('components.rollPanel.stressTaken', { count: last.stress })}
-            </Badge>
+            last.stress < 0 ? (
+              // A critical resistance CLEARS 1 stress (negative delta) — celebrate, don't alarm.
+              <Badge variant='gold'>{t('components.rollPanel.stressCleared')}</Badge>
+            ) : (
+              <Badge variant='stress-critical'>
+                {t('components.rollPanel.stressTaken', { count: last.stress })}
+              </Badge>
+            )
           ) : (
             <Badge variant={OUTCOME_VARIANT[last.outcome]}>{t(OUTCOME_KEY[last.outcome])}</Badge>
           )}
