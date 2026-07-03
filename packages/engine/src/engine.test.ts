@@ -74,6 +74,22 @@ describe('applyStress', () => {
     expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 })).toEqual(ok(null));
     expect(update).not.toHaveBeenCalled();
   });
+
+  it('a negative delta CLEARS stress, clamped at 0', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const atOne = {
+      ...CHARACTER,
+      characterData: { ...CHARACTER.characterData, stress: 1 },
+    } as CharacterWithDetails;
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(atOne)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    await applyStress(r, { characterId: 'c1', userId: 'u1', stress: -3 });
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 0 }),
+    });
+  });
 });
 
 describe('rollAction', () => {
@@ -147,7 +163,7 @@ describe('rollResistance', () => {
     });
   });
 
-  it('charges nothing on a crit resist (highest die 6)', async () => {
+  it('charges nothing on a single 6 (resists for free)', async () => {
     const update = vi.fn();
     const r = repos({
       rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
@@ -163,6 +179,29 @@ describe('rollResistance', () => {
     });
     expect(out.success && out.data.stress).toBe(0);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('a CRITICAL resist (two 6s) CLEARS 1 stress, per RAW', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollResistance(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      dice: 2,
+      results: [6, 6],
+      zeroDice: false,
+    });
+    expect(out.success && out.data.stress).toBe(-1);
+    // CHARACTER sits at stress 6 → the crit clears one → 5.
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 5 }),
+    });
   });
 });
 

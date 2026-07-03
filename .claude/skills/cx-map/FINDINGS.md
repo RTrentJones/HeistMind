@@ -429,6 +429,37 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   success toasts were skipped — invalidation-refetch chosen for correctness; in-place updates are the
   feedback (see `CODE-QUALITY.md` C16).
 
+### F61 — Critical resistance didn't clear 1 stress (RAW deviation)
+
+- **severity:** S2 · **type:** FitD-gap
+- **where:** `core/rules/dice.ts` `resistanceStress` floored at 0, conflating a crit (two+ 6s) with
+  a single 6. RAW: *"if you get a critical result, you also clear 1 stress"*
+  ([SRD, Resistance & Armor](https://bladesinthedark.com/resistance-armor)).
+- **status:** **fixed (round-3 PR-4)** — `resistanceStress` returns **−1** on a crit; the engine's
+  `applyStress` accepts negative deltas (clamped at 0); RollPanel/RollLog phrase it ("critical —
+  cleared 1 stress") instead of rendering "-1 stress".
+
+### F62 — One crew veteran grant unlocked unlimited cross-playbook picks
+
+- **severity:** S2 · **type:** FitD-gap
+- **where:** `core/rules/character-rules.ts` summed `veteran` effects but only checked `> 0` —
+  a single grant unlocked ANY number of tier-2 cross-playbook abilities (bounded only by the
+  ability-choice limit). RAW: each veteran advance = ONE ability from another playbook.
+- **status:** **fixed (round-3 PR-4)** — veteran grants are a **budget**: held cross-playbook picks
+  (tier ≥ 2, outside the playbook roster, no held prerequisite) must fit within the summed grants;
+  `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
+  over-budget set (`veteranPicksUsed` in character-rules).
+
+### F63 — Heat "remainder carry" flagged as a deviation — REFUTED, it is RAW
+
+- **severity:** S4 · **type:** FitD-gap (audit correction)
+- **where:** the round-3 review claimed `crews.ts` `applyHeat` deviates from RAW by carrying excess
+  heat past a wanted-level increment. The SRD says the opposite: excess heat **rolls over** ("if
+  your heat was 7 and you took 4 heat, you'd reset with 2 heat marked" —
+  [SRD, Heat](https://bladesinthedark.com/heat)).
+- **status:** **closed — no change**; the implementation was already correct. Kept as a reminder to
+  verify rule claims against the SRD before "fixing" them.
+
 ---
 
 ## S3 — minor

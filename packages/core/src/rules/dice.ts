@@ -45,12 +45,14 @@ export function diceForRating(rating: number): { count: number; zeroDice: boolea
 }
 
 /**
- * Stress taken when resisting a consequence (BitD "Armor 2" resistance roll): stress equals
- * `6 − the HIGHEST die rolled`. Roll a 6 (or a crit) and you take 0 stress; the worst single die
- * takes 5. A roll with **no dice** (empty) takes the full 6. Never returns less than 0.
+ * Stress DELTA when resisting a consequence (BitD resistance roll): `6 − the HIGHEST die rolled`.
+ * A single 6 resists for free (0); a CRITICAL (two or more 6s) **clears 1 stress** — returned as
+ * −1, per RAW ("if you get a critical result, you also clear 1 stress",
+ * https://bladesinthedark.com/resistance-armor). A roll with **no dice** (empty) takes the full 6.
  */
 export function resistanceStress(results: number[]): number {
   if (results.length === 0) return 6;
+  if (results.filter(die => die === 6).length >= 2) return -1;
   return Math.max(0, 6 - Math.max(...results));
 }
 

@@ -374,6 +374,7 @@
       "rollButton": "Roll",
       "resistButton": "Resist",
       "stressTaken": "{{count}} stress",
+      "stressCleared": "critical — cleared 1 stress",
       "diceCount": "{{count}}d",
       "diceSuffix": "({{count}}d)",
       "outcome": {
@@ -415,6 +416,7 @@
       "fortune": "Fortune",
       "gm": "GM",
       "resisted": "resisted — {{count}} stress",
+      "critResisted": "critical resist — cleared 1 stress",
       "downtime": "Downtime",
       "loadout": "Loadout",
       "score": "Score",

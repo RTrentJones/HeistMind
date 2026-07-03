@@ -54,7 +54,14 @@ first-run ruleset detour. Seven CI-gated PRs:
   `updateCharacterWithValidation` — the last unvalidated character write path is gone. Engine
   contract note updated: single-call writes stay repo-direct UNLESS they belong in the shared
   feed. Engine spec grew 14→24 mocked-repo tests (still the Discord bot's contract).
-- **R3-PR4 — rules-RAW fixes (crit-resist clears 1, heat resets on wanted, veteran as budget).** (pending)
+- **R3-PR4 — rules-RAW fixes (this PR).** Two real fixes + one refuted claim (all SRD-verified
+  before touching the rules): **crit resistance clears 1 stress** (F61 — `resistanceStress` → −1
+  on two+ 6s; engine `applyStress` accepts negative deltas clamped at 0; RollPanel/RollLog phrase
+  the clear); **veteran as a budget** (F62 — held cross-playbook picks must fit the summed grants,
+  `veteranPicksUsed`; one grant no longer unlocks unlimited picks); **heat remainder-carry is RAW**
+  (F63 — the review's claim refuted by the SRD's own example; no change, recorded). Recorded
+  deviation kept: `advanceTier` ignores coin cost + rival-hold Rep discount (helper
+  simplification). Core 108 tests green under the 100% rules gates; engine spec 24→28.
 - **R3-PR5 — error surfacing + draft-clobber guards.** (pending)
 - **R3-PR6 — first-run onboarding (inline starter catalog).** (pending)
 - **R3-PR7 — high-value unit tests + web ratchet.** (pending)
