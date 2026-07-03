@@ -6,7 +6,13 @@ import { applyHeat, advanceTier, incarcerate, REP_PER_TIER, CREW_LIMITS } from '
 import { Alert, Badge, Button, Heading, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCrewByGame } from '@/features/crews/data/queries';
-import { useCreateCrew, useUpdateCrew } from '@/features/crews/data/mutations';
+import {
+  useAdvanceCrewTier,
+  useApplyCrewHeat,
+  useCreateCrew,
+  useIncarcerateCrew,
+  useUpdateCrew,
+} from '@/features/crews/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { CrewStatStepper } from './cards/CrewStatStepper';
 import { CrewAdvanceTrack } from './cards/CrewAdvanceTrack';
@@ -35,14 +41,27 @@ export function CrewSheet({
   const crewQuery = useCrewByGame(gameId);
   const createCrewMut = useCreateCrew(gameId);
   const updateCrewMut = useUpdateCrew(gameId);
+  // The rule-driven progression ops (heat cascade, tier advance, incarceration) run through the
+  // ENGINE so the change also lands in the campaign feed.
+  const applyHeatMut = useApplyCrewHeat(gameId);
+  const advanceTierMut = useAdvanceCrewTier(gameId);
+  const incarcerateMut = useIncarcerateCrew(gameId);
   const [crewType, setCrewType] = useState('');
 
   const crew = crewQuery.data ?? null;
-  const busy = createCrewMut.isPending || updateCrewMut.isPending;
+  const busy =
+    createCrewMut.isPending ||
+    updateCrewMut.isPending ||
+    applyHeatMut.isPending ||
+    advanceTierMut.isPending ||
+    incarcerateMut.isPending;
   const error =
     crewQuery.error?.message ??
     createCrewMut.error?.message ??
     updateCrewMut.error?.message ??
+    applyHeatMut.error?.message ??
+    advanceTierMut.error?.message ??
+    incarcerateMut.error?.message ??
     null;
 
   const createCrew = () => {
@@ -178,9 +197,22 @@ export function CrewSheet({
         {/* Rep is uncapped — it accrues until a full track is spent to advance Tier (button below). */}
         {stepper(t('components.crewSheet.rep'), 'rep', crew.rep)}
         {stepper(t('components.crewSheet.heat'), 'heat', crew.heat, CREW_LIMITS.heat, () => {
-          // BitD: filling the heat track (9) marks a Wanted level and resets heat.
+          // BitD: filling the heat track (9) marks a Wanted level and resets heat. Through the
+          // ENGINE so the cascade also lands in the campaign feed (the note previews the same
+          // rule the engine re-runs).
+          const userId = user?.id;
+          if (!userId) return;
           const next = applyHeat({ heat: crew.heat, wanted: crew.wanted }, 1);
-          void save({ heat: next.heat, wanted: next.wanted });
+          applyHeatMut.mutate({
+            crew,
+            userId,
+            amount: 1,
+            logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
+            logNote: t('components.crewSheet.logHeatNote', {
+              heat: next.heat,
+              wanted: next.wanted,
+            }),
+          });
         })}
         {stepper(t('components.crewSheet.wanted'), 'wanted', crew.wanted, CREW_LIMITS.wanted)}
         {stepper(t('components.crewSheet.coin'), 'coin', crew.coin)}
@@ -196,7 +228,17 @@ export function CrewSheet({
               variant='ember'
               size='sm'
               disabled={busy}
-              onClick={() => void save(advanceTier({ tier: crew.tier, rep: crew.rep }))}
+              onClick={() => {
+                const userId = user?.id;
+                if (!userId) return;
+                const next = advanceTier({ tier: crew.tier, rep: crew.rep });
+                advanceTierMut.mutate({
+                  crew,
+                  userId,
+                  logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
+                  logNote: t('components.crewSheet.logTierNote', { tier: next.tier }),
+                });
+              }}
             >
               {t('components.crewSheet.advanceTier', { tier: crew.tier + 1 })}
             </Button>
@@ -206,7 +248,17 @@ export function CrewSheet({
               variant='outline'
               size='sm'
               disabled={busy}
-              onClick={() => void save(incarcerate({ heat: crew.heat, wanted: crew.wanted }))}
+              onClick={() => {
+                const userId = user?.id;
+                if (!userId) return;
+                const next = incarcerate({ heat: crew.heat, wanted: crew.wanted });
+                incarcerateMut.mutate({
+                  crew,
+                  userId,
+                  logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
+                  logNote: t('components.crewSheet.logIncarcerateNote', { wanted: next.wanted }),
+                });
+              }}
             >
               {t('components.crewSheet.incarcerate')}
             </Button>

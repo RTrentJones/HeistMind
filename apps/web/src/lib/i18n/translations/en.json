@@ -252,6 +252,7 @@
       "loadFailed": "Failed to load",
       "saveNameFailed": "Failed to save name",
       "addXpFailed": "Failed to add XP",
+      "logXpMark": "Marked 1 XP",
       "saveStressFailed": "Failed to save stress",
       "markXpFailed": "Failed to mark XP",
       "loadError": "Couldn't load character",
@@ -293,6 +294,8 @@
       "tabAdvancement": "Advancement",
       "saveFailed": "Save failed.",
       "advancementFailed": "Advancement failed.",
+      "logAdvanceAbility": "Spent XP: learned {{name}}",
+      "logAdvanceAction": "Spent XP: +1 dot in {{action}}",
       "identity": "Identity",
       "heritage": "Heritage",
       "background": "Background",
@@ -415,6 +418,10 @@
       "downtime": "Downtime",
       "loadout": "Loadout",
       "score": "Score",
+      "crew": "Crew",
+      "faction": "Faction",
+      "clock": "Clock",
+      "xp": "XP",
       "note": "Note",
       "unnamedScore": "Untitled score",
       "noScore": "Between scores"
@@ -494,7 +501,8 @@
       "newClockLabel": "New clock",
       "newClockPlaceholder": "e.g. The Alarm",
       "segments": "Segments",
-      "addClock": "Add clock"
+      "addClock": "Add clock",
+      "logCompleteNote": "Clock filled — the situation comes to a head."
     },
     "crewSheet": {
       "loadFailed": "Failed to load the crew",
@@ -539,7 +547,11 @@
       "removeCohortAria": "Remove cohort {{cohort}}",
       "addCohort": "Add cohort",
       "addCohortPlaceholder": "e.g. A gang of dockhands",
-      "add": "Add"
+      "add": "Add",
+      "logLabel": "Crew",
+      "logHeatNote": "Heat marked — heat {{heat}}, wanted {{wanted}}",
+      "logTierNote": "Advanced to Tier {{tier}} (full Rep track spent)",
+      "logIncarcerateNote": "Incarceration — heat cleared, wanted {{wanted}}"
     },
     "factionsPanel": {
       "loadFailed": "Failed to load factions",
@@ -556,6 +568,7 @@
       "lowerTierAria": "Lower {{name}} tier",
       "raiseTierAria": "Raise {{name}} tier",
       "status": "Status",
+      "logStatusNote": "Status shifted to {{status}} ({{label}})",
       "statusLegendTitle": "Faction status (−3 to +3)",
       "statusLegendScale": "−3 War · −2/−1 Hostile · 0 Neutral · +1/+2 Friendly · +3 Allied",
       "statusLegendAria": "Faction status scale",

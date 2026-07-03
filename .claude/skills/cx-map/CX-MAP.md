@@ -128,8 +128,12 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
     player sees it on load): shows **who** (character name; "Fortune"/"GM") and **when** (relative time
     + timestamp tooltip), annotates resistance ("resisted — N stress"), and renders non-dice events
-    (downtime / loadout / score / note) with a neutral kind badge. Entries are **grouped by score**
-    (newest operation first, under its name); with no scores in play it falls back to a flat feed.
+    (downtime / loadout / score / **crew** / **faction** / **clock** / **xp** / note) with a neutral
+    kind badge. **Every mechanical change reaches the feed** (round-3 PR-3, via engine use-cases):
+    crew heat/tier/incarceration, faction status shifts, a clock **filling** (routine ticks stay
+    panel-only), and XP marks/advances — alongside rolls, downtime, loadout, and score lifecycle.
+    Entries are **grouped by score** (newest operation first, under its name); with no scores in
+    play it falls back to a flat feed.
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.

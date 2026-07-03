@@ -20,6 +20,10 @@ const EVENT_KIND_KEY = {
   downtime: 'components.rollLog.downtime',
   loadout: 'components.rollLog.loadout',
   score: 'components.rollLog.score',
+  crew: 'components.rollLog.crew',
+  faction: 'components.rollLog.faction',
+  clock: 'components.rollLog.clock',
+  xp: 'components.rollLog.xp',
   note: 'components.rollLog.note',
 } as const;
 
