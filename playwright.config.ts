@@ -8,6 +8,7 @@
 // key and injects their sessions (see e2e/support/*). See e2e/README.md for the full strategy.
 
 import { defineConfig, devices } from '@playwright/test';
+import { ensureDiscordTestKeys } from './e2e/support/discord-keys';
 import { getE2EEnv } from './e2e/support/env';
 
 const env = getE2EEnv();
@@ -16,6 +17,10 @@ const env = getE2EEnv();
 const isLocal =
   env.baseURL.startsWith('http://localhost') || env.baseURL.startsWith('http://127.0.0.1');
 const manageServer = isLocal && !process.env.PLAYWRIGHT_NO_SERVER;
+
+// The managed server gets a LOCAL Discord public key so discord.spec.ts can sign real requests
+// (the spec reads the same keypair file; deployed targets hold the real key → the spec skips).
+const discordKeys = manageServer ? ensureDiscordTestKeys() : null;
 
 // Reach Vercel-protected preview/beta deploys by sending the bypass header on every request.
 const extraHTTPHeaders = env.vercelBypass
@@ -51,6 +56,10 @@ export default defineConfig({
         url: env.baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
+        env: {
+          ...(process.env as Record<string, string>),
+          ...(discordKeys ? { DISCORD_PUBLIC_KEY: discordKeys.publicKeyHex } : {}),
+        },
       }
     : undefined,
 });

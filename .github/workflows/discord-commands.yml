@@ -1,0 +1,48 @@
+name: Discord commands
+
+# Registers the slash-command manifest with the matching Discord application: the DEV app from
+# `development` (its interactions endpoint points at beta), the PROD app from `main`. A bulk PUT
+# is atomic + idempotent, so re-runs are safe. Creds-guarded: without the branch's app secrets
+# the job skips cleanly (same pattern as the deploy workflows).
+on:
+  push:
+    branches: [main, development]
+    paths:
+      - 'packages/discord/src/commands/manifest.ts'
+      - 'packages/discord/src/registration/**'
+      - '.github/workflows/discord-commands.yml'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20.18.0' # keep in lockstep with .nvmrc
+  PNPM_VERSION: '9.15.0'
+
+jobs:
+  register:
+    name: Register slash commands
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Register commands
+        env:
+          DISCORD_APP_ID: ${{ github.ref == 'refs/heads/main' && secrets.DISCORD_APP_ID || secrets.DISCORD_DEV_APP_ID }}
+          DISCORD_BOT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.DISCORD_BOT_TOKEN || secrets.DISCORD_DEV_BOT_TOKEN }}
+        # The script itself skips (exit 0) when the credentials are absent.
+        run: pnpm --filter @heist-mind/discord register
