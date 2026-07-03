@@ -2,7 +2,7 @@
 import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
 import { stringOption } from '../options';
-import { reply, replyEmbed } from '../respond';
+import { inline, reply, replyEmbed } from '../respond';
 import type { BotContext, CommandHandler } from '../types';
 
 const NOTATION = /^(\d{1,3})d(\d{1,4})([+-]\d{1,4})?$/i;
@@ -28,16 +28,16 @@ export function makeDiceHandler(
   return (_ctx: BotContext, interaction) => {
     const notation = stringOption(interaction, 'notation') ?? '';
     const parsed = parseNotation(notation);
-    if (!parsed) return reply(copy.diceInvalid, { ephemeral: true });
+    if (!parsed) return inline(reply(copy.diceInvalid, { ephemeral: true }));
 
     const results = realizeDice(parsed.count, parsed.sides);
     const total = results.reduce((sum, r) => sum + r, 0) + parsed.modifier;
-    return replyEmbed(
+    return inline(replyEmbed(
       rollEmbed({
         title: copy.diceTitle(notation.trim()),
         results,
         detail: copy.diceTotal(total),
       })
-    );
+    ));
   };
 }
