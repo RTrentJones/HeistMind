@@ -29,6 +29,25 @@ export const copy = {
   diceInvalid:
     'Use NdM with optional modifier, e.g. `2d6`, `4d8+2`, `1d20-1` (max 100 dice, d1000).',
   unknownCommand: "I don't know that command. Try `/roll` or `/heist about`.",
+  notConfigured: 'Account features are not configured on this deployment yet.',
+  signInFirst: (siteUrl: string) =>
+    `No HeistMind account is linked to your Discord yet. Sign in with Discord at ${siteUrl} once — that's the whole link — then try again.`,
+  somethingBroke: 'Something went wrong on our side — try again in a moment.',
+  characterNotFound: (name: string, owned: number) =>
+    owned === 0
+      ? "You don't have any characters yet — build one on the site first."
+      : `No character of yours is named “${name}”. Try the autocomplete suggestions.`,
+  characterInUse: (name: string) =>
+    `**${name}** is now your active character. Your rolls will use their sheet.`,
+  characterUnset: 'Active character cleared — /roll falls back to manual dice pools.',
+  noActiveCharacter: 'No active character. Pick one with `/character use`.',
+  sheetPlaybook: 'Playbook',
+  sheetStress: 'Stress',
+  sheetCoin: 'Coin',
+  sheetHarm: 'Harm',
+  sheetNoHarm: 'Unharmed',
+  sheetStandalone: 'Standalone — not in a campaign',
+  sheetInCampaign: (game: string) => `Crewing in **${game}**`,
   aboutTitle: 'HeistMind — the mechanical layer for Forged-in-the-Dark play',
   aboutBody: (siteUrl: string, sha: string) =>
     [

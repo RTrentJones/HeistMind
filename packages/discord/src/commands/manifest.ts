@@ -117,6 +117,45 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
     ],
   },
   {
+    name: 'character',
+    description: 'Your active HeistMind character — the sheet your rolls use',
+    ...EVERYWHERE,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'use',
+        description: 'Set your active character (one at a time)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'name',
+            description: 'One of your characters',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'show',
+        description: 'Show your active character sheet',
+        options: [
+          {
+            type: ApplicationCommandOptionType.Boolean,
+            name: 'share',
+            description: 'Post it to the channel instead of just to you',
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'unset',
+        description: 'Clear your active character',
+      },
+    ],
+  },
+  {
     name: 'heist',
     description: 'HeistMind — account, campaign links, and info',
     ...EVERYWHERE,

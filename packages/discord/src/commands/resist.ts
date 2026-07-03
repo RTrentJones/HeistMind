@@ -4,7 +4,7 @@ import { diceForRating, resistanceStress, rollOutcome } from '@heist-mind/core';
 import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
 import { integerOption, stringOption } from '../options';
-import { replyEmbed } from '../respond';
+import { inline, replyEmbed } from '../respond';
 import type { CommandHandler } from '../types';
 
 export const handleResist: CommandHandler = (ctx, interaction) => {
@@ -15,12 +15,12 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
   const results = ctx.realize(count);
   const stress = resistanceStress(results, { zeroDice });
 
-  return replyEmbed(
+  return inline(replyEmbed(
     rollEmbed({
       title: copy.resistTitle(dice, attribute),
       results,
       outcome: rollOutcome(results, { zeroDice }),
       detail: copy.resistCost(stress),
     })
-  );
+  ));
 };

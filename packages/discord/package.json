@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@heist-mind/core": "workspace:*",
+    "@heist-mind/database": "workspace:^",
     "discord-api-types": "^0.37.100"
   },
   "devDependencies": {

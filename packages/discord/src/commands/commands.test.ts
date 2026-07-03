@@ -1,13 +1,9 @@
 // Handler behavior spec: pure interaction→response functions driven by a fake context with
 // SCRIPTED dice (ctx.realize is the injection seam — same philosophy as the engine's
 // caller-realized dice).
-import type {
-  APIApplicationCommandInteraction,
-  APIEmbed,
-  APIInteractionResponse,
-} from 'discord-api-types/v10';
+import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
 import { describe, expect, it } from 'vitest';
-import type { BotContext } from '../types';
+import type { BotContext, HandlerResult } from '../types';
 import { handleRoll } from './roll';
 import { handleResist } from './resist';
 import { handleFortune } from './fortune';
@@ -18,6 +14,7 @@ const ctx = (faces: number[]): BotContext => ({
   realize: (count: number) => faces.slice(0, count),
   deploySha: 'abc1234',
   siteUrl: 'https://heistmind.example',
+  repos: null,
 });
 
 type Option = { name: string; type: number; value?: unknown; options?: Option[] };
@@ -27,15 +24,15 @@ const cmd = (name: string, options: Option[] = []): APIApplicationCommandInterac
 const int = (name: string, value: number): Option => ({ name, type: 4, value });
 const str = (name: string, value: string): Option => ({ name, type: 3, value });
 
-function embedOf(response: APIInteractionResponse): APIEmbed {
-  const data = (response as { data?: { embeds?: APIEmbed[] } }).data;
+function embedOf(result: HandlerResult): APIEmbed {
+  const data = (result.response as { data?: { embeds?: APIEmbed[] } }).data;
   const embed = data?.embeds?.[0];
   if (!embed) throw new Error('expected an embed response');
   return embed;
 }
 
-function isEphemeral(response: APIInteractionResponse): boolean {
-  const data = (response as { data?: { flags?: number } }).data;
+function isEphemeral(result: HandlerResult): boolean {
+  const data = (result.response as { data?: { flags?: number } }).data;
   return ((data?.flags ?? 0) & 64) !== 0;
 }
 

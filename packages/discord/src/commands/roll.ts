@@ -3,7 +3,7 @@ import { diceForRating, rollOutcome } from '@heist-mind/core';
 import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
 import { integerOption, stringOption } from '../options';
-import { replyEmbed } from '../respond';
+import { inline, replyEmbed } from '../respond';
 import type { CommandHandler } from '../types';
 
 export const handleRoll: CommandHandler = (ctx, interaction) => {
@@ -17,7 +17,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
   const results = ctx.realize(count);
   const outcome = rollOutcome(results, { zeroDice });
 
-  return replyEmbed(
+  return inline(replyEmbed(
     rollEmbed({
       title: copy.rollTitle(dice),
       results,
@@ -25,5 +25,5 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       detail: copy.positionEffect(position, effect),
       ...(note ? { note } : {}),
     })
-  );
+  ));
 };
