@@ -28,13 +28,13 @@ first-run ruleset detour. Seven CI-gated PRs:
   silently lost ALL test type-checking; the root exclude no longer bans tests and `database` now
   carries the same explicit exclude as its siblings. Root `references` completed
   (core/engine/telemetry were missing). **Hygiene:** stale `character-rules.ts` header ("lives in
-  @heist-mind/database"); dead `shared/src/constants.ts` (DICE_OUTCOMES/EXAMPLE_MECHANICS/
+  @heist-mind/database"); dead `shared/src/constants.ts` (DICE*OUTCOMES/EXAMPLE_MECHANICS/
   GameMechanics — zero consumers) deleted; vestigial `@heist-mind/database` vitest alias (shared) +
   `@heist-mind/shared` tsconfig path (database) removed; stray 80 KB root
   `blades-in-the-dark-complete-json.ts` deleted (zero importers); `useLanguageSwitcher` now derives
   `supportedLanguages` from `AVAILABLE_LANGUAGES` (was advertising es/fr/de with no messages);
   auth-callback `console.warn` → `logEvent`. **Docs:** BRD/STATUS/CLAUDE.md corrected — the bot
-  app _does not exist_ (was "stub"/"placeholder"); "attribution is free" now names the unwired
+  app \_does not exist* (was "stub"/"placeholder"); "attribution is free" now names the unwired
   service-role prerequisite; Phase-2 unified-log claim carries the XP caveat; the Phase-4 appendix
   lists the four verified platform prerequisites (service-role client path, engine-level authz to
   replace bypassed RLS, channel↔campaign migration, interactions endpoint).
@@ -62,13 +62,13 @@ first-run ruleset detour. Seven CI-gated PRs:
   (F63 — the review's claim refuted by the SRD's own example; no change, recorded). Recorded
   deviation kept: `advanceTier` ignores coin cost + rival-hold Rep discount (helper
   simplification). Core 108 tests green under the 100% rules gates; engine spec 24→28.
-- **R3-PR5 — error surfacing + draft-clobber guards (in CI, #116).** No silent failures:
-  `LoadoutCard` drops its swallow-everything catch (a failed save keeps the dirty draft + shows a
-  destructive Alert with the message); `AddResultForm` renders its mutation error (entered text
-  kept for retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local
-  drafts on a character reload ONLY while clean, via a three-way check (draft == incoming →
-  re-anchor; draft == base → follow remote; else it's the player's in-progress work — untouched).
-  The same-sheet stress-roll → build-edit reset is gone. Write-side counterpart (caught by the
+- **R3-PR5 — error surfacing + draft-clobber guards (this PR).** No silent failures: `LoadoutCard`
+  drops its swallow-everything catch (a failed save keeps the dirty draft + shows a destructive
+  Alert with the message); `AddResultForm` renders its mutation error (entered text kept for
+  retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local drafts on a
+  character reload ONLY while clean, via a three-way check (draft == incoming → re-anchor;
+  draft == base → follow remote; else it's the player's in-progress work — untouched). The
+  same-sheet stress-roll → build-edit reset is gone. Write-side counterpart (caught by the
   `gm-loadout` E2E): the editor's full-object save could persist a pre-refetch draft and wipe a
   loadout the sheet had just saved — the editor doesn't OWN loadout, so every editor save now
   carries the live `character.characterData.loadout`. Verified non-issue: the suspected
