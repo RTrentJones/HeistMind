@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@heist-mind/ui';
 import { getQueryClient } from '@/lib/query/client';
 import { I18nProvider } from '@/lib/i18n/provider';
+import { AuthListener } from '@/features/auth/components/AuthListener';
 import { NotificationToaster } from '@/shared/components/NotificationToaster';
 
 /**
@@ -28,6 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultMode='dark'>
         <I18nProvider>
+          <AuthListener />
           {children}
           {/* The single mount point for notification-store toasts (fixed overlay, app-wide). */}
           <NotificationToaster />

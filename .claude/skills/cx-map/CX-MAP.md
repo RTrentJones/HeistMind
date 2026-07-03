@@ -37,8 +37,13 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 
 ### `/` — Home (marketing when logged out, dashboard when signed in)
 
-- **File:** `apps/web/src/app/page.tsx` — a thin brancher: `useAuth().isAuthenticated ? <Dashboard/>
-  : <HomePage/>`. `AppShell` steps aside on `/`, so each side renders its own `AuthHeader` + `<main>`.
+- **File:** `apps/web/src/app/page.tsx` — a **server component** (exports the per-route `metadata` —
+  the real `<title>`/description for the one public URL) that renders
+  `<HomeSwitch marketing={<HomePage/>}/>`; `HomeSwitch`
+  (`features/marketing/components/HomeSwitch.tsx`, client) does the auth branch:
+  `isAuthenticated ? <Dashboard/> : marketing`. Signed-out is the prerender state, so the marketing
+  page arrives as server-rendered HTML. `AppShell` steps aside on `/`, so each side renders its own
+  `AuthHeader` + `<main>`.
 - **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
   two-mode landing. Hero *"The mechanical home for your Forged-in-the-Dark crew,"* a **dual CTA**
   (*Run a campaign* / *Join with a code* — both kick off Discord OAuth), **two "how you'll use it"
@@ -231,7 +236,18 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
 
-_Last verified:_ 2026-07-01 (F42 role-gated sheet affordances + concept-card splits; previously 2026-06-29 @ 00014 for Phase 5 portable characters)
+### Error & 404 surfaces (every route)
+
+- **Files:** `apps/web/src/app/{error,global-error,not-found}.tsx`.
+- **Route errors** (`error.tsx`): a render/data throw below the root layout lands on an i18n'd,
+  DS-styled card (*"errors.boundary.title"* + fallback copy) with a **Try again** button (Next
+  re-renders the segment); the error is reported through the telemetry seam. `global-error.tsx` is
+  the provider-free last resort for root-layout throws (own `<html>/<body>`, inline-styled, same
+  copy via the bare i18n instance).
+- **404** (`not-found.tsx`): *"Lost in the shadows"* + **Back to the lair** → `/`
+  (`errors.notFoundTitle` / `errors.backHome`).
+
+_Last verified:_ 2026-07-02 (server-rendered landing via HomeSwitch + per-route `/` metadata + error/404 surfaces, round-2 PR-9; previously 2026-07-01 F42 role-gated sheet affordances)
 
 ---
 

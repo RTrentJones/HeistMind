@@ -31,7 +31,9 @@
     "tailwind-merge": "^2.0.0",
     "zustand": "^5.0.5",
     "@heist-mind/core": "workspace:*",
-    "@heist-mind/engine": "workspace:*"
+    "@heist-mind/engine": "workspace:*",
+    "@heist-mind/telemetry": "workspace:*",
+    "@sentry/nextjs": "^9"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
