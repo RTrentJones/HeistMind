@@ -47,7 +47,10 @@ first-run ruleset detour. Seven CI-gated PRs:
   retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local drafts on a
   character reload ONLY while clean, via a three-way check (draft == incoming → re-anchor;
   draft == base → follow remote; else it's the player's in-progress work — untouched). The
-  same-sheet stress-roll → build-edit reset is gone. Verified non-issue: the suspected
+  same-sheet stress-roll → build-edit reset is gone. Write-side counterpart (caught by the
+  `gm-loadout` E2E): the editor's full-object save could persist a pre-refetch draft and wipe a
+  loadout the sheet had just saved — the editor doesn't OWN loadout, so every editor save now
+  carries the live `character.characterData.loadout`. Verified non-issue: the suspected
   `sessionChecked` rehydrate edge is covered — the auth service forwards `INITIAL_SESSION`
   (incl. null session) to the store listener, which signs out; an expired session self-corrects
   right after rehydrate (optimistic-rehydrate tradeoff kept, no change).

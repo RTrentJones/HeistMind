@@ -88,7 +88,13 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
 
   const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
 
-  // Loadout moved off the build to the character sheet (it's a per-score choice, not a build/advance).
+  // Loadout moved off the build to the character sheet (per-score choice, not a build/advance) —
+  // the editor does NOT own it, so every save carries the LIVE value. Otherwise a draft based on
+  // a pre-refetch snapshot (the dirty-guard above keeps it, by design) would silently wipe a
+  // loadout the sheet saved moments earlier: a full-object write from a stale base.
+  const saveDraft = () =>
+    void saveBuild({ ...draft, loadout: character.characterData.loadout });
+
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const playbookContacts = playbook?.contacts ?? [];
 
@@ -160,7 +166,7 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
               </Card>
             ))}
 
-            <Button variant='ember' onClick={() => void saveBuild(draft)} loading={saving}>
+            <Button variant='ember' onClick={saveDraft} loading={saving}>
               {t('components.characterEditor.saveBuild')}
             </Button>
           </Stack>
@@ -185,7 +191,7 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
 
             <HarmCard content={content} data={draft} edit={{ onPatch: patch }} />
 
-            <Button variant='ember' onClick={() => void saveBuild(draft)} loading={saving}>
+            <Button variant='ember' onClick={saveDraft} loading={saving}>
               {t('components.characterEditor.saveStress')}
             </Button>
           </Stack>
@@ -200,7 +206,7 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
 
             <GearCard data={draft} edit={{ playbookContacts, onPatch: patch }} />
 
-            <Button variant='ember' onClick={() => void saveBuild(draft)} loading={saving}>
+            <Button variant='ember' onClick={saveDraft} loading={saving}>
               {t('components.characterEditor.saveGear')}
             </Button>
           </Stack>
