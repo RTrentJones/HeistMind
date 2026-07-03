@@ -13,7 +13,7 @@ import {
   Heading,
   Text,
 } from '@heist-mind/ui';
-import { captureError } from '@heist-mind/telemetry';
+import { captureError, logEvent } from '@heist-mind/telemetry';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAuthTranslation } from '@/lib/i18n/hooks';
 
@@ -44,7 +44,7 @@ export default function AuthCallback() {
     // Set a timeout for safety in case auth state change doesn't fire
     const timeout = setTimeout(() => {
       if (!isAuthenticated) {
-        console.warn('OAuth callback timeout - auth state did not change');
+        logEvent('auth.callback.timeout', { 'error.surface': 'auth.oauth-callback' });
         setError(t('callback.timeout'));
         setTimeout(() => {
           router.push('/?error=auth_timeout');

@@ -3,17 +3,17 @@ import { createBaseConfig } from '../../configs/vitest.base';
 
 const base = createBaseConfig(__dirname, { environment: 'node' });
 
-// Gate the character-validation rules engine + its server-side enforcement at high coverage.
-// The legacy repositories/adapters are covered end-to-end by the Playwright suite (not unit
-// tests), so they're intentionally NOT unit-gated here — only the per-file globs below are
-// enforced (the base global threshold is replaced), keeping the gate honest rather than red.
+// Gate the server-side rules enforcement (the management repository) at high per-file coverage.
+// The rules engine itself moved to @heist-mind/core (gated 100% there); the other repositories
+// and adapters are covered end-to-end by the Playwright suite, so the global floor is set to
+// MEASURED reality (2026-07-02: 36.56 lines / 62.27 branches / 60.22 functions) — an upward-only
+// ratchet, never a decoration. Raise it whenever unit coverage grows; never lower it.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (base as any).test.coverage.thresholds = {
-  '**/character-rules.ts': { lines: 100, functions: 100, statements: 100, branches: 88 },
-  '**/clocks.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
-  '**/crews.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
-  '**/factions.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
-  '**/dice.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
+  lines: 36,
+  branches: 62,
+  functions: 60,
+  statements: 36,
   '**/supabase-character-management-repository.ts': {
     lines: 85,
     functions: 85,
