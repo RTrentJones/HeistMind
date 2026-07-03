@@ -48,6 +48,18 @@ export const copy = {
   sheetNoHarm: 'Unharmed',
   sheetStandalone: 'Standalone — not in a campaign',
   sheetInCampaign: (game: string) => `Crewing in **${game}**`,
+  rollNeedsDiceOrAction: 'Give me a pool (`/roll dice:3`) or an action (`/roll action:Skirmish`).',
+  accountStatus: (username: string, activeCharacter: string | null) =>
+    `Linked as **${username}**. Active character: ${activeCharacter ? `**${activeCharacter}**` : 'none — `/character use` picks one'}.`,
+  rollNeedsActiveCharacter: (siteUrl: string) =>
+    `Sheet rolls need an active character — \`/character use\` picks one (or sign in with Discord at ${siteUrl} first).`,
+  unknownAction: (name: string) =>
+    `“${name}” isn't an action on your active character's ruleset. Try the autocomplete suggestions.`,
+  pushedReminder: 'Pushed (+1d) — mark 2 stress on your sheet',
+  sheetRollTitle: (character: string, action: string, rating: number, extra: number, push: boolean) => {
+    const bonus = extra + (push ? 1 : 0);
+    return `${character} — ${action} ${rating}d${bonus > 0 ? ` +${bonus}d` : ''}`;
+  },
   aboutTitle: 'HeistMind — the mechanical layer for Forged-in-the-Dark play',
   aboutBody: (siteUrl: string, sha: string) =>
     [

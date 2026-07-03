@@ -12,7 +12,7 @@ import { makeDiceHandler } from './commands/dice';
 import { handleFortune } from './commands/fortune';
 import { handleHeist } from './commands/heist';
 import { handleResist } from './commands/resist';
-import { handleRoll } from './commands/roll';
+import { handleRoll, rollAutocomplete } from './commands/roll';
 import { realizeDice } from './dice';
 import { copy } from './format/copy';
 import { inline, pong, reply } from './respond';
@@ -43,7 +43,11 @@ export async function handleInteraction(
     // Autocomplete shares the 3s budget with NO defer — suggesters must stay to a couple of
     // indexed queries and degrade to [] on any trouble (values are validated on submit anyway).
     const choices =
-      interaction.data.name === 'character' ? await characterAutocomplete(ctx, interaction) : [];
+      interaction.data.name === 'character'
+        ? await characterAutocomplete(ctx, interaction)
+        : interaction.data.name === 'roll'
+          ? await rollAutocomplete(ctx, interaction)
+          : [];
     return inline({
       type: InteractionResponseType.ApplicationCommandAutocompleteResult,
       data: { choices },
