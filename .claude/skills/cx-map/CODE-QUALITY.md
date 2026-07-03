@@ -15,7 +15,7 @@ value are strong; the debt is gate-truth regressions from the core extraction, a
 staleness, feed incompleteness, three rules-vs-RAW deviations, error swallowing, and the
 first-run ruleset detour. Seven CI-gated PRs:
 
-- **R3-PR1 — gate truth + hygiene (this PR).**
+- **R3-PR1 ✅ done @55e71a5 — gate truth + hygiene.**
   **Gate truth:** `database/vitest.config.ts` per-file thresholds still targeted the five rules
   files that moved to `core` (globs matched nothing) and the `= {...}` replacement had wiped the
   base floor → global floors now set to measured reality (36/62/60/36, upward-only ratchet;
@@ -44,7 +44,7 @@ first-run ruleset detour. Seven CI-gated PRs:
   shared-state factories (clocks/factions/scores/crews/rolls/characters byGame+detail) — a second
   player's open hub no longer shows a stale feed. User-owned reads stay on client defaults
   (deliberate, audited).
-- **R3-PR3 — feed completeness via engine use-cases (this PR).** BRD R-E1 made true: crew
+- **R3-PR3 ✅ done @d2e1799 — feed completeness via engine use-cases.** BRD R-E1 made true: crew
   heat/tier/incarceration (`engine/crews.ts`), faction status (`engine/factions.ts`), a clock
   filling (`engine/clocks.ts` — completion only; routine ticks stay panel-only), and XP
   marks/advances (`markXp`/`advanceCharacter` in `engine/characters.ts`) each persist AND write a
@@ -54,7 +54,7 @@ first-run ruleset detour. Seven CI-gated PRs:
   `updateCharacterWithValidation` — the last unvalidated character write path is gone. Engine
   contract note updated: single-call writes stay repo-direct UNLESS they belong in the shared
   feed. Engine spec grew 14→24 mocked-repo tests (still the Discord bot's contract).
-- **R3-PR4 — rules-RAW fixes (this PR).** Two real fixes + one refuted claim (all SRD-verified
+- **R3-PR4 ✅ done @53894c2 — rules-RAW fixes.** Two real fixes + one refuted claim (all SRD-verified
   before touching the rules): **crit resistance clears 1 stress** (F61 — `resistanceStress` → −1
   on two+ 6s; engine `applyStress` accepts negative deltas clamped at 0; RollPanel/RollLog phrase
   the clear); **veteran as a budget** (F62 — held cross-playbook picks must fit the summed grants,
@@ -62,7 +62,7 @@ first-run ruleset detour. Seven CI-gated PRs:
   (F63 — the review's claim refuted by the SRD's own example; no change, recorded). Recorded
   deviation kept: `advanceTier` ignores coin cost + rival-hold Rep discount (helper
   simplification). Core 108 tests green under the 100% rules gates; engine spec 24→28.
-- **R3-PR5 — error surfacing + draft-clobber guards (this PR).** No silent failures: `LoadoutCard`
+- **R3-PR5 ✅ done @06afd48 — error surfacing + draft-clobber guards.** No silent failures: `LoadoutCard`
   drops its swallow-everything catch (a failed save keeps the dirty draft + shows a destructive
   Alert with the message); `AddResultForm` renders its mutation error (entered text kept for
   retry). No clobbered work: `CharacterEditor` and `LoadoutCard` resync their local drafts on a
@@ -75,7 +75,7 @@ first-run ruleset detour. Seven CI-gated PRs:
   `sessionChecked` rehydrate edge is covered — the auth service forwards `INITIAL_SESSION`
   (incl. null session) to the store listener, which signs out; an expired session self-corrects
   right after rehydrate (optimistic-rehydrate tradeoff kept, no change).
-- **R3-PR6 — first-run onboarding (this PR).** The product P0 (F37): the ruleset-prerequisite wall
+- **R3-PR6 ✅ done @0256c93 — first-run onboarding.** The product P0 (F37): the ruleset-prerequisite wall
   in front of the flagship "build a character in minutes" job is gone. `StarterCatalogInline`
   extracted (single implementation; `/rulesets` reuses it) and embedded in `/characters/new`
   (zero rulesets → the catalog IS the page, one click continues straight into the wizard; with
@@ -84,7 +84,7 @@ first-run ruleset detour. Seven CI-gated PRs:
   continue in place. Dashboard: a guided "Start here" 1-2-3 for a brand-new user. BRD Phase-5
   open decision #3 resolved as "inline offer, not pre-grant" (à-la-carte preserved). New E2E:
   `inline starter catalog` builds a character with no `/rulesets` visit.
-- **R3-PR7 — high-value unit tests + web ratchet (this PR).** The pure logic E2E can't cheaply
+- **R3-PR7 ✅ done @5ce0593 — high-value unit tests + web ratchet.** The pure logic E2E can't cheaply
   cover: `character-creation-store` (11 tests — point-buy affordability incl. cross-attribute
   cost accounting, action-dot budget + at-creation caps + attribute re-derivation, BitD radio
   ability semantics + tier-lock no-ops, resume/reset); RollPanel's pool math extracted to the
