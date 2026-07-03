@@ -42,7 +42,15 @@ first-run ruleset detour. Seven CI-gated PRs:
 - **R3-PR3 — feed completeness via engine use-cases.** (pending)
 - **R3-PR4 — rules-RAW fixes (crit-resist clears 1, heat resets on wanted, veteran as budget).** (pending)
 - **R3-PR5 — error surfacing + draft-clobber guards.** (pending)
-- **R3-PR6 — first-run onboarding (inline starter catalog).** (pending)
+- **R3-PR6 — first-run onboarding (this PR).** The product P0 (F37): the ruleset-prerequisite wall
+  in front of the flagship "build a character in minutes" job is gone. `StarterCatalogInline`
+  extracted (single implementation; `/rulesets` reuses it) and embedded in `/characters/new`
+  (zero rulesets → the catalog IS the page, one click continues straight into the wizard; with
+  rulesets → an "Add another system" section) and in `GameForm`'s empty state (was a bare
+  dead-end Text). `useLoadBuiltinRuleset` now returns the OWNED ruleset row so inline flows
+  continue in place. Dashboard: a guided "Start here" 1-2-3 for a brand-new user. BRD Phase-5
+  open decision #3 resolved as "inline offer, not pre-grant" (à-la-carte preserved). New E2E:
+  `inline starter catalog` builds a character with no `/rulesets` visit.
 - **R3-PR7 — high-value unit tests + web ratchet.** (pending)
 
 ---

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { Ruleset } from '@heist-mind/core';
 import { Button, Stack, Text } from '@heist-mind/ui';
 import { BUILTIN_RULESETS, type BuiltinRuleset } from '@heist-mind/shared';
 import { useAuth } from '@/features/auth/stores/auth-store';
@@ -23,7 +24,8 @@ export function LoadBuiltinRulesetButton({
 }: {
   builtin: BuiltinRuleset;
   variant?: 'ember' | 'outline';
-  onLoaded?: () => void;
+  /** Receives the OWNED copy, so inline flows can continue with it (wizard, campaign form). */
+  onLoaded?: (ruleset: Ruleset) => void;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -39,11 +41,11 @@ export function LoadBuiltinRulesetButton({
     }
     setMessage(null);
     try {
-      const outcome = await loadBuiltin.mutateAsync({ userId, content });
+      const { outcome, ruleset } = await loadBuiltin.mutateAsync({ userId, content });
       if (outcome === 'refreshed') {
         setMessage(t('components.builtinRuleset.refreshed', { name: content.metadata.name }));
       }
-      onLoaded?.();
+      onLoaded?.(ruleset);
     } catch (err) {
       setMessage(errorMessage(err) || t('components.builtinRuleset.addFailed'));
     }

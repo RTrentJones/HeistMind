@@ -410,5 +410,7 @@ multiple campaigns at once** (the rejected many-to-many model). GM-initiated det
 1. **Standalone name collisions on attach** — auto-suffix vs block (the per-game unique constraint
    still applies once linked).
 2. **Detach authority** — owner-only, or may a GM detach a player's character from their campaign?
-3. **Standalone-create ruleset access** — do bundled starters auto-grant a readable ruleset for
-   standalone create, or must the user "add" one to `/rulesets` first?
+3. ~~**Standalone-create ruleset access**~~ — **resolved (round-3 PR-6): inline offer, not
+   pre-grant.** The built-in catalog is embedded in `/characters/new` and `/games/new`; one click
+   creates the user's owned copy and continues in place. No auto-granted rows (à-la-carte
+   preserved — the user still explicitly takes a system), no `/rulesets` detour (F37).
