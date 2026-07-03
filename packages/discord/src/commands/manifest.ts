@@ -29,16 +29,34 @@ const EFFECTS = ['limited', 'standard', 'great'] as const;
 export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [
   {
     name: 'roll',
-    description: 'Roll a Forged-in-the-Dark action pool (0d rolls 2, take lowest)',
+    description: 'Roll a Forged-in-the-Dark action — your sheet’s action or a manual pool',
     ...EVERYWHERE,
     options: [
       {
         type: ApplicationCommandOptionType.Integer,
         name: 'dice',
-        description: 'Your dice pool (action rating + bonuses)',
-        required: true,
+        description: 'Manual dice pool (skip this when rolling a sheet action)',
         min_value: 0,
         max_value: 10,
+      },
+      {
+        type: ApplicationCommandOptionType.String,
+        name: 'action',
+        description: 'Roll your ACTIVE character’s action (e.g. Skirmish)',
+        autocomplete: true,
+        max_length: 100,
+      },
+      {
+        type: ApplicationCommandOptionType.Integer,
+        name: 'extra',
+        description: 'Bonus dice (assists, devil’s bargains)',
+        min_value: 0,
+        max_value: 3,
+      },
+      {
+        type: ApplicationCommandOptionType.Boolean,
+        name: 'push',
+        description: 'Push yourself: +1d for 2 stress',
       },
       {
         type: ApplicationCommandOptionType.String,
@@ -164,6 +182,11 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
         type: ApplicationCommandOptionType.Subcommand,
         name: 'about',
         description: 'What this bot is, privacy, and the deployed version',
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'account',
+        description: 'Your linked HeistMind account and active character',
       },
     ],
   },
