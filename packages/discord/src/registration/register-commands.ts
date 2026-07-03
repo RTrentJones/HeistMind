@@ -5,17 +5,22 @@
 // Creds-guarded: absent credentials exit 0 so secret-less runs/forks skip cleanly.
 import { COMMAND_MANIFEST } from '../commands/manifest';
 
-const DISCORD_API_BASE = process.env.DISCORD_API_BASE ?? 'https://discord.com/api/v10';
+export type RegistrationOutcome = 'skipped' | 'registered' | 'failed';
 
-async function main(): Promise<void> {
-  const appId = process.env.DISCORD_APP_ID;
-  const botToken = process.env.DISCORD_BOT_TOKEN;
+/** The registration logic, separated from the CLI shell so tests drive it with a stubbed fetch. */
+export async function registerCommands(env: {
+  appId?: string | undefined;
+  botToken?: string | undefined;
+  apiBase?: string | undefined;
+}): Promise<RegistrationOutcome> {
+  const { appId, botToken } = env;
   if (!appId || !botToken) {
     console.log('DISCORD_APP_ID / DISCORD_BOT_TOKEN absent — skipping command registration.');
-    return;
+    return 'skipped';
   }
 
-  const response = await fetch(`${DISCORD_API_BASE}/applications/${appId}/commands`, {
+  const apiBase = env.apiBase ?? 'https://discord.com/api/v10';
+  const response = await fetch(`${apiBase}/applications/${appId}/commands`, {
     method: 'PUT',
     headers: {
       authorization: `Bot ${botToken}`,
@@ -27,11 +32,20 @@ async function main(): Promise<void> {
   if (!response.ok) {
     console.error(`Registration failed: HTTP ${response.status}`);
     console.error(await response.text());
-    process.exitCode = 1;
-    return;
+    return 'failed';
   }
 
   console.log(`Registered ${COMMAND_MANIFEST.length} commands for application ${appId}.`);
+  return 'registered';
 }
 
-void main();
+// CLI entry (tsx). vitest imports this module with a different argv[1], so tests never auto-run.
+if (process.argv[1]?.includes('register-commands')) {
+  void registerCommands({
+    appId: process.env.DISCORD_APP_ID,
+    botToken: process.env.DISCORD_BOT_TOKEN,
+    apiBase: process.env.DISCORD_API_BASE,
+  }).then(outcome => {
+    if (outcome === 'failed') process.exitCode = 1;
+  });
+}
