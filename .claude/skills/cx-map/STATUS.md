@@ -136,6 +136,24 @@ the character + attach/detach RPCs, standalone `/characters*` routes, and **5b**
 - **Deferred (separate future plan):** realtime presence / live multiplayer via Supabase Realtime.
   The async load-on-view model is sufficient and intentional for play-by-post.
 
+**Complete (2026-07-03): ROUND 3 — the post-round-2 second pass (#113–#119).** A clean-slate
+3-lens review (packages / web / product-alignment; every claim grep-verified, rules claims
+SRD-verified) followed by seven CI-gated PRs. What changed: **gate truth restored** (database's
+decorative coverage globs + a zombie type test replaced by real floors and a dev/prod
+schema-parity check; the root tsconfig no longer silently un-type-checks tests); **shared campaign
+state is never fresh** (the named `sharedCampaignState` load-on-view + focus-refetch policy on all
+seven shared seams — a second player's open hub can't go stale); **the campaign feed is complete**
+(crew heat/tier/incarceration, faction status, clock completions, and XP marks/advances are engine
+use-cases that persist AND log — BRD R-E1 true; `saveLoadout` server-validated); **rules aligned
+with RAW** (crit resistance clears 1 stress F61, veteran grants are a budget F62; the heat
+remainder-carry claim was REFUTED against the SRD F63); **no silent failures / no clobbered
+drafts** (loadout + add-result errors surface; editor/loadout drafts resync only while clean, and
+editor saves carry the live loadout); **first-run onboarding fixed** (F37: the inline starter
+catalog on `/characters/new` + `/games/new` kills the `/rulesets` detour; the dashboard gets a
+"Start here" 1-2-3; BRD open decision #3 resolved as inline-offer-not-pre-grant); **high-value
+unit tests seeded** (web suite 20→41; creation-store budget math, `rollPool`, LoadoutCard;
+coverage ratchet 0→11). Full record: `CODE-QUALITY.md` "Round 3"; F61–F63 in `FINDINGS.md`.
+
 **Complete (2026-07-02): code-quality ROUND 2 — the product-shaped re-architecture.** The monorepo
 now has the Avrae-target package graph: **`core`** (pure FitD domain + rules) ← **`database`**
 (client-agnostic repositories) ← **`engine`** (the multi-step game operations both clients drive;
@@ -160,4 +178,4 @@ and **role-gated the sheet's write affordances** (F42: owner/GM edit, others rea
 Pick a cluster, ship it through the `deploy-verify-promote` loop, and flip the relevant `FINDINGS.md`
 entries to `fixed @<sha>` (updating `CX-MAP.md` sections + `_Last verified:_` as you go).
 
-_Last verified:_ 2026-07-02 (round 2 complete, #104–#112: core/engine/telemetry packages, honest tool gates, server-rendered landing; CODE-QUALITY.md carries the full record)
+_Last verified:_ 2026-07-03 (round 3 complete, #113–#119: gate truth, never-fresh shared state, feed completeness, RAW fixes F61–F63, error surfacing, first-run onboarding F37, unit-test seed + ratchet; previously round 2 #104–#112. CODE-QUALITY.md carries the full record)
