@@ -46,3 +46,26 @@ export async function ownsCharacter(
   const found = await repos.characters.findById(characterId);
   return found.success && !!found.data && found.data.createdBy === actorId;
 }
+
+/** Whether the actor is an ACTIVE member of the campaign (players + the GM alike). */
+export async function isMember(
+  repos: DatabaseRepositories,
+  actorId: string,
+  gameId: string
+): Promise<boolean> {
+  const members = await repos.gamePlayers.findByGame(gameId);
+  return (
+    members.success &&
+    members.data.some(m => m.playerId === actorId && m.status === 'active')
+  );
+}
+
+/** Whether the actor runs the campaign — the GM-only command gate. */
+export async function isGM(
+  repos: DatabaseRepositories,
+  actorId: string,
+  gameId: string
+): Promise<boolean> {
+  const gm = await repos.gamePlayers.isGameMaster(actorId, gameId);
+  return gm.success && gm.data;
+}

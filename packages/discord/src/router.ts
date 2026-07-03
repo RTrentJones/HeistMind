@@ -10,7 +10,8 @@ import {
 import { characterAutocomplete, handleCharacter } from './commands/character';
 import { makeDiceHandler } from './commands/dice';
 import { handleFortune } from './commands/fortune';
-import { handleHeist } from './commands/heist';
+import { handleHeist, heistAutocomplete } from './commands/heist';
+import { handleLog } from './commands/log';
 import { handleResist } from './commands/resist';
 import { handleRoll, rollAutocomplete } from './commands/roll';
 import { realizeDice } from './dice';
@@ -25,6 +26,7 @@ const HANDLERS: Record<string, CommandHandler> = {
   dice: makeDiceHandler(realizeDice),
   heist: handleHeist,
   character: handleCharacter,
+  log: handleLog,
 };
 
 export async function handleInteraction(
@@ -47,7 +49,9 @@ export async function handleInteraction(
         ? await characterAutocomplete(ctx, interaction)
         : interaction.data.name === 'roll'
           ? await rollAutocomplete(ctx, interaction)
-          : [];
+          : interaction.data.name === 'heist'
+            ? await heistAutocomplete(ctx, interaction)
+            : [];
     return inline({
       type: InteractionResponseType.ApplicationCommandAutocompleteResult,
       data: { choices },

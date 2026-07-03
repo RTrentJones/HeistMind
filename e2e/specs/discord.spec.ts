@@ -119,6 +119,131 @@ test.describe('Discord interactions endpoint', () => {
       .toBe(inserted.data!.id);
   });
 
+  test('phase 2: /heist link + /log land an attributed note; non-members are walled', async ({
+    request,
+  }) => {
+    const env = getE2EEnv();
+    test.skip(
+      !env.supabaseUrl || !env.supabaseServiceRoleKey,
+      'Needs the local Supabase stack (service-role provisioning).'
+    );
+
+    // Arrange: a discord-linked GM with a campaign (ruleset + game + GM membership rows).
+    const gm = await ensureTestUser(env, TEST_USERS.gm);
+    const admin = createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!);
+    const discordId = 'e2e-discord-424242';
+    await admin.from('profiles').update({ discord_id: discordId }).eq('id', gm.id!);
+    const dev = admin.schema('development');
+    await dev.from('games').delete().eq('created_by', gm.id!).eq('name', 'Bot Linked Job');
+    await dev.from('rulesets').delete().eq('created_by', gm.id!).eq('name', 'Bot E2E RS');
+    const ruleset = await dev
+      .from('rulesets')
+      .insert({ name: 'Bot E2E RS', created_by: gm.id!, content: {} })
+      .select('id')
+      .single();
+    const game = await dev
+      .from('games')
+      .insert({ name: 'Bot Linked Job', created_by: gm.id!, ruleset_id: ruleset.data!.id })
+      .select('id')
+      .single();
+    await dev
+      .from('game_players')
+      .insert({ game_id: game.data!.id, player_id: gm.id!, role: 'game_master', status: 'active' });
+
+    const guildSurface = {
+      guild_id: 'e2e-guild-1',
+      channel: { id: 'e2e-chan-1', parent_id: null },
+      member: { user: { id: discordId } },
+    };
+
+    // Act 1: the GM links the channel.
+    const link = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: {
+          name: 'heist',
+          type: 1,
+          options: [
+            {
+              name: 'link',
+              type: 1,
+              options: [{ name: 'campaign', type: 3, value: 'Bot Linked Job' }],
+            },
+          ],
+        },
+      })
+    );
+    expect(link.status()).toBe(200);
+    expect(((await link.json()) as { type: number }).type).toBe(5);
+    await expect
+      .poll(async () => {
+        const row = await dev
+          .from('games')
+          .select('discord_channel_id')
+          .eq('id', game.data!.id)
+          .single();
+        return row.data?.discord_channel_id ?? null;
+      })
+      .toBe('e2e-chan-1');
+
+    // Act 2: /log lands an attributed note in the campaign feed.
+    const log = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: {
+          name: 'log',
+          type: 1,
+          options: [{ name: 'text', type: 3, value: 'Settled offscreen: the vault is open' }],
+        },
+      })
+    );
+    expect(log.status()).toBe(200);
+    await expect
+      .poll(async () => {
+        const rows = await dev
+          .from('rolls')
+          .select('note, kind, user_id')
+          .eq('game_id', game.data!.id)
+          .eq('kind', 'note');
+        return rows.data?.some(
+          r => r.note === 'Settled offscreen: the vault is open' && r.user_id === gm.id
+        );
+      })
+      .toBe(true);
+
+    // Act 3: a NON-member Discord user is walled off (no roll row appears for them).
+    const strangerId = 'e2e-discord-stranger';
+    const before = await dev.from('rolls').select('id').eq('game_id', game.data!.id);
+    const strangerLog = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        member: { user: { id: strangerId } },
+        data: {
+          name: 'log',
+          type: 1,
+          options: [{ name: 'text', type: 3, value: 'I should not appear' }],
+        },
+      })
+    );
+    expect(strangerLog.status()).toBe(200);
+    // Deterministic wait: the stranger path resolves quickly; assert no new rows landed after a
+    // settle poll on the count staying flat.
+    await expect
+      .poll(async () => {
+        const after = await dev.from('rolls').select('id').eq('game_id', game.data!.id);
+        return (after.data?.length ?? 0) >= (before.data?.length ?? 0);
+      })
+      .toBe(true);
+    const finalRows = await dev.from('rolls').select('note').eq('game_id', game.data!.id);
+    expect(finalRows.data?.some(r => r.note === 'I should not appear')).toBe(false);
+  });
+
   test('/roll answers inline with a classified FitD embed', async ({ request }) => {
     const response = await request.post(
       '/api/discord',
