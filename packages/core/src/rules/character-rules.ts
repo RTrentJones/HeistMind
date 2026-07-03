@@ -2,8 +2,8 @@
 // under its ruleset?". Pure (no I/O), so both the web UI (creation wizard + editor) and the DB
 // layer (characterManagement, server-side enforcement) run the exact same checks.
 //
-// Lives in @heist-mind/database (not @heist-mind/shared) on purpose: shared depends on database,
-// so putting it here lets the DB layer validate without a dependency cycle. shared re-exports it.
+// Lives in @heist-mind/core with the rest of the rules engine: zero dependencies, so every
+// client (web, the future Discord bot) and the DB layer import the exact same checks.
 
 import type {
   RulesetContent,

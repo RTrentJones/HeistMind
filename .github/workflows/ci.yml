@@ -46,9 +46,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Validate database types
-        run: pnpm --filter database validate-types
-
+      # Type integrity is covered twice already: the compile-time checks in
+      # packages/database/src/type-integrity.test.ts run under `pnpm type-check` (tsc) and the
+      # test sweep below — a dedicated step would just be a third copy that can drift (its
+      # predecessor pointed at a deleted file and only CI noticed).
       - name: Run tests
         run: pnpm test:coverage
 

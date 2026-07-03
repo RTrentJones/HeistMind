@@ -146,15 +146,15 @@ independently usable — a group can adopt just one).
 | R-G1 | Clocks | ✅ | `ClocksPanel.tsx` |
 | R-G2 | Factions | ✅ | `FactionsPanel.tsx` |
 | R-H1 | In-app dice (optional) | ✅ | keep, reframed |
-| **R-H2** | **Discord bot** | ❌ | `apps/discord-bot` is a stub |
+| **R-H2** | **Discord bot** | ❌ | not started — `apps/discord-bot` does not exist yet |
 | R-I1/I2/I3 | Platform | ✅ | auth, invites, rulesets |
 
 ### Headline gaps
 1. ~~No "score" concept~~ → **done (Phase 1a):** `scores` table + `ScorePanel`.
 2. ~~Loadout is in the wrong place~~ → **done (Phase 1b):** per-score `LoadoutCard` on the sheet.
-3. ~~The log is only a roll log~~ → **done (Phase 2):** the roll log is the campaign event log — events carry `score_id`, the feed groups by score, and an "add result" entry records outcomes settled IRL/Discord.
+3. ~~The log is only a roll log~~ → **done (Phase 2):** the roll log is the campaign event log — events carry `score_id`, the feed groups by score, and an "add result" entry records outcomes settled IRL/Discord. _(Caveat: XP marks/advances still land only in `advancementHistory`, not the feed — R-C3 stays 🟡; round-3 PR-3 closes it.)_
 4. ~~No character lifecycle~~ → **done (Phase 3):** roster (player → character) + Retire (status + coin→stash).
-5. **No Discord integration** (R-H2) — the bot app is a stub. _(Phase 4.)_
+5. **No Discord integration** (R-H2) — not started; no bot app exists. _(Phase 4.)_
 
 ### Already aligned (no work)
 Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and the in-app dice
@@ -217,8 +217,17 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 
 ## Appendix — Phase 4: Discord integration (detailed BRD)
 
-**Status:** specified, **not built**. The `apps/discord-bot` app is a stub. This appendix is the
-spec to build from when the Discord app credentials are available; nothing here is implemented yet.
+**Status:** specified, **not built**. `apps/discord-bot` does not exist yet (the monorepo's
+`apps/*` workspace glob reserves the slot). This appendix is the spec to build from when the
+Discord app credentials are available; nothing here is implemented yet.
+
+**Platform prerequisites (verified 2026-07-02 — none exist yet):** (1) a **service-role client
+path** in `packages/database` — every current factory reads only the anon key, and
+`getUserByDiscordId` needs `auth.admin`; (2) **explicit membership/ownership authz in the engine
+use-cases** — today they trust `userId` because Postgres RLS on `auth.uid()` is the only guard,
+and a service-role caller **bypasses RLS entirely**; (3) the `games.discord_channel_id` migration
+below; (4) the interactions endpoint (no `app/api/` routes exist today). (1) and (2) are the
+security-sensitive ones — build them first.
 
 ### Goal & scope
 Let groups who play (or roll) on **Discord** push *settled results* into the HeistMind campaign log,
@@ -253,7 +262,9 @@ later iteration. This is **opt-in** (P1) — a group that doesn't use Discord is
 ### Data model (migration when built)
 - **`games.discord_channel_id TEXT` (+ `discord_guild_id TEXT`)** — the channel↔campaign link (a
   per-env `DO`-block migration like the others; needs a `pnpm db:types` regen).
-- **`profiles.discord_id`** — **already exists** (unique, from Discord OAuth) → attribution is free.
+- **`profiles.discord_id`** — the **column** already exists (unique, from Discord OAuth), but the
+  lookup is not free: `getUserByDiscordId` calls `auth.admin.getUserById`, which requires the
+  service-role client that nothing constructs today (prerequisite (1) above).
 - Optionally a partial unique index so a channel links to at most one campaign.
 
 ### Command surface (v1)

@@ -33,15 +33,28 @@
       "path": "./apps/web"
     },
     {
-      "path": "./packages/ui"
+      "path": "./packages/core"
     },
     {
       "path": "./packages/database"
     },
     {
+      "path": "./packages/engine"
+    },
+    {
       "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/telemetry"
+    },
+    {
+      "path": "./packages/ui"
     }
   ],
   "files": [],
-  "exclude": ["node_modules", "dist", "build", ".next", "coverage", "**/*.test.*", "**/*.spec.*"]
+  // Tests are deliberately NOT excluded: excluding them here silently removed every *.test.ts
+  // from type-check in any package that doesn't define its own `exclude` (a child tsconfig's
+  // `exclude` REPLACES this one, it doesn't merge) — which is how database's tests went
+  // type-unchecked until 2026-07-02. Packages exclude their own build noise individually.
+  "exclude": ["node_modules", "dist", "build", ".next", "coverage"]
 }

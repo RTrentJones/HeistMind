@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { useTranslation as useI18nTranslation } from 'react-i18next';
+import { AVAILABLE_LANGUAGES } from '@/lib/i18n/translations';
 import type {
   TranslationKey,
   InterpolationParams,
@@ -123,6 +124,8 @@ export function useLanguageSwitcher() {
   return {
     currentLanguage: i18n.language,
     changeLanguage,
-    supportedLanguages: ['en', 'es', 'fr', 'de'] as const,
+    // Only languages that actually ship translations — switching to anything else would render
+    // an empty locale. Derived, so adding a translations entry is the whole rollout.
+    supportedLanguages: AVAILABLE_LANGUAGES,
   };
 }

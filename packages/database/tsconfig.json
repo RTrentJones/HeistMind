@@ -4,10 +4,9 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "paths": {
-      "@/*": ["./src/*"],
-      "@heist-mind/shared": ["../../packages/shared/src"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["tests/**/*"]
+  "exclude": ["../../configs", "vitest.config.ts"]
 }
