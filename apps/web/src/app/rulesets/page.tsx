@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BUILTIN_RULESETS } from '@heist-mind/shared';
 import {
-  Badge,
   Button,
   Card,
   Container,
@@ -15,7 +13,7 @@ import {
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { SignInGate } from '@/features/auth/components/SignInGate';
-import { LoadBuiltinRulesetButton } from '@/features/rulesets/components/LoadBuiltinRulesetButton';
+import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 
@@ -60,37 +58,7 @@ export default function RulesetsPage() {
                 {t('pages.rulesetsCatalog.starterDescription')}
               </Text>
             </div>
-            <Stack direction='column' gap='sm'>
-              {BUILTIN_RULESETS.map(b => (
-                <Card key={b.id} variant='default'>
-                  <Stack
-                    direction='row'
-                    justify='between'
-                    align='center'
-                    className='flex-wrap gap-2'
-                  >
-                    <div className='min-w-0'>
-                      <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                        <Heading level='h3'>{b.content.metadata.name}</Heading>
-                        <Badge variant={b.tier === 'starter' ? 'gold' : 'steel'}>{b.tier}</Badge>
-                        {b.license && <Badge variant='steel'>{b.license}</Badge>}
-                      </Stack>
-                      {b.blurb && (
-                        <Text variant='muted' size='sm'>
-                          {b.blurb}
-                        </Text>
-                      )}
-                      {b.attribution && (
-                        <Text variant='muted' size='sm' className='mt-1 italic'>
-                          {b.attribution}
-                        </Text>
-                      )}
-                    </div>
-                    <LoadBuiltinRulesetButton builtin={b} variant='outline' />
-                  </Stack>
-                </Card>
-              ))}
-            </Stack>
+            <StarterCatalogInline />
           </Stack>
         </Card>
 

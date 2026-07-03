@@ -58,7 +58,10 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
   `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change. Copy in
   `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
-  `/characters` routes (Phase 5 — portable characters; see below).
+  `/characters` routes (Phase 5 — portable characters; see below). A **brand-new user** (no
+  campaigns AND no characters) gets a guided **"Start here" 1-2-3** card (build a character ·
+  create a campaign · join a game — each step a real link) instead of disconnected empty cards
+  (F37, `pages.dashboard.startHere.*`).
 - **Actions:** (logged out) Sign in / Sign up with Discord; (signed in) jump to any campaign, character
   sheet, or a quick action.
 - **Nav:** → `/auth/callback` (after OAuth) → back to `/` (now the dashboard); → `/games`,
@@ -91,7 +94,9 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **File:** `apps/web/src/app/games/new/page.tsx`
 - **Components:** `GameForm` (`apps/web/src/features/games/components/GameForm.tsx`).
 - **Actions:** name (required, **unique per creator**), description, ruleset select; Create. Accepts
-  `?ruleset=<id>` to preselect.
+  `?ruleset=<id>` to preselect. **Zero rulesets → the built-in catalog renders inline**
+  (`StarterCatalogInline`, F37): one click creates an owned copy and the form appears with it
+  preselected — no `/rulesets` detour.
 - **Nav:** → `/games/[gameId]` on success.
 - **CX intent:** a duplicate name surfaces a plain-language message ("You already have a campaign
   named …"), not the raw `23505` constraint (handled in `GameForm`).
@@ -228,8 +233,11 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **File:** `apps/web/src/app/characters/new/page.tsx`
 - **Purpose:** pick one of your rulesets (`rulesets.findByCreator`), then the **same
   `CharacterCreationWizard`** runs with **no `gameId`**; on create it lands on the standalone sheet.
-  Empty state points to `/rulesets` to add a starter first.
-- **Nav:** → `/characters/[id]` on create.
+  **The built-in catalog is inline** (`StarterCatalogInline`, F37): with zero rulesets it IS the
+  page (one click → straight into the wizard, no `/rulesets` detour); with rulesets present it sits
+  below the picker as "Add another system". A secondary link offers the JSON upload
+  (`/rulesets/new`).
+- **Nav:** → `/characters/[id]` on create; → `/rulesets/new` (bring your own).
 
 ### `/characters/[characterId]` — Standalone character sheet
 

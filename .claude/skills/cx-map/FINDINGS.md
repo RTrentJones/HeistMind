@@ -508,8 +508,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Now "Add &lt;name&gt; to my rulesets" with a clarifying tooltip, across the whole built-in catalog.
   `LoadBuiltinRulesetButton.tsx`. **fixed @69180e1**
 - **F37** · CX · No first-run onboarding: a new signed-in user with no rulesets/games gets no guided
-  next step. `app/page.tsx`, `/rulesets` empty state → an authed CTA / 1-2-3 path. **open — scoped as
-  its own follow-up (not part of the 2026-06-29 code-quality round).**
+  next step. **fixed (round-3 PR-6)** — the ruleset-prerequisite wall is gone: `/characters/new` and
+  `/games/new` embed the built-in catalog inline (`StarterCatalogInline` — one click loads a starter
+  and CONTINUES IN PLACE into the wizard / form, no `/rulesets` detour), and the dashboard shows a
+  guided "Start here" 1-2-3 (build a character · create a campaign · join a game) for a user with
+  nothing. Covered by the `inline starter catalog` E2E spec.
 - **F38** · CX · Landing doesn't convey the async play-by-post value prop or FitD specifics.
   `app/page.tsx:28–34` → messaging + an "async play" feature. **fixed (PR #59)** — hero + the three
   feature cards + CTA now lead with async, Discord-style play-by-post (rulesets, shared rolls/clocks/

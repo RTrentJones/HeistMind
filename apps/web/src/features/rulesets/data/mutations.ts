@@ -2,7 +2,7 @@
 
 // The rulesets data-access seam (write side).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateRulesetData, RulesetContent } from '@heist-mind/core';
+import type { CreateRulesetData, Ruleset, RulesetContent } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { RepositoryError, unwrap } from '@/lib/query/result';
 import { rulesetKeys } from './queries';
@@ -21,7 +21,8 @@ export function useCreateRuleset() {
  * Load a built-in ruleset as an owned copy: create, or — if the GM already has it (UNIQUE
  * name+creator) — REFRESH that copy's content to the latest bundle, so a ruleset loaded before a
  * content update picks up new mechanics (crew, factions, ability rules, …). Returns which of the
- * two happened so the button can phrase its confirmation.
+ * two happened (for the button's confirmation copy) plus the OWNED ruleset row, so inline flows
+ * (character wizard, campaign form) can continue with it in place — no /rulesets round-trip.
  */
 export function useLoadBuiltinRuleset() {
   const qc = useQueryClient();
@@ -29,7 +30,7 @@ export function useLoadBuiltinRuleset() {
     mutationFn: async (vars: {
       userId: string;
       content: RulesetContent;
-    }): Promise<'created' | 'refreshed'> => {
+    }): Promise<{ outcome: 'created' | 'refreshed'; ruleset: Ruleset }> => {
       const { userId, content } = vars;
       const repos = getRepositories();
       const created = await repos.rulesets.create(userId, {
@@ -38,7 +39,7 @@ export function useLoadBuiltinRuleset() {
         description: content.metadata.description,
         content,
       });
-      if (created.success) return 'created';
+      if (created.success) return { outcome: 'created', ruleset: created.data };
 
       const raw = created.error?.message ?? '';
       const duplicate =
@@ -48,14 +49,14 @@ export function useLoadBuiltinRuleset() {
       const mine = await repos.rulesets.findByCreator(userId).then(unwrap);
       const existing = mine.find(r => r.name === content.metadata.name);
       if (!existing) throw new RepositoryError(raw, created.error?.code);
-      await repos.rulesets
+      const refreshed = await repos.rulesets
         .update(existing.id, userId, {
           version: content.metadata.version,
           description: content.metadata.description,
           content,
         })
         .then(unwrap);
-      return 'refreshed';
+      return { outcome: 'refreshed', ruleset: refreshed };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: rulesetKeys.all }),
   });

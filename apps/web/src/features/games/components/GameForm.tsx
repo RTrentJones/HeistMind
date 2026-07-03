@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, ErrorDisplay, Input, LoadingSpinner, Select, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCreateGame } from '@/features/games/data/mutations';
+import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
 import { errorCode, errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -64,7 +65,15 @@ export function GameForm() {
     );
   }
   if (!rulesets || rulesets.length === 0) {
-    return <Text variant='muted'>{t('forms.gameForm.needRuleset')}</Text>;
+    // First campaign, no ruleset yet — offer the built-ins in place (F37: no /rulesets detour).
+    // Loading one refetches the list (mutation invalidation), so the form appears with the fresh
+    // copy preselected.
+    return (
+      <Stack direction='column' gap='sm'>
+        <Text variant='muted'>{t('forms.gameForm.needRuleset')}</Text>
+        <StarterCatalogInline onLoaded={rs => setRulesetId(rs.id)} />
+      </Stack>
+    );
   }
 
   return (

@@ -601,6 +601,9 @@
       "addFailed": "Failed to add the ruleset.",
       "addTitle": "Creates an editable copy of {{name}} in your rulesets.",
       "addCta": "Add {{name}} to my rulesets"
+    },
+    "starterCatalog": {
+      "footnote": "Each loads as an editable copy you own; loading one again refreshes it to the latest bundle."
     }
   },
   "auth": {
@@ -786,6 +789,16 @@
       "noCampaigns": "No campaigns yet. Create one, or join with an invite code.",
       "createFirstCampaign": "Create your first campaign",
       "noCharacters": "No characters yet. Open a campaign to build your scoundrel.",
+      "startHere": {
+        "title": "Start here",
+        "intro": "Three steps and your crew is on the board — take just the ones you need.",
+        "step1": "Build a character",
+        "step1Note": "— pick a built-in system (Blades in the Dark, Brackwater, Wicked Ones) and the wizard guides a rules-legal scoundrel.",
+        "step2": "Create a campaign",
+        "step2Note": "— you're the GM; share its join code with your players.",
+        "step3": "Join a game",
+        "step3Note": "— got an invite code from a GM? Redeem it here."
+      },
       "loadFailed": "Failed to load dashboard",
       "characterMeta": "{{playbook}} · {{campaign}}",
       "activeGames": "Active Games",
@@ -814,8 +827,10 @@
       "empty": "No characters yet. Build a standalone scoundrel and bring it to any table.",
       "createFirst": "Create your first character",
       "pickRuleset": "Pick a ruleset to build against. The character is yours — bring it to a campaign later.",
-      "noRulesets": "You don't have any rulesets yet. Add a starter system first.",
-      "addRuleset": "Add a ruleset",
+      "startWithBuiltin": "Start with a ready-made system — one click and you're building:",
+      "orUpload": "Or bring your own —",
+      "uploadLink": "upload a ruleset JSON",
+      "moreSystems": "Add another system",
       "rulesetVersion": "v{{version}}",
       "build": "Build",
       "notifyIncompleteTitle": "Incomplete character",

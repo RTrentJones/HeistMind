@@ -147,6 +147,44 @@ export function Dashboard() {
 
             {error && <ErrorDisplay title={t('pages.gamesList.loadError')} message={error} />}
 
+            {/* Brand-new user (no campaigns, no characters): one guided "start here" instead of
+                three disconnected empty cards (F37). Each step is a real link. */}
+            {!loading && campaigns.length === 0 && characters.length === 0 && (
+              <Card variant='outline'>
+                <Stack direction='column' gap='sm' align='start'>
+                  <Heading level='h2' variant='primary'>
+                    {t('pages.dashboard.startHere.title')}
+                  </Heading>
+                  <Text variant='muted' size='sm'>
+                    {t('pages.dashboard.startHere.intro')}
+                  </Text>
+                  <Stack direction='column' gap='xs' align='start'>
+                    <Text size='sm'>
+                      1.{' '}
+                      <Link href='/characters/new' className='underline'>
+                        {t('pages.dashboard.startHere.step1')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step1Note')}
+                    </Text>
+                    <Text size='sm'>
+                      2.{' '}
+                      <Link href='/games/new' className='underline'>
+                        {t('pages.dashboard.startHere.step2')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step2Note')}
+                    </Text>
+                    <Text size='sm'>
+                      3.{' '}
+                      <Link href='/games' className='underline'>
+                        {t('pages.dashboard.startHere.step3')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step3Note')}
+                    </Text>
+                  </Stack>
+                </Stack>
+              </Card>
+            )}
+
             {/* Your campaigns */}
             <Stack direction='row' justify='between' align='center'>
               <Heading level='h2' variant='primary'>
