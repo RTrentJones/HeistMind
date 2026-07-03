@@ -28,13 +28,13 @@ first-run ruleset detour. Seven CI-gated PRs:
   silently lost ALL test type-checking; the root exclude no longer bans tests and `database` now
   carries the same explicit exclude as its siblings. Root `references` completed
   (core/engine/telemetry were missing). **Hygiene:** stale `character-rules.ts` header ("lives in
-  @heist-mind/database"); dead `shared/src/constants.ts` (DICE_OUTCOMES/EXAMPLE_MECHANICS/
+  @heist-mind/database"); dead `shared/src/constants.ts` (DICE*OUTCOMES/EXAMPLE_MECHANICS/
   GameMechanics — zero consumers) deleted; vestigial `@heist-mind/database` vitest alias (shared) +
   `@heist-mind/shared` tsconfig path (database) removed; stray 80 KB root
   `blades-in-the-dark-complete-json.ts` deleted (zero importers); `useLanguageSwitcher` now derives
   `supportedLanguages` from `AVAILABLE_LANGUAGES` (was advertising es/fr/de with no messages);
   auth-callback `console.warn` → `logEvent`. **Docs:** BRD/STATUS/CLAUDE.md corrected — the bot
-  app _does not exist_ (was "stub"/"placeholder"); "attribution is free" now names the unwired
+  app \_does not exist* (was "stub"/"placeholder"); "attribution is free" now names the unwired
   service-role prerequisite; Phase-2 unified-log claim carries the XP caveat; the Phase-4 appendix
   lists the four verified platform prerequisites (service-role client path, engine-level authz to
   replace bypassed RLS, channel↔campaign migration, interactions endpoint).
@@ -84,7 +84,17 @@ first-run ruleset detour. Seven CI-gated PRs:
   continue in place. Dashboard: a guided "Start here" 1-2-3 for a brand-new user. BRD Phase-5
   open decision #3 resolved as "inline offer, not pre-grant" (à-la-carte preserved). New E2E:
   `inline starter catalog` builds a character with no `/rulesets` visit.
-- **R3-PR7 — high-value unit tests + web ratchet.** (pending)
+- **R3-PR7 — high-value unit tests + web ratchet (this PR).** The pure logic E2E can't cheaply
+  cover: `character-creation-store` (11 tests — point-buy affordability incl. cross-attribute
+  cost accounting, action-dot budget + at-creation caps + attribute re-derivation, BitD radio
+  ability semantics + tier-lock no-ops, resume/reset); RollPanel's pool math extracted to the
+  pure `rollPool` (`features/rolls/lib/roll-pool.ts`, 4 tests — push/bargain stacking, the
+  pushed-0-rating pool becoming a real die, fortune floor, resistance ignoring moves) — a smaller,
+  honest cut of the planned `useRoll` extraction (the remaining `roll()` body is engine calls +
+  setState, already covered by engine tests + E2E); `LoadoutCard` (6 tests — gauge, over-capacity
+  refusal, dirty-gating + tagged save payload, stale-score flag, the PR-5 error surface,
+  read-only mode). Web suite 20→41 tests; coverage threshold ratcheted 0→11 (measured 11.51
+  lines / 37.4 branches / 16.56 functions; upward-only).
 
 ---
 

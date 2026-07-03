@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { diceForRating } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
+import { rollPool } from '@/features/rolls/lib/roll-pool';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 interface ActionOption {
@@ -102,7 +102,7 @@ export function RollPanel({
       // realizes the dice and phrases the feed copy.
       if (mode === 'resistance') {
         const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
-        const { count, zeroDice } = diceForRating(opt?.rating ?? 0);
+        const { count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0 });
         const results = realize(count);
         const { roll: created, stress } = await resistanceRoll.mutateAsync({
           userId,
@@ -118,11 +118,9 @@ export function RollPanel({
 
       const isActionRoll = mode === 'action';
       const rating = isActionRoll ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune;
-      // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2 take-lowest).
-      const extraDice = isActionRoll ? (push ? 1 : 0) + (bargain ? 1 : 0) : 0;
-      const { count, zeroDice } = isActionRoll
-        ? diceForRating(rating + extraDice)
-        : { count: Math.max(fortune, 1), zeroDice: false };
+      // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2
+      // take-lowest) — the pool math is the pure, unit-tested `rollPool`.
+      const { count, zeroDice } = rollPool({ mode, rating, push, bargain, fortune });
       const results = realize(count);
       // Record the moves so the feed shows what was spent / accepted.
       const notes: string[] = [];
