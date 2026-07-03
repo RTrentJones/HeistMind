@@ -4,6 +4,7 @@
 // touch `getRepositories()` for character reads. Components depend on these hooks, never the repo.
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import { getRepositories } from '@/lib/auth';
+import { sharedCampaignState } from '@/lib/query/policies';
 import { unwrap } from '@/lib/query/result';
 
 export const characterKeys = {
@@ -27,17 +28,14 @@ export const characterQueries = {
         : skipToken,
     }),
   /**
-   * All characters in a campaign (the roster). SHARED campaign state: other players and the GM
-   * write it from their own clients, and there is no realtime layer — in-app invalidation can
-   * never cover those writes. Per the BRD's load-on-view model, treat it as never fresh:
-   * revalidate on every mount so opening the hub always shows the current roster. (Cached data
-   * still renders instantly; the refetch is a background revalidation, no empty flicker.)
+   * All characters in a campaign (the roster). SHARED campaign state — other players and the GM
+   * write it from their own clients — so load-on-view per `sharedCampaignState` (the policy's
+   * full rationale lives there).
    */
   byGame: (gameId: string | undefined) =>
     queryOptions({
       queryKey: characterKeys.byGame(gameId ?? ''),
-      staleTime: 0,
-      refetchOnMount: 'always',
+      ...sharedCampaignState,
       queryFn: gameId
         ? () => getRepositories().characters.findByGame(gameId).then(unwrap)
         : skipToken,
@@ -45,14 +43,13 @@ export const characterQueries = {
   /**
    * A single character with its game (nullable) + ruleset + creator. Load-on-view for the same
    * reason as the roster: the GM (a different client) can mutate a player's character, so a
-   * cached sheet may not reflect shared truth. Revalidate on every mount; the sheet's own edits
-   * still refresh in place via mutation invalidation.
+   * cached sheet may not reflect shared truth. The sheet's own edits still refresh in place via
+   * mutation invalidation.
    */
   detail: (id: string | undefined) =>
     queryOptions({
       queryKey: characterKeys.detail(id ?? ''),
-      staleTime: 0,
-      refetchOnMount: 'always',
+      ...sharedCampaignState,
       queryFn: id ? () => getRepositories().characters.findWithDetails(id).then(unwrap) : skipToken,
     }),
 };

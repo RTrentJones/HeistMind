@@ -7,10 +7,50 @@ PR sequence. Flip an item to `done @<sha>` when it ships.
 
 ---
 
+## Round 3 (2026-07-02) — post-round-2 fresh review → the second pass
+
+A clean-slate 3-lens review (packages / web / product-alignment; every load-bearing claim
+grep-verified) after round 2 closed. Verdict recorded in the round-3 plan: architecture + core
+value are strong; the debt is gate-truth regressions from the core extraction, async-play
+staleness, feed incompleteness, three rules-vs-RAW deviations, error swallowing, and the
+first-run ruleset detour. Seven CI-gated PRs:
+
+- **R3-PR1 — gate truth + hygiene (this PR).**
+  **Gate truth:** `database/vitest.config.ts` per-file thresholds still targeted the five rules
+  files that moved to `core` (globs matched nothing) and the `= {...}` replacement had wiped the
+  base floor → global floors now set to measured reality (36/62/60/36, upward-only ratchet;
+  management-repo per-file gate kept). `tests/type-validation.test.ts` was a zombie — tsconfig
+  excluded `tests/**` (tsc never saw it) and its `import type` lines are erased by vitest (imports
+  had been broken since the core extraction without anything failing); replaced by
+  `src/type-integrity.test.ts` (dev/prod schema **parity**, `profiles` in public, two-way domain
+  union checks), proven red-then-green with a deliberate type error. **Root-cause fix:** the ROOT
+  tsconfig excluded `**/*.test.*` — any package without its own `exclude` (only `database`)
+  silently lost ALL test type-checking; the root exclude no longer bans tests and `database` now
+  carries the same explicit exclude as its siblings. Root `references` completed
+  (core/engine/telemetry were missing). **Hygiene:** stale `character-rules.ts` header ("lives in
+  @heist-mind/database"); dead `shared/src/constants.ts` (DICE_OUTCOMES/EXAMPLE_MECHANICS/
+  GameMechanics — zero consumers) deleted; vestigial `@heist-mind/database` vitest alias (shared) +
+  `@heist-mind/shared` tsconfig path (database) removed; stray 80 KB root
+  `blades-in-the-dark-complete-json.ts` deleted (zero importers); `useLanguageSwitcher` now derives
+  `supportedLanguages` from `AVAILABLE_LANGUAGES` (was advertising es/fr/de with no messages);
+  auth-callback `console.warn` → `logEvent`. **Docs:** BRD/STATUS/CLAUDE.md corrected — the bot
+  app *does not exist* (was "stub"/"placeholder"); "attribution is free" now names the unwired
+  service-role prerequisite; Phase-2 unified-log claim carries the XP caveat; the Phase-4 appendix
+  lists the four verified platform prerequisites (service-role client path, engine-level authz to
+  replace bypassed RLS, channel↔campaign migration, interactions endpoint).
+- **R3-PR2 — async-play staleness.** (pending)
+- **R3-PR3 — feed completeness via engine use-cases.** (pending)
+- **R3-PR4 — rules-RAW fixes (crit-resist clears 1, heat resets on wanted, veteran as budget).** (pending)
+- **R3-PR5 — error surfacing + draft-clobber guards.** (pending)
+- **R3-PR6 — first-run onboarding (inline starter catalog).** (pending)
+- **R3-PR7 — high-value unit tests + web ratchet.** (pending)
+
+---
+
 ## Round 2 (2026-07-02) — architect for the product (web + Discord bot)
 
 A fresh 3-lens re-audit + a reframe from the user: design for *"Avrae for FitD"* — the web app AND
-the future Discord bot (`apps/discord-bot` placeholder; `packages/shared` exists for it) driving the
+the future Discord bot (not yet created — the `apps/*` workspace reserves the slot; `packages/shared` exists for it) driving the
 same rules engine and campaign state. **Target package graph:**
 `core` (domain types + pure rules) ← `database` (client-agnostic repos) ← `engine` (use-cases both
 clients call) ← { `web`, `discord-bot` }, with `shared` = cross-client ruleset content (deps: core)
