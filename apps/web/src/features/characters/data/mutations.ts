@@ -11,8 +11,10 @@ import type {
   UpdateCharacterData,
 } from '@heist-mind/core';
 import {
+  advanceCharacter,
   applyStress,
   indulgeVice,
+  markXp,
   retireCharacter,
   saveLoadout,
   type IndulgeViceOutcome,
@@ -48,29 +50,42 @@ export function useUpdateCharacterData(characterId: string) {
 }
 
 /**
- * Spend XP on an advancement (ability purchase / action dot) through the validated repo path —
- * the server gates on cost, prerequisites, and (for action dots) the track being full.
+ * Spend XP on an advancement (ability purchase / action dot) via the ENGINE: the validated repo
+ * path gates cost/prereqs/track server-side, then the advance lands in the campaign feed as an
+ * 'xp' event (BRD R-C3). Standalone characters (gameId null) skip the feed.
  */
-export function useAdvanceCharacter(characterId: string) {
+export function useAdvanceCharacter(characterId: string, gameId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { userId: string; advancement: CharacterAdvancement }): Promise<Character> =>
-      getRepositories()
-        .characterManagement.advanceCharacter(characterId, vars.userId, vars.advancement)
-        .then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+    mutationFn: async (vars: {
+      userId: string;
+      advancement: CharacterAdvancement;
+      logLabel: string;
+      logNote: string;
+    }): Promise<Character> =>
+      unwrap(await advanceCharacter(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
   });
 }
 
-/** Award XP through the repository's experience path (records the reason). */
-export function useAddExperience(characterId: string) {
+/** Award XP via the ENGINE (records the reason + logs an 'xp' feed event when in a campaign). */
+export function useAddExperience(characterId: string, gameId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { userId: string; amount: number; reason: string }): Promise<Character> =>
-      getRepositories()
-        .characters.addExperience(characterId, vars.userId, vars.amount, vars.reason)
-        .then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+    mutationFn: async (vars: {
+      userId: string;
+      amount: number;
+      reason: string;
+      logLabel: string;
+      logNote: string;
+    }): Promise<Character> => unwrap(await markXp(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
   });
 }
 

@@ -38,8 +38,22 @@ first-run ruleset detour. Seven CI-gated PRs:
   service-role prerequisite; Phase-2 unified-log claim carries the XP caveat; the Phase-4 appendix
   lists the four verified platform prerequisites (service-role client path, engine-level authz to
   replace bypassed RLS, channel↔campaign migration, interactions endpoint).
-- **R3-PR2 — async-play staleness.** (pending)
-- **R3-PR3 — feed completeness via engine use-cases.** (pending)
+- **R3-PR2 ✅ done @e8e1000 — async-play staleness.** The named `sharedCampaignState` policy
+  (`lib/query/policies.ts`: staleTime 0, refetchOnMount 'always', refetchOnWindowFocus true —
+  returning to the tab is the async-play "check the table" gesture) spread into all seven
+  shared-state factories (clocks/factions/scores/crews/rolls/characters byGame+detail) — a second
+  player's open hub no longer shows a stale feed. User-owned reads stay on client defaults
+  (deliberate, audited).
+- **R3-PR3 — feed completeness via engine use-cases (this PR).** BRD R-E1 made true: crew
+  heat/tier/incarceration (`engine/crews.ts`), faction status (`engine/factions.ts`), a clock
+  filling (`engine/clocks.ts` — completion only; routine ticks stay panel-only), and XP
+  marks/advances (`markXp`/`advanceCharacter` in `engine/characters.ts`) each persist AND write a
+  campaign-log event in one use-case; web mutations are thin wrappers with feed invalidation and
+  localized log copy. New RollKinds crew/faction/clock/xp (migration `00015` widens the kind
+  CHECK — constraint-only, no type regen). `saveLoadout` now writes through
+  `updateCharacterWithValidation` — the last unvalidated character write path is gone. Engine
+  contract note updated: single-call writes stay repo-direct UNLESS they belong in the shared
+  feed. Engine spec grew 14→24 mocked-repo tests (still the Discord bot's contract).
 - **R3-PR4 — rules-RAW fixes (crit-resist clears 1, heat resets on wanted, veteran as budget).** (pending)
 - **R3-PR5 — error surfacing + draft-clobber guards.** (pending)
 - **R3-PR6 — first-run onboarding (inline starter catalog).** (pending)

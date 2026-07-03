@@ -1,18 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { factionStatusLabel, type Faction, type FactionDefinition } from '@heist-mind/core';
+import {
+  clampFactionStatus,
+  factionStatusLabel,
+  type Faction,
+  type FactionDefinition,
+} from '@heist-mind/core';
 import { type Clock as ClockType } from '@heist-mind/core';
 import { Alert, Badge, Button, Card, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useClocksByGame } from '@/features/clocks/data/queries';
-import { useCreateClock, useDeleteClock, useUpdateClock } from '@/features/clocks/data/mutations';
+import { useCreateClock, useDeleteClock, useTickClock } from '@/features/clocks/data/mutations';
 import { ClockTile } from '@/features/clocks/components/ClockTile';
 import { NewClockForm } from '@/features/clocks/components/NewClockForm';
 import { useFactionsByGame } from '@/features/factions/data/queries';
 import {
   useCreateFaction,
   useDeleteFaction,
+  useSetFactionStatus,
   useUpdateFaction,
 } from '@/features/factions/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -133,24 +139,43 @@ function FactionCard({
 }) {
   const { t } = useTranslation();
   const updateFaction = useUpdateFaction(faction.gameId);
+  const setStatusMut = useSetFactionStatus(faction.gameId);
   const deleteFaction = useDeleteFaction(faction.gameId);
   const createClock = useCreateClock(faction.gameId);
-  const updateClock = useUpdateClock(faction.gameId);
+  const tickClock = useTickClock(faction.gameId);
   const deleteClock = useDeleteClock(faction.gameId);
 
   const busy =
     updateFaction.isPending ||
+    setStatusMut.isPending ||
     deleteFaction.isPending ||
     createClock.isPending ||
-    updateClock.isPending ||
+    tickClock.isPending ||
     deleteClock.isPending;
   const onErr = {
     onError: (e: unknown) =>
       onError((e as Error).message ?? t('components.factionsPanel.updateFailed')),
   };
 
-  const setStatus = (delta: number) =>
-    updateFaction.mutate({ id: faction.id, patch: { status: faction.status + delta } }, onErr);
+  // Status is table-visible mechanical state (war … allied) — through the ENGINE so the shift
+  // also lands in the campaign feed.
+  const setStatus = (delta: number) => {
+    if (!userId) return;
+    const next = clampFactionStatus(faction.status + delta);
+    setStatusMut.mutate(
+      {
+        faction,
+        userId,
+        status: next,
+        logLabel: faction.name,
+        logNote: t('components.factionsPanel.logStatusNote', {
+          status: next > 0 ? `+${next}` : `${next}`,
+          label: factionStatusLabel(next),
+        }),
+      },
+      onErr
+    );
+  };
   const setTier = (delta: number) =>
     updateFaction.mutate({ id: faction.id, patch: { tier: faction.tier + delta } }, onErr);
 
@@ -269,12 +294,19 @@ function FactionCard({
                 busy={busy}
                 size={72}
                 removeLabel='×'
-                onTick={(clock, delta) =>
-                  updateClock.mutate(
-                    { id: clock.id, patch: { filled: clock.filled + delta } },
+                onTick={(clock, delta) => {
+                  if (!userId) return;
+                  tickClock.mutate(
+                    {
+                      clock,
+                      userId,
+                      delta,
+                      logLabel: clock.name,
+                      logNote: t('components.clocksPanel.logCompleteNote'),
+                    },
                     onErr
-                  )
-                }
+                  );
+                }}
                 onRemove={id => deleteClock.mutate(id, onErr)}
               />
             ))}

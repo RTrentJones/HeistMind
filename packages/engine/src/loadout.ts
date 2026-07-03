@@ -17,9 +17,13 @@ export async function saveLoadout(
   input: SaveLoadoutInput
 ): Promise<Result<Character>> {
   const { character, userId } = input;
-  const updated = await repos.characters.update(character.id, userId, {
-    characterData: { ...character.characterData, loadout: input.loadout },
-  });
+  // The VALIDATED write path: load legality (level caps, item load) is server-enforced like every
+  // other character write — a non-web client can't persist an over-limit loadout.
+  const updated = await repos.characterManagement.updateCharacterWithValidation(
+    character.id,
+    userId,
+    { characterData: { ...character.characterData, loadout: input.loadout } }
+  );
   if (!updated.success) return updated;
   if (character.gameId !== null) {
     const logged = await repos.rolls.create(userId, {

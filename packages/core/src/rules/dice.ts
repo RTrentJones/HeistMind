@@ -3,8 +3,10 @@
 // can't be faked by the client. Re-exported via @heist-mind/shared for the web UI.
 
 export type RollOutcome = 'crit' | 'success' | 'partial' | 'bad';
-// 'loadout' / 'score' / 'note' are non-dice campaign-log events (no roll) — a 'note' is a manually
-// recorded result (settled IRL or on Discord) — carried in the same append-only log.
+// Everything after 'downtime' is a non-dice campaign-log event (no roll) carried in the same
+// append-only log: 'loadout'/'score' lifecycle entries, 'crew'/'faction'/'clock' mechanical
+// changes, 'xp' marks + advances, and 'note' — a manually recorded result (settled IRL or on
+// Discord). Kinds are mirrored by the rolls table's kind CHECK (widened per migration).
 export type RollKind =
   | 'action'
   | 'resistance'
@@ -12,6 +14,10 @@ export type RollKind =
   | 'downtime'
   | 'loadout'
   | 'score'
+  | 'crew'
+  | 'faction'
+  | 'clock'
+  | 'xp'
   | 'note';
 
 /**

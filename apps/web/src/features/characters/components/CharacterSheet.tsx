@@ -58,7 +58,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
   const updateChar = useUpdateCharacter(characterId);
   const updateCharData = useUpdateCharacterData(characterId);
-  const addXpMut = useAddExperience(characterId);
+  const addXpMut = useAddExperience(characterId, character?.gameId ?? null);
   const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
 
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +87,15 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
   const addXp = () => {
     const userId = user?.id;
-    if (!userId) return;
+    if (!userId || !character) return;
     addXpMut.mutate(
-      { userId, amount: 1, reason: 'Manual award' },
+      {
+        userId,
+        amount: 1,
+        reason: 'Manual award',
+        logLabel: character.name,
+        logNote: t('components.characterSheet.logXpMark'),
+      },
       { onError: e => setError(e.message ?? t('components.characterSheet.addXpFailed')) }
     );
   };
