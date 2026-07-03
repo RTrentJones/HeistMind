@@ -31,10 +31,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0",
-    "@heist-mind/core": "workspace:*"
+    "@heist-mind/core": "workspace:*",
+    "@supabase/supabase-js": "^2.50.0"
   },
   "devDependencies": {
-    "supabase": "^2.24.3"
+    "supabase": "^2.109.0"
   }
 }

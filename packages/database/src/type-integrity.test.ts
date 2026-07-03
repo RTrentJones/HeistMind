@@ -16,6 +16,7 @@ describe('generated schema integrity', () => {
       'characters',
       'clocks',
       'crews',
+      'discord_players',
       'factions',
       'game_players',
       'games',
@@ -24,7 +25,7 @@ describe('generated schema integrity', () => {
       'rulesets',
       'scores',
     ] as const satisfies readonly EnvTables[];
-    expect(tables.length).toBe(10);
+    expect(tables.length).toBe(11);
   });
 
   it('keeps profiles in the shared public schema', () => {

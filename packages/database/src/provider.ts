@@ -13,6 +13,7 @@ import { SupabaseRollRepository } from './implementations/supabase-roll-reposito
 import { SupabaseClockRepository } from './implementations/supabase-clock-repository';
 import { SupabaseCrewRepository } from './implementations/supabase-crew-repository';
 import { SupabaseFactionRepository } from './implementations/supabase-faction-repository';
+import { SupabaseDiscordPlayerRepository } from './implementations/supabase-discord-player-repository';
 import { SupabaseScoreRepository } from './implementations/supabase-score-repository';
 import { SupabaseCharacterManagementRepository } from './implementations/supabase-character-management-repository';
 import type { CoreSchema } from './implementations/result-helpers';
@@ -98,6 +99,7 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
       scores: new SupabaseScoreRepository(this.client, schema),
       characterManagement: new SupabaseCharacterManagementRepository(this.client, schema),
       invitations: new SupabaseInvitationRepository(this.client, schema),
+      discordPlayers: new SupabaseDiscordPlayerRepository(this.client, schema),
     };
   }
 
