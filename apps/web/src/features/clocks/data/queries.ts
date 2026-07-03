@@ -3,6 +3,7 @@
 // The clocks data-access seam (read side).
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query';
 import { getRepositories } from '@/lib/auth';
+import { sharedCampaignState } from '@/lib/query/policies';
 import { unwrap } from '@/lib/query/result';
 
 export const clockKeys = {
@@ -11,9 +12,11 @@ export const clockKeys = {
 };
 
 export const clockQueries = {
+  /** Clocks are GM-written shared state — load-on-view per `sharedCampaignState`. */
   byGame: (gameId: string | undefined) =>
     queryOptions({
       queryKey: clockKeys.byGame(gameId ?? ''),
+      ...sharedCampaignState,
       queryFn: gameId ? () => getRepositories().clocks.findByGame(gameId).then(unwrap) : skipToken,
     }),
 };
