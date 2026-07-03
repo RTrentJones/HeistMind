@@ -329,6 +329,8 @@ export type Database = {
           created_by: string
           current_players: number | null
           description: string | null
+          discord_channel_id: string | null
+          discord_guild_id: string | null
           house_rules: string | null
           id: string
           invite_only: boolean | null
@@ -347,6 +349,8 @@ export type Database = {
           created_by: string
           current_players?: number | null
           description?: string | null
+          discord_channel_id?: string | null
+          discord_guild_id?: string | null
           house_rules?: string | null
           id?: string
           invite_only?: boolean | null
@@ -365,6 +369,8 @@ export type Database = {
           created_by?: string
           current_players?: number | null
           description?: string | null
+          discord_channel_id?: string | null
+          discord_guild_id?: string | null
           house_rules?: string | null
           id?: string
           invite_only?: boolean | null
@@ -1034,6 +1040,8 @@ export type Database = {
           created_by: string
           current_players: number | null
           description: string | null
+          discord_channel_id: string | null
+          discord_guild_id: string | null
           house_rules: string | null
           id: string
           invite_only: boolean | null
@@ -1052,6 +1060,8 @@ export type Database = {
           created_by: string
           current_players?: number | null
           description?: string | null
+          discord_channel_id?: string | null
+          discord_guild_id?: string | null
           house_rules?: string | null
           id?: string
           invite_only?: boolean | null
@@ -1070,6 +1080,8 @@ export type Database = {
           created_by?: string
           current_players?: number | null
           description?: string | null
+          discord_channel_id?: string | null
+          discord_guild_id?: string | null
           house_rules?: string | null
           id?: string
           invite_only?: boolean | null

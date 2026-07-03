@@ -17,8 +17,19 @@ export interface Game {
   houseRules: string | null;
   inviteOnly: boolean;
   publicListing: boolean;
+  /** Discord link (bot phase 2): the guild this campaign is linked in; null = unlinked. */
+  discordGuildId: string | null;
+  /** Channel OR category snowflake; null with a guild id = the guild-wide default link. */
+  discordChannelId: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** A campaign's Discord link target (see Game.discordGuildId/discordChannelId). */
+export interface DiscordLink {
+  guildId: string;
+  /** Channel or category snowflake; null links the whole guild (the fallback scope). */
+  channelId: string | null;
 }
 
 export interface GamePlayer {

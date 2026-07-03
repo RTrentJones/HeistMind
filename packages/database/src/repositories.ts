@@ -5,6 +5,7 @@ import {
   type Profile,
   type Ruleset,
   type Game,
+  type DiscordLink,
   type GamePlayer,
   type Character,
   type Invitation,
@@ -87,6 +88,14 @@ export interface GameRepository {
   findWithDetails(id: string, userId?: string): Promise<Result<GameWithDetails | null>>;
   /** No web caller yet — the campaign-lifecycle contract (pause/complete) for GM tooling + the bot. */
   updateState(id: string, userId: string, state: GameState): Promise<Result<Game>>;
+  /**
+   * Resolve a Discord surface to its linked campaign (bot phase 2). `candidateChannelIds` are
+   * tried in precedence order (the channel, then its category); a guild-wide default link
+   * (channelId NULL) is the fallback. Null = nothing linked here.
+   */
+  findByDiscordChannel(guildId: string, candidateChannelIds: string[]): Promise<Result<Game | null>>;
+  /** Set (or clear, with null) a campaign's Discord link. GM-gating happens in the bot's authz. */
+  setDiscordLink(gameId: string, link: DiscordLink | null): Promise<Result<Game>>;
 }
 
 /**
