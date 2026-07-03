@@ -21,7 +21,6 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "validate-types": "vitest run tests/type-validation.test.ts",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
