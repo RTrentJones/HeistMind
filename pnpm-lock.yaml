@@ -208,6 +208,9 @@ importers:
       '@heist-mind/database':
         specifier: workspace:^
         version: link:../database
+      '@heist-mind/engine':
+        specifier: workspace:^
+        version: link:../engine
       discord-api-types:
         specifier: ^0.37.100
         version: 0.37.120

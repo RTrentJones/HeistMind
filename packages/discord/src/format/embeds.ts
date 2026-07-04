@@ -81,6 +81,8 @@ export function rollEmbed(input: {
   outcome?: RollOutcome;
   detail?: string;
   note?: string;
+  /** "Logged to <campaign>" / "Not logged — …" — where this roll landed (or didn't). */
+  footer?: string;
 }): APIEmbed {
   const lines = [copy.faces(input.results)];
   if (input.detail) lines.push(input.detail);
@@ -90,5 +92,6 @@ export function rollEmbed(input: {
     description: lines.join('\n'),
     color: input.outcome ? OUTCOME_COLOR[input.outcome] : NEUTRAL_COLOR,
     ...(input.outcome ? { fields: [{ name: 'Outcome', value: OUTCOME_LABEL[input.outcome] }] } : {}),
+    ...(input.footer ? { footer: { text: input.footer } } : {}),
   };
 }

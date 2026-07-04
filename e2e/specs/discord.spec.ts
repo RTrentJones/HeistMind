@@ -119,7 +119,7 @@ test.describe('Discord interactions endpoint', () => {
       .toBe(inserted.data!.id);
   });
 
-  test('phase 2: /heist link + /log land an attributed note; non-members are walled', async ({
+  test('phase 2: /heist link + /log + a persisted sheet roll; non-members are walled', async ({
     request,
   }) => {
     const env = getE2EEnv();
@@ -134,11 +134,19 @@ test.describe('Discord interactions endpoint', () => {
     const discordId = 'e2e-discord-424242';
     await admin.from('profiles').update({ discord_id: discordId }).eq('id', gm.id!);
     const dev = admin.schema('development');
+    // The character references the ruleset, so it goes first on re-runs.
+    await dev.from('characters').delete().eq('created_by', gm.id!).eq('name', 'Bot Linked Runner');
     await dev.from('games').delete().eq('created_by', gm.id!).eq('name', 'Bot Linked Job');
     await dev.from('rulesets').delete().eq('created_by', gm.id!).eq('name', 'Bot E2E RS');
     const ruleset = await dev
       .from('rulesets')
-      .insert({ name: 'Bot E2E RS', created_by: gm.id!, content: {} })
+      .insert({
+        name: 'Bot E2E RS',
+        created_by: gm.id!,
+        content: {
+          skills: [{ id: 'skirmish', name: 'Skirmish', description: '', attribute: 'prowess' }],
+        },
+      })
       .select('id')
       .single();
     const game = await dev
@@ -215,7 +223,53 @@ test.describe('Discord interactions endpoint', () => {
       })
       .toBe(true);
 
-    // Act 3: a NON-member Discord user is walled off (no roll row appears for them).
+    // Act 3 (PR 2.3): a sheet roll in the linked channel persists through the engine — the
+    // active character is IN this campaign, so /roll action: lands a kind='action' row.
+    const character = await dev
+      .from('characters')
+      .insert({
+        name: 'Bot Linked Runner',
+        created_by: gm.id!,
+        game_id: game.data!.id,
+        original_ruleset_id: ruleset.data!.id,
+        playbook_type: 'cutter',
+        character_data: { playbook: 'cutter', attributes: {}, skills: { skirmish: 2 }, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+      })
+      .select('id')
+      .single();
+    expect(character.error).toBeNull();
+    await dev
+      .from('discord_players')
+      .upsert({ profile_id: gm.id!, active_character_id: character.data!.id });
+
+    const sheetRoll = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: {
+          name: 'roll',
+          type: 1,
+          options: [{ name: 'action', type: 3, value: 'Skirmish' }],
+        },
+      })
+    );
+    expect(sheetRoll.status()).toBe(200);
+    expect(((await sheetRoll.json()) as { type: number }).type).toBe(5);
+    await expect
+      .poll(async () => {
+        const rows = await dev
+          .from('rolls')
+          .select('kind, label, character_id')
+          .eq('game_id', game.data!.id)
+          .eq('kind', 'action');
+        return rows.data?.some(
+          r => r.label === 'Skirmish' && r.character_id === character.data!.id
+        );
+      })
+      .toBe(true);
+
+    // Act 4: a NON-member Discord user is walled off (no roll row appears for them).
     const strangerId = 'e2e-discord-stranger';
     const before = await dev.from('rolls').select('id').eq('game_id', game.data!.id);
     const strangerLog = await request.post(
