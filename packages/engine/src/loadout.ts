@@ -2,6 +2,7 @@
 // the campaign feed (one entry per save; a standalone character has no feed — the save still lands).
 import type { Character, CharacterLoadout, CharacterWithDetails, Result } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
+import { notOwner } from './ownership';
 
 export interface SaveLoadoutInput {
   character: CharacterWithDetails;
@@ -17,6 +18,8 @@ export async function saveLoadout(
   input: SaveLoadoutInput
 ): Promise<Result<Character>> {
   const { character, userId } = input;
+  const owned = notOwner(character, userId);
+  if (owned) return owned;
   // The VALIDATED write path: load legality (level caps, item load) is server-enforced like every
   // other character write — a non-web client can't persist an over-limit loadout.
   const updated = await repos.characterManagement.updateCharacterWithValidation(

@@ -76,7 +76,7 @@ test.describe('GM: character validity', () => {
     await gmPage.getByRole('heading', { name: charName }).waitFor();
     await gmPage.getByRole('link', { name: 'View' }).first().click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f-]+$/);
-    await expect(gmPage.getByText('0 XP')).toBeVisible();
+    await expect(gmPage.getByText('0 XP', { exact: true })).toBeVisible();
 
     await gmPage.getByRole('button', { name: 'Edit build' }).click();
 

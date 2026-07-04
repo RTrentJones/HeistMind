@@ -11,7 +11,14 @@ import type {
   Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { advanceCharacter, applyStress, markXp, retireCharacter } from './characters';
+import {
+  advanceCharacter,
+  applyStress,
+  clearHarm,
+  markXp,
+  retireCharacter,
+  takeHarm,
+} from './characters';
 import { tickClock } from './clocks';
 import { advanceCrewTier, applyCrewHeat, incarcerateCrew } from './crews';
 import { indulgeVice, viceDicePool } from './downtime';
@@ -29,6 +36,7 @@ const CHARACTER = {
   id: 'c1',
   name: 'Silks',
   gameId: 'g1',
+  createdBy: 'u1',
   ruleset: { content: CONTENT },
   characterData: {
     playbook: 'cutter',
@@ -505,10 +513,13 @@ describe('tickClock', () => {
 });
 
 describe('XP economy', () => {
+  // The ownership precheck (service-role callers bypass RLS) reads the character by id first.
+  const owns = () => vi.fn().mockResolvedValue(ok({ id: 'c1', createdBy: 'u1' } as Character));
+
   it('markXp records the award and logs an xp event for a campaign character', async () => {
     const addExperience = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: 'g1' } as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
-    const r = repos({ characters: { addExperience }, rolls: { create } });
+    const r = repos({ characters: { addExperience, findById: owns() }, rolls: { create } });
     const out = await markXp(r, {
       characterId: 'c1',
       userId: 'u1',
@@ -528,7 +539,7 @@ describe('XP economy', () => {
   it('markXp skips the feed for a standalone character', async () => {
     const addExperience = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: null } as Character));
     const create = vi.fn();
-    const r = repos({ characters: { addExperience }, rolls: { create } });
+    const r = repos({ characters: { addExperience, findById: owns() }, rolls: { create } });
     const out = await markXp(r, {
       characterId: 'c1',
       userId: 'u1',
@@ -544,7 +555,11 @@ describe('XP economy', () => {
   it('advanceCharacter routes through the validated advance and logs an xp event', async () => {
     const advance = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: 'g1' } as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
-    const r = repos({ characterManagement: { advanceCharacter: advance }, rolls: { create } });
+    const r = repos({
+      characters: { findById: owns() },
+      characterManagement: { advanceCharacter: advance },
+      rolls: { create },
+    });
     const out = await advanceCharacter(r, {
       characterId: 'c1',
       userId: 'u1',
@@ -560,7 +575,11 @@ describe('XP economy', () => {
   it('advanceCharacter forwards a gated (rejected) advance without logging', async () => {
     const advance = vi.fn().mockResolvedValue(fail('track not full'));
     const create = vi.fn();
-    const r = repos({ characterManagement: { advanceCharacter: advance }, rolls: { create } });
+    const r = repos({
+      characters: { findById: owns() },
+      characterManagement: { advanceCharacter: advance },
+      rolls: { create },
+    });
     const out = await advanceCharacter(r, {
       characterId: 'c1',
       userId: 'u1',
@@ -569,6 +588,257 @@ describe('XP economy', () => {
       logNote: 'x',
     });
     expect(out.success).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+// ----- harm (bot phase 3): take with RAW escalation, clear one entry, both logged ---------------
+
+const withHarm = (harm: { lesser?: string[]; moderate?: string[]; severe?: string[] }) =>
+  ({
+    ...CHARACTER,
+    characterData: {
+      ...CHARACTER.characterData,
+      harm: { lesser: [], moderate: [], severe: [], ...harm },
+    },
+  }) as unknown as CharacterWithDetails;
+
+// ONE shared level-aware note factory (rather than per-test arrows: several tests fail before
+// logging, and a never-invoked closure would ding the file's function coverage).
+const levelNote = (level: string) => `took ${level}`;
+
+describe('takeHarm', () => {
+  it('lands at the dealt level, writes the sheet, and logs a level-aware harm event', async () => {
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'lesser',
+      description: 'Bruised',
+      logLabel: 'Silks',
+      logNote: levelNote,
+    });
+    expect(out.success).toBe(true);
+    if (out.success) expect(out.data.appliedLevel).toBe('lesser');
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        harm: { lesser: ['Bruised'], moderate: [], severe: [] },
+      }),
+    });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ kind: 'harm', note: 'took lesser' })
+    );
+  });
+
+  it('escalates past FULL tracks the RAW way (lesser full → lands moderate)', async () => {
+    // BitD defaults: 2 lesser boxes — both taken, so the new lesser harm becomes moderate.
+    const hurt = withHarm({ lesser: ['Bruised', 'Winded'] });
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(hurt)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'lesser',
+      description: 'Slashed',
+      logLabel: 'Silks',
+      logNote: levelNote,
+    });
+    expect(out.success).toBe(true);
+    if (out.success) expect(out.data.appliedLevel).toBe('moderate');
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        harm: expect.objectContaining({ moderate: ['Slashed'] }),
+      }),
+    });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'took moderate' }));
+  });
+
+  it('every track full → HARM_FULL failure, nothing written', async () => {
+    const dying = withHarm({
+      lesser: ['a', 'b'],
+      moderate: ['c', 'd'],
+      severe: ['e'],
+    });
+    const update = vi.fn();
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(dying)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'lesser',
+      description: 'x',
+      logLabel: 'x',
+      logNote: levelNote,
+    });
+    expect(out.success).toBe(false);
+    if (!out.success) expect(out.error.code).toBe('HARM_FULL');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('a standalone character takes the harm with no feed to write to', async () => {
+    const standalone = { ...CHARACTER, gameId: null } as CharacterWithDetails;
+    const create = vi.fn();
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(standalone)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(ok({} as Character)),
+      },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'severe',
+      description: 'Shot',
+      logLabel: 'x',
+      logNote: levelNote,
+    });
+    expect(out.success).toBe(true);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('clearHarm', () => {
+  it('removes exactly ONE matching entry and logs the recovery', async () => {
+    const hurt = withHarm({ lesser: ['Bruised', 'Bruised'] });
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(hurt)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await clearHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'lesser',
+      description: 'Bruised',
+      logLabel: 'Silks',
+      logNote: 'healed: Bruised',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        harm: expect.objectContaining({ lesser: ['Bruised'] }),
+      }),
+    });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ kind: 'harm', note: 'healed: Bruised' })
+    );
+  });
+
+  it('no matching entry → HARM_NOT_FOUND, nothing written', async () => {
+    const update = vi.fn();
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await clearHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'severe',
+      description: 'Ghost wound',
+      logLabel: 'x',
+      logNote: 'x',
+    });
+    expect(out.success).toBe(false);
+    if (!out.success) expect(out.error.code).toBe('HARM_NOT_FOUND');
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+// ----- the engine-level ownership gate (service-role callers bypass RLS) ------------------------
+
+describe('ownership assertions', () => {
+  const STRANGER = 'someone-else';
+  const NOT_OWNER = { message: 'Not the character owner', code: 'NOT_OWNER' };
+
+  it('every character-mutating use-case refuses a non-owner before writing', async () => {
+    const update = vi.fn();
+    const create = vi.fn();
+    const r = repos({
+      characters: {
+        findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)),
+        findById: vi.fn().mockResolvedValue(ok(CHARACTER)),
+        update,
+        addExperience: update,
+      },
+      characterManagement: { updateCharacterWithValidation: update, advanceCharacter: update },
+      rolls: { create },
+    });
+    const results = await Promise.all([
+      applyStress(r, { characterId: 'c1', userId: STRANGER, stress: 2 }),
+      takeHarm(r, {
+        characterId: 'c1',
+        userId: STRANGER,
+        level: 'lesser',
+        description: 'x',
+        logLabel: 'x',
+        logNote: levelNote,
+      }),
+      clearHarm(r, {
+        characterId: 'c1',
+        userId: STRANGER,
+        level: 'lesser',
+        description: 'x',
+        logLabel: 'x',
+        logNote: 'x',
+      }),
+      markXp(r, {
+        characterId: 'c1',
+        userId: STRANGER,
+        amount: 1,
+        reason: 'x',
+        logLabel: 'x',
+        logNote: 'x',
+      }),
+      advanceCharacter(r, {
+        characterId: 'c1',
+        userId: STRANGER,
+        advancement: { type: 'ability', target: 'x', cost: 1, description: 'x' },
+        logLabel: 'x',
+        logNote: 'x',
+      }),
+      retireCharacter(r, {
+        character: CHARACTER as unknown as Character,
+        userId: STRANGER,
+        gameId: 'g1',
+        logNote: 'x',
+      }),
+      indulgeVice(r, {
+        character: CHARACTER,
+        userId: STRANGER,
+        results: [4],
+        zeroDice: false,
+        logLabel: 'x',
+      }),
+      saveLoadout(r, {
+        character: CHARACTER,
+        userId: STRANGER,
+        loadout: { level: 'light', items: [] },
+        logNote: 'x',
+      }),
+    ]);
+    for (const out of results) {
+      expect(out.success).toBe(false);
+      if (!out.success) expect(out.error).toEqual(NOT_OWNER);
+    }
+    expect(update).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
   });
 });

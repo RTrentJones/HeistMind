@@ -92,6 +92,9 @@ export interface CharacterHarm {
   severe: string[];
 }
 
+/** The three FitD harm-track levels, lightest first (RAW: a full track escalates upward). */
+export type HarmLevel = keyof CharacterHarm;
+
 export interface CharacterContact {
   name: string;
   description: string;

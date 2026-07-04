@@ -13,12 +13,21 @@
 //   in the shared campaign feed: any mechanical change the table should see (crew heat/tier,
 //   faction status, a clock filling, XP marks/advances) is a use-case, because "persist + log"
 //   is exactly the multi-step sequencing this layer exists to hold.
-export { advanceCharacter, applyStress, markXp, retireCharacter } from './characters';
+export {
+  advanceCharacter,
+  applyStress,
+  clearHarm,
+  markXp,
+  retireCharacter,
+  takeHarm,
+} from './characters';
 export type {
   AdvanceCharacterInput,
   ApplyStressInput,
+  ClearHarmInput,
   MarkXpInput,
   RetireCharacterInput,
+  TakeHarmInput,
 } from './characters';
 export { rollAction, rollResistance } from './rolls';
 export type { ActionRollInput, ResistanceRollInput } from './rolls';

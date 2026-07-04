@@ -90,7 +90,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     // 10. Open the sheet and MODIFY: rename + award XP, asserting each persists.
     await gmPage.getByRole('link', { name: 'View' }).first().click();
     await expect(gmPage).toHaveURL(/\/characters\/[0-9a-f-]+$/);
-    await expect(gmPage.getByText('0 XP')).toBeVisible();
+    await expect(gmPage.getByText('0 XP', { exact: true })).toBeVisible();
 
     const renamed = uniqueName('Asher "Cinder" Vane');
     await gmPage.getByRole('button', { name: 'Edit', exact: true }).click();
@@ -100,7 +100,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     await expect(gmPage.getByRole('heading', { name: renamed })).toBeVisible();
 
     await gmPage.getByRole('button', { name: 'Add XP' }).click();
-    await expect(gmPage.getByText('1 XP')).toBeVisible();
+    await expect(gmPage.getByText('1 XP', { exact: true })).toBeVisible();
   });
 
   test('minimal ruleset renders DEFAULT steps, no budget badge, no tier badges', async ({
