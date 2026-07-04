@@ -75,6 +75,18 @@ export const copy = {
   statusNoCrew: 'No crew sheet yet',
   statusClocks: 'Running clocks',
   statusNoClocks: 'None',
+  loggedFooter: (campaign: string) => `Logged to ${campaign}`,
+  notLoggedNotLinked: 'Not logged — this channel isn’t linked to a campaign.',
+  notLoggedNoCharacter: 'Not logged — no active character. `/character use` picks one.',
+  notLoggedNotMember: 'Not logged — you’re not a member of the linked campaign.',
+  notLoggedWrongCampaign: 'Not logged — your active character isn’t in the linked campaign.',
+  pushedCharged: 'Pushed (+1d) — 2 stress marked on your sheet',
+  resistCharged: (character: string, stress: number) =>
+    stress < 0
+      ? `Critical — **1 stress cleared** on ${character}’s sheet.`
+      : stress === 0
+        ? `Resisted for free — ${character}’s sheet unchanged.`
+        : `**${stress} stress** marked on ${character}’s sheet.`,
   rollNeedsActiveCharacter: (siteUrl: string) =>
     `Sheet rolls need an active character — \`/character use\` picks one (or sign in with Discord at ${siteUrl} first).`,
   unknownAction: (name: string) =>

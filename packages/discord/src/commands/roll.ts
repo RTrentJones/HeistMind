@@ -1,17 +1,22 @@
 // /roll — the FitD action roll. Two forms:
 //   manual  — `/roll dice:N` (Phase 0): pure compute, inline reply, no account needed.
-//   sheet   — `/roll action:<name>` (Phase 1): the ACTIVE character's rating from their own
-//             ruleset, plus `extra` (assists/bargains) and `push` (+1d; copy-only reminder to
-//             mark 2 stress until Phase 2 persists rolls). DB reads → deferred, public.
+//   sheet   — `/roll action:<name>` (Phase 1/2): the ACTIVE character's rating from their own
+//             ruleset, plus `extra` (assists/bargains) and `push` (+1d). In a LINKED channel
+//             where the actor is a member and their active character is in that campaign, the
+//             roll PERSISTS via the engine (repo recomputes the outcome from the faces —
+//             anti-forge — and push charges its real 2 stress). Otherwise display-only with a
+//             footer saying why.
 import { diceForRating, rollOutcome, type CharacterWithDetails } from '@heist-mind/core';
+import { rollAction } from '@heist-mind/engine';
 import type {
   APIApplicationCommandAutocompleteInteraction,
   APIApplicationCommandInteraction,
   APIApplicationCommandOptionChoice,
 } from 'discord-api-types/v10';
-import { resolveActor } from '../authz';
+import { isMember, resolveActor } from '../authz';
 import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
+import { resolveLinkedGame } from '../links';
 import { basicOptions, booleanOption, integerOption, stringOption } from '../options';
 import { deferred, inline, reply, replyEmbed } from '../respond';
 import type { BotContext, CommandHandler } from '../types';
@@ -28,7 +33,7 @@ function resolveAction(
 }
 
 /** Load the actor's active character with details (the shared sheet lookup). */
-async function activeCharacter(
+export async function activeCharacter(
   ctx: BotContext,
   interaction: Pick<APIApplicationCommandInteraction, 'member' | 'user'>
 ): Promise<CharacterWithDetails | null> {
@@ -72,6 +77,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
         await followUp.sendEphemeral(content);
       };
       if (!ctx.repos) return failEphemeral(copy.notConfigured);
+      const repos = ctx.repos;
       const character = await activeCharacter(ctx, interaction);
       if (!character) return failEphemeral(copy.rollNeedsActiveCharacter(ctx.siteUrl));
       const resolved = resolveAction(character, action);
@@ -79,12 +85,49 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
 
       const rating = character.characterData.skills[resolved.id] ?? 0;
       const pool = rating + extra + (push ? 1 : 0);
-      const noteParts = [...(push ? [copy.pushedReminder] : []), ...(note ? [note] : [])];
-      const embed = finish(
-        copy.sheetRollTitle(character.name, resolved.name, rating, extra, push),
-        pool,
-        noteParts.length > 0 ? noteParts.join(' · ') : undefined
-      );
+      const { count, zeroDice } = diceForRating(pool);
+      const results = ctx.realize(count);
+
+      // Phase 2: persist when this surface is linked, the actor is a member, and the active
+      // character belongs to THAT campaign. Anything else stays display-only with the reason.
+      let footer: string;
+      let pushNote: string | null = push ? copy.pushedReminder : null;
+      const game = await resolveLinkedGame(repos, interaction);
+      if (!game) {
+        footer = copy.notLoggedNotLinked;
+      } else if (!(await isMember(repos, character.createdBy, game.id))) {
+        footer = copy.notLoggedNotMember;
+      } else if (character.gameId !== game.id) {
+        footer = copy.notLoggedWrongCampaign;
+      } else {
+        const logged = await rollAction(repos, {
+          gameId: game.id,
+          userId: character.createdBy,
+          characterId: character.id,
+          kind: 'action',
+          label: resolved.name,
+          dice: count,
+          results,
+          zeroDice,
+          ...(position ? { position } : {}),
+          ...(effect ? { effect } : {}),
+          ...(note ? { note } : {}),
+          pushed: push,
+        });
+        if (!logged.success) return failEphemeral(copy.somethingBroke);
+        footer = copy.loggedFooter(game.name);
+        if (push) pushNote = copy.pushedCharged; // the engine really charged the 2 stress
+      }
+
+      const noteParts = [...(pushNote ? [pushNote] : []), ...(note ? [note] : [])];
+      const embed = rollEmbed({
+        title: copy.sheetRollTitle(character.name, resolved.name, rating, extra, push),
+        results,
+        outcome: rollOutcome(results, { zeroDice }),
+        detail: copy.positionEffect(position, effect),
+        ...(noteParts.length > 0 ? { note: noteParts.join(' · ') } : {}),
+        footer,
+      });
       return followUp.editOriginal({ embeds: [embed] });
     });
   }
