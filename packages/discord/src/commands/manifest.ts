@@ -226,6 +226,155 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
     ],
   },
   {
+    name: 'stress',
+    description: 'Mark or clear stress on your active character’s sheet',
+    ...EVERYWHERE,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'add',
+        description: 'Mark stress (a cost you’re paying)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'amount',
+            description: 'How much stress to mark',
+            required: true,
+            min_value: 1,
+            max_value: 9,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'clear',
+        description: 'Clear stress (recovery)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'amount',
+            description: 'How much stress to clear',
+            required: true,
+            min_value: 1,
+            max_value: 9,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'harm',
+    description: 'Take or clear harm on your active character (logged to the campaign)',
+    ...EVERYWHERE,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'take',
+        description: 'Take harm — a full track escalates it upward (RAW)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'level',
+            description: 'The level the harm was dealt at',
+            required: true,
+            choices: [
+              { name: 'lesser', value: 'lesser' },
+              { name: 'moderate', value: 'moderate' },
+              { name: 'severe', value: 'severe' },
+            ],
+          },
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'description',
+            description: 'The injury as it reads on the sheet (e.g. Broken ribs)',
+            required: true,
+            max_length: 100,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'clear',
+        description: 'Clear one harm entry (recovery)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'level',
+            description: 'The track the entry sits on',
+            required: true,
+            choices: [
+              { name: 'lesser', value: 'lesser' },
+              { name: 'moderate', value: 'moderate' },
+              { name: 'severe', value: 'severe' },
+            ],
+          },
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'entry',
+            description: 'Which entry to clear',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'vice',
+    description: 'Indulge your vice (downtime): roll your lowest attribute, clear that much stress',
+    ...EVERYWHERE,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'indulge',
+        description: 'Roll the vice pool and clear stress (overindulgence is flagged)',
+      },
+    ],
+  },
+  {
+    name: 'xp',
+    description: 'Mark XP or spend an advance on your active character',
+    ...EVERYWHERE,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'mark',
+        description: 'Mark XP into your pool (logged to the campaign)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'amount',
+            description: 'How much XP (default 1)',
+            min_value: 1,
+            max_value: 5,
+          },
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'reason',
+            description: 'Why (recorded with the mark)',
+            max_length: 100,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'advance',
+        description: 'Spend XP: learn an ability or add an action dot',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'pick',
+            description: 'What to buy',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+        ],
+      },
+    ],
+  },
+  {
     name: 'log',
     description: 'Record a settled result into the linked campaign’s log',
     integration_types: [

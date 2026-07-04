@@ -5,6 +5,8 @@
 import {
   InteractionResponseType,
   InteractionType,
+  type APIApplicationCommandAutocompleteInteraction,
+  type APIApplicationCommandOptionChoice,
   type APIInteraction,
 } from 'discord-api-types/v10';
 import { characterAutocomplete, handleCharacter } from './commands/character';
@@ -14,6 +16,14 @@ import { handleHeist, heistAutocomplete } from './commands/heist';
 import { handleLog } from './commands/log';
 import { handleResist } from './commands/resist';
 import { handleRoll, rollAutocomplete } from './commands/roll';
+import {
+  handleHarm,
+  handleStress,
+  handleVice,
+  handleXp,
+  harmAutocomplete,
+  xpAutocomplete,
+} from './commands/sheet';
 import { realizeDice } from './dice';
 import { copy } from './format/copy';
 import { inline, pong, reply } from './respond';
@@ -27,6 +37,24 @@ const HANDLERS: Record<string, CommandHandler> = {
   heist: handleHeist,
   character: handleCharacter,
   log: handleLog,
+  stress: handleStress,
+  harm: handleHarm,
+  vice: handleVice,
+  xp: handleXp,
+};
+
+const AUTOCOMPLETES: Record<
+  string,
+  (
+    ctx: BotContext,
+    interaction: APIApplicationCommandAutocompleteInteraction
+  ) => Promise<APIApplicationCommandOptionChoice[]>
+> = {
+  character: characterAutocomplete,
+  roll: rollAutocomplete,
+  heist: heistAutocomplete,
+  harm: harmAutocomplete,
+  xp: xpAutocomplete,
 };
 
 export async function handleInteraction(
@@ -44,14 +72,8 @@ export async function handleInteraction(
   if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
     // Autocomplete shares the 3s budget with NO defer — suggesters must stay to a couple of
     // indexed queries and degrade to [] on any trouble (values are validated on submit anyway).
-    const choices =
-      interaction.data.name === 'character'
-        ? await characterAutocomplete(ctx, interaction)
-        : interaction.data.name === 'roll'
-          ? await rollAutocomplete(ctx, interaction)
-          : interaction.data.name === 'heist'
-            ? await heistAutocomplete(ctx, interaction)
-            : [];
+    const suggest = AUTOCOMPLETES[interaction.data.name];
+    const choices = suggest ? await suggest(ctx, interaction) : [];
     return inline({
       type: InteractionResponseType.ApplicationCommandAutocompleteResult,
       data: { choices },
