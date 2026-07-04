@@ -22,8 +22,27 @@ const EVERYWHERE = {
   ],
 };
 
+// GM commands act on the campaign linked to THIS server surface — meaningless in DMs.
+const GUILD_ONLY = {
+  integration_types: [
+    ApplicationIntegrationType.GuildInstall,
+    ApplicationIntegrationType.UserInstall,
+  ],
+  contexts: [InteractionContextType.Guild],
+};
+
 const POSITIONS = ['controlled', 'risky', 'desperate'] as const;
 const EFFECTS = ['limited', 'standard', 'great'] as const;
+
+const FACTION_STATUSES = [
+  { name: '-3 (war)', value: -3 },
+  { name: '-2 (hostile)', value: -2 },
+  { name: '-1 (interfering)', value: -1 },
+  { name: '0 (neutral)', value: 0 },
+  { name: '+1 (helpful)', value: 1 },
+  { name: '+2 (friendly)', value: 2 },
+  { name: '+3 (allied)', value: 3 },
+];
 
 // Chat-input commands only (the narrower type keeps `description` required and typo-checked).
 export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [
@@ -375,14 +394,124 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
     ],
   },
   {
+    name: 'score',
+    description: 'GM: start or wrap the linked campaign’s score (operation)',
+    ...GUILD_ONLY,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'start',
+        description: 'Start a score (one active at a time)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'name',
+            description: 'What the crew is attempting',
+            max_length: 100,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'end',
+        description: 'Wrap the active score',
+      },
+    ],
+  },
+  {
+    name: 'crew',
+    description: 'GM: crew progression — heat, tier, incarceration',
+    ...GUILD_ONLY,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'heat',
+        description: 'Add heat (a full track marks a Wanted level)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'amount',
+            description: 'Heat to add',
+            required: true,
+            min_value: 1,
+            max_value: 9,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'tier',
+        description: 'Spend a full Rep track to advance the crew a tier',
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'incarcerate',
+        description: 'Someone takes the fall: Wanted −1, Heat cleared',
+      },
+    ],
+  },
+  {
+    name: 'clock',
+    description: 'GM: tick a progress clock (filling it announces the milestone)',
+    ...GUILD_ONLY,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'tick',
+        description: 'Advance (or wind back) a clock',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'clock',
+            description: 'Which clock',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'segments',
+            description: 'Segments to add (default 1; negative winds back)',
+            min_value: -8,
+            max_value: 8,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'faction',
+    description: 'GM: set a faction’s status toward the crew',
+    ...GUILD_ONLY,
+    options: [
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'status',
+        description: 'Set the standing (−3 war … +3 allied)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'faction',
+            description: 'Which faction',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'status',
+            description: 'The new standing',
+            required: true,
+            choices: FACTION_STATUSES,
+          },
+        ],
+      },
+    ],
+  },
+  {
     name: 'log',
     description: 'Record a settled result into the linked campaign’s log',
-    integration_types: [
-      ApplicationIntegrationType.GuildInstall,
-      ApplicationIntegrationType.UserInstall,
-    ],
-    // Guild-only: /log writes to the campaign linked to THIS server surface.
-    contexts: [InteractionContextType.Guild],
+    ...GUILD_ONLY,
     options: [
       {
         type: ApplicationCommandOptionType.String,
