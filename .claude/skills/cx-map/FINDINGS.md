@@ -450,6 +450,21 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
   over-budget set (`veteranPicksUsed` in character-rules).
 
+### F68 — profiles.discord_id was never populated — the bot's account link was broken for EVERYONE
+
+- **severity:** S1 · **type:** CX (found by the first real go-live smoke test)
+- **where:** the column has been UNIQUE since `00001`, and the whole bot identity model
+  ("web sign-in IS the link") rests on it — but NO code path ever wrote it: `handle_new_user`
+  set only username/avatar, and `linkDiscordAccount` writes auth METADATA, not the profile
+  column. Every real profile had `discord_id NULL`, so `resolveActor` → sign-in-first for every
+  user. The e2e specs set the column by HAND (`admin.from('profiles').update({discord_id})`),
+  which masked the gap through three phases of green tests.
+- **found by:** the operator's first `/character use` on beta (2026-07-04).
+- **status:** **fixed (migration `00019`)** — backfills existing profiles from their
+  `auth.identities` Discord identity and teaches the trigger to capture `provider_id`/`sub` at
+  signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
+  production trigger is supposed to create proves the READ path only.
+
 ### F67 — No player-facing web page documents the Discord bot
 
 - **severity:** S3 · **type:** CX
