@@ -96,6 +96,26 @@ export const copy = {
     const bonus = extra + (push ? 1 : 0);
     return `${character} — ${action} ${rating}d${bonus > 0 ? ` +${bonus}d` : ''}`;
   },
+  noActiveScore: 'No active score — `/score start` begins one.',
+  scoreStarted: (name: string | null) => (name ? `Score started — **${name}**.` : 'Score started.'),
+  scoreEnded: (name: string | null) => (name ? `Score wrapped — **${name}**.` : 'Score wrapped.'),
+  scoreLogStart: 'Score started',
+  scoreLogEnd: 'Score ended',
+  noCrew: 'No crew sheet yet — create it on the web app first.',
+  crewTierNotReady: (rep: number) => `The Rep track isn’t full — ${rep}/12.`,
+  crewLogHeat: (amount: number) => `+${amount} heat`,
+  crewLogTier: 'Advanced a tier',
+  crewLogIncarcerate: 'Incarceration — Wanted down one, Heat cleared',
+  clockNotFound: (name: string) => `No clock “${name}”. Try the autocomplete suggestions.`,
+  clockTicked: (name: string, filled: number, segments: number) =>
+    `**${name}** — ${filled}/${segments}.`,
+  clockCompleted: '**It comes to a head!**',
+  clockLogFilled: (name: string) => `${name} filled`,
+  factionNotFound: (name: string) => `No faction “${name}”. Try the autocomplete suggestions.`,
+  factionStatusFmt: (status: number) => (status > 0 ? `+${status}` : `${status}`),
+  factionSet: (name: string, statusLabel: string) => `**${name}** — status **${statusLabel}**.`,
+  factionLogStatus: (statusLabel: string) => `Status → ${statusLabel}`,
+  gmActionFailed: (reason: string) => `Couldn’t do that: ${reason}`,
   stressLine: (name: string, stress: number, max: number) =>
     `**${name}** — stress **${stress}/${max}**.`,
   stressUnchanged: (name: string) =>

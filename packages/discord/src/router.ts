@@ -17,6 +17,14 @@ import { handleLog } from './commands/log';
 import { handleResist } from './commands/resist';
 import { handleRoll, rollAutocomplete } from './commands/roll';
 import {
+  clockAutocomplete,
+  factionAutocomplete,
+  handleClock,
+  handleCrew,
+  handleFaction,
+  handleScore,
+} from './commands/gm';
+import {
   handleHarm,
   handleStress,
   handleVice,
@@ -41,6 +49,10 @@ const HANDLERS: Record<string, CommandHandler> = {
   harm: handleHarm,
   vice: handleVice,
   xp: handleXp,
+  score: handleScore,
+  crew: handleCrew,
+  clock: handleClock,
+  faction: handleFaction,
 };
 
 const AUTOCOMPLETES: Record<
@@ -55,6 +67,8 @@ const AUTOCOMPLETES: Record<
   heist: heistAutocomplete,
   harm: harmAutocomplete,
   xp: xpAutocomplete,
+  clock: clockAutocomplete,
+  faction: factionAutocomplete,
 };
 
 export async function handleInteraction(

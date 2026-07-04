@@ -28,11 +28,12 @@ describe('COMMAND_MANIFEST', () => {
     }
   });
 
-  it('every command is registered for guild AND user install; /log is guild-context only', () => {
+  it('every command is registered for guild AND user install; linked-surface commands are guild-only', () => {
+    // These act on the campaign linked to a SERVER surface — meaningless in DMs.
+    const guildOnly = new Set(['log', 'score', 'crew', 'clock', 'faction']);
     for (const command of COMMAND_MANIFEST) {
       expect(command.integration_types).toEqual([0, 1]);
-      // /log writes to the campaign linked to a SERVER surface — meaningless in DMs.
-      expect(command.contexts).toEqual(command.name === 'log' ? [0] : [0, 1, 2]);
+      expect(command.contexts).toEqual(guildOnly.has(command.name) ? [0] : [0, 1, 2]);
     }
   });
 
