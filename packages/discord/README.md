@@ -46,8 +46,39 @@ Setup, per app, in the [Discord developer portal](https://discord.com/developers
 Never point the dev app at localhost — Discord re-validates the URL on save and you'd break beta.
 Use `scripts/discord-post.mjs` for local iteration instead.
 
+## Command reference
+
+`/heist help` shows this in Discord, grouped by what each command needs.
+
+| Command                             | Needs                             | Does                                                                                                            |
+| ----------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `/roll dice:` `[position]` `[effect]` `[note]` | nothing                | Manual FitD action roll (0d = 2d take-lowest), classified outcome                                                 |
+| `/resist dice:` `[attribute]`       | nothing                           | Resistance roll — stress = 6 − highest; a crit clears 1                                                           |
+| `/fortune dice:`                    | nothing                           | Fortune roll                                                                                                      |
+| `/dice notation:`                   | nothing                           | Plain NdM±k                                                                                                       |
+| `/heist about` · `/heist help`      | nothing                           | Deploy probe / this reference                                                                                     |
+| `/character use\|show\|unset`       | account                           | Pick / show / clear your ACTIVE character (one at a time)                                                         |
+| `/roll action:` `[extra]` `[push]`  | active character                  | Sheet-rated roll; push charges its 2 stress when the roll persists                                                |
+| `/stress add\|clear`                | active character                  | Clamped stress delta on the sheet                                                                                 |
+| `/harm take\|clear`                 | active character                  | Harm with RAW track escalation / clear one entry — both feed-logged                                               |
+| `/vice indulge`                     | active character                  | Lowest-attribute vice roll; clears stress; flags overindulgence                                                   |
+| `/xp mark\|advance`                 | active character                  | Bank pool XP / spend an advance (abilities + action dots, autocompleted)                                          |
+| `/heist link\|unlink`               | GM, in a guild                    | Link a campaign to the channel, its category, or the whole server                                                 |
+| `/heist status`                     | member, linked channel            | Score / crew / running clocks at a glance                                                                         |
+| `/log text:`                        | member, linked channel            | Record a settled result — attributed, active-score-tagged                                                         |
+| `/score start\|end`                 | GM, linked channel                | Operation lifecycle (feed events tagged to the score)                                                             |
+| `/crew heat\|tier\|incarcerate`     | GM, linked channel                | Heat→wanted cascade · spend a full Rep track · Wanted −1 + Heat cleared                                           |
+| `/clock tick`                       | GM, linked channel                | Advance/wind a clock; FILLING it announces the milestone                                                          |
+| `/faction status`                   | GM, linked channel                | Set the −3 war … +3 allied standing                                                                               |
+
+In a linked channel, `/roll action:` and `/resist` PERSIST through the engine when the roller is a
+member and their active character crews that campaign — the embed footer says where the roll landed
+("Logged to …") or exactly why it didn't. Everything else that persists (`/harm`, `/xp`, GM
+commands) feed-logs through the same engine use-cases the web app calls.
+
 ## Phases
 
-Phase 0 (this): manual FitD roller, no account link. Phase 1: active-character rolls. Phase 2:
-channel/category/server↔campaign links + logged rolls. Phase 3: gameplay parity. See the BRD
-Phase-4 appendix (`.claude/skills/cx-map/BRD.md`).
+All four phases are built: **0** manual FitD roller (no account link) → **1** active-character
+rolls → **2** channel/category/server↔campaign links + persisted `/roll`/`/resist` + `/log` →
+**3** gameplay parity (`/stress` `/harm` `/vice` `/xp` + the GM commands) and `/heist help`. See
+the BRD Phase-4 appendix (`.claude/skills/cx-map/BRD.md`).

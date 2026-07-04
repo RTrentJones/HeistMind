@@ -48,9 +48,10 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
   two-mode landing. Hero _"The mechanical home for your Forged-in-the-Dark crew,"_ a **dual CTA**
   (_Run a campaign_ / _Join with a code_ — both kick off Discord OAuth), **two "how you'll use it"
-  tracks** (_At your table_ (Mode 1) and _Play-by-post on Discord_ (Mode 2, tagged _"Like Avrae for
-  D&D — but built for Forged in the Dark"_)), and **three pillars** (rules-driven · track from
-  anywhere · take what you want). Copy lives in `pages.landing.*`.
+  tracks** (_At your table_ (Mode 1) and _Play-by-post on Discord_ (Mode 2 — the body now names the
+  LIVE bot: sheet-rated rolls, stress/harm/XP, clocks, GM controls as slash commands; tagged _"Like
+  Avrae for D&D — but built for Forged in the Dark"_)), and **three pillars** (rules-driven · track
+  from anywhere · take what you want). Copy lives in `pages.landing.*`.
 - **Signed in — `Dashboard`** (`apps/web/src/features/dashboard/components/Dashboard.tsx` +
   `features/dashboard/hooks/use-dashboard-data.ts`): the personal home (the OAuth callback redirects
   to `/`). Header _"Welcome back, {name}"_; **quick actions** (create campaign · join a game ·
@@ -260,7 +261,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-02 (server-rendered landing via HomeSwitch + per-route `/` metadata + error/404 surfaces, round-2 PR-9; previously 2026-07-01 F42 role-gated sheet affordances)
+_Last verified:_ 2026-07-04 (landing pbp-track copy names the live Discord bot, bot phase-3 close-out; previously 2026-07-02 server-rendered landing via HomeSwitch, round-2 PR-9)
 
 ---
 
@@ -293,6 +294,35 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    `getRepositories().characterManagement.createCharacterWithValidation`.
 
 _Last verified:_ 2026-06-27 @ 2535b31
+
+---
+
+## Discord surface (the second client)
+
+The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client — creation flows
+(characters, campaigns, rulesets) stay web-only. Full command table:
+`packages/discord/README.md`; in Discord, `/heist help`. The tiers, by what they need:
+
+- **No account (works in any server/DM via user-install):** `/roll dice:` · `/resist` · `/fortune`
+  · `/dice` · `/heist about|help`. Pure compute, nothing stored.
+- **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
+  (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
+  the character's own ruleset, `extra`/`push`), `/stress add|clear`, `/harm take|clear` (RAW
+  escalation), `/vice indulge`, `/xp mark|advance` — the sheet commands feed-log via the same
+  engine use-cases the web calls.
+- **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
+  `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
+  that campaign (embed footer says "Logged to …" or exactly why not); `/log` (attributed,
+  score-tagged); `/heist status` (member snapshot).
+- **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate` · `/clock tick`
+  (filling announces "It comes to a head!") · `/faction status`. GM-gated INCLUDING autocompletes —
+  campaign state never leaks through suggestions.
+
+Failure posture everywhere: public defers that fail authz become delete + ephemeral; non-members
+learn nothing (not even the campaign's name). Known gaps: F65 (web harm parity), F66 (threads under
+a category link), F67 (no web docs page).
+
+_Last verified:_ 2026-07-04 (bot phases 0–3 complete, #121–#132)
 
 ---
 

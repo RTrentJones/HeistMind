@@ -29,6 +29,12 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
     );
   }
 
+  if (sub === 'help') {
+    return inline(
+      replyEmbed({ title: copy.helpTitle, description: copy.helpBody(ctx.siteUrl) }, { ephemeral: true })
+    );
+  }
+
   const userId = discordUserId(interaction);
   if (!userId) return inline(reply(copy.unknownCommand, { ephemeral: true }));
 

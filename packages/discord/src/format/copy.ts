@@ -150,6 +150,23 @@ export const copy = {
   xpLogDot: (action: string) => `+1 ${action} dot`,
   learnAbility: (name: string) => `learned **${name}**`,
   actionDot: (name: string) => `+1 **${name}** dot`,
+  helpTitle: 'HeistMind — commands',
+  helpBody: (siteUrl: string) =>
+    [
+      '**Dice — no account needed**',
+      '`/roll dice:3` action roll · `/resist` · `/fortune` · `/dice 2d6+1`',
+      '',
+      '**Your sheet** — sign in with Discord on the site once, then `/character use`',
+      '`/roll action:Skirmish` (+`extra`, `push`) · `/character show` · `/stress add|clear` · `/harm take|clear` · `/vice indulge` · `/xp mark|advance`',
+      '',
+      '**Linked campaigns** — the GM runs `/heist link` in a channel',
+      'Sheet rolls and `/resist` there land in the campaign log. `/log` records a settled result · `/heist status` shows score/crew/clocks.',
+      '',
+      '**GM controls — in the linked channel**',
+      '`/score start|end` · `/crew heat|tier|incarcerate` · `/clock tick` · `/faction status`',
+      '',
+      `Build characters, campaigns, and rulesets at ${siteUrl}.`,
+    ].join('\n'),
   aboutTitle: 'HeistMind — the mechanical layer for Forged-in-the-Dark play',
   aboutBody: (siteUrl: string, sha: string) =>
     [

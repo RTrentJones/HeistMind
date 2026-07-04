@@ -37,9 +37,9 @@ Discord prose; the mechanics + shared truth live in HeistMind.**
 For D&D PbP, **Avrae + D&D Beyond** give the group a mechanical spine — dice everyone can see (no
 fudging), synced character sheets, resource/initiative tracking — while the **story stays human prose
 in Discord**. **Forged in the Dark has no Avrae** — PbP Blades groups cobble together a generic dice
-bot + a spreadsheet. HeistMind *is* that missing layer for FitD. (Phase 4's Discord bot — specified in
-`BRD.md` — makes the parallel literal: roll from Discord, state lands in HeistMind. Even pre-bot, the
-web app is the shared mechanical truth.)
+bot + a spreadsheet. HeistMind *is* that missing layer for FitD. (**The Phase-4 Discord bot — built
+2026-07-04 — makes the parallel literal:** roll from Discord with your sheet's ratings, mark stress/
+harm/XP, GMs run scores/clocks/crew/factions, and state lands in HeistMind's campaign log.)
 
 ### À la carte still holds
 
@@ -84,11 +84,12 @@ FitD equivalent.
 | Crew / faction / clock state tracked | N/A (5e) | 🟡 manual | ✅ |
 | Score-grouped, shared campaign log | ❌ (chat scrollback) | ❌ | ✅ |
 | Built for Forged in the Dark | ❌ (D&D only) | 🟡 generic | ✅ |
-| Rolls *from inside Discord* | ✅ (bot) | ✅ (bot) | 🔜 Phase 4 (web today) |
+| Rolls *from inside Discord* | ✅ (bot) | ✅ (bot) | ✅ (the bot — sheet-rated, engine-persisted) |
 
-**Takeaway:** for FitD PbP there is **no Avrae** — groups improvise. HeistMind already wins on
-rules-correctness + shared state; the one thing Avrae has that we don't yet is **in-Discord commands**
-(Phase 4, already specified in `BRD.md`).
+**Takeaway:** for FitD PbP there is **no Avrae** — groups improvise. HeistMind wins on
+rules-correctness + shared state, and since 2026-07-04 the last Avrae-only advantage is gone:
+**in-Discord commands are live** (dice anywhere via user-install; sheet + GM gameplay in linked
+channels; see `packages/discord/README.md`). Remaining bot polish is tracked as F65–F67.
 
 ---
 

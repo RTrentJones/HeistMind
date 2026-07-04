@@ -121,8 +121,9 @@ off-app results), and **roster/retire** (`CharacterRoster`: player→character a
 Retire). **Phase 5 + 5b (portable characters — F56)** also shipped (2026-06-29): migration `00014`
 makes `characters.game_id` a **nullable pointer** (single active campaign), with the ruleset bound on
 the character + attach/detach RPCs, standalone `/characters*` routes, and **5b** owner controls to
-**move / detach / clone** (no migration — reuses the RPCs). **Phase 4 (Discord bot)** and **Phase 5c
-(cross-ruleset adaptation)** remain specified/deferred. What's next is driven by the audit, not a sprint board:
+**move / detach / clone** (no migration — reuses the RPCs). **Phase 4 (Discord bot) shipped
+2026-07-04** (see the block below); **Phase 5c (cross-ruleset adaptation)** remains
+specified/deferred. What's next is driven by the audit, not a sprint board:
 
 - **`FINDINGS.md` is the backlog** — severity-scored CX flaws + FitD gaps from Audit 1. Its
   closing "themes worth a dedicated pass" section is the de-facto roadmap. Highest-leverage clusters:
@@ -136,18 +137,28 @@ the character + attach/detach RPCs, standalone `/characters*` routes, and **5b**
 - **Deferred (separate future plan):** realtime presence / live multiplayer via Supabase Realtime.
   The async load-on-view model is sufficient and intentional for play-by-post.
 
-**In build (2026-07-03): the DISCORD BOT (BRD Phase 4, the four-phase plan).** Phase 0 is
-**complete** (#121–#123): `packages/discord` (Ed25519 verify over raw bytes, router, the manual
-FitD roller — `/roll`, `/resist`, `/fortune`, `/dice`, `/heist about` — registered for guild AND
-user install, so rolls work in any server/DM), the `/api/discord` interactions endpoint in
-`apps/web` (creds-guarded 503 without `DISCORD_PUBLIC_KEY`), the tunnel-free signed-POST local
-harness (`scripts/discord-post.mjs` — which immediately caught F64, the zero-dice resistance
-bug live since round 1), the branch-mapped command-registration workflow, and a real-signature
-endpoint E2E. Companion infra PR (RTrentJones.dev #29) wires `DISCORD_PUBLIC_KEY` per Vercel
-target. Remaining operator steps to go live: create the two Discord apps (dev→beta, prod→prod),
-`greenlight secrets gather heistmind`, the four GitHub registration secrets, then the endpoint
-URLs (see `packages/discord/README.md`). Phase 1 (account link + one active character) is in
-build; Phases 2–3 (campaign links + logged rolls; gameplay parity) follow the approved plan.
+**Complete (2026-07-04): the DISCORD BOT (BRD Phase 4) — all four phases (#121–#132).**
+HeistMind's second client, built as planned: **Phase 0** (#121–#123) `packages/discord` (Ed25519
+verify over raw bytes, router, the manual FitD roller registered for guild AND user install — rolls
+work in any server/DM), the `/api/discord` interactions endpoint in `apps/web`, the tunnel-free
+signed-POST harness (`scripts/discord-post.mjs` — which immediately caught F64), the branch-mapped
+registration workflow, real-signature E2E. **Phase 1** (#124–#126) account link via the existing
+`profiles.discord_id` + `discord_players` active-character pointer (`/character use|show|unset`,
+sheet-rated `/roll action:` with autocomplete). **Phase 2** (#127–#129) campaign↔Discord links
+(channel/category/server scope, precedence in that order; migration `00017`) with `/heist
+link|unlink|status`, member-gated attributed `/log`, and **persisted `/roll`/`/resist`** through
+engine `rollAction`/`rollResistance` when linked + member + active-char-in-campaign (push charges
+its real 2 stress; embed footers say where the roll landed or why it didn't). **Phase 3**
+(#130–#132) gameplay parity: engine `takeHarm`/`clearHarm` (RAW escalation; `harm` feed kind,
+migration `00018`) + the **engine-level ownership gate** (`notOwner` in every character-mutating
+use-case — the service-role client bypasses RLS, so the engine asserts creator-is-actor);
+`/stress` `/harm` `/vice` `/xp`; the GM commands `/score` `/crew` `/clock` `/faction` (GM-gated,
+including their autocompletes — no state leaks through suggestions); `/heist help`. Creation flows
+stay web-only (parity is gameplay only, per the plan). Remaining OPERATOR steps to go live: create
+the two Discord apps (dev→beta, prod→prod), `greenlight secrets gather heistmind`, the four GitHub
+registration secrets, then the endpoint URLs (see `packages/discord/README.md`); companion infra PR
+RTrentJones.dev #29 wires `DISCORD_PUBLIC_KEY` per Vercel target. Residual gaps tracked as
+F65–F67.
 
 **Complete (2026-07-03): ROUND 3 — the post-round-2 second pass (#113–#119).** A clean-slate
 3-lens review (packages / web / product-alignment; every claim grep-verified, rules claims

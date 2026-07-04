@@ -718,7 +718,7 @@
         },
         "pbp": {
           "title": "Play-by-post on Discord",
-          "body": "The async mechanical layer for your game: rolls, clocks, stress, per-score gear, and a score-grouped campaign log that stays in sync as the story unfolds in your Discord channels.",
+          "body": "The async mechanical layer for your game, live in your server: sheet-rated rolls, stress, harm, XP, clocks, and GM controls as slash commands. Link a channel to your campaign and every command lands in the score-grouped campaign log as the story unfolds.",
           "tag": "Like Avrae for D&D — but built for Forged in the Dark."
         }
       },

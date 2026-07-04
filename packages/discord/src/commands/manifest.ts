@@ -204,6 +204,11 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       },
       {
         type: ApplicationCommandOptionType.Subcommand,
+        name: 'help',
+        description: 'Every command, grouped by what it needs',
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
         name: 'account',
         description: 'Your linked HeistMind account and active character',
       },

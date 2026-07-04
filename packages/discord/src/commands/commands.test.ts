@@ -127,3 +127,15 @@ describe('/heist about', () => {
     expect(embed.description).toContain('https://heistmind.example');
   });
 });
+
+describe('/heist help', () => {
+  it('lists the whole command surface, grouped, ephemerally — no account needed', async () => {
+    const res = await handleHeist(ctx([]), cmd('heist', [{ name: 'help', type: 1, options: [] }]));
+    expect(isEphemeral(res)).toBe(true);
+    const embed = embedOf(res);
+    for (const name of ['/roll', '/resist', '/character', '/stress', '/harm', '/vice', '/xp', '/heist link', '/log', '/score', '/crew', '/clock', '/faction']) {
+      expect(embed.description).toContain(name);
+    }
+    expect(embed.description).toContain('https://heistmind.example');
+  });
+});

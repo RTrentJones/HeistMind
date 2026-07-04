@@ -164,7 +164,9 @@ independently usable — a group can adopt just one).
 2. ~~Loadout is in the wrong place~~ → **done (Phase 1b):** per-score `LoadoutCard` on the sheet.
 3. ~~The log is only a roll log~~ → **done (Phase 2):** the roll log is the campaign event log — events carry `score_id`, the feed groups by score, and an "add result" entry records outcomes settled IRL/Discord. _(Caveat: XP marks/advances still land only in `advancementHistory`, not the feed — R-C3 stays 🟡; round-3 PR-3 closes it.)_
 4. ~~No character lifecycle~~ → **done (Phase 3):** roster (player → character) + Retire (status + coin→stash).
-5. **No Discord integration** (R-H2) — not started; no bot app exists. _(Phase 4.)_
+5. ~~No Discord integration~~ → **done (Phase 4, 2026-07-04):** the bot (`packages/discord` + the
+   `/api/discord` endpoint) — dice anywhere, sheet-rated rolls, campaign links, persisted
+   rolls/`/log`, gameplay parity + GM commands. See the appendix.
 
 ### Already aligned (no work)
 
@@ -175,8 +177,9 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 
 ## Roadmap (phased; each ships via deploy → verify → promote)
 
-> **Status (2026-06-29):** Phases 1–3 **and Phase 5 (portable characters)** are **shipped**. Phase 4
-> (Discord) is **specified, not built** — see the detailed appendices at the end of this doc.
+> **Status (2026-07-04):** Phases 1–5 are **shipped** — including **Phase 4 (Discord)**, built
+> 2026-07-03/04 as the four-phase bot plan (#121–#132); the appendix below records the shipped
+> shape. Only Phase 5b/5c cross-ruleset adaptation remains deferred.
 
 - **Phase 1 — Score model + per-score loadout** (R-D1..D4, B4) — ✅ **shipped.** `scores` table + per-score loadout
   storage; "Start/End score" on the campaign page; the sheet's gear becomes the **active score's
@@ -188,9 +191,10 @@ Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and
 - **Phase 3 — Character lifecycle & attribution** (R-F1..F3, B3) — ✅ **shipped.** `CharacterRoster`
   (player → character(s) + status); **Retire** (status + coin→stash, logged); status badges. No
   migration (`status` already a column).
-- **Phase 4 — Discord integration** (R-H2) — **specified, not built.** See the detailed appendix below
-  (interactions-endpoint design, channel↔campaign mapping, attribution via `profiles.discord_id`,
-  the migration + credentials the work needs). Inbound-first.
+- **Phase 4 — Discord integration** (R-H2) — ✅ **shipped (2026-07-04, #121–#132).** The
+  interactions-endpoint bot: channel/category/server↔campaign links, attribution via
+  `profiles.discord_id`, persisted rolls + `/log`, sheet + GM gameplay parity. Appendix below
+  records the shipped shape; residual gaps are F65–F67.
 - **Phase 5 — Portable characters** (R-F4..F7) — ✅ **shipped.** Closes **F56** (the biggest Mode-1
   gap): migration `00014` makes `game_id` a **nullable pointer** (single active campaign, `ON DELETE
 SET NULL`), binds the ruleset on the character (`original_ruleset_id`), and adds
@@ -205,7 +209,8 @@ SET NULL`), binds the ruleset on the character (`original_ruleset_id`), and adds
    Phase 2 only if needed.
 2. **Score granularity:** ✅ **score-only.** Sessions are real-life and NOT modelled (a score may span
    sessions, or several scores fit one session — "between sessions" = tracking IRL).
-3. **Discord v1:** **inbound-only** (log results rolled on Discord); outbound deferred. _(Phase 4.)_
+3. **Discord v1:** **inbound-only** (log results rolled on Discord); outbound deferred. _(Phase 4 —
+   shipped; "outbound" so far is command replies/embeds only, no proactive posts.)_
 4. **Loadout storage:** ✅ **current loadout on the character** (Option A) — resettable; changes →
    campaign log; score reset → a "cleared" log note. **No per-score loadout table.** The only new
    table is `scores` itself.
@@ -231,12 +236,17 @@ SET NULL`), binds the ruleset on the character (`original_ruleset_id`), and adds
 
 ## Appendix — Phase 4: Discord integration (detailed BRD)
 
-**Status:** **in build (2026-07-03, the phased bot plan).** The client lives in
+**Status:** ✅ **built (2026-07-04, the phased bot plan, #121–#132).** The client lives in
 **`packages/discord`** (verify/router/handlers/manifest — unit-tested; the web `/api/discord`
 route is a thin transport), NOT a separate `apps/discord-bot` — Discord interactions are HTTP
-webhooks, no gateway process. Phases: **0** harness + manual FitD roller, no account link
-(shipping now); **1** active-character rolls; **2** the channel/category/server↔campaign link +
-logged rolls (this appendix's core); **3** gameplay parity.
+webhooks, no gateway process. All four phases shipped: **0** harness + manual FitD roller;
+**1** active-character rolls; **2** channel/category/server↔campaign links + persisted
+`/roll`/`/resist` + `/log` (this appendix's core — R-H2.1..R-H2.5 all met, with R-H2.1 widened
+to category/server scopes and R-H2.5 exceeded: rolls are engine-persisted, anti-forge); **3**
+gameplay parity (`/stress` `/harm` `/vice` `/xp`; GM `/score` `/crew` `/clock` `/faction`;
+`/heist help`). The platform prerequisites below were all built (service-role factory in the
+web app, engine ownership gate, migrations 00016–00018, the endpoint). Command reference:
+`packages/discord/README.md`. Residual gaps: F65–F67.
 
 **Platform prerequisites (verified 2026-07-02 — none exist yet):** (1) a **service-role client
 path** in `packages/database` — every current factory reads only the anon key, and
