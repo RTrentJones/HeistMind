@@ -450,6 +450,35 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
   over-budget set (`veteranPicksUsed` in character-rules).
 
+### F67 — No player-facing web page documents the Discord bot
+
+- **severity:** S3 · **type:** CX
+- **where:** the landing page's play-by-post track now names the live bot, and `/heist help` is the
+  in-Discord reference — but the web app has no page a GM can send players ("install the app / sign
+  in once / `/character use`"), and no install ("Add to server") link anywhere.
+- **status:** **open** — a small static `/discord` page (getting-started + the command table from
+  `packages/discord/README.md` + the app-directory install link once the prod app exists).
+
+### F66 — A thread under a CATEGORY-linked parent doesn't resolve the link
+
+- **severity:** S3 · **type:** CX (bot phase-2 known gap, now user-visible)
+- **where:** link resolution uses the interaction's `channel.id` + `channel.parent_id`. In a thread,
+  `parent_id` is the parent CHANNEL — so channel links resolve fine from threads, but when only the
+  channel's **category** is linked, the category id isn't in the payload and `/roll`/`/log` in the
+  thread say "not linked". Needs one bot-token channel fetch (the first bot-token call in the app)
+  or a cached channel→category map.
+- **status:** **open** (documented since the phase-2 plan; logged so the backlog owns it).
+
+### F65 — Web harm edits still bypass the campaign feed (R-E1 residue)
+
+- **severity:** S3 · **type:** CX
+- **where:** the bot's `/harm take|clear` logs `harm` feed events via engine `takeHarm`/`clearHarm`
+  (phase-3), but the web sheet edits harm only inside the full editor's batch `saveBuild`
+  (`HarmCard` `onPatch` → whole-`characterData` write) — no feed event, no RAW escalation. The two
+  clients now behave differently for the same action.
+- **status:** **open** — add sheet-level quick actions (or rewire the editor's harm section) through
+  the same engine use-cases; the web catches up to the bot, closing R-E1 for harm end-to-end.
+
 ### F64 — Zero-dice resistance computed stress from the HIGHEST die (should be lowest)
 
 - **severity:** S2 · **type:** FitD-gap
