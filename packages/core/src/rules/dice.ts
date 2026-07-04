@@ -5,8 +5,9 @@
 export type RollOutcome = 'crit' | 'success' | 'partial' | 'bad';
 // Everything after 'downtime' is a non-dice campaign-log event (no roll) carried in the same
 // append-only log: 'loadout'/'score' lifecycle entries, 'crew'/'faction'/'clock' mechanical
-// changes, 'xp' marks + advances, and 'note' — a manually recorded result (settled IRL or on
-// Discord). Kinds are mirrored by the rolls table's kind CHECK (widened per migration).
+// changes, 'xp' marks + advances, 'harm' taken/cleared, and 'note' — a manually recorded result
+// (settled IRL or on Discord). Kinds are mirrored by the rolls table's kind CHECK (widened per
+// migration).
 export type RollKind =
   | 'action'
   | 'resistance'
@@ -18,6 +19,7 @@ export type RollKind =
   | 'faction'
   | 'clock'
   | 'xp'
+  | 'harm'
   | 'note';
 
 /**

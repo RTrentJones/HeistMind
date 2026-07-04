@@ -10,6 +10,7 @@ import {
   type Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
+import { notOwner } from './ownership';
 
 /** The vice-roll dice pool for a character: dice = the LOWEST attribute rating (0 → 2 take-lowest). */
 export function viceDicePool(character: CharacterWithDetails): {
@@ -47,6 +48,8 @@ export async function indulgeVice(
   input: IndulgeViceInput
 ): Promise<Result<IndulgeViceOutcome>> {
   const { character, userId, results, zeroDice } = input;
+  const owned = notOwner(character, userId);
+  if (owned) return owned;
   const stress = character.characterData?.stress ?? 0;
   const cleared = viceStressCleared(results, { zeroDice });
   const overindulged = isOverindulged(cleared, stress);
