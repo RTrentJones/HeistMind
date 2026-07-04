@@ -96,6 +96,40 @@ export const copy = {
     const bonus = extra + (push ? 1 : 0);
     return `${character} — ${action} ${rating}d${bonus > 0 ? ` +${bonus}d` : ''}`;
   },
+  stressLine: (name: string, stress: number, max: number) =>
+    `**${name}** — stress **${stress}/${max}**.`,
+  stressUnchanged: (name: string) =>
+    `**${name}**’s stress track is already there — nothing changed.`,
+  harmTaken: (name: string, level: string, description: string) =>
+    `**${name}** takes **${level}** harm: “${description}”.`,
+  harmEscalated: (dealt: string, applied: string) =>
+    `Dealt at ${dealt} — landed at **${applied}** (the ${dealt} track is full).`,
+  harmFull:
+    'Every harm track is full — that’s trauma/death territory. Settle it at the table, then update the sheet on the web.',
+  harmCleared: (name: string, description: string) =>
+    `**${name}** recovers — “${description}” cleared.`,
+  harmNotFound: (entry: string) =>
+    `No harm entry “${entry}” on that track. Try the autocomplete suggestions.`,
+  harmLogTaken: (level: string, description: string) => `Took ${level} harm: ${description}`,
+  harmLogCleared: (level: string, description: string) => `Cleared ${level} harm: ${description}`,
+  viceTitle: (name: string, dice: number) =>
+    dice === 0 ? `${name} indulges — 0d (2d, take lowest)` : `${name} indulges — ${dice}d`,
+  viceCleared: (cleared: number, stress: number, max: number) =>
+    `Cleared **${cleared}** stress — now ${stress}/${max}.`,
+  viceOverindulged:
+    'Overindulged — you cleared more than was marked. The GM narrates the complication (RAW).',
+  viceLog: 'Indulged their vice',
+  xpMarked: (name: string, amount: number, total: number) =>
+    `**${name}** marks ${amount} XP — **${total}** banked.`,
+  xpLogMark: (amount: number) => `Marked ${amount} XP`,
+  xpReasonDefault: 'Marked via Discord',
+  xpAdvanced: (name: string, what: string) => `**${name}** advances — ${what}.`,
+  xpAdvanceFailed: (reason: string) => `Couldn’t advance: ${reason}`,
+  xpPickInvalid: 'Pick an advance from the autocomplete suggestions.',
+  xpLogAbility: (name: string) => `Learned ${name}`,
+  xpLogDot: (action: string) => `+1 ${action} dot`,
+  learnAbility: (name: string) => `learned **${name}**`,
+  actionDot: (name: string) => `+1 **${name}** dot`,
   aboutTitle: 'HeistMind — the mechanical layer for Forged-in-the-Dark play',
   aboutBody: (siteUrl: string, sha: string) =>
     [
