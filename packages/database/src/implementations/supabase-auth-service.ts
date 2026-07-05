@@ -1,5 +1,5 @@
 // Supabase implementation of AuthService
-// Handles authentication for both web and Discord bot applications
+// Handles authentication for the web app (the bot resolves actors via profiles.findByDiscordId).
 
 import type {
   SupabaseClient,
@@ -16,12 +16,10 @@ import type {
   SignUpData,
   SignInData,
   SignInWithOAuthData,
-  SignInWithDiscordData,
   ResetPasswordData,
   UpdateUserData,
   AuthEvent,
   AuthEventCallback,
-  DiscordAuthData,
   OAuthProvider,
 } from '../auth-types';
 
@@ -137,42 +135,6 @@ export class SupabaseAuthService implements AuthService {
     };
   }
 
-  async signInWithDiscord(data: SignInWithDiscordData): Promise<AuthResponse<Session>> {
-    // Custom Discord authentication flow for bot integration
-    // This exchanges the Discord code for tokens and creates a Supabase session
-
-    try {
-      // Exchange Discord code for access token
-      const discordTokenResponse = await this.exchangeDiscordCode(data.code, data.redirectUri);
-
-      // Get Discord user info
-      await this.getDiscordUser(discordTokenResponse.access_token);
-
-      // For Discord bot integration, we need to handle this differently
-      // This is a simplified version - in practice, you'd need to:
-      // 1. Check if user exists by Discord ID
-      // 2. Create new user or link existing user
-      // 3. Create a custom session
-
-      // For now, we'll return an error indicating this needs custom implementation
-      return {
-        data: null,
-        error: {
-          message: 'Discord bot authentication requires custom implementation',
-          code: 'DISCORD_BOT_AUTH_NOT_IMPLEMENTED',
-        },
-      };
-    } catch (error) {
-      return {
-        data: null,
-        error: {
-          message: error instanceof Error ? error.message : 'Discord authentication failed',
-          code: 'DISCORD_AUTH_ERROR',
-        },
-      };
-    }
-  }
-
   async signOut(): Promise<AuthResponse<never>> {
     const { error } = await this.supabase.auth.signOut();
 
@@ -268,109 +230,6 @@ export class SupabaseAuthService implements AuthService {
   // DISCORD BOT INTEGRATION
   // ===========================
 
-  async linkDiscordAccount(
-    userId: string,
-    discordData: DiscordAuthData
-  ): Promise<AuthResponse<User>> {
-    try {
-      // Update user metadata with Discord information
-      const { data: userData, error } = await this.supabase.auth.updateUser({
-        data: {
-          discord_id: discordData.discordUser.id,
-          discord_username: discordData.discordUser.username,
-          discord_discriminator: discordData.discordUser.discriminator,
-          discord_avatar: discordData.discordUser.avatar,
-          discord_access_token: discordData.accessToken,
-          discord_refresh_token: discordData.refreshToken,
-        },
-      });
-
-      if (error) {
-        return {
-          data: null,
-          error: this.transformSupabaseError(error),
-        };
-      }
-
-      return {
-        data: this.transformSupabaseUser(userData.user),
-        error: null,
-      };
-    } catch (error) {
-      return {
-        data: null,
-        error: {
-          message: error instanceof Error ? error.message : 'Failed to link Discord account',
-          code: 'DISCORD_LINK_ERROR',
-        },
-      };
-    }
-  }
-
-  async unlinkDiscordAccount(_userId: string): Promise<AuthResponse<User>> {
-    try {
-      const { data: userData, error } = await this.supabase.auth.updateUser({
-        data: {
-          discord_id: null,
-          discord_username: null,
-          discord_discriminator: null,
-          discord_avatar: null,
-          discord_access_token: null,
-          discord_refresh_token: null,
-        },
-      });
-
-      if (error) {
-        return {
-          data: null,
-          error: this.transformSupabaseError(error),
-        };
-      }
-
-      return {
-        data: this.transformSupabaseUser(userData.user),
-        error: null,
-      };
-    } catch (error) {
-      return {
-        data: null,
-        error: {
-          message: error instanceof Error ? error.message : 'Failed to unlink Discord account',
-          code: 'DISCORD_UNLINK_ERROR',
-        },
-      };
-    }
-  }
-
-  async getUserByDiscordId(discordId: string): Promise<User | null> {
-    try {
-      // Query profiles table for user with matching Discord ID
-      const { data, error } = await this.supabase
-        .from('profiles')
-        .select('id')
-        .eq('discord_id', discordId)
-        .single();
-
-      if (error || !data) {
-        return null;
-      }
-
-      // Get full user data
-      const {
-        data: { user },
-        error: userError,
-      } = await this.supabase.auth.admin.getUserById(data.id);
-
-      if (userError || !user) {
-        return null;
-      }
-
-      return this.transformSupabaseUser(user);
-    } catch {
-      return null;
-    }
-  }
-
   // ===========================
   // EVENT HANDLING
   // ===========================
@@ -465,48 +324,4 @@ export class SupabaseAuthService implements AuthService {
     });
   }
 
-  private async exchangeDiscordCode(
-    code: string,
-    redirectUri: string
-  ): Promise<{ access_token: string }> {
-    const clientId = process.env.DISCORD_CLIENT_ID;
-    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-      throw new Error('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET are not configured.');
-    }
-
-    const response = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to exchange Discord code for token');
-    }
-
-    return response.json();
-  }
-
-  private async getDiscordUser(accessToken: string): Promise<Record<string, unknown>> {
-    const response = await fetch('https://discord.com/api/users/@me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get Discord user info');
-    }
-
-    return response.json();
-  }
 }

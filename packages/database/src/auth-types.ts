@@ -69,11 +69,6 @@ export interface SignInWithOAuthData {
   };
 }
 
-export interface SignInWithDiscordData {
-  code: string;
-  redirectUri: string;
-}
-
 export interface ResetPasswordData {
   email: string;
   options?: {
@@ -114,38 +109,6 @@ export type OAuthProvider =
   | 'zoom';
 
 // ===========================
-// DISCORD BOT INTEGRATION
-// ===========================
-
-export interface DiscordUser {
-  id: string;
-  username: string;
-  discriminator: string;
-  globalName: string | null;
-  avatar: string | null;
-  bot?: boolean;
-  system?: boolean;
-  mfaEnabled?: boolean;
-  banner?: string | null;
-  accentColor?: number | null;
-  locale?: string;
-  verified?: boolean;
-  email?: string | null;
-  flags?: number;
-  premiumType?: number;
-  publicFlags?: number;
-}
-
-export interface DiscordAuthData {
-  discordUser: DiscordUser;
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn: number;
-  scope: string;
-  tokenType: string;
-}
-
-// ===========================
 // AUTH EVENT TYPES
 // ===========================
 
@@ -178,7 +141,6 @@ export interface AuthService {
   signUp(data: SignUpData): Promise<AuthResponse<Session>>;
   signIn(data: SignInData): Promise<AuthResponse<Session>>;
   signInWithOAuth(data: SignInWithOAuthData): Promise<AuthResponse<never>>;
-  signInWithDiscord(data: SignInWithDiscordData): Promise<AuthResponse<Session>>;
   signOut(): Promise<AuthResponse<never>>;
 
   // Password management
@@ -188,11 +150,6 @@ export interface AuthService {
   // Session management
   refreshSession(): Promise<AuthResponse<Session>>;
   setSession(session: Session): Promise<AuthResponse<Session>>;
-
-  // Discord bot integration
-  linkDiscordAccount(userId: string, discordData: DiscordAuthData): Promise<AuthResponse<User>>;
-  unlinkDiscordAccount(userId: string): Promise<AuthResponse<User>>;
-  getUserByDiscordId(discordId: string): Promise<User | null>;
 
   // Event handling
   onAuthStateChange(callback: AuthEventCallback): () => void;

@@ -22,7 +22,7 @@
     "build:ui": "turbo build --filter=@heist-mind/ui",
     "build:web": "turbo build --filter=@heist-mind/web",
     "design:bundle": "pnpm build:ui && node design-sync/build.mjs",
-    "design:sync": "pnpm design:bundle && node -e \"console.log('\\nBundle ready in design-sync/bundle — run /design-sync in Claude Code to push to claude.ai/design.')\"",
+    "design:sync": "pnpm design:bundle && node -e \"console.log('\\nBundle ready in design-sync/bundle \u2014 run /design-sync in Claude Code to push to claude.ai/design.')\"",
     "dev:ui": "pnpm --filter=@heist-mind/ui dev",
     "dev:web": "pnpm --filter=@heist-mind/web dev",
     "db:push": "pnpm --filter database db:push",
@@ -33,7 +33,8 @@
     "dep-update": "pnpm -r update",
     "cleanup": "pnpm -r run clean",
     "prepare": "husky",
-    "greenlight": "npx @rtrentjones/greenlight"
+    "greenlight": "npx @rtrentjones/greenlight",
+    "knip": "knip"
   },
   "devDependencies": {
     "@heist-mind/shared": "workspace:^",
@@ -58,6 +59,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
+    "knip": "^6.24.0",
     "lint-staged": "^16.1.2",
     "monocart-coverage-reports": "^2.12.12",
     "prettier": "^3.5.3",

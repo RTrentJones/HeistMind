@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["e2e/**/*.ts", "scripts/*.mjs", "verify/*.ts", "playwright.config.ts"],
+      "project": ["e2e/**/*.ts", "scripts/*.mjs", "verify/*.ts"]
+    },
+    "apps/web": {
+      "project": "src/**/*.{ts,tsx}"
+    },
+    "packages/*": {
+      "entry": ["src/index.ts", "src/registration/*.ts"],
+      "project": "src/**/*.{ts,tsx}"
+    },
+    "configs": {
+      "entry": ["*.mjs", "*.ts"]
+    }
+  },
+  "ignoreDependencies": ["@heist-mind/eslint-config"]
+}
