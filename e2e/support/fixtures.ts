@@ -50,6 +50,8 @@ async function withCoverage(page: Page, handOver: () => Promise<void>): Promise<
 interface PersonaFixtures {
   gmPage: Page;
   playerPage: Page;
+  /** The Discord persona's browser — the SAME account the bot acts as (cross-client parity). */
+  discordPage: Page;
   gmUser: TestUser;
   playerUser: TestUser;
 }
@@ -77,6 +79,21 @@ export const test = base.extend<PersonaFixtures>({
       return;
     }
     const context = await browser.newContext({ storageState: storageStatePath('player') });
+    const page = await context.newPage();
+    await withCoverage(page, () => use(page));
+    await context.close();
+  },
+
+  discordPage: async ({ browser }, use, testInfo) => {
+    const path = storageStatePath('discord');
+    if (!existsSync(path)) {
+      testInfo.skip(
+        true,
+        'No injected Discord-persona session (Supabase service-role key not configured).'
+      );
+      return;
+    }
+    const context = await browser.newContext({ storageState: storageStatePath('discord') });
     const page = await context.newPage();
     await withCoverage(page, () => use(page));
     await context.close();
