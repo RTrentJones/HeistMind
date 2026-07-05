@@ -134,11 +134,15 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
     player sees it on load): shows **who** (character name; "Fortune"/"GM") and **when** (relative time
-    - timestamp tooltip), annotates resistance ("resisted — N stress"), and renders non-dice events
-      (downtime / loadout / score / **crew** / **faction** / **clock** / **xp** / note) with a neutral
-      kind badge. **Every mechanical change reaches the feed** (round-3 PR-3, via engine use-cases):
-      crew heat/tier/incarceration, faction status shifts, a clock **filling** (routine ticks stay
-      panel-only), and XP marks/advances — alongside rolls, downtime, loadout, and score lifecycle.
+    - timestamp tooltip), annotates resistance ("resisted — N stress"; zero-dice resists ride the
+      persisted `zero_dice` flag since audit P2, so the displayed cost matches the sheet), and
+      renders non-dice events (downtime / loadout / score / **crew** / **faction** / **clock** /
+      **xp** / **harm** / note) with a neutral kind badge. **Every mechanical change reaches the
+      feed** (round-3 PR-3 + bot phase-3, via engine use-cases): crew heat/tier/incarceration,
+      faction status shifts, a clock **filling** (routine ticks stay panel-only), XP marks/advances,
+      and harm taken/cleared — alongside rolls, downtime, loadout, and score lifecycle. _One web
+      exception (F70): the sheet's track-XP marking (`setXp`) writes tracks without an `xp` feed
+      event — only the flat-pool button and the bot's `/xp mark` log one._
       Entries are **grouped by score** (newest operation first, under its name); with no scores in
       play it falls back to a flat feed.
 - **Role:** GM edits campaign objects; players read them.
@@ -261,7 +265,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-04 (landing pbp-track copy names the live Discord bot, bot phase-3 close-out; previously 2026-07-02 server-rendered landing via HomeSwitch, round-2 PR-9)
+_Last verified:_ 2026-07-05 (full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
 
 ---
 
@@ -322,7 +326,7 @@ Failure posture everywhere: public defers that fail authz become delete + epheme
 learn nothing (not even the campaign's name). Known gaps: F65 (web harm parity), F66 (threads under
 a category link), F67 (no web docs page).
 
-_Last verified:_ 2026-07-04 (bot phases 0–3 complete, #121–#132)
+_Last verified:_ 2026-07-05 (go-live smoke fixed F68 discord_id trigger-link + F69 rulesetActions resolution; residue tracked as F70/F71; previously phases 0–3 complete #121–#132)
 
 ---
 
