@@ -48,10 +48,19 @@ test.describe('GM: resistance + downtime', () => {
     });
 
     // --- Resistance: roll against an attribute → an entry lands in the shared roll log, annotated
-    // with the stress it cost. The die is random (stress can be 0–6), so assert the log entry's
-    // "resisted" annotation rather than a specific value. ---
+    // with the stress it cost. A fresh Razor has ZERO action dots, so this is always a ZERO-DICE
+    // resist (2d take-LOWEST, F64). The faces are random but the log prints them, so assert the
+    // DISPLAYED stress is consistent with the faces — the audit-P2 regression: before rolls
+    // persisted `zero_dice`, the feed recomputed from 6−HIGHEST and disagreed with the sheet. ---
     await gmPage.getByLabel('Roll type').selectOption('resistance');
     await gmPage.getByRole('button', { name: 'Resist', exact: true }).click();
-    await expect(gmPage.getByText(/resisted/).first()).toBeVisible({ timeout: 15_000 });
+    const resistLine = gmPage.getByText(/resisted — \d stress/).first();
+    await expect(resistLine).toBeVisible({ timeout: 15_000 });
+    const lineText = (await resistLine.textContent()) ?? '';
+    const facesMatch = lineText.match(/\[(\d), (\d)\]/);
+    expect(facesMatch, `log line should print two faces: ${lineText}`).not.toBeNull();
+    // Zero-dice takes the LOWEST and never crits — two 6s resist for 0 (F64).
+    const lowest = Math.min(Number(facesMatch![1]), Number(facesMatch![2]));
+    expect(lineText).toContain(`resisted — ${6 - lowest} stress`);
   });
 });

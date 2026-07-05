@@ -16,6 +16,9 @@ export function fromSupabaseRoll(row: RollRow): Roll {
     kind: (row.kind as RollKind) ?? 'action',
     label: row.label ?? null,
     dice: row.dice ?? 0,
+    // Persisted since 00020 (audit P2) — a rating-0 pool rolls 2 dice take-lowest, so `dice`
+    // alone can't signal the zero-dice rule to display-time recomputes.
+    zeroDice: row.zero_dice ?? false,
     results: parseSupabaseJson<number[]>(row.results, []),
     outcome: (row.outcome as RollOutcome) ?? 'bad',
     position: row.position ?? null,
@@ -39,6 +42,7 @@ export function toSupabaseRollInsert(
     kind: data.kind,
     label: data.label ?? null,
     dice: data.dice,
+    zero_dice: data.zeroDice ?? false,
     results: data.results,
     outcome,
     position: data.position ?? null,

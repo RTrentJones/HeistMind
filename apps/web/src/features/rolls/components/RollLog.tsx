@@ -24,6 +24,7 @@ const EVENT_KIND_KEY = {
   faction: 'components.rollLog.faction',
   clock: 'components.rollLog.clock',
   xp: 'components.rollLog.xp',
+  harm: 'components.rollLog.harm',
   note: 'components.rollLog.note',
 } as const;
 
@@ -79,9 +80,14 @@ export function RollLog({ gameId }: { gameId: string }) {
     const posEffect =
       r.position && r.effect ? `${r.position}/${r.effect}` : (r.position ?? r.effect ?? '');
     // A critical resistance CLEARS 1 stress (resistanceStress returns −1) — phrase it, don't
-    // render "-1 stress". A 0-dice pool (r.dice === 0) takes the LOWEST die (F64).
+    // render "-1 stress". Zero-dice (rating 0 → 2d take-LOWEST, F64) rides the persisted flag
+    // since 00020 (audit P2: `dice` stores the dice actually ROLLED — 2 on a zero pool — so the
+    // old `dice === 0` inference never fired and zero-dice resists displayed 6−highest); the ||
+    // keeps any legacy dice=0 row rendering right.
     const resistDelta =
-      r.kind === 'resistance' ? resistanceStress(r.results, { zeroDice: r.dice === 0 }) : null;
+      r.kind === 'resistance'
+        ? resistanceStress(r.results, { zeroDice: r.zeroDice || r.dice === 0 })
+        : null;
     const resisted =
       resistDelta === null
         ? null

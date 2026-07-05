@@ -458,6 +458,7 @@ export type Database = {
           results: number[]
           score_id: string | null
           user_id: string
+          zero_dice: boolean
         }
         Insert: {
           character_id?: string | null
@@ -474,6 +475,7 @@ export type Database = {
           results?: number[]
           score_id?: string | null
           user_id: string
+          zero_dice?: boolean
         }
         Update: {
           character_id?: string | null
@@ -490,6 +492,7 @@ export type Database = {
           results?: number[]
           score_id?: string | null
           user_id?: string
+          zero_dice?: boolean
         }
         Relationships: [
           {
@@ -1169,6 +1172,7 @@ export type Database = {
           results: number[]
           score_id: string | null
           user_id: string
+          zero_dice: boolean
         }
         Insert: {
           character_id?: string | null
@@ -1185,6 +1189,7 @@ export type Database = {
           results?: number[]
           score_id?: string | null
           user_id: string
+          zero_dice?: boolean
         }
         Update: {
           character_id?: string | null
@@ -1201,6 +1206,7 @@ export type Database = {
           results?: number[]
           score_id?: string | null
           user_id?: string
+          zero_dice?: boolean
         }
         Relationships: [
           {
