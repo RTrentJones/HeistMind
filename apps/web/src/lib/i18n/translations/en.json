@@ -997,7 +997,13 @@
       "startHeading": "Not sure where to start?",
       "starterHintPrefix": "The easiest path is to add a",
       "starterHintLink": "starter ruleset",
-      "starterHintSuffix": "and edit your copy — no JSON required."
+      "starterHintSuffix": "and edit your copy — no JSON required.",
+      "attestLabel": "I have the right to upload this content, and it doesn't infringe anyone's intellectual property.",
+      "attestHintPrefix": "Uploads are licensed to HeistMind to host and display to your campaigns per the ",
+      "attestTermsLink": "Terms of Service",
+      "attestHintJoiner": ". Copyright complaints are handled under the ",
+      "attestDmcaLink": "DMCA policy",
+      "attestHintSuffix": "."
     }
   },
   "errors": {

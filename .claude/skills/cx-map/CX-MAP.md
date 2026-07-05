@@ -231,8 +231,12 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 - **Components:** `RulesetUpload` (`apps/web/src/features/rulesets/components/RulesetUpload.tsx`).
 - **Actions:** upload a `.json` file or paste JSON; validate + save. Validation errors list inline.
   A **guidance card** (F35) outlines the required/optional JSON shape and points to the starter
-  catalog as the no-JSON path.
+  catalog as the no-JSON path. **IP attestation (2026-07-05):** a required checkbox ("I have the
+  right to upload this content…") gates the Upload button — the ToS §2 warranty restated at the
+  moment it matters — with a muted line linking `/legal/terms` and `/legal/dmca`. (The e2e
+  `uploadRuleset` helper checks it for every spec.)
 - **Nav:** → `/rulesets` on success.
+- _Last verified:_ 2026-07-05 (attestation gate added)
 
 ### `/characters` — My Characters (Phase 5 — portable characters)
 

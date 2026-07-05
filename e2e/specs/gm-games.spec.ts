@@ -29,6 +29,7 @@ test.describe('GM: rulesets & games', () => {
   test('malformed ruleset upload is rejected with a validation error', async ({ gmPage }) => {
     await gmPage.goto('/rulesets/new');
     await gmPage.locator('#ruleset-file').setInputFiles(fixturePath('malformed.json'));
+    await gmPage.getByLabel(/right to upload this content/i).check();
     const upload = gmPage.getByRole('button', { name: 'Upload ruleset' });
     await expect(upload).toBeEnabled();
     await upload.click();

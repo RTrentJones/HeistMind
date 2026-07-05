@@ -17,6 +17,7 @@ export function RulesetUpload() {
   const { t } = useTranslation();
   const createRuleset = useCreateRuleset();
   const [raw, setRaw] = useState('');
+  const [attested, setAttested] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -109,12 +110,37 @@ export function RulesetUpload() {
         <ErrorDisplay title={t('forms.rulesetUpload.invalidTitle')} message={errors.join(' • ')} />
       )}
 
+      {/* IP attestation — gates the upload (the ToS §2 warranty, restated at the moment it
+          matters). Links live OUTSIDE the label so clicking them doesn't toggle the checkbox. */}
+      <Stack direction='column' gap='xs'>
+        <label className='flex items-start gap-2 text-sm text-foreground-secondary'>
+          <input
+            type='checkbox'
+            checked={attested}
+            onChange={e => setAttested(e.target.checked)}
+            className='mt-1'
+          />
+          <span>{t('forms.rulesetUpload.attestLabel')}</span>
+        </label>
+        <Text variant='muted' size='xs' className='pl-6'>
+          {t('forms.rulesetUpload.attestHintPrefix')}
+          <Link href='/legal/terms' className='underline'>
+            {t('forms.rulesetUpload.attestTermsLink')}
+          </Link>
+          {t('forms.rulesetUpload.attestHintJoiner')}
+          <Link href='/legal/dmca' className='underline'>
+            {t('forms.rulesetUpload.attestDmcaLink')}
+          </Link>
+          {t('forms.rulesetUpload.attestHintSuffix')}
+        </Text>
+      </Stack>
+
       <Stack direction='row' gap='sm' align='center'>
         <Button
           variant='ember'
           onClick={onSubmit}
           loading={createRuleset.isPending}
-          disabled={!raw.trim()}
+          disabled={!raw.trim() || !attested}
         >
           {t('forms.rulesetUpload.uploadCta')}
         </Button>
