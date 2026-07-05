@@ -10,6 +10,10 @@
 // Setting: Brackwater, a drowned, lantern-lit canal city of smugglers under perpetual storm,
 // where the dead rise from the water as the "Tide-touched" and fortunes are cut from smuggled
 // saltglass. Every name below is content — rename freely by editing this file.
+//
+// 2026-07 originality pass: a handful of ability display names that coincided with SRD ability
+// names were renamed to originals (ids kept stable — they're internal references only), and the
+// stray setting term "sparkcraft" became "cogwork", so the originality claim above holds.
 import type { RulesetContent } from '@heist-mind/core';
 
 export const DEFAULT_RULESET: RulesetContent = {
@@ -371,9 +375,9 @@ export const DEFAULT_RULESET: RulesetContent = {
       name: 'Gadgeteer',
       tier: 1,
       category: 'brewer',
-      description: 'Build small sparkcraft devices and gadgets suited to the job at hand.',
+      description: 'Build small cogwork devices and gadgets suited to the job at hand.',
       rules:
-        'When you gather information for a job, you also build a small sparkcraft gadget suited to it. You and the GM define what it does together.',
+        'When you gather information for a job, you also build a small cogwork gadget suited to it. You and the GM define what it does together.',
     },
     {
       id: 'brewer-wardsmith',
@@ -469,7 +473,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'eel-daredevil',
-      name: 'Daredevil',
+      name: 'Death-Defier',
       tier: 1,
       category: 'eel',
       description: 'When you take a desperate action, gain a bonus die and resist its fallout.',
@@ -506,7 +510,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'mask-connected',
-      name: 'Connected',
+      name: 'Everyone Owes Me',
       tier: 1,
       category: 'mask',
       description: 'Earn a little extra coin on the side from your dealings each job.',
@@ -515,7 +519,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'mask-ghostvoice',
-      name: 'Ghost Voice',
+      name: 'Drowned Voice',
       tier: 2,
       category: 'mask',
       description: 'Speak with the Tide-touched calmly, without fear or harm.',
@@ -544,7 +548,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     // --- The Weaver ---
     {
       id: 'weaver-mastermind',
-      name: 'Mastermind',
+      name: 'Grand Design',
       tier: 1,
       category: 'weaver',
       description: "Protect an ally's resolve; when you lead, you take less stress doing it.",
@@ -553,7 +557,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'weaver-foresight',
-      name: 'Foresight',
+      name: 'Contingencies',
       tier: 1,
       category: 'weaver',
       description: 'Gain an extra downtime activity to prepare a scheme.',
@@ -562,7 +566,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'weaver-calculating',
-      name: 'Calculating',
+      name: 'Cold Ledger',
       tier: 1,
       category: 'weaver',
       description: 'Improve the detail and effect of a plan you set in motion.',
@@ -619,7 +623,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'medium-compel',
-      name: 'Compel',
+      name: 'Command the Dead',
       tier: 1,
       category: 'medium',
       description: 'Briefly command a nearby spirit to act on your word.',
@@ -628,7 +632,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'medium-tempest',
-      name: 'Tempest',
+      name: 'Stormcall',
       tier: 2,
       category: 'medium',
       prerequisite: 'medium-commune',
@@ -656,7 +660,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     },
     {
       id: 'medium-strange',
-      name: 'Strange Methods',
+      name: 'Uncanny Rites',
       tier: 1,
       category: 'medium',
       description: 'Devise strange arcane methods, designs, and apparatus.',
