@@ -1,6 +1,7 @@
 {
   "name": "@heist-mind/shared",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared utilities and types for HeistMind",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

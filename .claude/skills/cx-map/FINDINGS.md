@@ -496,6 +496,27 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   is deduping the double utility import; tracked here until someone takes that on.
 - **status:** open (workaround in place; audit other `hidden <bp>:` usages when touching them)
 
+### F82 — Repo shipped Duskwall _setting_ content outside the CC BY grant (IP audit 2026-07-05)
+
+- **severity:** S2 · **type:** IP/licensing (audit-found, not user-visible)
+- **where:** the BitD builtin (`packages/shared/src/builtin-rulesets/blades-in-the-dark.ts`)
+  shipped six named Doskvol factions (Bluecoats, Spirit Wardens, Lampblacks, Red Sashes, Crows,
+  Circle of Flame), "Duskvol" in its description + catalog blurb, "electroplasmic" (×2) and a
+  "spirit warden" contact; product copy used "Doskvol" (`auth.signIn.newUser`,
+  `roleSelection.scoundrel.features`) and "Bluecoat"/"Lampblack" name placeholders; Brackwater
+  leaked the setting term "sparkcraft" and 9 SRD-coincident ability display names against its
+  "everything original" header; Storybook demos + e2e fixture names used setting names.
+- **root cause:** the SRD's CC BY 3.0 grant covers the _system_ but excludes the Duskwall
+  setting/NPCs/art/maps (bladesinthedark.com/licensing) — the setting layer was bolted onto an
+  otherwise-clean system implementation. Wicked Ones CC0 claim externally verified true
+  (Bandit Camp, Jan 2024); e2e ruleset fixtures (cinders/veil), migrations, and docs are clean.
+- **fix:** PR #151 (shared: drop factions block, de-Duskvol description/blurb,
+  spectral/ghost-hunter renames, Brackwater originality pass) + the web-copy reskin PR
+  (en.json, seam fixtures, e2e campaign names, Storybook, design-tokens comment). Existing user
+  DB copies are load-time snapshots — intentionally unaffected.
+- **status:** fixed (PR #151 + web-copy reskin PR) — legal-pages series (/legal/\*, footer,
+  clickwrap, upload attestation) tracks separately.
+
 ### F81 — "My Characters" is missing from the persistent nav
 
 - **severity:** S4 · **type:** CX-flaw

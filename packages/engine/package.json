@@ -1,6 +1,7 @@
 {
   "name": "@heist-mind/engine",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "HeistMind's application use-cases: the multi-step game operations (roll → stress, scores, retire, loadout, vice) every client — web now, the Discord bot next — drives through one implementation. Pure orchestration over the repository contracts; returns domain data, never UI copy.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

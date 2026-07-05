@@ -57,6 +57,9 @@ export function AuthHeader() {
             <Button asChild variant='ghost' size='sm'>
               <Link href='/rulesets'>{t('navigation.rulesets')}</Link>
             </Button>
+            <Button asChild variant='ghost' size='sm'>
+              <Link href='/settings'>{t('navigation.settings')}</Link>
+            </Button>
             <Text size='sm' variant='muted'>
               {t('auth.header.welcomeUser', {
                 name: user.profile?.displayName || user.email || '',

@@ -1,6 +1,7 @@
 {
   "name": "@heist-mind/core",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "HeistMind's pure domain: FitD types + rules. No I/O, no framework — consumed by every client (web, Discord bot) and by the data layer.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

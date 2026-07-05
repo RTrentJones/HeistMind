@@ -1,7 +1,7 @@
 // HeistMind Design System - Atmospheric TTRPG Theme
 export const designTokens = {
   colors: {
-    // Doskvol-inspired dark palette
+    // Lantern-lit harbor-night dark palette
     background: {
       primary: 'hsl(220 15% 8%)', // Deep shadow
       secondary: 'hsl(217 20% 12%)', // Subtle layers
