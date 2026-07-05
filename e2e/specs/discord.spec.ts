@@ -143,8 +143,9 @@ test.describe('Discord interactions endpoint', () => {
       .insert({
         name: 'Bot E2E RS',
         created_by: gm.id!,
+        // The REAL content shape (F69): actions are NAMES on attributes[].skills.
         content: {
-          skills: [{ id: 'skirmish', name: 'Skirmish', description: '', attribute: 'prowess' }],
+          attributes: [{ id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish'] }],
         },
       })
       .select('id')
@@ -233,7 +234,7 @@ test.describe('Discord interactions endpoint', () => {
         game_id: game.data!.id,
         original_ruleset_id: ruleset.data!.id,
         playbook_type: 'cutter',
-        character_data: { playbook: 'cutter', attributes: {}, skills: { skirmish: 2 }, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+        character_data: { playbook: 'cutter', attributes: {}, skills: { Skirmish: 2 }, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
       })
       .select('id')
       .single();

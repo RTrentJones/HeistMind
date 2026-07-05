@@ -6,7 +6,12 @@
 //             roll PERSISTS via the engine (repo recomputes the outcome from the faces —
 //             anti-forge — and push charges its real 2 stress). Otherwise display-only with a
 //             footer saying why.
-import { diceForRating, rollOutcome, type CharacterWithDetails } from '@heist-mind/core';
+import {
+  diceForRating,
+  rollOutcome,
+  rulesetActions,
+  type CharacterWithDetails,
+} from '@heist-mind/core';
 import { rollAction } from '@heist-mind/engine';
 import type {
   APIApplicationCommandAutocompleteInteraction,
@@ -22,14 +27,18 @@ import { deferred, inline, reply, replyEmbed } from '../respond';
 import type { BotContext, CommandHandler } from '../types';
 import { discordUserId } from './character';
 
-/** Match a typed action name to the ruleset's action list; returns [id, displayName] or null. */
-function resolveAction(
-  character: CharacterWithDetails,
-  typed: string
-): { id: string; name: string } | null {
-  const skills = character.ruleset.content.skills ?? [];
-  const match = skills.find(s => s.name.toLowerCase() === typed.toLowerCase());
-  return match ? { id: match.id, name: match.name } : null;
+/**
+ * Match a typed action name against the ruleset's CANONICAL action list — `rulesetActions`
+ * (names collected from `attributes[].skills`), the same source the web sheet and the validator
+ * use. Ratings are keyed by that NAME in `characterData.skills`. (The top-level `content.skills`
+ * DEFINITIONS are optional flavor — the default ruleset ships with them empty; F69.)
+ */
+function resolveAction(character: CharacterWithDetails, typed: string): string | null {
+  return (
+    rulesetActions(character.ruleset.content).find(
+      name => name.toLowerCase() === typed.toLowerCase()
+    ) ?? null
+  );
 }
 
 /** Load the actor's active character with details (the shared sheet lookup). */
@@ -83,7 +92,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       const resolved = resolveAction(character, action);
       if (!resolved) return failEphemeral(copy.unknownAction(action));
 
-      const rating = character.characterData.skills[resolved.id] ?? 0;
+      const rating = character.characterData.skills[resolved] ?? 0;
       const pool = rating + extra + (push ? 1 : 0);
       const { count, zeroDice } = diceForRating(pool);
       const results = ctx.realize(count);
@@ -105,7 +114,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
           userId: character.createdBy,
           characterId: character.id,
           kind: 'action',
-          label: resolved.name,
+          label: resolved,
           dice: count,
           results,
           zeroDice,
@@ -121,7 +130,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
 
       const noteParts = [...(pushNote ? [pushNote] : []), ...(note ? [note] : [])];
       const embed = rollEmbed({
-        title: copy.sheetRollTitle(character.name, resolved.name, rating, extra, push),
+        title: copy.sheetRollTitle(character.name, resolved, rating, extra, push),
         results,
         outcome: rollOutcome(results, { zeroDice }),
         detail: copy.positionEffect(position, effect),
@@ -156,12 +165,12 @@ export async function rollAutocomplete(
         .find(o => o.name === 'action')
         ?.value?.toString()
         .toLowerCase() ?? '';
-    return (character.ruleset.content.skills ?? [])
-      .filter(s => s.name.toLowerCase().includes(typed))
+    return rulesetActions(character.ruleset.content)
+      .filter(name => name.toLowerCase().includes(typed))
       .slice(0, 25)
-      .map(s => {
-        const rating = character.characterData.skills[s.id] ?? 0;
-        return { name: `${s.name} (${rating}d)`, value: s.name };
+      .map(name => {
+        const rating = character.characterData.skills[name] ?? 0;
+        return { name: `${name} (${rating}d)`, value: name };
       });
   } catch {
     return [];

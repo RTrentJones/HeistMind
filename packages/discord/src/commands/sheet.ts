@@ -2,7 +2,12 @@
 // engine use-cases (the ownership gate and the campaign-feed logging live THERE; these handlers
 // resolve the actor's active character, realize dice where needed, and phrase the outcome).
 // All public: they're table-facing gameplay events, and in a DM "public" is just you.
-import { stressBounds, type CharacterWithDetails, type HarmLevel } from '@heist-mind/core';
+import {
+  rulesetActions,
+  stressBounds,
+  type CharacterWithDetails,
+  type HarmLevel,
+} from '@heist-mind/core';
 import {
   advanceCharacter,
   applyStress,
@@ -177,18 +182,20 @@ function decodePick(
     };
   }
   if (kind === 'skill' && id) {
-    const def = (content.skills ?? []).find(s => s.id === id);
-    if (!def) return null;
+    // Actions are NAMES from `attributes[].skills` (the canonical list — F69); the advancement
+    // target is that name, exactly like the web's advanceAction.
+    const name = rulesetActions(content).find(a => a.toLowerCase() === id.toLowerCase());
+    if (!name) return null;
     return {
       advancement: {
         type: 'skill',
-        target: def.id,
+        target: name,
         value: 1,
         cost: 0,
-        description: `Add a dot to ${def.name}`,
+        description: `Add a dot to ${name}`,
       },
-      what: copy.actionDot(def.name),
-      logNote: copy.xpLogDot(def.name),
+      what: copy.actionDot(name),
+      logNote: copy.xpLogDot(name),
     };
   }
   return null;
@@ -283,9 +290,9 @@ export async function xpAutocomplete(
     const abilities = content.specialAbilities
       .filter(a => !owned.includes(a.id))
       .map(a => ({ name: `Learn ${a.name}`, value: `ability:${a.id}` }));
-    const dots = (content.skills ?? []).map(s => {
-      const rating = character.characterData.skills[s.id] ?? 0;
-      return { name: `+1 ${s.name} dot (${rating}→${rating + 1})`, value: `skill:${s.id}` };
+    const dots = rulesetActions(content).map(name => {
+      const rating = character.characterData.skills[name] ?? 0;
+      return { name: `+1 ${name} dot (${rating}→${rating + 1})`, value: `skill:${name}` };
     });
     return [...abilities, ...dots]
       .filter(c => c.name.toLowerCase().includes(typed))

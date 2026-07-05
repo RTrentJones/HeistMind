@@ -450,6 +450,22 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
   over-budget set (`veteranPicksUsed` in character-rules).
 
+### F69 — Bot action resolution read the WRONG field — no ruleset using the canonical shape worked
+
+- **severity:** S1 · **type:** CX (found by the beta go-live smoke test, right after F68)
+- **where:** `/roll action:` (resolve + autocomplete) and `/xp advance`'s action dots read the
+  top-level `content.skills` DEFINITIONS and keyed ratings by skill id — but the canonical model
+  (web sheet, wizard, `validateCharacter`) is **`rulesetActions(content)`**: action NAMES from
+  `attributes[].skills`, ratings keyed by NAME. The default starter ruleset ships
+  `content.skills: []` by design, so every sheet roll surface showed "no actions". The unit AND
+  e2e fixtures had invented the id-keyed shape — real data never looked like that, and three
+  phases of green tests proved a path production data can't take.
+- **found by:** the operator's `/roll action:` on a fresh default-ruleset character (2026-07-04).
+- **status:** **fixed** — resolve/autocomplete/advance all go through `rulesetActions` (names,
+  case-insensitive match), fixtures and the e2e seed corrected to the real shape. Lesson (same
+  family as F68): fixtures must mirror the production data shape, not a shape that merely
+  satisfies the code under test.
+
 ### F68 — profiles.discord_id was never populated — the bot's account link was broken for EVERYONE
 
 - **severity:** S1 · **type:** CX (found by the first real go-live smoke test)

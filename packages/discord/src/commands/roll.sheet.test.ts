@@ -14,6 +14,8 @@ afterEach(() => clearActorCache());
 
 const ok = <T,>(data: T) => ({ success: true as const, data });
 
+// The REAL content shape (F69): actions are NAMES on `attributes[].skills` (rulesetActions),
+// ratings keyed by NAME — the top-level `skills` definitions stay empty like the default ruleset.
 const DETAILS = {
   id: 'c1',
   name: 'Silks',
@@ -22,15 +24,14 @@ const DETAILS = {
   ruleset: {
     content: {
       playbooks: [],
-      attributes: [],
-      characterCreation: { steps: [] },
-      skills: [
-        { id: 'skirmish', name: 'Skirmish', description: '', attribute: 'prowess' },
-        { id: 'prowl', name: 'Prowl', description: '', attribute: 'prowess' },
+      attributes: [
+        { id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish', 'Prowl'] },
       ],
+      characterCreation: { steps: [] },
+      skills: [],
     },
   },
-  characterData: { playbook: 'cutter', skills: { skirmish: 2 }, attributes: {}, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+  characterData: { playbook: 'cutter', skills: { Skirmish: 2 }, attributes: {}, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
 };
 
 function repos(): DatabaseRepositories {
