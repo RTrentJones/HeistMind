@@ -1,14 +1,14 @@
 // Phase-3 GM-command spec: /score /crew /clock /faction drive the REAL engine use-cases against
 // the LINKED campaign behind the GM gate — pinning the rules (heat cascade, tier gate, clock
-// completion milestone), the feed events, and the leak-nothing failure paths.
+// completion milestone), the feed events, and the leak-nothing failure paths. The campaign
+// fixtures (GAME/CREW/CLOCK/FACTION) and scaffolding come from the shared helpers.
 import type {
   APIApplicationCommandAutocompleteInteraction,
   APIApplicationCommandInteraction,
 } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DatabaseRepositories } from '@heist-mind/database';
 import { clearActorCache } from '../authz';
-import type { BotContext, FollowUpClient, HandlerResult } from '../types';
+import { content, CREW, ctx, ok, repos, run } from '../test/helpers';
 import {
   clockAutocomplete,
   factionAutocomplete,
@@ -20,55 +20,12 @@ import {
 
 afterEach(() => clearActorCache());
 
-const ok = <T,>(data: T) => ({ success: true as const, data });
-
-const GAME = { id: 'g1', name: 'The Docks Job', state: 'active' };
-const CREW = { id: 'cr1', gameId: 'g1', name: 'The Silver Nails', tier: 1, rep: 13, heat: 8, wanted: 2 };
-const CLOCK = { id: 'cl1', gameId: 'g1', name: 'Alarm', filled: 3, segments: 4 };
-const FACTION = { id: 'f1', gameId: 'g1', name: 'The Hive', status: 1 };
-
-function repos(overrides: Record<string, unknown> = {}): DatabaseRepositories {
-  return {
-    profiles: { findByDiscordId: vi.fn().mockResolvedValue(ok({ id: 'p1', username: 'gm' })) },
-    games: { findByDiscordChannel: vi.fn().mockResolvedValue(ok(GAME)) },
-    gamePlayers: { isGameMaster: vi.fn().mockResolvedValue(ok(true)) },
-    scores: {
-      start: vi.fn().mockResolvedValue(ok({ id: 's1', name: 'The Vault' })),
-      end: vi.fn().mockResolvedValue(ok({ id: 's1', name: 'The Vault' })),
-      findActive: vi.fn().mockResolvedValue(ok({ id: 's1', name: 'The Vault' })),
-    },
-    crews: {
-      findByGame: vi.fn().mockResolvedValue(ok(CREW)),
-      update: vi.fn().mockImplementation((_id: string, patch: object) =>
-        Promise.resolve(ok({ ...CREW, ...patch }))
-      ),
-    },
-    clocks: {
-      findByGame: vi.fn().mockResolvedValue(ok([CLOCK])),
-      update: vi.fn().mockImplementation((_id: string, patch: object) =>
-        Promise.resolve(ok({ ...CLOCK, ...patch }))
-      ),
-    },
-    factions: {
-      findByGame: vi.fn().mockResolvedValue(ok([FACTION])),
-      update: vi.fn().mockImplementation((_id: string, patch: object) =>
-        Promise.resolve(ok({ ...FACTION, ...patch }))
-      ),
-    },
-    rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
-    ...overrides,
-  } as unknown as DatabaseRepositories;
-}
-
-const ctx = (r: DatabaseRepositories | null): BotContext => ({
-  realize: () => [],
-  deploySha: 'test',
-  siteUrl: 'https://heistmind.example',
-  repos: r,
-});
-
 type Option = { name: string; type: number; value?: unknown };
-const guildCmd = (name: string, sub: string, options: Option[] = []): APIApplicationCommandInteraction =>
+const guildCmd = (
+  name: string,
+  sub: string,
+  options: Option[] = []
+): APIApplicationCommandInteraction =>
   ({
     type: 2,
     guild_id: 'guild-1',
@@ -77,31 +34,14 @@ const guildCmd = (name: string, sub: string, options: Option[] = []): APIApplica
     data: { name, type: 1, options: [{ name: sub, type: 1, options }] },
   }) as unknown as APIApplicationCommandInteraction;
 
-function captureFollowUp() {
-  const calls: { method: string; payload?: unknown }[] = [];
-  const client: FollowUpClient = {
-    editOriginal: payload => (calls.push({ method: 'edit', payload }), Promise.resolve()),
-    deleteOriginal: () => (calls.push({ method: 'delete' }), Promise.resolve()),
-    sendEphemeral: content => (calls.push({ method: 'ephemeral', payload: content }), Promise.resolve()),
-  };
-  return { client, calls };
-}
-
-async function run(result: HandlerResult) {
-  const { client, calls } = captureFollowUp();
-  if (!result.work) throw new Error('expected deferred work');
-  await result.work(client);
-  return calls;
-}
-
-const content = (calls: { payload?: unknown }[]) =>
-  String((calls[0]?.payload as { content?: string })?.content ?? '');
-
 describe('/score', () => {
   it('start creates the score and logs a score event tagged with it', async () => {
     const r = repos();
     const calls = await run(
-      await handleScore(ctx(r), guildCmd('score', 'start', [{ name: 'name', type: 3, value: 'The Vault' }]))
+      await handleScore(
+        ctx(r),
+        guildCmd('score', 'start', [{ name: 'name', type: 3, value: 'The Vault' }])
+      )
     );
     expect(r.scores.start).toHaveBeenCalledWith('p1', { gameId: 'g1', name: 'The Vault' });
     expect(r.rolls.create).toHaveBeenCalledWith(
@@ -188,7 +128,10 @@ describe('/clock tick', () => {
   it('a completing tick announces the milestone and logs a clock event', async () => {
     const r = repos();
     const calls = await run(
-      await handleClock(ctx(r), guildCmd('clock', 'tick', [{ name: 'clock', type: 3, value: 'cl1' }]))
+      await handleClock(
+        ctx(r),
+        guildCmd('clock', 'tick', [{ name: 'clock', type: 3, value: 'cl1' }])
+      )
     );
     expect(r.clocks.update).toHaveBeenCalledWith('cl1', { filled: 4 });
     expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'clock' }));
@@ -212,7 +155,10 @@ describe('/clock tick', () => {
     expect(content(calls)).toContain('2/4');
 
     const missing = await run(
-      await handleClock(ctx(repos()), guildCmd('clock', 'tick', [{ name: 'clock', type: 3, value: 'Nope' }]))
+      await handleClock(
+        ctx(repos()),
+        guildCmd('clock', 'tick', [{ name: 'clock', type: 3, value: 'Nope' }])
+      )
     );
     expect(String(missing[1]?.payload)).toContain('No clock');
   });
@@ -237,7 +183,11 @@ describe('/faction status', () => {
 });
 
 describe('GM autocompletes', () => {
-  const auto = (name: string, sub: string, options: Option[]): APIApplicationCommandAutocompleteInteraction =>
+  const auto = (
+    name: string,
+    sub: string,
+    options: Option[]
+  ): APIApplicationCommandAutocompleteInteraction =>
     ({
       type: 4,
       guild_id: 'guild-1',
@@ -248,7 +198,10 @@ describe('GM autocompletes', () => {
 
   it('clock/faction suggest the linked campaign’s state with ids as values', async () => {
     expect(
-      await clockAutocomplete(ctx(repos()), auto('clock', 'tick', [{ name: 'clock', type: 3, value: '' }]))
+      await clockAutocomplete(
+        ctx(repos()),
+        auto('clock', 'tick', [{ name: 'clock', type: 3, value: '' }])
+      )
     ).toEqual([{ name: 'Alarm (3/4)', value: 'cl1' }]);
     clearActorCache();
     expect(
@@ -262,12 +215,20 @@ describe('GM autocompletes', () => {
   it('a non-GM (or unlinked channel) gets NOTHING — no campaign state leaks', async () => {
     const notGm = repos({ gamePlayers: { isGameMaster: vi.fn().mockResolvedValue(ok(false)) } });
     expect(
-      await clockAutocomplete(ctx(notGm), auto('clock', 'tick', [{ name: 'clock', type: 3, value: '' }]))
+      await clockAutocomplete(
+        ctx(notGm),
+        auto('clock', 'tick', [{ name: 'clock', type: 3, value: '' }])
+      )
     ).toEqual([]);
     clearActorCache();
-    const unlinked = repos({ games: { findByDiscordChannel: vi.fn().mockResolvedValue(ok(null)) } });
+    const unlinked = repos({
+      games: { findByDiscordChannel: vi.fn().mockResolvedValue(ok(null)) },
+    });
     expect(
-      await factionAutocomplete(ctx(unlinked), auto('faction', 'status', [{ name: 'faction', type: 3, value: '' }]))
+      await factionAutocomplete(
+        ctx(unlinked),
+        auto('faction', 'status', [{ name: 'faction', type: 3, value: '' }])
+      )
     ).toEqual([]);
   });
 });

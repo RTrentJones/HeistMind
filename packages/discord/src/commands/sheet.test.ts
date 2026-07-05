@@ -1,15 +1,18 @@
 // Phase-3 sheet-command spec: /stress /harm /vice /xp drive the REAL engine use-cases over
 // mocked repos — pinning the call shapes, the RAW behaviors (escalation, overindulgence, the
-// zero-dice vice pool), and the delete+ephemeral failure paths.
+// zero-dice vice pool), and the delete+ephemeral failure paths. Scaffolding comes from the
+// shared helpers; the character fixtures stay PURPOSE-BUILT because these suites pin scenario
+// shapes the shipped default ruleset can't express (a FLAT-XP ruleset for the banked-XP paths —
+// Brackwater always has xpTracks — plus specific harm arrays, stress levels, and a cost-2
+// advancement option).
 import type {
   APIApplicationCommandAutocompleteInteraction,
   APIApplicationCommandInteraction,
   APIEmbed,
 } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DatabaseRepositories } from '@heist-mind/database';
 import { clearActorCache } from '../authz';
-import type { BotContext, FollowUpClient, HandlerResult } from '../types';
+import { content, ctx, fail, ok, repos as baseRepos, run } from '../test/helpers';
 import {
   handleHarm,
   handleStress,
@@ -20,9 +23,6 @@ import {
 } from './sheet';
 
 afterEach(() => clearActorCache());
-
-const ok = <T,>(data: T) => ({ success: true as const, data });
-const fail = (message: string) => ({ success: false as const, error: { message } });
 
 const details = (over: Record<string, unknown> = {}) => ({
   id: 'c1',
@@ -39,7 +39,9 @@ const details = (over: Record<string, unknown> = {}) => ({
       characterCreation: { steps: [] },
       skills: [],
       specialAbilities: [{ id: 'battleborn', name: 'Battleborn', description: '' }],
-      advancement: { advancementOptions: [{ id: 'a1', name: 'New ability', category: 'ability', cost: 2 }] },
+      advancement: {
+        advancementOptions: [{ id: 'a1', name: 'New ability', category: 'ability', cost: 2 }],
+      },
     },
   },
   characterData: {
@@ -57,34 +59,8 @@ const details = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function repos(overrides: Record<string, unknown> = {}, character = details()): DatabaseRepositories {
-  return {
-    profiles: { findByDiscordId: vi.fn().mockResolvedValue(ok({ id: 'p1', username: 'silks' })) },
-    discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok('c1')) },
-    characters: {
-      findWithDetails: vi.fn().mockResolvedValue(ok(character)),
-      findById: vi.fn().mockResolvedValue(ok(character)),
-      addExperience: vi.fn().mockResolvedValue(ok({ ...character, experiencePoints: 5 })),
-    },
-    characterManagement: {
-      updateCharacterWithValidation: vi
-        .fn()
-        .mockImplementation((_id: string, _uid: string, data: { characterData: { stress: number } }) =>
-          Promise.resolve(ok({ ...character, characterData: data.characterData }))
-        ),
-      advanceCharacter: vi.fn().mockResolvedValue(ok(character)),
-    },
-    rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
-    ...overrides,
-  } as unknown as DatabaseRepositories;
-}
-
-const ctx = (r: DatabaseRepositories | null, faces: number[] = []): BotContext => ({
-  realize: count => faces.slice(0, count),
-  deploySha: 'test',
-  siteUrl: 'https://heistmind.example',
-  repos: r,
-});
+const repos = (overrides: Record<string, unknown> = {}, character = details()) =>
+  baseRepos(overrides, character);
 
 type Option = { name: string; type: number; value?: unknown };
 const cmd = (name: string, sub: string, options: Option[] = []): APIApplicationCommandInteraction =>
@@ -93,26 +69,6 @@ const cmd = (name: string, sub: string, options: Option[] = []): APIApplicationC
     user: { id: 'discord-1' },
     data: { name, type: 1, options: [{ name: sub, type: 1, options }] },
   }) as unknown as APIApplicationCommandInteraction;
-
-function captureFollowUp() {
-  const calls: { method: string; payload?: unknown }[] = [];
-  const client: FollowUpClient = {
-    editOriginal: payload => (calls.push({ method: 'edit', payload }), Promise.resolve()),
-    deleteOriginal: () => (calls.push({ method: 'delete' }), Promise.resolve()),
-    sendEphemeral: content => (calls.push({ method: 'ephemeral', payload: content }), Promise.resolve()),
-  };
-  return { client, calls };
-}
-
-async function run(result: HandlerResult) {
-  const { client, calls } = captureFollowUp();
-  if (!result.work) throw new Error('expected deferred work');
-  await result.work(client);
-  return calls;
-}
-
-const content = (calls: { payload?: unknown }[]) =>
-  String((calls[0]?.payload as { content?: string })?.content ?? '');
 
 describe('/stress', () => {
   it('add marks the delta through the engine and reads back the track', async () => {
@@ -139,7 +95,9 @@ describe('/stress', () => {
   });
 
   it('no active character → delete + ephemeral hint', async () => {
-    const r = repos({ discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok(null)) } });
+    const r = repos({
+      discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok(null)) },
+    });
     const calls = await run(
       await handleStress(ctx(r), cmd('stress', 'add', [{ name: 'amount', type: 4, value: 1 }]))
     );
@@ -170,7 +128,10 @@ describe('/harm', () => {
   it('a full track escalates and the reply says so', async () => {
     // BitD lesser has 2 boxes; fill both → the new lesser harm lands moderate.
     const hurt = details({
-      characterData: { stress: 4, harm: { lesser: ['Bruised', 'Winded'], moderate: [], severe: [] } },
+      characterData: {
+        stress: 4,
+        harm: { lesser: ['Bruised', 'Winded'], moderate: [], severe: [] },
+      },
     });
     const r = repos({}, hurt);
     const calls = await run(
@@ -241,7 +202,10 @@ describe('/vice indulge', () => {
     expect(embed?.title).toContain('indulges — 1d');
     expect(embed?.description).toContain('Cleared **3** stress — now 1/9');
     expect(embed?.description).not.toContain('Overindulged');
-    expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'downtime' }));
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'downtime' })
+    );
   });
 
   it('clearing more than was marked flags overindulgence', async () => {
@@ -333,7 +297,10 @@ describe('/xp', () => {
   it('advance decodes an ability pick and phrases the repo’s gate on refusal', async () => {
     const r = repos();
     const calls = await run(
-      await handleXp(ctx(r), cmd('xp', 'advance', [{ name: 'pick', type: 3, value: 'ability:battleborn' }]))
+      await handleXp(
+        ctx(r),
+        cmd('xp', 'advance', [{ name: 'pick', type: 3, value: 'ability:battleborn' }])
+      )
     );
     expect(r.characterManagement.advanceCharacter).toHaveBeenCalledWith(
       'c1',
@@ -349,7 +316,10 @@ describe('/xp', () => {
       },
     });
     const refusal = await run(
-      await handleXp(ctx(gated), cmd('xp', 'advance', [{ name: 'pick', type: 3, value: 'skill:skirmish' }]))
+      await handleXp(
+        ctx(gated),
+        cmd('xp', 'advance', [{ name: 'pick', type: 3, value: 'skill:skirmish' }])
+      )
     );
     expect(String(refusal[1]?.payload)).toContain('Playbook track not full');
   });
@@ -357,7 +327,10 @@ describe('/xp', () => {
   it('an unknown pick fails to the autocomplete hint without touching the engine', async () => {
     const r = repos();
     const calls = await run(
-      await handleXp(ctx(r), cmd('xp', 'advance', [{ name: 'pick', type: 3, value: 'ability:nope' }]))
+      await handleXp(
+        ctx(r),
+        cmd('xp', 'advance', [{ name: 'pick', type: 3, value: 'ability:nope' }])
+      )
     );
     expect(r.characterManagement.advanceCharacter).not.toHaveBeenCalled();
     expect(String(calls[1]?.payload)).toContain('autocomplete');
@@ -365,7 +338,11 @@ describe('/xp', () => {
 });
 
 describe('sheet autocompletes', () => {
-  const auto = (name: string, sub: string, options: Option[]): APIApplicationCommandAutocompleteInteraction =>
+  const auto = (
+    name: string,
+    sub: string,
+    options: Option[]
+  ): APIApplicationCommandAutocompleteInteraction =>
     ({
       type: 4,
       user: { id: 'discord-1' },
@@ -414,7 +391,10 @@ describe('sheet autocompletes', () => {
     ]);
     clearActorCache();
     expect(
-      await xpAutocomplete(ctx(repos()), auto('xp', 'mark', [{ name: 'track', type: 3, value: '' }]))
+      await xpAutocomplete(
+        ctx(repos()),
+        auto('xp', 'mark', [{ name: 'track', type: 3, value: '' }])
+      )
     ).toEqual([]);
   });
 

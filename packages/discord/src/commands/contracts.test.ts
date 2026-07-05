@@ -1,51 +1,25 @@
 // Shape contracts (audit T2): the bot's suggestion surfaces must work for a character on EVERY
 // SHIPPED ruleset — the F69 bug class was an invented fixture proving a path real content can't
 // take (the default ruleset ships content.skills: [] and the bot read exactly that). These run
-// on the real builtins, so a content-shape drift in either the bot or a builtin fails HERE
-// before any player types /roll.
+// on the real builtins via the shared `characterOn` fixture, so a content-shape drift in either
+// the bot or a builtin fails HERE before any player types /roll.
 import type { APIApplicationCommandAutocompleteInteraction } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { rulesetActions, usesXpTracks, type RulesetContent } from '@heist-mind/core';
-import type { DatabaseRepositories } from '@heist-mind/database';
 import { BUILTIN_RULESETS } from '@heist-mind/shared';
 import { clearActorCache } from '../authz';
-import type { BotContext } from '../types';
+import { characterOn, ctx, ok, repos } from '../test/helpers';
 import { rollAutocomplete } from './roll';
 import { xpAutocomplete } from './sheet';
 
 afterEach(() => clearActorCache());
 
-const ok = <T,>(data: T) => ({ success: true as const, data });
-
-function characterOn(content: RulesetContent) {
-  return {
-    id: 'c1',
-    name: 'Contract Runner',
-    createdBy: 'p1',
-    gameId: null,
-    game: null,
-    ruleset: { content },
-    characterData: {
-      playbook: content.playbooks[0]?.id ?? 'none',
-      skills: {},
-      attributes: {},
-      specialAbilities: [],
-      stress: 0,
-      trauma: [],
-      contacts: [],
-      custom: {},
-    },
-  };
-}
-
-function ctxOn(content: RulesetContent): BotContext {
-  const repos = {
-    profiles: { findByDiscordId: vi.fn().mockResolvedValue(ok({ id: 'p1', username: 'c' })) },
-    discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok('c1')) },
-    characters: { findWithDetails: vi.fn().mockResolvedValue(ok(characterOn(content))) },
-  } as unknown as DatabaseRepositories;
-  return { realize: () => [], deploySha: 'test', siteUrl: 'https://x.example', repos };
-}
+const ctxOn = (content: RulesetContent) =>
+  ctx(
+    repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(characterOn(content))) },
+    })
+  );
 
 const auto = (
   name: string,

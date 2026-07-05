@@ -3,6 +3,7 @@
 // caller-realized dice).
 import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
 import { describe, expect, it } from 'vitest';
+import { ctx as baseCtx } from '../test/helpers';
 import type { BotContext, HandlerResult } from '../types';
 import { handleRoll } from './roll';
 import { handleResist } from './resist';
@@ -10,12 +11,8 @@ import { handleFortune } from './fortune';
 import { makeDiceHandler, parseNotation } from './dice';
 import { handleHeist } from './heist';
 
-const ctx = (faces: number[]): BotContext => ({
-  realize: (count: number) => faces.slice(0, count),
-  deploySha: 'abc1234',
-  siteUrl: 'https://heistmind.example',
-  repos: null,
-});
+// Repo-less compute context; /heist about pins the deployed SHA, so override the helper's.
+const ctx = (faces: number[]): BotContext => ({ ...baseCtx(null, faces), deploySha: 'abc1234' });
 
 type Option = { name: string; type: number; value?: unknown; options?: Option[] };
 const cmd = (name: string, options: Option[] = []): APIApplicationCommandInteraction =>
@@ -56,7 +53,12 @@ describe('/roll', () => {
   it('carries position/effect and the note into the embed', async () => {
     const res = await handleRoll(
       ctx([3]),
-      cmd('roll', [int('dice', 1), str('position', 'risky'), str('effect', 'standard'), str('note', 'cross the rooftops')])
+      cmd('roll', [
+        int('dice', 1),
+        str('position', 'risky'),
+        str('effect', 'standard'),
+        str('note', 'cross the rooftops'),
+      ])
     );
     const embed = embedOf(res);
     expect(embed.description).toContain('risky / standard');
@@ -117,10 +119,7 @@ describe('/dice', () => {
 
 describe('/heist about', () => {
   it('replies ephemerally with the deployed SHA and site link', async () => {
-    const res = await handleHeist(
-      ctx([]),
-      cmd('heist', [{ name: 'about', type: 1, options: [] }])
-    );
+    const res = await handleHeist(ctx([]), cmd('heist', [{ name: 'about', type: 1, options: [] }]));
     expect(isEphemeral(res)).toBe(true);
     const embed = embedOf(res);
     expect(embed.description).toContain('abc1234');
@@ -133,7 +132,21 @@ describe('/heist help', () => {
     const res = await handleHeist(ctx([]), cmd('heist', [{ name: 'help', type: 1, options: [] }]));
     expect(isEphemeral(res)).toBe(true);
     const embed = embedOf(res);
-    for (const name of ['/roll', '/resist', '/character', '/stress', '/harm', '/vice', '/xp', '/heist link', '/log', '/score', '/crew', '/clock', '/faction']) {
+    for (const name of [
+      '/roll',
+      '/resist',
+      '/character',
+      '/stress',
+      '/harm',
+      '/vice',
+      '/xp',
+      '/heist link',
+      '/log',
+      '/score',
+      '/crew',
+      '/clock',
+      '/faction',
+    ]) {
       expect(embed.description).toContain(name);
     }
     expect(embed.description).toContain('https://heistmind.example');
