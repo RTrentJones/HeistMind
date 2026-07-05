@@ -254,6 +254,25 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
 
+### `/legal/*` — Legal documents (public, six routes)
+
+- **Files:** `apps/web/src/app/legal/{page,terms/page,privacy/page,dmca/page,acceptable-use/page,licenses/page}.tsx`
+  — **server components** each exporting per-route `metadata`; prose lives in client components in
+  `apps/web/src/features/legal/components/` (`LegalPageLayout` + one `*Content` per document).
+- **Purpose:** `/legal` is the hub (five doc cards); `/legal/terms` (UGC ownership + license grant,
+  repeat-infringer §512(i) hook, disclaimers/liability cap, governing law); `/legal/privacy` (the
+  honest collection list: Discord OAuth profile, game content, Sentry errors; deletion →
+  `/settings` + email); `/legal/dmca` (§512(c)(3) notice checklist, designated agent, counter-notice
+  - 10–14 day restore, §512(f) warning); `/legal/acceptable-use` (IP rules, decency, no probing);
+    `/legal/licenses` (renders `BUILTIN_RULESETS` live — name/license/attribution can't drift — plus
+    the CC BY 3.0 attribution paragraph, CC0/CC BY 4.0 notes, not-affiliated disclaimer, MIT note).
+- **Copy:** deliberately **not** i18n'd (canonical English legal text behind file-level
+  eslint-disable; governing-language clause in the terms). Placeholders `[EFFECTIVE DATE]`,
+  `[STATE]`, `[CONTACT EMAIL]`, `[DMCA AGENT …]` **must be filled before prod promote**.
+- **Nav:** public, no auth gate; AppShell chrome is automatic (paths aren't `/` or `/auth/*`).
+  Footer links (separate PR) are the discovery path.
+- _Last verified:_ 2026-07-05 (feature introduction)
+
 ### Error & 404 surfaces (every route)
 
 - **Files:** `apps/web/src/app/{error,global-error,not-found}.tsx`.
