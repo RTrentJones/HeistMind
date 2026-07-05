@@ -12,8 +12,8 @@ import { useCreateGame } from '../mutations';
 // Representative seam tests: one read hook (Result unwrapping into RQ data/error state) and one
 // write hook (repo call + concept-wide invalidation), per the characters seam pattern.
 
-const GAME = { id: 'g1', name: 'Doskvol Nights', createdBy: 'u1' } as unknown as Game;
-const GAME_DATA = { name: 'Doskvol Nights', rulesetId: 'rs1' } as unknown as CreateGameData;
+const GAME = { id: 'g1', name: 'Brackwater Nights', createdBy: 'u1' } as unknown as Game;
+const GAME_DATA = { name: 'Brackwater Nights', rulesetId: 'rs1' } as unknown as CreateGameData;
 
 function mockRepos(repos: Record<string, unknown>) {
   vi.mocked(getRepositories).mockReturnValue(repos as unknown as DatabaseRepositories);

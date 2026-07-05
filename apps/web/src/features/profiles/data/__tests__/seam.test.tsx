@@ -1,15 +1,16 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Profile } from '@heist-mind/core';
-import type { DatabaseRepositories } from '@heist-mind/database';
-import { getRepositories } from '@/lib/auth';
+import type { AuthService, DatabaseRepositories } from '@heist-mind/database';
+import { getAuthService, getRepositories } from '@/lib/auth';
 import { useProfileNames } from '../queries';
-import { fetchProfile } from '../api';
+import { deleteAccount, fetchProfile } from '../api';
 
-// Profiles has no mutations (profile creation is the DB trigger's job), so both seam cases are
-// read-side: the `useQueries` name fan-out and the non-hook `fetchProfile` the auth store uses.
+// Profiles has no repository mutations (profile creation is the DB trigger's job); the seam cases
+// are the `useQueries` name fan-out, the non-hook `fetchProfile` the auth store uses, and the
+// non-hook `deleteAccount` bridge to the service-role endpoint.
 
 const profile = (id: string, displayName: string, username: string) =>
   ({ id, displayName, username }) as unknown as Profile;
@@ -89,5 +90,45 @@ describe('fetchProfile (non-hook read side)', () => {
     mockRepos({ profiles: { findById } });
 
     await expect(fetchProfile('u1')).resolves.toBeNull();
+  });
+});
+
+describe('deleteAccount (non-hook write side)', () => {
+  const mockSession = (session: { accessToken: string } | null) => {
+    vi.mocked(getAuthService).mockReturnValue({
+      getCurrentSession: vi.fn().mockResolvedValue(session),
+    } as unknown as AuthService);
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('POSTs to the delete endpoint with the session token as a bearer', async () => {
+    mockSession({ accessToken: 'jwt-123' });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(deleteAccount()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith('/api/account/delete', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer jwt-123' },
+    });
+  });
+
+  it('throws without a session and never calls the endpoint', async () => {
+    mockSession(null);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(deleteAccount()).rejects.toThrow('Not signed in.');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws on a non-OK response', async () => {
+    mockSession({ accessToken: 'jwt-123' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+    await expect(deleteAccount()).rejects.toThrow('Account deletion failed (500).');
   });
 });

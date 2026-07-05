@@ -1,6 +1,7 @@
 {
   "name": "heist-mind",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "turbo dev",
@@ -22,7 +23,7 @@
     "build:ui": "turbo build --filter=@heist-mind/ui",
     "build:web": "turbo build --filter=@heist-mind/web",
     "design:bundle": "pnpm build:ui && node design-sync/build.mjs",
-    "design:sync": "pnpm design:bundle && node -e \"console.log('\\nBundle ready in design-sync/bundle \u2014 run /design-sync in Claude Code to push to claude.ai/design.')\"",
+    "design:sync": "pnpm design:bundle && node -e \"console.log('\\nBundle ready in design-sync/bundle — run /design-sync in Claude Code to push to claude.ai/design.')\"",
     "dev:ui": "pnpm --filter=@heist-mind/ui dev",
     "dev:web": "pnpm --filter=@heist-mind/web dev",
     "db:push": "pnpm --filter database db:push",

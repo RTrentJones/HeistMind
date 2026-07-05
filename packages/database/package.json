@@ -1,6 +1,7 @@
 {
   "name": "@heist-mind/database",
   "version": "1.0.0",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
