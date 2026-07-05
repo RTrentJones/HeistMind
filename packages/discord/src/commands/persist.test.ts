@@ -1,61 +1,26 @@
 // PR 2.3 behavior spec: /roll and /resist PERSIST through the real engine use-cases when the
 // surface is linked + the actor is a member + their active character is in that campaign — and
 // stay display-only (footer says why) in every lesser context. Repos are mocked; the engine
-// functions are the real ones, so these tests pin the whole bot→engine→repo call shape.
+// functions are the real ones, so these tests pin the whole bot→engine→repo call shape. The
+// active character rides the REAL shipped DEFAULT_RULESET (F69 fixture-provenance rule) with
+// RATED_ACTION at 2 and ATTRIBUTE as the resistance label.
 import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DatabaseRepositories } from '@heist-mind/database';
 import { clearActorCache } from '../authz';
-import type { BotContext, FollowUpClient, HandlerResult } from '../types';
+import {
+  ATTRIBUTE,
+  characterOnDefaultRuleset,
+  ctx,
+  fail,
+  ok,
+  RATED_ACTION,
+  repos,
+  run,
+} from '../test/helpers';
 import { handleResist } from './resist';
 import { handleRoll } from './roll';
 
 afterEach(() => clearActorCache());
-
-const ok = <T,>(data: T) => ({ success: true as const, data });
-const fail = (message: string) => ({ success: false as const, error: { message } });
-
-const GAME = { id: 'g1', name: 'The Docks Job', state: 'active' };
-
-// The REAL content shape (F69): action names ride `attributes[].skills`; ratings key by NAME.
-const details = (gameId: string | null) => ({
-  id: 'c1',
-  name: 'Silks',
-  createdBy: 'p1',
-  gameId,
-  game: null,
-  ruleset: {
-    content: {
-      playbooks: [],
-      attributes: [{ id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish'] }],
-      characterCreation: { steps: [] },
-      skills: [],
-    },
-  },
-  characterData: { playbook: 'cutter', skills: { Skirmish: 2 }, attributes: {}, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
-});
-
-function repos(overrides: Record<string, unknown> = {}): DatabaseRepositories {
-  return {
-    profiles: { findByDiscordId: vi.fn().mockResolvedValue(ok({ id: 'p1', username: 'silks' })) },
-    discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok('c1')) },
-    characters: { findWithDetails: vi.fn().mockResolvedValue(ok(details('g1'))) },
-    games: { findByDiscordChannel: vi.fn().mockResolvedValue(ok(GAME)) },
-    gamePlayers: { findByGame: vi.fn().mockResolvedValue(ok([{ playerId: 'p1', status: 'active' }])) },
-    rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1', kind: 'action' })) },
-    characterManagement: {
-      updateCharacterWithValidation: vi.fn().mockResolvedValue(ok(details('g1'))),
-    },
-    ...overrides,
-  } as unknown as DatabaseRepositories;
-}
-
-const ctx = (r: DatabaseRepositories | null, faces: number[]): BotContext => ({
-  realize: count => faces.slice(0, count),
-  deploySha: 'test',
-  siteUrl: 'https://heistmind.example',
-  repos: r,
-});
 
 type Option = { name: string; type: number; value?: unknown };
 const guildCmd = (name: string, options: Option[]): APIApplicationCommandInteraction =>
@@ -67,23 +32,6 @@ const guildCmd = (name: string, options: Option[]): APIApplicationCommandInterac
     data: { name, type: 1, options },
   }) as unknown as APIApplicationCommandInteraction;
 
-function captureFollowUp() {
-  const calls: { method: string; payload?: unknown }[] = [];
-  const client: FollowUpClient = {
-    editOriginal: payload => (calls.push({ method: 'edit', payload }), Promise.resolve()),
-    deleteOriginal: () => (calls.push({ method: 'delete' }), Promise.resolve()),
-    sendEphemeral: content => (calls.push({ method: 'ephemeral', payload: content }), Promise.resolve()),
-  };
-  return { client, calls };
-}
-
-async function run(result: HandlerResult) {
-  const { client, calls } = captureFollowUp();
-  if (!result.work) throw new Error('expected deferred work');
-  await result.work(client);
-  return calls;
-}
-
 const firstEmbed = (calls: { payload?: unknown }[]): APIEmbed =>
   (calls[0]?.payload as { embeds: APIEmbed[] }).embeds[0]!;
 
@@ -94,7 +42,7 @@ describe('/roll action — persisted (Phase 2)', () => {
       await handleRoll(
         ctx(r, [6, 5, 4]),
         guildCmd('roll', [
-          { name: 'action', type: 3, value: 'Skirmish' },
+          { name: 'action', type: 3, value: RATED_ACTION },
           { name: 'push', type: 5, value: true },
           { name: 'note', type: 3, value: 'over the wall' },
         ])
@@ -106,7 +54,7 @@ describe('/roll action — persisted (Phase 2)', () => {
         gameId: 'g1',
         characterId: 'c1',
         kind: 'action',
-        label: 'Skirmish',
+        label: RATED_ACTION,
         dice: 3, // rating 2 + push 1
         results: [6, 5, 4],
         zeroDice: false,
@@ -128,16 +76,26 @@ describe('/roll action — persisted (Phase 2)', () => {
   it('not a member of the linked campaign → display-only with the notMember footer', async () => {
     const r = repos({ gamePlayers: { findByGame: vi.fn().mockResolvedValue(ok([])) } });
     const calls = await run(
-      await handleRoll(ctx(r, [5, 3]), guildCmd('roll', [{ name: 'action', type: 3, value: 'Skirmish' }]))
+      await handleRoll(
+        ctx(r, [5, 3]),
+        guildCmd('roll', [{ name: 'action', type: 3, value: RATED_ACTION }])
+      )
     );
     expect(r.rolls.create).not.toHaveBeenCalled();
     expect(firstEmbed(calls).footer?.text).toContain('not a member');
   });
 
   it('active character crews a DIFFERENT campaign → wrongCampaign footer, nothing persisted', async () => {
-    const r = repos({ characters: { findWithDetails: vi.fn().mockResolvedValue(ok(details('g2'))) } });
+    const r = repos({
+      characters: {
+        findWithDetails: vi.fn().mockResolvedValue(ok(characterOnDefaultRuleset({ gameId: 'g2' }))),
+      },
+    });
     const calls = await run(
-      await handleRoll(ctx(r, [5, 3]), guildCmd('roll', [{ name: 'action', type: 3, value: 'Skirmish' }]))
+      await handleRoll(
+        ctx(r, [5, 3]),
+        guildCmd('roll', [{ name: 'action', type: 3, value: RATED_ACTION }])
+      )
     );
     expect(r.rolls.create).not.toHaveBeenCalled();
     expect(firstEmbed(calls).footer?.text).toContain('isn’t in the linked campaign');
@@ -149,7 +107,7 @@ describe('/roll action — persisted (Phase 2)', () => {
       await handleRoll(
         ctx(r, [5, 3, 1]),
         guildCmd('roll', [
-          { name: 'action', type: 3, value: 'Skirmish' },
+          { name: 'action', type: 3, value: RATED_ACTION },
           { name: 'push', type: 5, value: true },
         ])
       )
@@ -163,7 +121,10 @@ describe('/roll action — persisted (Phase 2)', () => {
   it('an engine failure deletes the public defer and apologizes ephemerally', async () => {
     const r = repos({ rolls: { create: vi.fn().mockResolvedValue(fail('boom')) } });
     const calls = await run(
-      await handleRoll(ctx(r, [5, 3]), guildCmd('roll', [{ name: 'action', type: 3, value: 'Skirmish' }]))
+      await handleRoll(
+        ctx(r, [5, 3]),
+        guildCmd('roll', [{ name: 'action', type: 3, value: RATED_ACTION }])
+      )
     );
     expect(calls.map(c => c.method)).toEqual(['delete', 'ephemeral']);
   });
@@ -177,13 +138,19 @@ describe('/resist — persisted (Phase 2)', () => {
         ctx(r, [4, 2]),
         guildCmd('resist', [
           { name: 'dice', type: 4, value: 2 },
-          { name: 'attribute', type: 3, value: 'Prowess' },
+          { name: 'attribute', type: 3, value: ATTRIBUTE },
         ])
       )
     );
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',
-      expect.objectContaining({ gameId: 'g1', characterId: 'c1', kind: 'resistance', label: 'Prowess', results: [4, 2] })
+      expect.objectContaining({
+        gameId: 'g1',
+        characterId: 'c1',
+        kind: 'resistance',
+        label: ATTRIBUTE,
+        results: [4, 2],
+      })
     );
     expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
       'c1',
@@ -200,17 +167,21 @@ describe('/resist — persisted (Phase 2)', () => {
     const calls = await run(
       await handleResist(ctx(r, [6, 6]), guildCmd('resist', [{ name: 'dice', type: 4, value: 2 }]))
     );
-    expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'resistance' }));
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance' })
+    );
     // stress 0 + (−1) clamps back to 0 — the engine skips the no-op write.
     expect(r.characterManagement.updateCharacterWithValidation).not.toHaveBeenCalled();
     expect(firstEmbed(calls).description).toContain('1 stress cleared');
   });
 
   it('in a DM, /resist stays the Phase-0 inline display-only roll', async () => {
-    const result = await handleResist(
-      ctx(repos(), [4, 2]),
-      { type: 2, user: { id: 'discord-1' }, data: { name: 'resist', type: 1, options: [{ name: 'dice', type: 4, value: 2 }] } } as unknown as APIApplicationCommandInteraction
-    );
+    const result = await handleResist(ctx(repos(), [4, 2]), {
+      type: 2,
+      user: { id: 'discord-1' },
+      data: { name: 'resist', type: 1, options: [{ name: 'dice', type: 4, value: 2 }] },
+    } as unknown as APIApplicationCommandInteraction);
     expect(result.work).toBeUndefined();
     expect(result.response.type).toBe(4);
   });
@@ -227,7 +198,9 @@ describe('/resist — persisted (Phase 2)', () => {
   });
 
   it('no active character in a linked channel → the /character use hint footer', async () => {
-    const r = repos({ discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok(null)) } });
+    const r = repos({
+      discordPlayers: { getActiveCharacterId: vi.fn().mockResolvedValue(ok(null)) },
+    });
     const calls = await run(
       await handleResist(ctx(r, [4, 2]), guildCmd('resist', [{ name: 'dice', type: 4, value: 2 }]))
     );
