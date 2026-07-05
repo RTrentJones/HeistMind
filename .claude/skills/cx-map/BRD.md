@@ -1,10 +1,12 @@
 # HeistMind — Business Requirements Document (BRD)
 
 The scope-of-record for HeistMind. Sibling of `STATUS.md` (what's built), `CX-MAP.md` (every
-page/flow), and `FINDINGS.md` (the prioritized backlog). When scope changes, edit here first, then
-reconcile the others.
+page/flow), `FINDINGS.md` (the prioritized defect/improvement backlog), and `COMPETITIVE.md`
+(positioning). When scope changes, edit here first, then reconcile the others.
 
-_Last reviewed: 2026-06-28 (value-prop sharpened to two modes; Phase 5 portable-characters spec added)._
+_Last reviewed: 2026-07-05 (v2 — full rewrite: personas + user stories added, NFRs added,
+coverage table refreshed post-Phase-4/5 and the piping-bug audit; requirement IDs R-A…R-I are
+STABLE and unchanged — they are referenced throughout `FINDINGS.md` and `CX-MAP.md`)._
 
 ## Product statement
 
@@ -17,450 +19,404 @@ manager** for Forged in the Dark, used **two ways** (one product, two modes):
 >
 > **Mode 2 — the live mechanical layer for async play-by-post on Discord.** As a PbP game posts over
 > days/weeks, HeistMind holds the shared mechanical state — rolls, clocks, stress, per-score gear,
-> crew/faction state, and a score-grouped campaign log. **The narrative stays in Discord prose; the
-> mechanics + shared truth live here.** _("Avrae for Forged in the Dark" — and FitD has no Avrae
-> today; the competitive frame is in `COMPETITIVE.md`.)_
+> crew/faction state, and a score-grouped campaign log — reachable both in-app and **as slash
+> commands in Discord itself** (the shipped bot). **The narrative stays in Discord prose; the
+> mechanics + shared truth live here.** _("Avrae for Forged in the Dark" — and FitD has no other
+> Avrae; the competitive frame is in `COMPETITIVE.md`.)_
 
-Actual play happens wherever the group plays. Existing dice/clocks/factions features serve both modes:
-a result can be rolled in-app **or** entered after being settled elsewhere (in person / on Discord).
-The mechanical layer + tracker, not the table's narration, is the product. _(An earlier framing called
-this a "between-session record" — accurate for Mode 1, but it undersold Mode 2, where there is no
-session: PbP play is continuous and HeistMind is the surface used while you play.)_
+Actual play happens wherever the group plays. Every mechanical surface serves both modes: a result
+can be rolled in-app, rolled via the bot, **or** entered after being settled elsewhere. The
+mechanical layer + tracker, not the table's narration, is the product.
+
+## Personas
+
+- **The GM** — creates campaigns, owns/uploads rulesets, runs the shared state (crew, clocks,
+  factions, scores), invites players, adjudicates play. Uses web for setup and either surface for
+  play.
+- **The Player** — joins a campaign by code, builds rules-valid characters, plays them (rolls,
+  stress, harm, XP, loadout) on web or Discord. May belong to several campaigns.
+- **The Solo Scoundrel (Mode 1)** — no campaign at all: builds and maintains standalone characters
+  as portable sheets for tables that play entirely elsewhere.
+- **The Discord-first Group** — a PbP table living in a Discord server; the GM links channels to
+  the campaign and the whole gameplay loop runs as slash commands, with the web app as the
+  shared-truth viewer and the creation surface.
+- **The Operator** — deploys/promotes via the Greenlight loop, owns the Discord applications and
+  secrets, and watches CI gates. (Served by NFRs, not user stories.)
 
 ## Core value & guiding principles
 
-These two principles govern every requirement and design call below.
+These govern every requirement and design call below.
 
 - **CV — Rules-driven management (the core value).** The reason to use HeistMind is that **you don't
-  have to read the rules carefully**: every step the system presents and every action it lets you take
-  is **already rules-legal for your ruleset + campaign context**. The app guides valid choices and
-  refuses illegal ones (point/dot budgets, ability gating, caps, load limits, trauma/harm bounds,
-  crew-aware effects). This is HeistMind's edge over a paper sheet or a spreadsheet — correctness is
-  built in. _Every new feature must preserve this: if the system offers it, it must be allowed._
+  have to read the rules carefully**: every step the system presents and every action it lets you
+  take is **already rules-legal for your ruleset + campaign context** (point/dot budgets, ability
+  gating, caps, load limits, trauma/harm bounds, crew-aware effects). _Every new feature must
+  preserve this: if the system offers it, it must be allowed._
 - **P1 — À la carte ("take what you want, leave the rest").** Capabilities are **independently
-  adoptable** and never forced into one workflow. A group can use **only character sheets** (and play
-  in person), **only crew tracking**, the **full in-app play loop**, or the **Discord bot** — in any
-  combination. Concretely: scores, the in-app dice, Discord, even a crew are **opt-in**; a lone player
-  can track a single character with nothing else set up, and every screen degrades gracefully when an
-  optional piece is absent.
+  adoptable**: only sheets, only crew tracking, the full in-app loop, or the Discord bot — in any
+  combination. Scores, in-app dice, Discord, even a crew are opt-in; every screen degrades
+  gracefully when an optional piece is absent.
 - **P2 — Log, don't gate play.** HeistMind records _settled_ results; it does not block the table.
-  Results may originate in-app, on Discord, or be **entered after the fact**.
+  Results may originate in-app, on Discord, or be entered after the fact.
 
 ## Non-goals
 
 - **Not** the authoritative rules engine for resolving play — position/effect, consequences, and
-  adjudication stay with the table/GM. In-app dice are a convenience, not a requirement.
+  adjudication stay with the table/GM. Dice (in-app or bot) are a convenience, not a requirement.
 - **No** real-time presence / VTT. The async **load-on-view + log** model is intentional.
 - Equipment is **not** a creation choice or an advancement — it is a **per-score** operational choice.
+- **No gateway bot / message-content parsing** — the Discord client is an interactions endpoint
+  (slash commands only; no privileged intents); no proactive outbound posts (v1).
+- **Creation flows stay web-only** — Discord parity is **gameplay only** (characters, campaigns,
+  and rulesets are built on the web).
 
 ---
 
-## Requirements
+## User stories
 
-IDs are referenced by the gap comparison below and by `FINDINGS.md`. **All requirements are subject
-to CV** (every step/action the system offers is rules-legal) **and P1** (each capability is opt-in and
-independently usable — a group can adopt just one).
+Format: `US-<area><n>` · story · [requirements] · **status** (✅ shipped · 🟡 partial (F-refs) ·
+❌ open). Statuses cross-reference `FINDINGS.md`; a story is 🟡/❌ only when a finding or phase
+records why.
+
+### Onboarding & identity
+
+- **US-O1** As a new visitor, I understand the two modes (sheet anywhere / Discord play layer)
+  from the landing page and can sign in with Discord in one click. [R-I1] ✅
+- **US-O2** As a signed-in user with nothing yet, my dashboard walks me through a 1-2-3 start
+  (build a character · create a campaign · join a game). [R-I2] ✅ _(F37 fixed)_
+- **US-O3** As a returning user, my dashboard opens to **my** campaigns, characters, and recent
+  activity — not marketing. [R-I2] 🟡 _(works; sections pop in without loading states, and content
+  is untested — F79)_
+- **US-O4** As a user whose sign-in fails, I see what went wrong and how to retry. [R-I1]
+  ❌ _(F40 — 2s flash then an unexplained redirect home)_
+- **US-O5** As a signed-out visitor landing on any protected page, I get a clear sign-in
+  affordance, not bare text. [R-I1] 🟡 _(primary routes ✅; six secondary routes bare — F72)_
+
+### Rulesets (the CV foundation)
+
+- **US-R1** As a GM, I can add a built-in starter system to my rulesets in one click ("add a copy
+  I own"), or upload my own FitD ruleset as JSON with guidance and validation. [R-I3] ✅
+- **US-R2** As a GM, a malformed upload is rejected inline with plain-language reasons — nothing
+  half-imports. [R-I3, CV] ✅
+- **US-R3** As a GM, reloading a starter refreshes my copy's content instead of erroring.
+  [R-I3] ✅
+- **US-R4** As a user, ruleset content drives every downstream surface (wizard steps, action
+  lists, XP tracks, load limits) so what I'm offered is always legal for **my** system. [CV] ✅
+
+### Characters — building (web-only by design)
+
+- **US-C1** As a player, the creation wizard only offers legal choices — playbook, point-buy
+  budgets, dot caps, ability tiers/prerequisites — and tells me **why** Next/Create is disabled.
+  [R-B1, R-B4, CV] ✅
+- **US-C2** As a player, I can build a character with **no campaign** (standalone) and it lives in
+  My Characters with a full sheet. [R-F4, R-F5, R-F7] ✅
+- **US-C3** As a player, I can attach a standalone character to a matching-ruleset campaign, detach
+  it back, move it between campaigns, or clone it. [R-F6] ✅ _(cross-ruleset adaptation = Phase 5c,
+  open)_
+- **US-C4** As a player, I record friends/rivals (contacts) during creation, not just in the
+  editor afterwards. [R-B1] ❌ _(F12 — contacts step missing from the wizard)_
+
+### Characters — playing (web + Discord parity)
+
+- **US-P1** As a player, I roll actions from my sheet's real ratings with position/effect, push
+  (+1d for 2 stress, actually charged) and devil's bargain, and the outcome is classified for me.
+  [R-H1, R-B2, CV] ✅
+- **US-P2** As a player, I resist a consequence and the stress cost (6 − highest; crit clears 1;
+  zero-dice takes lowest) is computed and applied for me. [R-H1, R-B2, CV] ✅ _(F64/P2 display bug
+  fixed)_
+- **US-P3** As a player, I mark/clear stress, take harm (with RAW track escalation), and heal —
+  and campaign-relevant changes land in the shared log. [R-B2, R-E1] 🟡 _(bot ✅; web harm edits
+  are editor-only and feedless — F65)_
+- **US-P4** As a player, I mark XP on the tracks my system actually uses and spend advances only
+  when the rules allow. [R-C1, CV] ✅ _(web track-marks skip the feed event — F70)_
+- **US-P5** As a player, I indulge my vice to clear stress and overindulgence is flagged.
+  [R-H1] ✅
+- **US-P6** As a player, I pick a per-score load level and equip up to my (ability-modified) limit
+  as I go; a new score prompts a reset. [R-D2, R-D3, CV] ✅ _(F45 closed — per-score level exists)_
+- **US-P7** As a player, harm and armor affect my rolls the way the book says. [CV]
+  ❌ _(F43 harm penalties; F44 armor inert)_
+- **US-P8** As a player, I can use teamwork moves (assist, lead a group action, set up, protect)
+  and flashbacks. [R-H1] ❌ _(F10, F16 — reclassified optional result sources, still absent)_
+- **US-P9** As a player, downtime offers the full menu (recover, acquire, long-term project,
+  reduce heat, train), not just vice. [R-H1] ❌ _(F15)_
+
+### Campaigns & membership
+
+- **US-M1** As a GM, I create a campaign on a ruleset; a duplicate name is explained in plain
+  language. [R-I2, R-I3] ✅
+- **US-M2** As a GM, I generate an invite code; as a player, I join with it and the campaign
+  appears in my list with a Player badge. [R-I2] ✅
+- **US-M3** As a joined player, the campaign hub actually opens (roster, crew, clocks, factions,
+  log all readable). [R-I2, R-A4] ✅ _(F53 fixed)_
+- **US-M4** As a GM, I see a roster of players → characters with statuses, and can retire a
+  character (coin banked to stash, logged, kept for history). [R-F1, R-F2, R-F3] ✅
+- **US-M5** As a member, everything shared survives reload and is visible to every player on
+  load (async play-by-post model). [R-A4, R-E1] ✅
+
+### GM campaign state
+
+- **US-G1** As a GM, I maintain the crew sheet (type, tier, rep, heat, wanted, abilities, claims,
+  cohorts, coin/vault) and progression runs by the rules (rep→tier, heat→wanted cascade,
+  incarceration). [R-A1..A3, CV] ✅
+- **US-G2** As a GM, I run progress clocks (4/6/8/10/12) and filling one is announced as the
+  table-visible milestone. [R-G1] ✅
+- **US-G3** As a GM, I track factions (tier, status −3..+3) against the crew. [R-G2] 🟡 _(war
+  state + faction project clocks unsurfaced — F47)_
+- **US-G4** As a GM, I start/end scores; everything the table does groups under the active score.
+  [R-D1, R-D5, R-E2] ✅ _(payout/downtime transition not modelled — by scope decision #2)_
+- **US-G5** As a GM, I control the campaign lifecycle state players see. [R-I2] 🟡 _(F32 — state
+  badge shown, no control to change it)_
+
+### The campaign log (the spine)
+
+- **US-L1** As a member, every settled mechanical event — rolls, score lifecycle, loadout, XP,
+  harm, crew/faction/clock changes, notes — lands in one append-only, score-grouped feed with
+  who/what/when. [R-E1, R-E2] ✅ _(one exception: web track-XP — F70)_
+- **US-L2** As a member, I can record a result settled elsewhere (in person / in prose) after the
+  fact. [R-E3, P2] ✅
+- **US-L3** As a member, what the feed displays matches what the rules charged (e.g. zero-dice
+  resists). [R-E2, CV] ✅ _(audit P2 fixed)_
+
+### Discord (Mode 2 — the bot)
+
+- **US-D1** As anyone in any server or DM (no account needed), I roll FitD dice — `/roll`,
+  `/resist`, `/fortune`, `/dice` — with outcomes classified. [R-H2] ✅
+- **US-D2** As a player, signing into the web app with Discord IS the account link; `/character
+  use` then makes my sheet roll from Discord (`/roll action:` with autocomplete from my own
+  ruleset). [R-H2.3] ✅ _(F68 fixed — the link is trigger-written at signup)_
+- **US-D3** As a GM, I link a channel, category, or the whole server to my campaign; rolls and
+  sheet changes there persist to the campaign log, attributed and score-tagged. [R-H2.1, R-H2.2,
+  R-H2.4] ✅ _(threads under a category-only link don't resolve — F66)_
+- **US-D4** As a player on Discord, I have gameplay parity: `/stress`, `/harm` (RAW escalation),
+  `/vice`, `/xp` (track-aware) — the same engine the web uses. [R-H2.5+] ✅
+- **US-D5** As a GM on Discord, I run the campaign: `/score`, `/crew`, `/clock` (fills announced),
+  `/faction` — with autocompletes that never leak state to non-GMs. [R-H2] ✅
+- **US-D6** As a non-member, I learn nothing — not even the campaign's name — from any command or
+  autocomplete. [R-H2.3, N-SEC] ✅
+- **US-D7** As a new Discord user, `/heist help` shows me the whole surface grouped by what each
+  tier needs, and the web tells me the bot exists and how to install it. 🟡 _(help ✅; no
+  player-facing web docs/install page — F67)_
+
+### Cross-cutting experience
+
+- **US-X1** As any user, errors speak my language (no raw Postgres/HTTP), loading and empty states
+  are distinct, and a failed inline save never destroys my working view. 🟡 _(F60 raw strings in
+  panels; F73 sheet-swap on save error; F74 empty-state flash)_
+- **US-X2** As a keyboard/screen-reader/low-vision user, the app is navigable and readable (skip
+  link, focus order, contrast). 🟡 _(fixed cases F1/F41; no automated enforcement — F76)_
+- **US-X3** As any user, I can switch theme and language. ✅
+- **US-X4** As a mobile user, the sheet and hub are usable one-handed at the table. 🟡 _(F57 —
+  scoped follow-up)_
+
+---
+
+## Functional requirements
+
+IDs are stable and referenced by `FINDINGS.md` + `CX-MAP.md`. **All requirements are subject to
+CV** (everything offered is rules-legal) **and P1** (each capability is opt-in and independently
+usable).
 
 ### A. Crew tracking
 
 - **R-A1** One crew per campaign: type, **tier (0–4)**, **rep**, **heat (0–9)**, **wanted (0–4)**, hold, coin, vault.
-- **R-A2** Crew **abilities**, **claims**, **cohorts**.
+- **R-A2** Crew **abilities**, **claims**, **cohorts** (+ ruleset-defined resource pools).
 - **R-A3** Campaign-long **progression**: rep → tier; crew **XP track** → advances; incarceration (−1 wanted / clear heat); heat → wanted cascade.
-- **R-A4** GM-maintained, shared, **persists between sessions** (load-on-view).
+- **R-A4** GM-maintained, shared, **persists between sessions** (load-on-view; every member sees it on reload).
 
 ### B. Character tracking
 
 - **R-B1** Build: playbook, **action ratings / attributes**, **special abilities**, heritage/background/vice, contacts (friend/rival).
-- **R-B2** Live condition: **stress**, **trauma** (named conditions), **harm**.
+- **R-B2** Live condition: **stress**, **trauma** (named conditions), **harm** (three RAW tracks with escalation).
 - **R-B3** **Coin** and **stash**.
 - **R-B4** Rules-aware creation, **without baking in per-score things** (see D).
 
 ### C. XP & advancement (campaign-long)
 
-- **R-C1** **Character XP** — playbook + attribute tracks (or flat pool); mark XP, spend advances.
+- **R-C1** **Character XP** — playbook + attribute tracks (or flat pool, per ruleset); mark XP, spend advances (cost/prereq/track gated server-side).
 - **R-C2** **Crew XP** the same way (see R-A3).
-- **R-C3** XP changes are a **logged campaign event**.
+- **R-C3** XP changes are a **logged campaign event**. _(🟡 web `setXp` residue — F70.)_
 
-### D. Per-score play (the core re-scope)
+### D. Per-score play
 
-- **R-D1** **Score lifecycle (opt-in)** — campaigns _may_ run as a series of **scores/operations**;
-  **"Start score" / "End score"** controls; a score is a first-class record (status, started/ended,
-  optional name/notes), game-scoped. Groups that don't want scores can ignore them — loadout then
-  behaves as a single resettable "current loadout" (P1).
-- **R-D2** **Per-character, per-score loadout** — pick a **load level** (light 3 / normal 5 / heavy 6, ability-modified), **equip items up to the limit as you go**. Loadout stays **on the character** as the **resettable "current" loadout** (not a build property, not a per-score table); it's understood to be "for the active score."
-- **R-D3** **Reset between scores** — starting a new score clears each character's current loadout; the reset is recorded as a **log note** ("loadout cleared").
-- **R-D4** **Loadout changes are logged** — when a character (in a campaign) changes loadout, write a `loadout` entry to the campaign/roll log.
-- **R-D5** **Reviewable history** of past scores and their events/loadouts.
+- **R-D1** **Score lifecycle (opt-in)** — "Start/End score"; a score is a first-class, game-scoped record. Groups that skip scores get a single resettable "current loadout" (P1).
+- **R-D2** **Per-character, per-score loadout** — pick a **load level** (light/normal/heavy, ability-modified), equip items up to the limit as you go; lives on the character as the resettable "current" loadout.
+- **R-D3** **Reset between scores** — a new score prompts a loadout reset, recorded as a log note.
+- **R-D4** **Loadout changes are logged.**
+- **R-D5** **Reviewable history** of past scores and their events.
 
-### E. Campaign log (the spine of "track results between sessions")
+### E. Campaign log
 
-- **R-E1** A **unified, append-only campaign log** of settled events: rolls/outcomes, score start/end, loadout changes, XP marks/advances, downtime, harm/trauma, crew/faction changes.
-- **R-E2** Each entry shows **who, what, when**, and where relevant **which score** + **character/player**.
-- **R-E3** Entries can be **created in-app** or **entered after the fact** (settled IRL/Discord) — source-agnostic.
+- **R-E1** A **unified, append-only campaign log**: rolls/outcomes, score start/end, loadout, XP, downtime, **harm**, crew/faction/clock changes, notes.
+- **R-E2** Each entry shows **who, what, when**, the **score** it belongs to, and displays values consistent with what the rules applied.
+- **R-E3** Entries can be created in-app, **via the bot**, or entered after the fact — source-agnostic (P2).
 
 ### F. Character lifecycle & ownership
 
-- **R-F1** **Player attribution** — every character is attributed to a player; a player may have several; the GM sees a **roster** of player → character(s).
-- **R-F2** **Retire character** — move out of active play (stash → retirement), keep the record. Distinct from delete.
-- **R-F3** Character status (active / retired / dead) visible in the roster.
-- **R-F4** **Standalone characters (portable)** — a player can build + own a character **without a campaign**; it lives at the user level (`created_by`) and is bound to a **ruleset** the user can read. _(Phase 5.)_
-- **R-F5** **My Characters** — a user sees + manages all their characters (standalone + in-campaign) and opens a **standalone sheet**, not just the dashboard list. _(Phase 5.)_
-- **R-F6** **Attach to a campaign (link)** — a player brings a standalone character into one of their campaigns whose ruleset **matches**; the character is then linked (**single active campaign**), and its loadout + log follow that campaign (Phase-1 behaviour). _(Phase 5.)_
-- **R-F7** **À la carte standalone** — a standalone character degrades gracefully: campaign-scoped sections (active score, shared roll log) hide when it isn't in a campaign (P1 — "a lone player can track a single character with nothing else set up"). _(Phase 5.)_
+- **R-F1** **Player attribution** — every character attributed to a player; GM sees the roster.
+- **R-F2** **Retire** — out of active play (coin → stash, logged), distinct from delete.
+- **R-F3** Status (active/retired/dead) visible.
+- **R-F4** **Standalone (portable) characters** — user-owned, ruleset-bound, no campaign required.
+- **R-F5** **My Characters** — one surface for all of a user's characters + standalone sheets.
+- **R-F6** **Attach / detach / move / clone** — single-active-campaign model, matching ruleset required; server-enforced via SECURITY DEFINER RPCs. _(Cross-ruleset adaptation = Phase 5c, open.)_
+- **R-F7** **À la carte standalone** — campaign-scoped sections hide when unlinked.
 
-### G. Campaign-state tracking (kept — tracking, not play)
+### G. Campaign-state tracking
 
-- **R-G1** **Progress clocks** (threats / projects / faction clocks, 4/6/8/10/12).
-- **R-G2** **Factions** — tier (0–6) + status (−3..+3) vs the crew.
+- **R-G1** **Progress clocks** (4/6/8/10/12); completion is the logged milestone, ticks are panel-state.
+- **R-G2** **Factions** — tier (0–6) + status (−3..+3) vs the crew. _(War state + faction clocks unsurfaced — F47.)_
 
 ### H. Results capture & integrations
 
-- **R-H1** **In-app dice (optional)** — keep the roller (action/fortune/resistance, position/effect, push/devil's-bargain, indulge-vice) as **one** result source, not the required surface.
-- **R-H2** **Discord integration** — an Avrae-style bot so results rolled on Discord are **logged into HeistMind** against the right campaign/character (inbound-first; richer two-way later).
+- **R-H1** **In-app dice (optional)** — action/fortune/resistance, position/effect, push/devil's-bargain, indulge-vice — one result source among several, never required.
+- **R-H2** **Discord client** — shipped as slash commands over a signed interactions endpoint:
+  - **R-H2.1** GM links a **channel, category, or server** to one campaign (precedence in that order; partial unique indexes enforce one campaign per surface).
+  - **R-H2.2** `/log` records an attributed, score-tagged result; sheet rolls/`/resist` **persist through the engine** when linked + member + active-character-in-campaign.
+  - **R-H2.3** Identity = web Discord OAuth (`profiles.discord_id`, trigger-written at signup); one **active character** per user (`/character use`); non-members rejected without information leaks.
+  - **R-H2.4** Logged events auto-tag the **active score** (server-side).
+  - **R-H2.5** Server-realized dice, anti-forge (repository recomputes outcomes from faces).
+  - **R-H2.6** **Gameplay parity, creation excluded**: `/stress` `/harm` `/vice` `/xp` for players; `/score` `/crew` `/clock` `/faction` for GMs; `/heist help` discoverability. Manual dice require no account and store nothing.
 
 ### I. Platform
 
-- **R-I1** Discord OAuth; multi-tenant per-env schema + RLS.
+- **R-I1** Discord OAuth (Supabase Auth); the OAuth signup **is** the bot account link.
 - **R-I2** GM + players; invite/join codes; per-campaign membership and roles.
-- **R-I3** Uploadable/selectable rulesets.
+- **R-I3** Uploadable/selectable rulesets + a built-in starter catalog ("add a copy you own").
+- **R-I4** Environments: schema-per-env (development/production) in one Supabase project; branch-mapped deploys (PR→preview, development→beta, main→prod) with two Discord apps (dev→beta, prod→prod).
 
 ---
 
-## Gap comparison — BRD vs. current state
+## Non-functional requirements
 
-**✅ Built · 🟡 Partial · ❌ Missing**
-
-| Req        | Capability                    | Status | Notes                                                                         |
-| ---------- | ----------------------------- | ------ | ----------------------------------------------------------------------------- |
-| R-A1/A2    | Crew sheet                    | ✅     | `crews` table; `CrewSheet.tsx`                                                |
-| R-A3       | Crew progression              | ✅     | `crews.ts` `advanceTier`/`incarcerate`/`crewXp`/`applyHeat`                   |
-| R-A4       | Crew persists/shared          | ✅     | DB-backed, RLS                                                                |
-| R-B1       | Character build               | ✅     | `CharacterData`; creation wizard; sheet/editor                                |
-| R-B2       | Stress/trauma/harm            | ✅     | live trackers                                                                 |
-| R-B3       | Coin + stash                  | ✅     | coin tracked; stash banked on retire (Phase 3)                                |
-| R-B4       | No per-score in build         | ✅     | loadout left the build editor (Phase 1b)                                      |
-| R-C1       | Character XP                  | ✅     | `character-rules.ts`                                                          |
-| R-C2       | Crew XP                       | ✅     | F18                                                                           |
-| R-C3       | XP changes logged             | 🟡     | `advancementHistory` only, not a unified log                                  |
-| R-D1       | Score lifecycle               | ✅     | `scores` table + repo + `ScorePanel` (Phase 1a)                               |
-| R-D2       | Per-score loadout             | ✅     | `LoadoutCard` on the sheet, load-engine gated (Phase 1b)                      |
-| R-D3       | Reset between scores          | ✅     | staleness vs active score → "Reset for this score"                            |
-| R-D4       | Loadout changes logged        | ✅     | `loadout` events in the campaign/roll log                                     |
-| R-D5       | Score history                 | ✅     | feed grouped by score; recent scores on `ScorePanel`                          |
-| R-E1/E2    | Unified campaign log          | ✅     | `rolls` is the event log (`score_id`, kinds); feed grouped by score (Phase 2) |
-| R-E3       | Record results from elsewhere | ✅     | `AddResultForm` → a `note` event (Phase 2)                                    |
-| R-F1       | Player roster/attribution     | ✅     | `CharacterRoster` resolves `createdBy` → player (Phase 3)                     |
-| R-F2       | Retire character              | ✅     | roster Retire (GM/owner) → status + coin→stash, logged (Phase 3)              |
-| R-F3       | Status visibility             | ✅     | status badges on roster + sheet (Phase 3)                                     |
-| R-G1       | Clocks                        | ✅     | `ClocksPanel.tsx`                                                             |
-| R-G2       | Factions                      | ✅     | `FactionsPanel.tsx`                                                           |
-| R-H1       | In-app dice (optional)        | ✅     | keep, reframed                                                                |
-| **R-H2**   | **Discord bot**               | ❌     | not started — `apps/discord-bot` does not exist yet                           |
-| R-I1/I2/I3 | Platform                      | ✅     | auth, invites, rulesets                                                       |
-
-### Headline gaps
-
-1. ~~No "score" concept~~ → **done (Phase 1a):** `scores` table + `ScorePanel`.
-2. ~~Loadout is in the wrong place~~ → **done (Phase 1b):** per-score `LoadoutCard` on the sheet.
-3. ~~The log is only a roll log~~ → **done (Phase 2):** the roll log is the campaign event log — events carry `score_id`, the feed groups by score, and an "add result" entry records outcomes settled IRL/Discord. _(Caveat: XP marks/advances still land only in `advancementHistory`, not the feed — R-C3 stays 🟡; round-3 PR-3 closes it.)_
-4. ~~No character lifecycle~~ → **done (Phase 3):** roster (player → character) + Retire (status + coin→stash).
-5. ~~No Discord integration~~ → **done (Phase 4, 2026-07-04):** the bot (`packages/discord` + the
-   `/api/discord` endpoint) — dice anywhere, sheet-rated rolls, campaign links, persisted
-   rolls/`/log`, gameplay parity + GM commands. See the appendix.
-
-### Already aligned (no work)
-
-Crew + character + XP tracking, clocks, factions, auth/multiplayer/rulesets, and the in-app dice
-(now optional) satisfy the re-scope as-is.
+- **N-SEC1 — Row-level security** is the tenant boundary: `is_active_game_member` gates reads,
+  `is_game_gm` gates GM writes; standalone rows are owner-scoped. _(⚠ the isolation guarantee has
+  no executing e2e — F75.)_
+- **N-SEC2 — Service-role discipline**: the bot's service-role client bypasses RLS, so **every
+  character-mutating engine use-case asserts creator-is-actor** (`notOwner`), and bot handlers run
+  the actor→membership→role prelude before any write. Attach/detach go through SECURITY DEFINER
+  RPCs, never client-set foreign keys.
+- **N-SEC3 — Signed interactions**: every Discord request is Ed25519-verified over the raw bytes
+  before parsing; unsigned/forged → 401. Bot tokens are used only for command registration, never
+  at runtime.
+- **N-SEC4 — Secrets** flow via Terraform TF_VARs / GitHub Actions secrets / `greenlight secrets
+  gather` (hidden input); never committed, never written to disk.
+- **N-TEST1 — Gates**: lint + type-check + tests + build on every PR; per-package coverage floors
+  are **upward-only ratchets** set from measured reality (engine 90, discord 90/70, core 100
+  per-file rules, ui 40/62/44/40, web 15, database 36+); e2e (local Supabase) on every PR;
+  Storybook smoke renders all stories; greenlight-verify gates every deployment.
+- **N-TEST2 — Fixture provenance & trigger-owned rows**: tests build ruleset content from the
+  shipped builtins, never invented shapes; e2e never hand-seeds rows a production trigger/RPC owns
+  (see `CODE-QUALITY.md` "Testing discipline" — the F68/F69 response).
+- **N-A11Y** — skip link, focus order, ARIA labels, contrast tokens; **target: axe-enforced in CI**
+  _(currently unenforced — F76)_.
+- **N-I18N** — all user-facing copy through the i18n layer (`en.json`); the bot owns its copy the
+  same way (`format/copy.ts`).
+- **N-PERF** — async load-on-view (no realtime); shared campaign state uses load-on-view +
+  focus-refetch so a second player's open hub can't go stale; autocomplete answers within
+  Discord's 3s budget (≤2 indexed queries + actor cache).
+- **N-OPS** — ship via Greenlight deploy→verify→promote; single-DO-block per-env migrations with
+  the types-regen handoff; creds-guarded CI (missing secrets skip cleanly, never fail).
+- **N-PRIV** — manual dice store nothing and need no account; no Discord message-content access;
+  the bot reads only slash-command interactions.
 
 ---
 
-## Roadmap (phased; each ships via deploy → verify → promote)
+## Requirements coverage (2026-07-05)
 
-> **Status (2026-07-04):** Phases 1–5 are **shipped** — including **Phase 4 (Discord)**, built
-> 2026-07-03/04 as the four-phase bot plan (#121–#132); the appendix below records the shipped
-> shape. Only Phase 5b/5c cross-ruleset adaptation remains deferred.
+**✅ Built · 🟡 Partial · ❌ Missing** — F-refs are the open work in `FINDINGS.md`.
 
-- **Phase 1 — Score model + per-score loadout** (R-D1..D4, B4) — ✅ **shipped.** `scores` table + per-score loadout
-  storage; "Start/End score" on the campaign page; the sheet's gear becomes the **active score's
-  loadout** (reset on new score); move loadout **out of the build editor**. Reuse `loadUsed`/
-  `effectiveLoadLimit`.
-- **Phase 2 — Unified campaign log** (R-C3, R-D4, R-E) — ✅ **shipped.** `rolls` widened with `score_id`
-  - a `note` kind; the roll repo auto-tags the active score; a campaign feed **grouped by score**; an
-    **"add result"** entry path for outcomes settled elsewhere.
-- **Phase 3 — Character lifecycle & attribution** (R-F1..F3, B3) — ✅ **shipped.** `CharacterRoster`
-  (player → character(s) + status); **Retire** (status + coin→stash, logged); status badges. No
-  migration (`status` already a column).
-- **Phase 4 — Discord integration** (R-H2) — ✅ **shipped (2026-07-04, #121–#132).** The
-  interactions-endpoint bot: channel/category/server↔campaign links, attribution via
-  `profiles.discord_id`, persisted rolls + `/log`, sheet + GM gameplay parity. Appendix below
-  records the shipped shape; residual gaps are F65–F67.
-- **Phase 5 — Portable characters** (R-F4..F7) — ✅ **shipped.** Closes **F56** (the biggest Mode-1
-  gap): migration `00014` makes `game_id` a **nullable pointer** (single active campaign, `ON DELETE
-SET NULL`), binds the ruleset on the character (`original_ruleset_id`), and adds
-  `attach_character_to_game` / `detach_character` RPCs. Routes `/characters`, `/characters/new`
-  (ruleset picker → the existing wizard), `/characters/[id]` (standalone sheet + "Bring to a
-  campaign"). **Phase 5b** (move/clone/cross-ruleset adaptation) deferred — see the appendix.
-
-### Decisions (resolved 2026-06-27)
-
-1. **Campaign log shape:** **widen the existing `rolls` log incrementally** — add `loadout`/`score`
-   kinds now (the log already has kind/label/note); a full `rolls`→`events` rename is deferred to
-   Phase 2 only if needed.
-2. **Score granularity:** ✅ **score-only.** Sessions are real-life and NOT modelled (a score may span
-   sessions, or several scores fit one session — "between sessions" = tracking IRL).
-3. **Discord v1:** **inbound-only** (log results rolled on Discord); outbound deferred. _(Phase 4 —
-   shipped; "outbound" so far is command replies/embeds only, no proactive posts.)_
-4. **Loadout storage:** ✅ **current loadout on the character** (Option A) — resettable; changes →
-   campaign log; score reset → a "cleared" log note. **No per-score loadout table.** The only new
-   table is `scores` itself.
-
-### Decisions (resolved 2026-06-28)
-
-5. **Character ↔ campaign (Phase 5):** ✅ **single active campaign (link/move).** One user-owned
-   character row; `game_id` becomes a **nullable pointer** (`NULL` = standalone, `<id>` = currently
-   linked). Chosen over **copy-on-attach** (two diverging sheets — which is "real"?) and
-   **many-to-many** (un-FitD — a scoundrel belongs to one crew — and the largest rework: per-campaign
-   loadout/log/RLS/roster). Matches the Phase-1 loadout decision (#4) and the latent `transferToGame`
-   design. **Attach requires a ruleset match**; cross-ruleset adaptation (the `adaptations` column) is
-   deferred to Phase 5b.
-
-### FINDINGS re-scoped by this BRD
-
-- **F13** (loadout at creation) → **inverted**: loadout leaves the build entirely and becomes
-  per-score (R-D2).
-- **F9 / F15 / F16** (push-bargain / downtime / flashbacks) → reclassified from "missing mechanics"
-  to **optional result sources** — not required; logged if used.
+| Req | Capability | Status | Notes |
+| --- | --- | --- | --- |
+| R-A1..A4 | Crew sheet + progression | ✅ | `CrewSheet`, `crews.ts` rules, engine use-cases |
+| R-B1 | Character build | ✅ | wizard + editor; contacts step missing (F12) |
+| R-B2 | Stress/trauma/harm | 🟡 | live trackers ✅; web harm edits feedless (F65); harm/armor don't affect rolls (F43/F44) |
+| R-B3/B4 | Coin/stash; no per-score in build | ✅ | |
+| R-C1/C2 | Character + crew XP | ✅ | track + flat modes, gated advances |
+| R-C3 | XP changes logged | 🟡 | bot + flat-pool ✅; web `setXp` feedless (F70) |
+| R-D1..D5 | Scores + per-score loadout + history | ✅ | F45 closed (per-score load level) |
+| R-E1..E3 | Unified campaign log | ✅ | incl. `harm` kind + zero-dice display (audit P2/P3) |
+| R-F1..F3 | Roster / retire / status | ✅ | |
+| R-F4..F7 | Portable characters | ✅ | Phase 5 + 5b; 5c (cross-ruleset) open |
+| R-G1 | Clocks | ✅ | |
+| R-G2 | Factions | 🟡 | war state + faction clocks unsurfaced (F47) |
+| R-H1 | In-app dice | 🟡 | core loop ✅; teamwork (F10), flashbacks (F16), fortune types (F46), consequence capture (F52), downtime menu (F15) open |
+| R-H2 | Discord client | ✅ | all four phases; residue F65–F67 |
+| R-I1..I4 | Platform | ✅ | F68 (identity trigger) fixed |
+| N-SEC1 | RLS isolation | 🟡 | enforced in DB; **unproven by e2e (F75, S2)** |
+| N-A11Y | Accessibility | 🟡 | fixed cases; no CI enforcement (F76) |
 
 ---
 
-## Appendix — Phase 4: Discord integration (detailed BRD)
+## Open backlog, by theme
 
-**Status:** ✅ **built (2026-07-04, the phased bot plan, #121–#132).** The client lives in
-**`packages/discord`** (verify/router/handlers/manifest — unit-tested; the web `/api/discord`
-route is a thin transport), NOT a separate `apps/discord-bot` — Discord interactions are HTTP
-webhooks, no gateway process. All four phases shipped: **0** harness + manual FitD roller;
-**1** active-character rolls; **2** channel/category/server↔campaign links + persisted
-`/roll`/`/resist` + `/log` (this appendix's core — R-H2.1..R-H2.5 all met, with R-H2.1 widened
-to category/server scopes and R-H2.5 exceeded: rolls are engine-persisted, anti-forge); **3**
-gameplay parity (`/stress` `/harm` `/vice` `/xp`; GM `/score` `/crew` `/clock` `/faction`;
-`/heist help`). The platform prerequisites below were all built (service-role factory in the
-web app, engine ownership gate, migrations 00016–00018, the endpoint). Command reference:
-`packages/discord/README.md`. Residual gaps: F65–F67.
+`FINDINGS.md` is the authoritative item-by-item log (F-numbered, severity-scored). The themes:
 
-**Platform prerequisites (verified 2026-07-02 — none exist yet):** (1) a **service-role client
-path** in `packages/database` — every current factory reads only the anon key, and
-`getUserByDiscordId` needs `auth.admin`; (2) **explicit membership/ownership authz in the engine
-use-cases** — today they trust `userId` because Postgres RLS on `auth.uid()` is the only guard,
-and a service-role caller **bypasses RLS entirely**; (3) the `games.discord_channel_id` migration
-below; (4) the interactions endpoint (no `app/api/` routes exist today). (1) and (2) are the
-security-sensitive ones — build them first.
-
-### Goal & scope
-
-Let groups who play (or roll) on **Discord** push _settled results_ into the HeistMind campaign log,
-so the between-session record stays complete without leaving Discord (P2 — log, don't gate play).
-**v1 is inbound-first:** Discord → HeistMind. Outbound (HeistMind posting state to Discord) is a
-later iteration. This is **opt-in** (P1) — a group that doesn't use Discord is unaffected.
-
-### Requirements
-
-- **R-H2.1 — Link a channel to a campaign.** A GM links a Discord channel (and guild) to one HeistMind
-  campaign. One active link per channel; a campaign may have one linked channel (v1).
-- **R-H2.2 — Log a result from Discord.** A slash command records a result as a campaign-log event
-  (the existing `note` kind), appearing in the in-app feed like any other entry.
-- **R-H2.3 — Attribution.** The posting Discord user maps to their HeistMind player via the existing
-  unique `profiles.discord_id`, and (when unambiguous) to the character they own in that campaign — so
-  the entry is attributed without extra linking. Unmapped/non-member posters are rejected.
-- **R-H2.4 — Score tagging.** Logged events auto-tag the campaign's **active score** (reuse the roll
-  repo's server-side tagging), so Discord results group under the right operation in the feed.
-- **R-H2.5 — (optional) Server-rolled dice.** A `/heist roll` that rolls FitD dice server-side
-  (reuse `dice.ts` `rollOutcome`) and logs an `action` event — so the result can't be faked, same as
-  in-app. May defer; `/heist log <text>` covers the core need.
-
-### Architecture
-
-- **Interactions endpoint, not a gateway bot.** A serverless **Next.js API route** (e.g.
-  `apps/web/src/app/api/discord/route.ts`) that **verifies Discord's Ed25519 request signature**
-  (`X-Signature-Ed25519` / `-Timestamp` against the app **public key**) and handles
-  `application command` interactions. This fits the Vercel/serverless model — **no always-on
-  process** — unlike a gateway bot. `apps/discord-bot` is repurposed to hold the **slash-command
-  registration script** + shared types (or deprecated).
-- **Writes go through the same repository layer** (`rolls.create`, scoped to the resolved campaign via
-  the service role), so the same validation/auto-tagging applies. No new write path.
-
-### Data model (migration when built)
-
-- **`games.discord_channel_id TEXT` (+ `discord_guild_id TEXT`)** — the channel↔campaign link (a
-  per-env `DO`-block migration like the others; needs a `pnpm db:types` regen).
-- **`profiles.discord_id`** — the **column** already exists (unique, from Discord OAuth), but the
-  lookup is not free: `getUserByDiscordId` calls `auth.admin.getUserById`, which requires the
-  service-role client that nothing constructs today (prerequisite (1) above).
-- Optionally a partial unique index so a channel links to at most one campaign.
-
-### Command surface (v1)
-
-- `/heist link` — GM links the current channel to their campaign (resolves the GM via `discord_id`).
-- `/heist log <text>` — record a result → a `note` event (attributed + score-tagged).
-- `/heist roll <action> [position] [effect]` — _(optional)_ server-rolled action → an `action` event.
-- `/heist status` — _(outbound-lite, optional)_ reply with the crew/character snapshot.
-
-### Security
-
-- **Ed25519 signature verification** on every request (reject otherwise) — Discord's required check.
-- Authorize by mapping `discord_id` → an **active member** of the linked campaign; reject others.
-- The endpoint uses the service role **scoped to the resolved campaign/character**; never trusts the
-  channel→campaign mapping without the membership check.
-
-### Setup / credentials (operator-provided)
-
-A **Discord application** (Developer Portal — needs the operator's Discord account), providing:
-**public key**, **application id**, **bot token** → wired as secrets
-(`DISCORD_PUBLIC_KEY`, `DISCORD_APP_ID`, `DISCORD_BOT_TOKEN`) via the Greenlight secrets flow; set the
-app's **Interactions Endpoint URL** to the deployed route; run the command-registration script.
-
-### Verification
-
-- A **signed** test interaction POST creates the expected campaign-log event; an unsigned/forged one
-  is rejected (401).
-- `/heist link` then `/heist log` from a member's Discord id lands an attributed, score-tagged entry
-  in the in-app feed; a non-member is rejected.
-
-### Out of scope (v1)
-
-Proactive outbound to Discord (state posts, reminders), message-content parsing (needs the privileged
-message-content intent + a gateway bot), voice, and a multi-guild management UI.
-
-### Open decisions
-
-1. **Slash-command-only** (recommended, no privileged intents) vs also parsing channel messages.
-2. **Roll server-side** (`/heist roll`) in v1, or **log-only** (`/heist log`) and defer rolling.
-3. **One channel ↔ one campaign**, or allow several channels per campaign.
+1. **Prove the guarantees (test-estate)** — F75 player-perspective + RLS isolation scaffolds
+   (the one S2); F78 deploy-gate blindness; F79 dashboard content; F80 UI-primitive coverage zeros;
+   F71 knip triage → blocking.
+2. **The play loop's depth (FitD fidelity)** — F43 harm penalties, F44 armor, F10 teamwork,
+   F15 downtime menu, F16 flashbacks, F46 fortune types, F47 faction war/clocks, F52 consequences,
+   F48 contact mechanics. All optional-by-scope (P2) but the biggest fidelity wins.
+3. **Cross-client convergence** — F65 web harm → engine `takeHarm`/`clearHarm`; F70 web `setXp`
+   → engine `markXp`; F66 thread-under-category links.
+4. **Experience polish** — F73 sheet error-swap, F72 sign-in gates, F74 empty-state flash,
+   F77 fortune affordance vs journey text, F60 clarity cluster, F81 My-Characters nav, F40
+   auth-error dead-end, F57 mobile sheet, F32 lifecycle control, F12 contacts step.
+5. **Reach** — F67 player-facing bot docs/install page; F55 builtin roster growth; Phase 5c
+   cross-ruleset adaptation.
 
 ---
 
-## Appendix — Phase 5: Portable characters (detailed BRD)
+## Decisions log (standing)
 
-**Status:** specified, **not built**. This is the spec for closing **F56** — making characters
-user-owned and campaign-independent. Nothing here is implemented yet.
+1. **Campaign log shape** — widen the existing `rolls` log with kinds (`score_id` + kind CHECK
+   migrations); no `events` rename.
+2. **Score granularity** — score-only; real-life sessions are not modelled.
+3. **Discord v1** — inbound-first; "outbound" is command replies/embeds only, no proactive posts.
+4. **Loadout storage** — current loadout on the character, resettable; no per-score table.
+5. **Character ↔ campaign** — single active campaign (nullable `game_id` pointer); attach requires
+   a ruleset match; adaptation deferred to 5c. Chosen over copy-on-attach and many-to-many.
+6. **Bot hosting (2026-07-03)** — interactions endpoint inside `apps/web` on Vercel (no gateway
+   process); **two Discord applications** (dev→beta, prod→prod); short gameplay commands + the
+   `/heist` admin group; link scopes channel/category/server.
+7. **Ruleset access on create (round-3)** — inline catalog offer, not pre-grant; the user
+   explicitly takes a copy they own.
+8. **F13 inverted / F9-F15-F16 reclassified** — loadout is per-score, not a build property;
+   push/downtime/flashbacks are optional result sources, not required mechanics.
 
-### Goal & scope
+---
 
-Deliver **Mode 1 ("your sheet anywhere")**: a player builds + owns a character **without a campaign**,
-opens it as a standalone sheet, and **brings it to a table** (attaches it to one of their campaigns).
-**v1 model = single active campaign (link/move)** (Decision #5): the character row is the source of
-truth, owned by `created_by`, bound to a ruleset; `game_id` is a **nullable pointer** — `NULL` =
-standalone ("My Characters"), `<id>` = currently linked into that campaign. One crew at a time
-(FitD-canonical); loadout + campaign log follow the active campaign. **Opt-in / à la carte** (P1) — a
-group that only plays in-campaign is unaffected; existing characters keep working unchanged.
+## Appendix A — Discord client: shipped shape (Phase 4, #121–#132 + go-live fixes)
 
-### Why this is mostly column + RLS, not a rebuild
+The client lives in **`packages/discord`** (Ed25519 verify, router, handlers, manifest, copy);
+`apps/web/src/app/api/discord/route.ts` is a thin transport running deferred work in `after()`.
+Registration is branch-mapped CI (`discord-commands.yml`); the full command reference is
+`packages/discord/README.md` (in Discord: `/heist help`).
 
-The `characters` table (`supabase/migrations/00002_core_schema.sql:240`) already has its own row
-(only `character_data` is JSONB) and **already carries the portability hooks**: `original_ruleset_id
-UUID REFERENCES rulesets(id)` (nullable, unused), `adaptations JSONB` (unused), `is_template`
-(unused). The repository **already declares** `transferToGame` + `cloneCharacter`
-(`packages/database/src/repositories.ts`, currently throwing). `characters.findByPlayer(userId)`
-already returns all of a user's characters. Rulesets are first-class + user-owned (own/public readable
-without a game). **The blockers** are: `game_id NOT NULL ON DELETE CASCADE`; ruleset resolution via
-`character → game → game.ruleset_id` (`supabase-character-repository.ts:111`,
-`supabase-character-management-repository.ts:66`); INSERT RLS requiring active game membership;
-`CreateCharacterData.gameId` required; the wizard requiring a `gameId` prop; and the only sheet route
-being `/games/[gameId]/characters/[characterId]`.
+- **Requirements met**: R-H2.1 (widened to channel/category/server scopes), R-H2.2, R-H2.3
+  (identity via the signup trigger — F68 fixed the missing write), R-H2.4, R-H2.5 (exceeded:
+  engine-persisted anti-forge rolls), R-H2.6 (full gameplay parity + GM commands).
+- **Security shape**: raw-bytes Ed25519 before parse; public-defer failures become
+  delete+ephemeral; the engine ownership gate covers the service-role path (N-SEC2); GM-gated
+  autocompletes leak nothing.
+- **Data model**: `discord_players` (one active character per profile, 00016);
+  `games.discord_guild_id/discord_channel_id` + partial unique indexes (00017); `harm` feed kind
+  (00018); `profiles.discord_id` trigger-write + backfill (00019).
+- **Operator model**: two Discord apps; `DISCORD_PUBLIC_KEY` per Vercel target via Terraform;
+  registration secrets per branch; endpoint URL set **last** (Discord validates on save). Vercel
+  Deployment Protection must stay **off** the endpoint's target (go-live incident).
+- **Residue**: F65 (web harm parity), F66 (threads under category links), F67 (web docs page).
 
-### Requirements
+## Appendix B — Portable characters: shipped shape (Phase 5 + 5b)
 
-Implements **R-F4..R-F7** (group F — character lifecycle & ownership).
+Migration `00014`: nullable `game_id` (ON DELETE SET NULL — campaign deletion returns characters
+to standalone), ruleset bound on the character (`original_ruleset_id`, backfilled),
+`attach_character_to_game`/`detach_character` SECURITY DEFINER RPCs (ownership + membership +
+ruleset match), partial unique name index for standalone rows. Routes: `/characters`,
+`/characters/new` (ruleset picker → the same wizard), `/characters/[id]` (standalone sheet with
+campaign sections hidden). 5b added move/clone (owner controls on the sheet, Duplicate on the
+list) with no migration.
 
-### Data model (migration when built)
-
-A single per-env `DO`-block migration (the established pattern); **needs a `pnpm db:types` regen** —
-the adapter won't type-check until the generated types include the changes (the user runs the regen).
-
-- **`ALTER TABLE characters ALTER COLUMN game_id DROP NOT NULL`**, and change the FK to **`ON DELETE
-SET NULL`** (deleting a campaign **returns its characters to standalone** instead of cascading them
-  away — important: characters outlive campaigns).
-- **Bind the ruleset on the character** using the existing `original_ruleset_id`: **backfill** it from
-  each row's `game.ruleset_id`, and set it on every create going forward. (`adaptations` stays
-  reserved for cross-ruleset moves — Phase 5b.)
-- **Unique names:** keep the per-game `UNIQUE(game_id, created_by, name)`; add a **partial unique
-  index** `(created_by, name) WHERE game_id IS NULL` so standalone names are unique per owner.
-- **RLS** (the trickiest part — keep ownership and membership intact):
-  - **SELECT** already covers the owner (`created_by = auth.uid()` OR active member), so standalone
-    rows are readable by their owner with no change.
-  - **INSERT** must allow standalone: `created_by = auth.uid() AND (game_id IS NULL OR
-is_active_game_member(auth.uid(), game_id))`.
-  - **Attach / detach** (set/clear `game_id`) go through a **`SECURITY DEFINER` RPC**
-    (`attach_character_to_game(character_id, game_id)` / `detach_character(character_id)`), modelled on
-    `redeem_invite_code` (`00010`). The RPC enforces server-side: caller **owns** the character, is an
-    **active member** of the target game, and the game's ruleset **matches** the character's
-    `original_ruleset_id`. This avoids overloading UPDATE `WITH CHECK` (which must still let a GM edit
-    an in-game character for retire, yet **not** re-home a player's character to another table).
-
-### Repository / service (when built)
-
-- Resolve a character's ruleset via its **`original_ruleset_id`** (fallback to `game.ruleset_id` only
-  for legacy rows before backfill); make **`CharacterWithDetails.game` nullable**.
-- Make **`CreateCharacterData.gameId` optional** + add **`rulesetId`**; `createCharacterWithValidation`
-  resolves the ruleset from `rulesetId` (standalone) or `gameId` (in-campaign). Reuse the existing
-  `validateCharacter` — its `crew` context is already optional, so it's simply skipped when standalone.
-- Implement the latent **`transferToGame`** (move) + **`cloneCharacter`** (copy) — used by Phase 5b.
-
-### Routes / surface (when built)
-
-- **`/characters`** — My Characters list (standalone + in-campaign); the dashboard "Your characters"
-  section links here.
-- **`/characters/new`** — a **ruleset picker** over the user's rulesets + the bundled starters, then
-  the **existing creation wizard** with `gameId` undefined (the wizard already takes a `ruleset`; pass
-  the picked one). The latent ruleset-add path (`/rulesets`) feeds this.
-- **`/characters/[characterId]`** — standalone sheet. Reuse `CharacterSheet`; **hide** the
-  campaign-scoped sections (active score, shared roll log) when `game_id IS NULL`.
-- **Attach:** "Bring to a campaign" on the standalone sheet (pick a same-ruleset campaign → the RPC);
-  "Add one of your characters" on the campaign hub (`CharacterRoster`). The existing
-  `/games/[gameId]/characters/[characterId]` keeps working for the in-campaign view.
-
-### Security
-
-- Reads stay owner-or-member (unchanged). Standalone insert is owner-only. Attach/detach is **gated by
-  the `SECURITY DEFINER` RPC** (ownership + membership + ruleset match), never by trusting a
-  client-set `game_id`.
-
-### Backward compatibility
-
-Existing rows keep their `game_id`; the backfilled `original_ruleset_id` makes them behave exactly as
-today. No user-visible change until the standalone routes ship. `ON DELETE SET NULL` changes campaign
-deletion from "destroy characters" to "return them to standalone" — a strict improvement.
-
-### Verification (when built)
-
-- Create a character with **no campaign** → it appears in My Characters and opens a standalone sheet
-  with score/shared-log sections hidden.
-- **Attach** it to a same-ruleset campaign → it shows in that roster and the in-campaign sheet; loadout
-  - log now follow that campaign.
-- A **non-member** or **wrong-ruleset** attach is **rejected** by the RPC.
-- An existing in-campaign character is **unaffected**; deleting its campaign returns it to standalone
-  (SET NULL), not deletion.
-
-### Phase 5b — ✅ shipped (move / detach / clone, same-ruleset)
-
-**Move** (re-home to another same-ruleset campaign — reuses the attach RPC), **detach** (return to My
-Characters — the `detach_character` RPC), and **clone** (`cloneCharacter` — duplicate a build to a new
-standalone character; also the clean way to run the same scoundrel at two tables). Owner controls live
-on the character sheet (`AttachToCampaign`), "Duplicate" on My Characters. **No migration** — the
-`00014` RPCs + RLS already covered it.
-
-### Out of scope → Phase 5c
-
-**Cross-ruleset adaptation** (the `adaptations` column — clone/move into a _different_-ruleset campaign
-with re-validation + guided fixes), `transferToGame` as a distinct primitive, and a character **in
-multiple campaigns at once** (the rejected many-to-many model). GM-initiated detach (5b is owner-only).
-
-### Open decisions
-
-1. **Standalone name collisions on attach** — auto-suffix vs block (the per-game unique constraint
-   still applies once linked).
-2. **Detach authority** — owner-only, or may a GM detach a player's character from their campaign?
-3. ~~**Standalone-create ruleset access**~~ — **resolved (round-3 PR-6): inline offer, not
-   pre-grant.** The built-in catalog is embedded in `/characters/new` and `/games/new`; one click
-   creates the user's owned copy and continues in place. No auto-granted rows (à-la-carte
-   preserved — the user still explicitly takes a system), no `/rulesets` detour (F37).
+**Phase 5c (open)**: cross-ruleset adaptation via the reserved `adaptations` column (clone/move
+into a different-ruleset campaign with re-validation + guided fixes); GM-initiated detach; the
+`is_template` hook. Open decisions: standalone name collisions on attach (auto-suffix vs block);
+detach authority (owner-only today).

@@ -14,9 +14,12 @@ pre-launch app — a stale doc is worse than none, because it lies). This skill 
 
 ## Files this skill owns
 
-- **`BRD.md`** (sibling) — **the scope-of-record**: the product statement, requirements (R-A…R-I),
-  non-goals, the BRD-vs-current gap analysis, and the phased roadmap. Read it before planning new
-  work; when scope changes, edit it first, then reconcile the others.
+- **`BRD.md`** (sibling) — **the scope-of-record** (v2, 2026-07-05): the product statement,
+  personas, **user stories** (US-coded, status-tracked against findings), functional requirements
+  (R-A…R-I — IDs are stable), **non-functional requirements** (N-coded: security/testing/a11y/ops),
+  the coverage table, the themed open backlog, the decisions log, and shipped-shape appendices
+  (Discord client, portable characters). Read it before planning new work; when scope changes,
+  edit it first, then reconcile the others.
 - **`STATUS.md`** (sibling) — what HeistMind is, what's built, the architecture/constraints worth
   knowing, and current plans. The product-state doc the memory bank used to (badly) hold.
 - **`CX-MAP.md`** (sibling) — the map: every route, the character-creation wizard, the campaign
