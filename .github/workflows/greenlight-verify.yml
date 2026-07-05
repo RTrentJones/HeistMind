@@ -36,6 +36,11 @@ jobs:
           run_install: false
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # The e2e suite imports workspace packages (discord.spec.ts seeds the builtin ruleset from
+      # @heist-mind/shared — the fixture-provenance rule), and workspace imports resolve to
+      # dist/, which a bare install doesn't produce. `...` builds the package plus its deps.
+      - name: Build workspace packages the e2e suite imports
+        run: pnpm exec turbo run build --filter="@heist-mind/shared..."
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
