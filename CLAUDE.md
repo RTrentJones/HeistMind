@@ -172,6 +172,28 @@ issue you find in `FINDINGS.md`. It's the guide for user validation and for deci
 - **Discord** (future bot): `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`.
 - **E2E / Playwright:** `PLAYWRIGHT_BASE_URL` (unset → boots a local dev server; set to a deployed URL to gate it), optional `E2E_SUPABASE_URL` / `E2E_SUPABASE_ANON_KEY`. See `e2e/README.md`.
 
+## Testing discipline (the audit-round rules — they exist because F68/F69 shipped)
+
+- **Fixture provenance:** tests that need ruleset content import it from `@heist-mind/shared`
+  (`DEFAULT_RULESET`/`BUILTIN_RULESETS`, or discord's `characterOnDefaultRuleset()` helper) —
+  never invent a content shape. An invented fixture proves a path real data can't take (F69).
+- **Trigger-owned rows:** e2e never hand-seeds a row a production trigger/RPC owns (e.g.
+  `profiles.discord_id`) — create the upstream event and ASSERT the row appears (F68). The
+  discord e2e persona is born through the signup trigger; keep it that way.
+- **New bot command checklist:** unit specs (real engine fns over mocked repos, via
+  `packages/discord/src/test/helpers.ts`), a signed e2e in `e2e/specs/discord.spec.ts`, an
+  autocomplete (type-4) e2e if the command suggests, the manifest entry (auto-registers on
+  merge), and a `/heist help` line.
+- **Coverage ratchets only move UP.** A ratchet hit on new code means add tests, never lower
+  floors. Floors are set from measured reality minus ~1pt headroom.
+- **Which gates when:** `pnpm validate` always; `pnpm build` + the targeted e2e spec for
+  anything touching discord/e2e (rebuild dist first — stale discord dist is the known trap);
+  check `gh pr view N --json mergeable` before debugging silent CI; never merge on a watcher's
+  exit code alone — verify zero non-green check-runs.
+- **UI walkthrough before user-facing PRs:** drive the changed flow in the running app (the
+  verify/run skill) and update `CX-MAP.md` in the same PR (the live-update rule above).
+- Full policy + history: `.claude/skills/cx-map/CODE-QUALITY.md` ("Testing discipline" section).
+
 ## Greenlight loop (deploy → verify → promote)
 
 This repo uses Greenlight. Ship changes through the deploy-verify-promote skill:
