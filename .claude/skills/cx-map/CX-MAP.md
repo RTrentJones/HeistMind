@@ -254,6 +254,24 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
 
+### `/settings` — Account settings (self-service deletion)
+
+- **File:** `apps/web/src/app/settings/page.tsx` → `AccountSettings`
+  (`apps/web/src/features/profiles/components/AccountSettings.tsx`). Signed-out → `SignInGate`.
+- **Purpose:** the account surface: who you're signed in as (Discord), and the **danger zone** —
+  permanent account deletion (GDPR/CCPA deletion path; the Privacy Policy points here).
+- **Actions:** type-to-confirm deletion — typing the exact confirm word (`DELETE`) arms the
+  destructive button. Deletion calls `deleteAccount()` (profiles data seam) → `POST
+/api/account/delete` with the session access token as a bearer; the route verifies the token
+  server-side (`auth.getUser`), then service-role `auth.admin.deleteUser(callerId)` — the auth
+  user cascades through profiles → games/characters/rulesets/rolls. On success: local sign-out +
+  redirect `/`. Failures surface inline; the route is creds-guarded (503 without the service key).
+- **Nav:** header nav gains a persistent **Settings** link (`navigation.settings`); → `/` after
+  deletion.
+- **CX intent:** deletion is discoverable but hard to trigger accidentally (confirm word +
+  destructive styling); copy states exactly what is removed and that it's unrecoverable.
+- _Last verified:_ 2026-07-05 (feature introduction)
+
 ### Error & 404 surfaces (every route)
 
 - **Files:** `apps/web/src/app/{error,global-error,not-found}.tsx`.
