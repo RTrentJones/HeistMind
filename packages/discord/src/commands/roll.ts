@@ -23,7 +23,7 @@ import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
 import { resolveLinkedGame } from '../links';
 import { basicOptions, booleanOption, integerOption, stringOption } from '../options';
-import { deferred, inline, reply, replyEmbed } from '../respond';
+import { deferred, failEphemeral, inline, reply, replyEmbed } from '../respond';
 import type { BotContext, CommandHandler } from '../types';
 import { discordUserId } from './character';
 
@@ -81,16 +81,12 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
   // Sheet form: the active character's rating (DB reads → defer publicly; rolls face the table).
   if (action) {
     return deferred(async followUp => {
-      const failEphemeral = async (content: string): Promise<void> => {
-        await followUp.deleteOriginal();
-        await followUp.sendEphemeral(content);
-      };
-      if (!ctx.repos) return failEphemeral(copy.notConfigured);
+      if (!ctx.repos) return failEphemeral(followUp, copy.notConfigured);
       const repos = ctx.repos;
       const character = await activeCharacter(ctx, interaction);
-      if (!character) return failEphemeral(copy.rollNeedsActiveCharacter(ctx.siteUrl));
+      if (!character) return failEphemeral(followUp, copy.rollNeedsActiveCharacter(ctx.siteUrl));
       const resolved = resolveAction(character, action);
-      if (!resolved) return failEphemeral(copy.unknownAction(action));
+      if (!resolved) return failEphemeral(followUp, copy.unknownAction(action));
 
       const rating = character.characterData.skills[resolved] ?? 0;
       const pool = rating + extra + (push ? 1 : 0);
@@ -123,7 +119,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
           ...(note ? { note } : {}),
           pushed: push,
         });
-        if (!logged.success) return failEphemeral(copy.somethingBroke);
+        if (!logged.success) return failEphemeral(followUp, copy.somethingBroke);
         footer = copy.loggedFooter(game.name);
         if (push) pushNote = copy.pushedCharged; // the engine really charged the 2 stress
       }

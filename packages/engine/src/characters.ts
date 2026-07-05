@@ -4,6 +4,7 @@
 import {
   clampStress,
   harmBounds,
+  HARM_LEVELS,
   markXpTrack,
   PLAYBOOK_TRACK,
   usesXpTracks,
@@ -205,7 +206,6 @@ export async function advanceCharacter(
   return advanced;
 }
 
-const HARM_LEVELS: readonly HarmLevel[] = ['lesser', 'moderate', 'severe'];
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 
 export interface TakeHarmInput {

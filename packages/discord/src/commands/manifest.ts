@@ -3,6 +3,7 @@
 // only gain options across phases, so player muscle memory never breaks. Every command is
 // registered for BOTH install models (guild + user) and all contexts — Phase 0/1 gameplay works
 // in any server or DM via user-install ("sheet anywhere").
+import { HARM_LEVELS } from '@heist-mind/core';
 import {
   ApplicationCommandOptionType,
   ApplicationIntegrationType,
@@ -33,6 +34,8 @@ const GUILD_ONLY = {
 
 const POSITIONS = ['controlled', 'risky', 'desperate'] as const;
 const EFFECTS = ['limited', 'standard', 'great'] as const;
+
+const HARM_LEVEL_CHOICES = HARM_LEVELS.map(l => ({ name: l, value: l }));
 
 const FACTION_STATUSES = [
   { name: '-3 (war)', value: -3 },
@@ -301,11 +304,7 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
             name: 'level',
             description: 'The level the harm was dealt at',
             required: true,
-            choices: [
-              { name: 'lesser', value: 'lesser' },
-              { name: 'moderate', value: 'moderate' },
-              { name: 'severe', value: 'severe' },
-            ],
+            choices: HARM_LEVEL_CHOICES,
           },
           {
             type: ApplicationCommandOptionType.String,
@@ -326,11 +325,7 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
             name: 'level',
             description: 'The track the entry sits on',
             required: true,
-            choices: [
-              { name: 'lesser', value: 'lesser' },
-              { name: 'moderate', value: 'moderate' },
-              { name: 'severe', value: 'severe' },
-            ],
+            choices: HARM_LEVEL_CHOICES,
           },
           {
             type: ApplicationCommandOptionType.String,
