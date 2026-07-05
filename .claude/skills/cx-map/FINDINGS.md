@@ -481,6 +481,81 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F77 — Hub fortune roll + record-result affordance contradicts the journey text (decide: gate or relabel)
+
+- **severity:** S4 · **type:** CX-flaw
+- **where:** `apps/web/src/app/games/[gameId]/page.tsx` renders `RollPanel` (fortune) and
+  `AddResultForm` unconditionally to every member, while every sibling panel gates writes by
+  `game.createdBy === user?.id`; `CX-MAP.md` J3 step 5 says "GM makes fortune/GM rolls from the hub".
+- **root cause:** Never decided. Note the bot's parity: `/fortune` is open to everyone and `/log`
+  is member-gated — so the current web behavior matches the bot, and the JOURNEY text may be what's
+  wrong.
+- **fix:** Decide once: either gate the hub fortune panel to the GM, or (likelier, for bot parity)
+  keep it member-open and reword the section label + J3 so a player rolling fortune isn't off-map.
+- **status:** open
+
+### F76 — Accessibility is never enforced in CI (stories are render-only; no axe anywhere)
+
+- **severity:** S3 · **type:** CX-flaw (test-estate)
+- **where:** `packages/ui` — 0 `play:` functions across all 18 story files; `test-runner-jest.config.js`
+  has no `checkA11y`/axe hook (only retry config); `@storybook/addon-a11y` is dev-panel-only; no
+  `jest-axe` usage anywhere in unit tests.
+- **root cause:** The Storybook smoke (audit PR 8) is a mount-smoke — it catches "story throws" but
+  asserts no interaction and no a11y. Keyboard/contrast/ARIA regressions (the F1/F41 class) ship green.
+- **fix:** Add axe assertions to the test-runner (`postVisit` + `checkA11y`, error mode on a curated
+  rule set) and/or `play` functions for the interactive primitives (Select, Tooltip, ThemeToggle).
+- **status:** open
+
+### F75 — Player-perspective and RLS tenant-isolation e2e are fixme scaffolds — two headline guarantees unproven
+
+- **severity:** S2 · **type:** CX-flaw (test-estate)
+- **where:** `e2e/specs/player-characters.spec.ts` and `e2e/specs/tenant-isolation.spec.ts` — every
+  test is `test.fixme(...)` asserting only `expect(page).toBeTruthy()`.
+- **root cause:** Scaffolded and never built. Every gameplay spec drives `gmPage`; a Player's
+  join→build→play→advance path is exercised only as far as `join-via-code`'s membership check, and
+  the CLAUDE.md security headline ("multi-tenant isolation via RLS") has zero executing assertions —
+  a data-leak regression would ship green.
+- **fix:** Implement both specs on the existing `playerPage` fixture: (a) player joins, creates a
+  rules-valid character, rolls, advances; (b) player B cannot read GM A's unrelated campaign objects,
+  and member writes to GM-gated objects are refused.
+- **status:** open
+
+### F74 — Hub panels flash their empty state during the initial load
+
+- **severity:** S4 · **type:** CX-flaw
+- **where:** `ClocksPanel.tsx` (~:56), `FactionsPanel.tsx` (~:76), `ScorePanel.tsx` (~:80/:92) render
+  "No clocks/factions/score yet" with no `isLoading` guard; `CrewSheet.tsx` (~:79) shows the correct
+  loading pattern.
+- **root cause:** Empty-state branch keyed on `data.length === 0` before the first fetch resolves.
+- **fix:** Mirror CrewSheet: loading branch before the empty branch on the three panels.
+- **status:** open
+
+### F73 — A transient inline-edit error replaces the whole character sheet
+
+- **severity:** S3 · **type:** CX-flaw
+- **where:** `apps/web/src/features/characters/components/CharacterSheet.tsx:164` — the shared
+  `error` state set by ANY inline mutation's `onError` (stress nudge, rename, add/mark XP, indulge
+  vice) makes the page render `ErrorDisplay` instead of the sheet; recovery is a full reload. The
+  code comment even flags it ("unchanged from the pre-seam behavior").
+- **root cause:** One error state serves both load failures (where a page-level error is right) and
+  inline-save failures (where in-place feedback is right — the F58 principle).
+- **fix:** Split the states: load errors keep the page swap; mutation errors render a dismissible
+  inline Alert (or the notification store) and leave the sheet interactive.
+- **status:** open
+
+### F72 — Six secondary routes still show bare "please sign in" text with no CTA (F39 residue)
+
+- **severity:** S3 · **type:** CX-flaw
+- **where:** signed-out branches of `games/new/page.tsx` (~:27), `games/[gameId]/characters/new`
+  (~:27), `games/[gameId]/characters/[characterId]` (~:28), `characters/new/page.tsx` (~:41),
+  `characters/[characterId]/page.tsx` (~:34), `rulesets/new/page.tsx` (~:38) — each renders a bare
+  `<Text variant='muted'>` prompt while `SignInGate` (heading + value prop + Discord button) exists
+  and is used on the four primary routes.
+- **root cause:** F39 was fixed for `/games`, `/rulesets`, `/characters`, `/games/[id]` and the
+  fix never propagated to the secondary routes.
+- **fix:** Swap all six branches to `SignInGate` (mechanical; component already exists).
+- **status:** open
+
 ### F71 — Knip first-run triage backlog (advisory until clean)
 
 - **severity:** S4 · **type:** CX (tooling)
@@ -636,7 +711,8 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **F44** · FitD · Armor has no mechanical effect (harm reduction / heavy −1d). loadout carries armor
   but rolls/harm ignore it → "spend armor" to reduce harm; heavy-armor note. **open**
 - **F45** · FitD · Load level is character-static, not chosen per score. `CharacterLoadout.level` is
-  baked in → allow per-score load choice when a score/heist entity exists. **open**
+  baked in → allow per-score load choice when a score/heist entity exists. **fixed/superseded**
+  (verified 2026-07-05 audit): `LoadoutCard.tsx:130-144` offers light/normal/heavy per score.
 - **F46** · FitD · Fortune rolls lack structured types (engagement / gather-info / situation) and
   tiered readouts. `RollPanel.tsx:131–143` → a fortune-type selector + interpretation. **open**
 - **F47** · FitD · Faction projects/clocks and the war state (status −3) aren't surfaced; `Clock`
