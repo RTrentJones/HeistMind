@@ -86,3 +86,13 @@ export function makeFollowUpClient(
       send(webhook, 'POST', { content, flags: MessageFlags.Ephemeral }),
   };
 }
+
+/**
+ * The public-defer failure move: a publicly-deferred reply that fails authz/validation must not
+ * stay public — delete the original, then explain ephemerally. Every command file used to carry
+ * its own copy of this (8 of them, audit D2).
+ */
+export async function failEphemeral(followUp: FollowUpClient, content: string): Promise<void> {
+  await followUp.deleteOriginal();
+  await followUp.sendEphemeral(content);
+}

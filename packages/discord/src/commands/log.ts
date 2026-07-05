@@ -5,7 +5,7 @@
 import { isMember, resolveActor } from '../authz';
 import { copy } from '../format/copy';
 import { linkCandidates, resolveLinkedGame } from '../links';
-import { deferred, inline, reply } from '../respond';
+import { deferred, failEphemeral, inline, reply } from '../respond';
 import { stringOption } from '../options';
 import type { CommandHandler } from '../types';
 import { discordUserId } from './character';
@@ -17,17 +17,13 @@ export const handleLog: CommandHandler = (ctx, interaction) => {
   const text = stringOption(interaction, 'text')?.trim() ?? '';
 
   return deferred(async followUp => {
-    const failEphemeral = async (content: string): Promise<void> => {
-      await followUp.deleteOriginal();
-      await followUp.sendEphemeral(content);
-    };
-    if (!ctx.repos) return failEphemeral(copy.notConfigured);
+    if (!ctx.repos) return failEphemeral(followUp, copy.notConfigured);
     const repos = ctx.repos;
     const actor = await resolveActor(repos, userId);
-    if (!actor) return failEphemeral(copy.signInFirst(ctx.siteUrl));
+    if (!actor) return failEphemeral(followUp, copy.signInFirst(ctx.siteUrl));
     const game = await resolveLinkedGame(repos, interaction);
-    if (!game) return failEphemeral(copy.notLinked);
-    if (!(await isMember(repos, actor.id, game.id))) return failEphemeral(copy.notMember);
+    if (!game) return failEphemeral(followUp, copy.notLinked);
+    if (!(await isMember(repos, actor.id, game.id))) return failEphemeral(followUp, copy.notMember);
 
     // Attribute to the actor's character in THIS campaign when they have one.
     const roster = await repos.characters.findByGame(game.id);
@@ -44,7 +40,7 @@ export const handleLog: CommandHandler = (ctx, interaction) => {
       results: [],
       note: text,
     });
-    if (!created.success) return failEphemeral(copy.somethingBroke);
+    if (!created.success) return failEphemeral(followUp, copy.somethingBroke);
     return followUp.editOriginal({ content: copy.logRecorded(text) });
   });
 };

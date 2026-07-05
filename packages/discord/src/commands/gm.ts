@@ -21,10 +21,13 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 import { isGM, resolveActor } from '../authz';
 import { copy } from '../format/copy';
 import { linkCandidates, resolveLinkedGame } from '../links';
-import { integerOption, stringOption, subcommandName } from '../options';
-import { deferred, inline, reply } from '../respond';
+import { integerOption, stringOption, subcommandName, typedOptionValue } from '../options';
+import { deferred, failEphemeral, inline, reply } from '../respond';
 import type { BotContext, CommandHandler, FollowUpClient } from '../types';
 import { discordUserId } from './character';
+
+/** GM commands act on a linked SERVER surface — a DM answers the guild-only hint inline. */
+const guildGate = () => inline(reply(copy.guildOnly, { ephemeral: true }));
 
 interface GmContext {
   repos: DatabaseRepositories;
@@ -54,14 +57,9 @@ async function gmContext(
   return { repos: ctx.repos, actorId: actor.id, game };
 }
 
-async function failEphemeral(followUp: FollowUpClient, content: string): Promise<void> {
-  await followUp.deleteOriginal();
-  await followUp.sendEphemeral(content);
-}
-
 /** /score start|end — the operation lifecycle (one active at a time, repo-enforced). */
 export const handleScore: CommandHandler = (ctx, interaction) => {
-  if (!linkCandidates(interaction)) return inline(reply(copy.guildOnly, { ephemeral: true }));
+  if (!linkCandidates(interaction)) return guildGate();
   const sub = subcommandName(interaction);
 
   return deferred(async followUp => {
@@ -102,7 +100,7 @@ export const handleScore: CommandHandler = (ctx, interaction) => {
 
 /** /crew heat|tier|incarcerate — crew progression through the rules (heat cascade, tier, jail). */
 export const handleCrew: CommandHandler = (ctx, interaction) => {
-  if (!linkCandidates(interaction)) return inline(reply(copy.guildOnly, { ephemeral: true }));
+  if (!linkCandidates(interaction)) return guildGate();
   const sub = subcommandName(interaction);
 
   return deferred(async followUp => {
@@ -173,7 +171,7 @@ function pickByIdOrName<T extends { id: string; name: string }>(list: T[], typed
 
 /** /clock tick — advance (or wind back) a clock; FILLING it announces the milestone. */
 export const handleClock: CommandHandler = (ctx, interaction) => {
-  if (!linkCandidates(interaction)) return inline(reply(copy.guildOnly, { ephemeral: true }));
+  if (!linkCandidates(interaction)) return guildGate();
 
   return deferred(async followUp => {
     const gm = await gmContext(ctx, interaction, followUp);
@@ -202,7 +200,7 @@ export const handleClock: CommandHandler = (ctx, interaction) => {
 
 /** /faction status — set a faction's standing toward the crew (−3 war … +3 allied). */
 export const handleFaction: CommandHandler = (ctx, interaction) => {
-  if (!linkCandidates(interaction)) return inline(reply(copy.guildOnly, { ephemeral: true }));
+  if (!linkCandidates(interaction)) return guildGate();
 
   return deferred(async followUp => {
     const gm = await gmContext(ctx, interaction, followUp);
@@ -245,13 +243,6 @@ async function gmGame(
   return { repos: ctx.repos, game };
 }
 
-const typedValue = (
-  interaction: APIApplicationCommandAutocompleteInteraction,
-  name: string
-): string =>
-  stringOption(interaction as unknown as APIApplicationCommandInteraction, name)?.toLowerCase() ??
-  '';
-
 /** Suggest the linked campaign's clocks for `/clock tick clock:` (GM-gated; value = id). */
 export async function clockAutocomplete(
   ctx: BotContext,
@@ -262,7 +253,7 @@ export async function clockAutocomplete(
     if (!gm) return [];
     const clocks = await gm.repos.clocks.findByGame(gm.game.id);
     if (!clocks.success) return [];
-    const typed = typedValue(interaction, 'clock');
+    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'clock');
     return clocks.data
       .filter(c => c.name.toLowerCase().includes(typed))
       .slice(0, 25)
@@ -282,7 +273,7 @@ export async function factionAutocomplete(
     if (!gm) return [];
     const factions = await gm.repos.factions.findByGame(gm.game.id);
     if (!factions.success) return [];
-    const typed = typedValue(interaction, 'faction');
+    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'faction');
     return factions.data
       .filter(f => f.name.toLowerCase().includes(typed))
       .slice(0, 25)

@@ -6,7 +6,7 @@ import { isGM, isMember, resolveActor } from '../authz';
 import { copy } from '../format/copy';
 import { campaignStatusEmbed } from '../format/embeds';
 import { linkCandidates, resolveLinkedGame } from '../links';
-import { deferred, inline, reply, replyEmbed } from '../respond';
+import { deferred, failEphemeral, inline, reply, replyEmbed } from '../respond';
 import { stringOption, subcommandName } from '../options';
 import type {
   APIApplicationCommandAutocompleteInteraction,
@@ -67,23 +67,19 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
 
   // Link state is table-visible → public defer; failures go delete + ephemeral.
   return deferred(async followUp => {
-    const failEphemeral = async (content: string): Promise<void> => {
-      await followUp.deleteOriginal();
-      await followUp.sendEphemeral(content);
-    };
-    if (!ctx.repos) return failEphemeral(copy.notConfigured);
+    if (!ctx.repos) return failEphemeral(followUp, copy.notConfigured);
     const repos = ctx.repos;
     const actor = await resolveActor(repos, userId);
-    if (!actor) return failEphemeral(copy.signInFirst(ctx.siteUrl));
+    if (!actor) return failEphemeral(followUp, copy.signInFirst(ctx.siteUrl));
 
     if (sub === 'link') {
       const campaignName = stringOption(interaction, 'campaign')?.trim() ?? '';
       const scope = (stringOption(interaction, 'scope') ?? 'channel') as LinkScope;
       const mine = await repos.games.findByCreator(actor.id);
-      if (!mine.success) return failEphemeral(copy.somethingBroke);
+      if (!mine.success) return failEphemeral(followUp, copy.somethingBroke);
       const game = mine.data.find(g => g.name.toLowerCase() === campaignName.toLowerCase());
-      if (!game) return failEphemeral(copy.campaignNotFound(campaignName));
-      if (!(await isGM(repos, actor.id, game.id))) return failEphemeral(copy.gmOnly);
+      if (!game) return failEphemeral(followUp, copy.campaignNotFound(campaignName));
+      if (!(await isGM(repos, actor.id, game.id))) return failEphemeral(followUp, copy.gmOnly);
 
       const channel = interaction.channel as { id?: string; parent_id?: string | null };
       const channelId =
@@ -92,7 +88,7 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
           : scope === 'category'
             ? (channel.parent_id ?? null)
             : null;
-      if (scope === 'category' && !channelId) return failEphemeral(copy.noCategoryHere);
+      if (scope === 'category' && !channelId) return failEphemeral(followUp, copy.noCategoryHere);
 
       const linked = await repos.games.setDiscordLink(game.id, {
         guildId: surface.guildId,
@@ -101,7 +97,7 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
       if (!linked.success) {
         const duplicate =
           linked.error?.code === '23505' || /duplicate|unique/i.test(linked.error?.message ?? '');
-        return failEphemeral(duplicate ? copy.alreadyLinked : copy.somethingBroke);
+        return failEphemeral(followUp, duplicate ? copy.alreadyLinked : copy.somethingBroke);
       }
       // The link itself is a campaign event — the in-app feed shows where play happens.
       await repos.rolls.create(actor.id, {
@@ -117,10 +113,10 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
 
     if (sub === 'unlink') {
       const game = await resolveLinkedGame(repos, interaction);
-      if (!game) return failEphemeral(copy.notLinked);
-      if (!(await isGM(repos, actor.id, game.id))) return failEphemeral(copy.gmOnly);
+      if (!game) return failEphemeral(followUp, copy.notLinked);
+      if (!(await isGM(repos, actor.id, game.id))) return failEphemeral(followUp, copy.gmOnly);
       const cleared = await repos.games.setDiscordLink(game.id, null);
-      if (!cleared.success) return failEphemeral(copy.somethingBroke);
+      if (!cleared.success) return failEphemeral(followUp, copy.somethingBroke);
       await repos.rolls.create(actor.id, {
         gameId: game.id,
         kind: 'note',
@@ -134,8 +130,8 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
 
     if (sub === 'status') {
       const game = await resolveLinkedGame(repos, interaction);
-      if (!game) return failEphemeral(copy.notLinked);
-      if (!(await isMember(repos, actor.id, game.id))) return failEphemeral(copy.notMember);
+      if (!game) return failEphemeral(followUp, copy.notLinked);
+      if (!(await isMember(repos, actor.id, game.id))) return failEphemeral(followUp, copy.notMember);
       const [score, crew, clocks] = await Promise.all([
         repos.scores.findActive(game.id),
         repos.crews.findByGame(game.id),
@@ -153,7 +149,7 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
       });
     }
 
-    return failEphemeral(copy.unknownCommand);
+    return failEphemeral(followUp, copy.unknownCommand);
   });
 };
 

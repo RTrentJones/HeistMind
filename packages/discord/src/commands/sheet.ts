@@ -3,6 +3,7 @@
 // resolve the actor's active character, realize dice where needed, and phrase the outcome).
 // All public: they're table-facing gameplay events, and in a DM "public" is just you.
 import {
+  HARM_LEVELS,
   PLAYBOOK_TRACK,
   rulesetActions,
   stressBounds,
@@ -28,12 +29,11 @@ import type {
 } from 'discord-api-types/v10';
 import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
-import { basicOptions, integerOption, stringOption, subcommandName } from '../options';
-import { deferred } from '../respond';
+import { integerOption, stringOption, subcommandName, typedOptionValue } from '../options';
+import { deferred, failEphemeral } from '../respond';
 import type { BotContext, CommandHandler, FollowUpClient } from '../types';
 import { activeCharacter } from './roll';
 
-const HARM_LEVELS: readonly HarmLevel[] = ['lesser', 'moderate', 'severe'];
 
 function asHarmLevel(value: string | null): HarmLevel | null {
   return HARM_LEVELS.find(l => l === value) ?? null;
@@ -54,11 +54,6 @@ async function requireCharacter(
   const character = await activeCharacter(ctx, interaction);
   if (!character) return failEphemeral(copy.noActiveCharacter);
   return character;
-}
-
-async function failEphemeral(followUp: FollowUpClient, content: string): Promise<void> {
-  await followUp.deleteOriginal();
-  await followUp.sendEphemeral(content);
 }
 
 /** /stress add|clear — a clamped delta on the active character's track. */
@@ -275,12 +270,6 @@ export const handleXp: CommandHandler = (ctx, interaction) => {
   });
 };
 
-const typedValue = (interaction: APIApplicationCommandAutocompleteInteraction, name: string) =>
-  basicOptions(interaction as unknown as APIApplicationCommandInteraction)
-    .find(o => o.name === name)
-    ?.value?.toString()
-    .toLowerCase() ?? '';
-
 /** Suggest current harm entries for `/harm clear entry:` — scoped to the picked level. */
 export async function harmAutocomplete(
   ctx: BotContext,
@@ -293,7 +282,7 @@ export async function harmAutocomplete(
     const level = asHarmLevel(
       stringOption(interaction as unknown as APIApplicationCommandInteraction, 'level')
     );
-    const typed = typedValue(interaction, 'entry');
+    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'entry');
     const entries = level ? harm[level] : HARM_LEVELS.flatMap(l => harm[l]);
     return [...new Set(entries)]
       .filter(e => e.toLowerCase().includes(typed))
@@ -320,7 +309,7 @@ export async function xpAutocomplete(
 
     if (sub === 'mark') {
       if (!usesXpTracks(content)) return [];
-      const typed = typedValue(interaction, 'track');
+      const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'track');
       return [
         { name: copy.xpPlaybookTrack, value: PLAYBOOK_TRACK },
         ...(content.attributes ?? []).map(a => ({ name: a.name, value: a.id })),
@@ -330,7 +319,7 @@ export async function xpAutocomplete(
     }
 
     const owned = character.characterData.specialAbilities;
-    const typed = typedValue(interaction, 'pick');
+    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'pick');
     const abilities = content.specialAbilities
       .filter(a => !owned.includes(a.id))
       .map(a => ({ name: `Learn ${a.name}`, value: `ability:${a.id}` }));

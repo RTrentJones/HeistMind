@@ -57,3 +57,19 @@ export function booleanOption(
     ? opt.value
     : null;
 }
+
+/**
+ * The focused/typed value of an autocomplete option, lowercased for matching ('' when absent).
+ * Two drifted copies of this lived in gm.ts and sheet.ts (audit D4).
+ */
+export function typedOptionValue(
+  interaction: APIApplicationCommandInteraction,
+  name: string
+): string {
+  return (
+    basicOptions(interaction)
+      .find(o => o.name === name)
+      ?.value?.toString()
+      .toLowerCase() ?? ''
+  );
+}

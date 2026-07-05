@@ -95,6 +95,9 @@ export interface CharacterHarm {
 /** The three FitD harm-track levels, lightest first (RAW: a full track escalates upward). */
 export type HarmLevel = keyof CharacterHarm;
 
+/** The ordered level list — the escalation order engine `takeHarm` walks and choice lists show. */
+export const HARM_LEVELS: readonly HarmLevel[] = ['lesser', 'moderate', 'severe'];
+
 export interface CharacterContact {
   name: string;
   description: string;
