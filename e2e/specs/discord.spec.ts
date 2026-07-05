@@ -4,6 +4,7 @@
 // playwright.config; deployed targets hold the real Discord app key we can't sign for.
 import { createClient } from '@supabase/supabase-js';
 import { test, expect } from '@playwright/test';
+import { DEFAULT_RULESET } from '@heist-mind/shared';
 import { loadDiscordTestKeys, signInteraction } from '../support/discord-keys';
 import { getE2EEnv } from '../support/env';
 import { ensureTestUser, TEST_USERS } from '../support/supabase-admin';
@@ -63,12 +64,19 @@ test.describe('Discord interactions endpoint', () => {
       'Needs the local Supabase stack (service-role provisioning).'
     );
 
-    // Arrange: the GM persona (harness-provisioned + harness-torn-down) becomes a linked
-    // Discord user with one character — the same state a real signup + wizard run produces.
-    const gm = await ensureTestUser(env, TEST_USERS.gm);
+    // Arrange: the DISCORD persona — created with Discord-shaped signup metadata so the
+    // handle_new_user trigger writes profiles.discord_id (the PRODUCTION link path, 00019).
+    // Never hand-seed that column here: the trigger owns it, and hand-seeding is exactly how
+    // F68 shipped through green tests. The assert below IS the F68 regression.
+    const gm = await ensureTestUser(env, TEST_USERS.discord);
+    const discordId = TEST_USERS.discord.discordId!;
     const admin = createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!);
-    const discordId = 'e2e-discord-424242';
-    await admin.from('profiles').update({ discord_id: discordId }).eq('id', gm.id!);
+    const linked = await admin
+      .from('profiles')
+      .select('discord_id')
+      .eq('id', gm.id!)
+      .single();
+    expect(linked.data?.discord_id, 'the signup trigger must write discord_id').toBe(discordId);
     const dev = admin.schema('development');
     await dev.from('characters').delete().eq('created_by', gm.id!).eq('name', 'Bot Runner');
     const inserted = await dev
@@ -128,25 +136,29 @@ test.describe('Discord interactions endpoint', () => {
       'Needs the local Supabase stack (service-role provisioning).'
     );
 
-    // Arrange: a discord-linked GM with a campaign (ruleset + game + GM membership rows).
-    const gm = await ensureTestUser(env, TEST_USERS.gm);
+    // Arrange: the trigger-linked Discord persona with a campaign (ruleset + game + GM rows).
+    const gm = await ensureTestUser(env, TEST_USERS.discord);
+    const discordId = TEST_USERS.discord.discordId!;
     const admin = createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!);
-    const discordId = 'e2e-discord-424242';
-    await admin.from('profiles').update({ discord_id: discordId }).eq('id', gm.id!);
     const dev = admin.schema('development');
     // The character references the ruleset, so it goes first on re-runs.
     await dev.from('characters').delete().eq('created_by', gm.id!).eq('name', 'Bot Linked Runner');
     await dev.from('games').delete().eq('created_by', gm.id!).eq('name', 'Bot Linked Job');
     await dev.from('rulesets').delete().eq('created_by', gm.id!).eq('name', 'Bot E2E RS');
+    // Release the test guild's links whoever holds them — a leftover link from an earlier run's
+    // orphaned game would 23505 the /heist link below (one campaign per channel, by design).
+    await dev
+      .from('games')
+      .update({ discord_guild_id: null, discord_channel_id: null })
+      .eq('discord_guild_id', 'e2e-guild-1');
     const ruleset = await dev
       .from('rulesets')
       .insert({
         name: 'Bot E2E RS',
         created_by: gm.id!,
-        // The REAL content shape (F69): actions are NAMES on attributes[].skills.
-        content: {
-          attributes: [{ id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish'] }],
-        },
+        // The REAL shipped content (fixture-provenance rule, F69): the builtin default ruleset,
+        // verbatim — never an invented shape.
+        content: DEFAULT_RULESET,
       })
       .select('id')
       .single();
@@ -226,6 +238,8 @@ test.describe('Discord interactions endpoint', () => {
 
     // Act 3 (PR 2.3): a sheet roll in the linked channel persists through the engine — the
     // active character is IN this campaign, so /roll action: lands a kind='action' row.
+    // The action is a REAL builtin action (rulesetActions reads attributes[].skills — F69).
+    const ACTION = DEFAULT_RULESET.attributes[0]!.skills![0]!;
     const character = await dev
       .from('characters')
       .insert({
@@ -233,8 +247,8 @@ test.describe('Discord interactions endpoint', () => {
         created_by: gm.id!,
         game_id: game.data!.id,
         original_ruleset_id: ruleset.data!.id,
-        playbook_type: 'cutter',
-        character_data: { playbook: 'cutter', attributes: {}, skills: { Skirmish: 2 }, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+        playbook_type: DEFAULT_RULESET.playbooks[0]!.id,
+        character_data: { playbook: DEFAULT_RULESET.playbooks[0]!.id, attributes: {}, skills: { [ACTION]: 2 }, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
       })
       .select('id')
       .single();
@@ -251,7 +265,7 @@ test.describe('Discord interactions endpoint', () => {
         data: {
           name: 'roll',
           type: 1,
-          options: [{ name: 'action', type: 3, value: 'Skirmish' }],
+          options: [{ name: 'action', type: 3, value: ACTION }],
         },
       })
     );
@@ -265,10 +279,51 @@ test.describe('Discord interactions endpoint', () => {
           .eq('game_id', game.data!.id)
           .eq('kind', 'action');
         return rows.data?.some(
-          r => r.label === 'Skirmish' && r.character_id === character.data!.id
+          r => r.label === ACTION && r.character_id === character.data!.id
         );
       })
       .toBe(true);
+
+    // Act 3.5 (audit T4): AUTOCOMPLETE (type 4) — the F69 surface no e2e ever hit. The active
+    // character on the REAL builtin ruleset must yield its actions; a stranger gets nothing.
+    const autocomplete = await request.post(
+      '/api/discord',
+      signed({
+        type: 4,
+        ...guildSurface,
+        data: {
+          name: 'roll',
+          type: 1,
+          options: [{ name: 'action', type: 3, value: '', focused: true }],
+        },
+      })
+    );
+    expect(autocomplete.status()).toBe(200);
+    const suggestions = (await autocomplete.json()) as {
+      type: number;
+      data: { choices: { name: string; value: string }[] };
+    };
+    expect(suggestions.type).toBe(8); // APPLICATION_COMMAND_AUTOCOMPLETE_RESULT
+    expect(suggestions.data.choices.length).toBeGreaterThan(0);
+    expect(suggestions.data.choices.map(c => c.value)).toContain(ACTION);
+
+    const strangerAuto = await request.post(
+      '/api/discord',
+      signed({
+        type: 4,
+        ...guildSurface,
+        member: { user: { id: 'e2e-discord-stranger' } },
+        data: {
+          name: 'roll',
+          type: 1,
+          options: [{ name: 'action', type: 3, value: '', focused: true }],
+        },
+      })
+    );
+    expect(strangerAuto.status()).toBe(200);
+    expect(
+      ((await strangerAuto.json()) as { data: { choices: unknown[] } }).data.choices
+    ).toEqual([]);
 
     // Act 4: a NON-member Discord user is walled off (no roll row appears for them).
     const strangerId = 'e2e-discord-stranger';
@@ -315,5 +370,22 @@ test.describe('Discord interactions endpoint', () => {
     expect(body.type).toBe(4); // CHANNEL_MESSAGE_WITH_SOURCE — inline, no defer needed
     expect(body.data.embeds[0]?.title).toBe('Action roll — 3d');
     expect(body.data.embeds[0]?.fields?.[0]?.name).toBe('Outcome');
+  });
+});
+
+// The deployed-posture check (audit T7): needs NO signing keys and NO managed server, so it
+// runs against EVERY target — including the greenlight deploy gate, where the signed suite
+// above skips. An unsigned POST must be rejected by OUR route's signature check (401), not by
+// a missing key (503, creds-guard) and not by Vercel Deployment Protection (the SSO JSON that
+// silently blocked Discord's validation probes at go-live).
+test.describe('Discord endpoint posture (any target)', () => {
+  test('an unsigned POST is rejected by signature verification itself', async ({ request }) => {
+    const response = await request.post('/api/discord', {
+      data: JSON.stringify({ type: 1 }),
+      headers: { 'content-type': 'application/json' },
+    });
+    const body = await response.text();
+    expect(response.status(), `endpoint must hold a public key (503 = missing): ${body}`).toBe(401);
+    expect(body, 'Vercel protection must stay off this route').not.toContain('Protected deployment');
   });
 });

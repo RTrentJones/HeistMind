@@ -21,6 +21,13 @@ export interface TestUser {
   email: string;
   password: string;
   username: string;
+  /**
+   * A Discord snowflake to carry in the signup metadata (`provider_id`/`sub`) so the
+   * `handle_new_user` trigger writes `profiles.discord_id` — the PRODUCTION link path
+   * (migration 00019). Never hand-seed that column in a spec: the trigger owns it, and
+   * hand-seeding is exactly how F68 shipped invisible.
+   */
+  discordId?: string;
   /** Populated after provisioning. */
   id?: string;
 }
@@ -44,6 +51,13 @@ export const TEST_USERS = {
     password: RUN_PASSWORD,
     username: 'e2e-player',
   } satisfies TestUser,
+  /** The bot persona — provisioned like a REAL Discord signup (trigger-linked; F68 regression). */
+  discord: {
+    email: 'e2e-discord@heistmind.test',
+    password: RUN_PASSWORD,
+    username: 'e2e-discord',
+    discordId: 'e2e-discord-424242',
+  } satisfies TestUser,
 } as const;
 
 function adminClient(env: E2EEnv): SupabaseClient {
@@ -59,11 +73,49 @@ function adminClient(env: E2EEnv): SupabaseClient {
 export async function ensureTestUser(env: E2EEnv, user: TestUser): Promise<TestUser> {
   const admin = adminClient(env);
 
+  // A Discord-linked persona must be BORN through the trigger (it fires on INSERT only). A
+  // correctly-linked existing copy is REUSED — the bot's warm-lambda actor cache maps the
+  // snowflake to this profile id, so gratuitous recreation would strand the cache mid-suite.
+  // Only a stale/unlinked copy is deleted and recreated (profiles cascade from auth.users, so
+  // its leftover campaign rows go too), and any OTHER profile still holding this snowflake
+  // (e.g. a pre-F68 run that hand-seeded it) must release it first or the trigger's UNIQUE
+  // insert makes signup itself fail.
+  if (user.discordId) {
+    const existing = await findUserByEmail(admin, user.email);
+    if (existing) {
+      const profile = await admin
+        .from('profiles')
+        .select('discord_id')
+        .eq('id', existing.id)
+        .maybeSingle();
+      if (profile.data?.discord_id === user.discordId) {
+        await admin.auth.admin.updateUserById(existing.id, {
+          password: user.password,
+          email_confirm: true,
+        });
+        return { ...user, id: existing.id };
+      }
+      await admin.auth.admin.deleteUser(existing.id).catch(() => undefined);
+    }
+    await admin
+      .from('profiles')
+      .update({ discord_id: null })
+      .eq('discord_id', user.discordId)
+      .then(() => undefined)
+      .catch(() => undefined);
+  }
+
   const { data: created, error } = await admin.auth.admin.createUser({
     email: user.email,
     password: user.password,
     email_confirm: true,
-    user_metadata: { username: user.username, avatar_url: null },
+    user_metadata: {
+      username: user.username,
+      avatar_url: null,
+      // Discord OAuth carries the snowflake here; handle_new_user copies it to
+      // profiles.discord_id (00019).
+      ...(user.discordId ? { provider_id: user.discordId, sub: user.discordId } : {}),
+    },
   });
 
   if (!error && created.user) {
