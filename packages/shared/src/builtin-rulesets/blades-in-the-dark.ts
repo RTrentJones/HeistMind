@@ -6,6 +6,10 @@
 // All ability *rules text* below is original, concise mechanical wording written for HeistMind — it
 // is not transcribed from the book's prose. Game mechanics aren't copyrightable; only expression is.
 //
+// The CC BY grant covers the SRD *system* only — it excludes the Duskwall setting, its NPCs and
+// factions, artwork, and maps. This builtin therefore ships no setting content: no city or faction
+// names, no setting-specific terms. GMs seed their own factions per campaign.
+//
 // Shape mirrors `default-ruleset.ts` / `e2e/fixtures/rulesets/cinders.json` so the creation wizard
 // and the character-rules engine accept it unchanged: action-rating creation, BitD stress 9 / trauma
 // 4, harm 2/2/1, XP tracks (playbook 8 / attribute 6).
@@ -17,8 +21,8 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     version: '1.0.0',
     author: 'John Harper / One Seven Design (CC BY 3.0)',
     description:
-      'A daring crew of scoundrels seeking their fortunes in the haunted, industrial-fantasy city ' +
-      'of Duskvol. The reference Forged-in-the-Dark system: rate your actions, push your luck on ' +
+      'A daring crew of scoundrels seeking their fortunes in a haunted, industrial-fantasy city. ' +
+      'The reference Forged-in-the-Dark system: rate your actions, push your luck on ' +
       'the dice, run your crew, and weather the consequences. Licensed under CC BY 3.0 — edit freely.',
     system: 'Forged in the Dark',
   },
@@ -190,7 +194,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'whisper',
       name: 'The Whisper',
-      description: 'An arcane adept who bargains with ghosts and channels the electroplasmic dark.',
+      description: 'An arcane adept who bargains with ghosts and channels the spectral dark.',
       startingAbilities: ['whisper-compel'],
       specialAbilities: [
         'whisper-compel',
@@ -203,7 +207,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       ],
       contacts: [
         {
-          name: 'A spirit warden',
+          name: 'A ghost hunter',
           description: 'Hunts ghosts — and notices those who court them.',
         },
         { name: 'A vampire', description: 'An ancient patron with an agenda.' },
@@ -615,7 +619,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'whisper-tempest',
       name: 'Tempest',
-      description: 'Unleash the raw electroplasmic storm.',
+      description: 'Unleash the raw spectral storm.',
       rules:
         'Channel destructive energy as a ranged or area attack. Spend stress to increase its effect; bystanders may be caught in it.',
       tier: 2,
@@ -967,43 +971,4 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       'Boltholes',
     ],
   },
-
-  factions: [
-    {
-      name: 'The Bluecoats',
-      type: 'City',
-      tier: 3,
-      description: 'The city watch — corrupt, but everywhere.',
-    },
-    {
-      name: 'The Spirit Wardens',
-      type: 'Institution',
-      tier: 4,
-      description: 'They hunt ghosts and dispose of the dead.',
-    },
-    {
-      name: 'The Lampblacks',
-      type: 'Underworld',
-      tier: 2,
-      description: 'A rough gang of oil-soaked thugs.',
-    },
-    {
-      name: 'The Red Sashes',
-      type: 'Underworld',
-      tier: 2,
-      description: 'Disciplined sword-fighters and rivals.',
-    },
-    {
-      name: 'The Crows',
-      type: 'Underworld',
-      tier: 0,
-      description: 'A leaderless gang ripe for the taking.',
-    },
-    {
-      name: 'The Circle of Flame',
-      type: 'Nobility',
-      tier: 4,
-      description: 'An occult society of wealthy schemers.',
-    },
-  ],
 };

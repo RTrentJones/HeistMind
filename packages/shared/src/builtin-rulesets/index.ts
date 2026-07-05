@@ -47,7 +47,7 @@ export const BUILTIN_RULESETS: BuiltinRuleset[] = [
       'and authored by John Harper, and licensed for our use under the Creative Commons Attribution ' +
       '3.0 Unported license.',
     blurb:
-      'The classic: a daring crew of scoundrels in the haunted, industrial city of Duskvol. The ' +
+      'The classic: a daring crew of scoundrels in a haunted, industrial city. The ' +
       'reference Forged-in-the-Dark system.',
   },
   {
