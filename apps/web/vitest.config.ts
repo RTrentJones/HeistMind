@@ -6,12 +6,12 @@ export default defineConfig({
   ...createBaseConfig(__dirname, {
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
-    // Measured 2026-07-03 after the round-3 PR-7 tranche (creation-store budget math, rollPool,
-    // LoadoutCard, plus the seam/component seeds): 11.51 lines / 37.4 branches / 16.56 functions.
+    // Measured 2026-07-04 after the audit-PR-7 tranche (a seam suite in every feature's data/
+    // plus the notification + auth store tests): 16.2 lines / 52.37 branches / 31.87 functions.
     // Floor at the lowest measured metric, minus rounding headroom; ratchet upward with every
     // tranche, never down. (History: "70" pre-R2 gated only test-imported files — it verified
-    // nothing; honest 0 from R2-PR4 until this tranche.)
-    coverageThreshold: 11,
+    // nothing; honest 0 from R2-PR4, 11 from the round-3 tranche, 15 here.)
+    coverageThreshold: 15,
     additionalAliases: {
       '@heist-mind/ui': resolve(__dirname, '../../packages/ui/src'),
       '@heist-mind/database': resolve(__dirname, '../../packages/database/src'),
