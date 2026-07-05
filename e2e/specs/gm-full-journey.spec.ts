@@ -136,6 +136,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     await gmPage.goto('/rulesets/new');
     // Exercise the <input type="file"> affordance (the valid flows use the paste path).
     await gmPage.locator('#ruleset-file').setInputFiles(fixturePath('malformed.json'));
+    await gmPage.getByLabel(/right to upload this content/i).check();
     const upload = gmPage.getByRole('button', { name: 'Upload ruleset' });
     await expect(upload).toBeEnabled();
     await upload.click();

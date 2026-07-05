@@ -45,6 +45,8 @@ export async function uploadRuleset(
   await page.goto('/rulesets/new');
   await expect(page.getByRole('heading', { name: 'Upload a Ruleset' })).toBeVisible();
   await page.getByLabel('Ruleset JSON', { exact: true }).fill(JSON.stringify(content));
+  // The IP attestation checkbox gates the upload button (every upload path goes through here).
+  await page.getByLabel(/right to upload this content/i).check();
   await page.getByRole('button', { name: 'Upload ruleset' }).click();
 
   await expect(page).toHaveURL(/\/rulesets$/);
