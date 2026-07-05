@@ -481,6 +481,27 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F82 — Repo shipped Duskwall _setting_ content outside the CC BY grant (IP audit 2026-07-05)
+
+- **severity:** S2 · **type:** IP/licensing (audit-found, not user-visible)
+- **where:** the BitD builtin (`packages/shared/src/builtin-rulesets/blades-in-the-dark.ts`)
+  shipped six named Doskvol factions (Bluecoats, Spirit Wardens, Lampblacks, Red Sashes, Crows,
+  Circle of Flame), "Duskvol" in its description + catalog blurb, "electroplasmic" (×2) and a
+  "spirit warden" contact; product copy used "Doskvol" (`auth.signIn.newUser`,
+  `roleSelection.scoundrel.features`) and "Bluecoat"/"Lampblack" name placeholders; Brackwater
+  leaked the setting term "sparkcraft" and 9 SRD-coincident ability display names against its
+  "everything original" header; Storybook demos + e2e fixture names used setting names.
+- **root cause:** the SRD's CC BY 3.0 grant covers the _system_ but excludes the Duskwall
+  setting/NPCs/art/maps (bladesinthedark.com/licensing) — the setting layer was bolted onto an
+  otherwise-clean system implementation. Wicked Ones CC0 claim externally verified true
+  (Bandit Camp, Jan 2024); e2e ruleset fixtures (cinders/veil), migrations, and docs are clean.
+- **fix:** PR #151 (shared: drop factions block, de-Duskvol description/blurb,
+  spectral/ghost-hunter renames, Brackwater originality pass) + the web-copy reskin PR
+  (en.json, seam fixtures, e2e campaign names, Storybook, design-tokens comment). Existing user
+  DB copies are load-time snapshots — intentionally unaffected.
+- **status:** fixed (PR #151 + web-copy reskin PR) — legal-pages series (/legal/\*, footer,
+  clickwrap, upload attestation) tracks separately.
+
 ### F81 — "My Characters" is missing from the persistent nav
 
 - **severity:** S4 · **type:** CX-flaw
@@ -658,7 +679,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **severity:** S2 · **type:** FitD-gap
 - **where:** `core/rules/dice.ts` `resistanceStress` always used `Math.max(...results)`, but a
   0-attribute resistance rolls 2d and takes the **LOWEST** (the same zero-dice rule `rollOutcome`
-  applies). A `[1, 6]` zero-dice resist was computed as *free* instead of **5 stress** — and two
+  applies). A `[1, 6]` zero-dice resist was computed as _free_ instead of **5 stress** — and two
   6s on 0d even "crit-cleared". Affected core → engine (`rollResistance`) → web (`RollLog`
   display) → bot, since round 1.
 - **found by:** the Discord bot's local signed-POST harness on `/resist dice:0` (bot phase-0

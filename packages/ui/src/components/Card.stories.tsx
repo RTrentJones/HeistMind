@@ -194,7 +194,7 @@ export const GameThemed: Story = {
           <div className='space-y-3'>
             <div className='flex items-center gap-2'>
               <Crown className='w-4 h-4 text-semantic-warning' />
-              <span className='text-sm'>Target: The Doskvol Bank</span>
+              <span className='text-sm'>Target: The Brackwater Vault</span>
             </div>
             <div className='flex items-center gap-2'>
               <Target className='w-4 h-4 text-semantic-error' />
@@ -218,7 +218,7 @@ export const GameThemed: Story = {
         </CardHeader>
         <CardContent>
           <p className='text-sm text-semantic-error'>
-            The Bluecoats are closing in. Your crew needs to make a quick escape or face the
+            The City Watch is closing in. Your crew needs to make a quick escape or face the
             consequences.
           </p>
         </CardContent>

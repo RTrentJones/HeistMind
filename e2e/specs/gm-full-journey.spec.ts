@@ -34,7 +34,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
   }) => {
     // 1. Upload the full ruleset and spin up a campaign from it.
     const ruleset = await uploadRuleset(gmPage, 'cinders.json', uniqueName('Cinders & Coin'));
-    await createCampaign(gmPage, ruleset, uniqueName('The Lampblack Job'));
+    await createCampaign(gmPage, ruleset, uniqueName('The Harbormaster Job'));
 
     // 2. Enter the character-creation wizard from the game page.
     await gmPage.getByRole('link', { name: 'Create character' }).click();
