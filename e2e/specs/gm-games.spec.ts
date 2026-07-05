@@ -39,7 +39,7 @@ test.describe('GM: rulesets & games', () => {
 
   test('GM creates a game from an uploaded ruleset', async ({ gmPage }) => {
     const ruleset = await uploadRuleset(gmPage, 'cinders.json', uniqueName('Cinders & Coin'));
-    await createCampaign(gmPage, ruleset, uniqueName('The Red Sashes Score'));
+    await createCampaign(gmPage, ruleset, uniqueName('The Silk Blades Score'));
     // The game-detail header attributes the campaign to its ruleset.
     await expect(gmPage.getByText(ruleset.name)).toBeVisible();
   });

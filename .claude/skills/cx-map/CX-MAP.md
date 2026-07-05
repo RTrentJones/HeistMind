@@ -277,6 +277,24 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   Footer links (separate PR) are the discovery path.
 - _Last verified:_ 2026-07-05 (feature introduction)
 
+### `/settings` — Account settings (self-service deletion)
+
+- **File:** `apps/web/src/app/settings/page.tsx` → `AccountSettings`
+  (`apps/web/src/features/profiles/components/AccountSettings.tsx`). Signed-out → `SignInGate`.
+- **Purpose:** the account surface: who you're signed in as (Discord), and the **danger zone** —
+  permanent account deletion (GDPR/CCPA deletion path; the Privacy Policy points here).
+- **Actions:** type-to-confirm deletion — typing the exact confirm word (`DELETE`) arms the
+  destructive button. Deletion calls `deleteAccount()` (profiles data seam) → `POST
+/api/account/delete` with the session access token as a bearer; the route verifies the token
+  server-side (`auth.getUser`), then service-role `auth.admin.deleteUser(callerId)` — the auth
+  user cascades through profiles → games/characters/rulesets/rolls. On success: local sign-out +
+  redirect `/`. Failures surface inline; the route is creds-guarded (503 without the service key).
+- **Nav:** header nav gains a persistent **Settings** link (`navigation.settings`); → `/` after
+  deletion.
+- **CX intent:** deletion is discoverable but hard to trigger accidentally (confirm word +
+  destructive styling); copy states exactly what is removed and that it's unrecoverable.
+- _Last verified:_ 2026-07-05 (feature introduction)
+
 ### Error & 404 surfaces (every route)
 
 - **Files:** `apps/web/src/app/{error,global-error,not-found}.tsx`.
@@ -288,7 +306,7 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-05 (full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
+_Last verified:_ 2026-07-05 (IP-audit copy reskin (F82): sign-in "First time in the shadows?", scoundrel feature line, game/score name placeholders now Brackwater-flavored — no Duskwall setting names in product copy; same day: full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
 
 ---
 

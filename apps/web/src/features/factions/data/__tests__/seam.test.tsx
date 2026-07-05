@@ -12,7 +12,7 @@ import { useDeleteFaction } from '../mutations';
 // Representative seam tests: one read hook (Result unwrapping into RQ data/error state) and one
 // write hook (repo call + the game's factions invalidation), per the characters seam pattern.
 
-const FACTION = { id: 'f1', name: 'The Crows', tier: 2, status: 0 } as unknown as Faction;
+const FACTION = { id: 'f1', name: 'The Magpies', tier: 2, status: 0 } as unknown as Faction;
 
 function mockRepos(repos: Record<string, unknown>) {
   vi.mocked(getRepositories).mockReturnValue(repos as unknown as DatabaseRepositories);

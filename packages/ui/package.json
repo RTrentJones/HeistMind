@@ -1,6 +1,7 @@
 {
   "name": "@heist-mind/ui",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared UI components and design system for HeistMind",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

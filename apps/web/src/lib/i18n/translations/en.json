@@ -469,7 +469,7 @@
       "unnamed": "Untitled score",
       "none": "No score in progress.",
       "nameLabel": "Score name",
-      "namePlaceholder": "e.g. The Bluecoat Job",
+      "namePlaceholder": "e.g. The Saltglass Job",
       "startScore": "Start score",
       "endScore": "End score",
       "recent": "Recent scores",
@@ -631,7 +631,7 @@
           "subtitle": "Swift and secure access"
         }
       },
-      "newUser": "First time in Doskvol?",
+      "newUser": "First time in the shadows?",
       "createAccount": "Create Your Legend"
     },
     "signUp": {
@@ -665,7 +665,7 @@
           "Join active crews",
           "Develop your character",
           "Master dangerous skills",
-          "Leave your mark on Doskvol"
+          "Leave your mark on the underworld"
         ],
         "cta": "Find Your Crew"
       }
@@ -687,6 +687,19 @@
     }
   },
   "pages": {
+    "settings": {
+      "title": "Settings",
+      "authHeading": "Sign in to manage your account",
+      "authPrompt": "Sign in with Discord to view your account settings.",
+      "accountHeading": "Account",
+      "signedInAs": "Signed in as {{name}} via Discord.",
+      "dangerHeading": "Danger zone",
+      "dangerBody": "Deleting your account is permanent. Your profile, campaigns, characters, rulesets, and campaign logs are all removed and cannot be recovered.",
+      "confirmLabel": "Type {{word}} to confirm",
+      "confirmWord": "DELETE",
+      "deleteCta": "Delete my account",
+      "deleteFailed": "Account deletion failed. Please try again or contact us."
+    },
     "rulesetsCatalog": {
       "loadFailed": "Failed to load rulesets",
       "authHeading": "Sign in to manage rulesets",
@@ -941,7 +954,7 @@
     },
     "gameForm": {
       "nameLabel": "Campaign name",
-      "namePlaceholder": "e.g. The Lampblack Job",
+      "namePlaceholder": "e.g. The Harbormaster Job",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Optional",
       "rulesetLabel": "Ruleset",
