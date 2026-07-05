@@ -481,6 +481,29 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F71 — Knip first-run triage backlog (advisory until clean)
+
+- **severity:** S4 · **type:** CX (tooling)
+- **where:** the audit round added `knip` (root script + ADVISORY CI step, `continue-on-error`).
+  Its first run flags real finds mixed with resolver noise — notably `useApplyCharacterStress`
+  (dead web mutation), two unused web lib files, and a batch of dependency/exports flags that
+  need per-item verdicts (the Radix "unused dependency" wall in `packages/ui` looks like a
+  resolver false-positive family).
+- **status:** **open** — triage the report, encode verdicts in `knip.json` ignores or deletions,
+  then flip the CI step to blocking.
+
+### F70 — Audit round log-only piping residue (read-never-written / written-never-read)
+
+- **severity:** S4 · **type:** CX (data-piping hygiene, F68/F69 family — deliberately NOT fixed)
+- **where:** (a) `characters.adaptations` + `characters.is_template` are read by the adapter but
+  have no write path — Phase-5c placeholders; revisit when 5c lands or delete then.
+  (b) `CharacterData.items` is seeded `[]` at creation (`creation-steps.ts`) and never read —
+  superseded by `loadout.items`. (c) web `setXp` (CharacterSheet) writes XP tracks WITHOUT an
+  'xp' feed event, while the bot's `/xp mark` (engine `markXp`, track-aware since the P1 fix)
+  logs one — R-C3 residue: converge the web sheet onto engine `markXp`.
+- **status:** **open (logged by design)** — the P1–P4/P7/P8 siblings were fixed in the audit
+  round (#136–#141+); these three are the intentional leftovers.
+
 ### F67 — No player-facing web page documents the Discord bot
 
 - **severity:** S3 · **type:** CX

@@ -11,7 +11,5 @@ export interface Profile {
 
 export interface UpdateProfileData {
   username?: string;
-  displayName?: string;
   avatarUrl?: string;
-  preferences?: Record<string, unknown>;
 }

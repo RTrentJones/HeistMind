@@ -46,6 +46,13 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # ADVISORY dead-code scan (audit D6 — knip would have flagged the F68-era dead auth
+      # surface). Stays continue-on-error until the first-run noise (see the job log) is
+      # triaged; promote to blocking after.
+      - name: Dead-code scan (knip, advisory)
+        continue-on-error: true
+        run: pnpm exec knip
+
       # Type integrity is covered twice already: the compile-time checks in
       # packages/database/src/type-integrity.test.ts run under `pnpm type-check` (tsc) and the
       # test sweep below — a dedicated step would just be a third copy that can drift (its
