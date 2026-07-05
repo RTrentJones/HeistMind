@@ -397,3 +397,53 @@ optimistic updates (round-1 deviation stands); Discord-id→profile schema work.
 Adopting a server-side data boundary (Server Actions / Route Handlers); onboarding (F37); mobile sheet
 (F57); Phase 5c cross-ruleset. No new backend/REST API — React Query wraps the existing repositories via
 the seam.
+
+## Testing discipline (audit round, 2026-07-04/05 — the F68/F69 response)
+
+**Why this section exists:** two S1 bugs shipped through three phases of green tests. F68:
+`profiles.discord_id` was read-but-never-written — the e2e hand-seeded the exact row the signup
+trigger was supposed to create, proving only the read path. F69: the bot resolved actions from
+`content.skills` while everything else uses `rulesetActions()` — the unit AND e2e fixtures had
+invented the id-keyed shape, so tests validated a path production data can never take. Both were
+found by the first manual beta smoke test, minutes apart. The rules below make those failure
+modes structurally hard, and the audit round (#136–#145+) retrofitted them everywhere.
+
+### The rules
+
+1. **Fixture provenance.** Ruleset content in tests comes from `@heist-mind/shared` — the
+   shipped `DEFAULT_RULESET`/`BUILTIN_RULESETS` are the fixture source of truth. Derive names
+   (`rulesetActions(content)[0]`) instead of hardcoding them. Discord tests use
+   `packages/discord/src/test/helpers.ts` (`characterOnDefaultRuleset()`, `RATED_ACTION`, …).
+   Purpose-built fixtures are allowed only where the shipped content cannot express the
+   scenario (e.g. a flat-XP ruleset) — say so in a comment.
+2. **Trigger-owned rows.** If a production trigger/RPC owns a row, e2e creates the UPSTREAM
+   event and asserts the row appears; it never writes the row directly. The discord persona
+   (`TEST_USERS.discord`) is born via `auth.admin.createUser` with Discord-shaped metadata so
+   the `handle_new_user` trigger writes `discord_id` — and the spec asserts it did.
+3. **Shape contracts.** `packages/discord/src/commands/contracts.test.ts` runs the bot's
+   suggestion surfaces against EVERY builtin; `packages/shared`'s builtin tests pin
+   `rulesetActions` non-emptiness. A content-shape drift fails CI, not a player.
+4. **Ratchets move up only.** Every package has a measured floor (ui gained one in the round:
+   40/62/44/40; web moved 11→15). Respond to hits with tests. When deleting dead code,
+   consider ratcheting the freed floor upward afterwards.
+5. **E2E posture checks.** The keyless "unsigned POST → OUR 401" spec runs against every
+   deployed target (greenlight verify) — it distinguishes our signature check from creds-guard
+   503 and from platform-protection walls (both real go-live incidents).
+6. **New-command checklist** (bot): unit specs over real engine fns; signed command e2e;
+   type-4 autocomplete e2e when the command suggests; manifest entry; `/heist help` line.
+7. **Storybook is a test signal now** — the CI smoke renders every story; a broken story
+   fails the PR, not a reader.
+8. **Claude-driven UI walkthroughs:** before a PR that changes a user-facing flow, drive the
+   changed flow in the running app and update `CX-MAP.md` in the same PR.
+
+### Process guards (learned the hard way, same round)
+
+- Never merge on a watcher's exit code or a stale `mergeable` read — verify **zero non-green
+  check-runs** on the head SHA first (#139's red verify got merged past; #140 fixed the
+  breakage it hid).
+- The greenlight-verify workflow builds `@heist-mind/shared...` before Playwright — e2e specs
+  may import workspace packages ONLY if that filter covers them (dist-resolution; a bare
+  install loads nothing).
+- Types regen after a migration: regen from the fully-migrated LOCAL stack (remote `production`
+  lags until promote and the regen would drop its newer tables); hand-restore the
+  `__InternalSupabase` block; the diff must be exactly the migration's columns.
