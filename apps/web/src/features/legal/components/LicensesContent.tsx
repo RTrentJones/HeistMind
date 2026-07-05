@@ -8,7 +8,7 @@ import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
 export function LicensesContent() {
   return (
-    <LegalPageLayout title='Content Licenses & Attributions' effectiveDate='[EFFECTIVE DATE]'>
+    <LegalPageLayout title='Content Licenses & Attributions' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
         HeistMind&rsquo;s code and its built-in game content carry different licenses. The
         application code is open source under the MIT License. The built-in rulesets below each

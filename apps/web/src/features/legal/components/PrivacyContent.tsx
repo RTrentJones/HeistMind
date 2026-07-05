@@ -8,7 +8,7 @@ import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
 export function PrivacyContent() {
   return (
-    <LegalPageLayout title='Privacy Policy' effectiveDate='[EFFECTIVE DATE]'>
+    <LegalPageLayout title='Privacy Policy' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
         HeistMind, operated by Trent Jones, is a free hobby service. This policy describes exactly
         what we collect and why — which is deliberately little. We show no ads, run no analytics
@@ -78,7 +78,7 @@ export function PrivacyContent() {
             delete your account
           </Link>{' '}
           yourself at any time — deletion is immediate and permanent, removing your profile and all
-          your content. You can also email [CONTACT EMAIL] and we will delete it for you.
+          your content. You can also email legal@heistmind.com and we will delete it for you.
         </Paragraph>
       </LegalSection>
 
@@ -86,7 +86,7 @@ export function PrivacyContent() {
         <Paragraph variant='description'>
           Depending on where you live (e.g. GDPR in the EU, CCPA in California), you may have rights
           to access, correct, export, or erase your personal data, and to object to or restrict
-          processing. Email [CONTACT EMAIL] and we will honor these requests for all users
+          processing. Email legal@heistmind.com and we will honor these requests for all users
           regardless of jurisdiction.
         </Paragraph>
       </LegalSection>
@@ -94,8 +94,8 @@ export function PrivacyContent() {
       <LegalSection title='8. Children'>
         <Paragraph variant='description'>
           The Service is not directed at children under 13, and we do not knowingly collect data
-          from them. If you believe a child under 13 has an account, contact [CONTACT EMAIL] and we
-          will delete it.
+          from them. If you believe a child under 13 has an account, contact legal@heistmind.com and
+          we will delete it.
         </Paragraph>
       </LegalSection>
 
@@ -114,7 +114,9 @@ export function PrivacyContent() {
       </LegalSection>
 
       <LegalSection title='11. Contact'>
-        <Paragraph variant='description'>Privacy questions or requests: [CONTACT EMAIL].</Paragraph>
+        <Paragraph variant='description'>
+          Privacy questions or requests: legal@heistmind.com.
+        </Paragraph>
       </LegalSection>
     </LegalPageLayout>
   );

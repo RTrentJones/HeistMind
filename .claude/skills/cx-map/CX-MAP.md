@@ -280,11 +280,13 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
     `/legal/licenses` (renders `BUILTIN_RULESETS` live — name/license/attribution can't drift — plus
     the CC BY 3.0 attribution paragraph, CC0/CC BY 4.0 notes, not-affiliated disclaimer, MIT note).
 - **Copy:** deliberately **not** i18n'd (canonical English legal text behind file-level
-  eslint-disable; governing-language clause in the terms). Placeholders `[EFFECTIVE DATE]`,
-  `[STATE]`, `[CONTACT EMAIL]`, `[DMCA AGENT …]` **must be filled before prod promote**.
+  eslint-disable; governing-language clause in the terms). Filled 2026-07-05: effective date
+  July 5, 2026; governing law California; contact `legal@heistmind.com`; DMCA agent Trent Jones
+  (postal/phone via the Copyright Office directory listing). **Prod promote still requires the
+  copyright.gov agent registration to actually exist** (the page claims it).
 - **Nav:** public, no auth gate; AppShell chrome is automatic (paths aren't `/` or `/auth/*`).
   Footer links (separate PR) are the discovery path.
-- _Last verified:_ 2026-07-05 (feature introduction)
+- _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
 
 ### `/settings` — Account settings (self-service deletion)
 

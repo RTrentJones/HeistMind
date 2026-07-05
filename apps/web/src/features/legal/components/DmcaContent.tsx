@@ -7,7 +7,7 @@ import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
 export function DmcaContent() {
   return (
-    <LegalPageLayout title='DMCA & Copyright Policy' effectiveDate='[EFFECTIVE DATE]'>
+    <LegalPageLayout title='DMCA & Copyright Policy' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
         HeistMind hosts rulesets and campaign content uploaded by users. If you believe content on
         HeistMind infringes your copyright, this page explains how to tell us, and what happens
@@ -51,14 +51,20 @@ export function DmcaContent() {
 
       <LegalSection title='3. Designated agent'>
         <Paragraph variant='description'>
-          [DMCA AGENT NAME]
+          Trent Jones (HeistMind)
           <br />
-          [DMCA AGENT ADDRESS]
-          <br />
-          [DMCA AGENT EMAIL] · [DMCA AGENT PHONE]
+          Email: legal@heistmind.com
         </Paragraph>
         <Paragraph variant='description'>
-          As registered in the U.S. Copyright Office&rsquo;s DMCA Designated Agent Directory.
+          Postal address and telephone number are as listed in our registration in the{' '}
+          <a
+            href='https://dmca.copyright.gov/osp/publish/search.html'
+            className='underline'
+            rel='noopener noreferrer'
+          >
+            U.S. Copyright Office&rsquo;s DMCA Designated Agent Directory
+          </a>{' '}
+          (search &ldquo;HeistMind&rdquo;). Email is the fastest way to reach the agent.
         </Paragraph>
       </LegalSection>
 

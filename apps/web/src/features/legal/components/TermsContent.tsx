@@ -10,7 +10,7 @@ const OPERATOR = 'HeistMind, operated by Trent Jones';
 
 export function TermsContent() {
   return (
-    <LegalPageLayout title='Terms of Service' effectiveDate='[EFFECTIVE DATE]'>
+    <LegalPageLayout title='Terms of Service' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
         These terms are an agreement between you and {OPERATOR} (&ldquo;we&rdquo;, &ldquo;us&rdquo;)
         about your use of heistmind and its related services (the &ldquo;Service&rdquo;) — a free
@@ -135,8 +135,8 @@ export function TermsContent() {
 
       <LegalSection title='12. Governing law'>
         <Paragraph variant='description'>
-          These terms are governed by the laws of [STATE], USA, without regard to conflict of law
-          principles. The governing language of these terms is English.
+          These terms are governed by the laws of the State of California, USA, without regard to
+          conflict of law principles. The governing language of these terms is English.
         </Paragraph>
       </LegalSection>
 
@@ -149,7 +149,9 @@ export function TermsContent() {
       </LegalSection>
 
       <LegalSection title='14. Contact'>
-        <Paragraph variant='description'>Questions about these terms: [CONTACT EMAIL].</Paragraph>
+        <Paragraph variant='description'>
+          Questions about these terms: legal@heistmind.com.
+        </Paragraph>
       </LegalSection>
     </LegalPageLayout>
   );

@@ -8,7 +8,7 @@ import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
 export function AcceptableUseContent() {
   return (
-    <LegalPageLayout title='Acceptable Use Policy' effectiveDate='[EFFECTIVE DATE]'>
+    <LegalPageLayout title='Acceptable Use Policy' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
         Short version: upload only what you have the right to upload, keep shared spaces decent, and
         don&rsquo;t attack the Service. This policy is part of the{' '}
@@ -62,7 +62,7 @@ export function AcceptableUseContent() {
           <Link href='/legal/dmca' className='underline'>
             DMCA policy
           </Link>
-          ; report anything else to [CONTACT EMAIL].
+          ; report anything else to legal@heistmind.com.
         </Paragraph>
       </LegalSection>
     </LegalPageLayout>
