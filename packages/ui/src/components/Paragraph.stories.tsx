@@ -279,12 +279,12 @@ export const GameDescription: Story = {
   render: () => (
     <div className='p-6 bg-background-tertiary rounded-lg'>
       <Paragraph variant='lead' spacing='relaxed'>
-        Welcome to the shadows of Doskvol, where you and your crew of scoundrels pull off heists and
-        build your criminal empire.
+        Welcome to the shadows of Brackwater, where you and your crew of scoundrels pull off heists
+        and build your criminal empire.
       </Paragraph>
       <Paragraph variant='description' maxWidth='2xl' spacing='normal'>
-        Blades in the Dark is a tabletop role-playing game about a crew of daring scoundrels seeking
-        their fortunes on the haunted streets of an industrial-fantasy city.
+        Brackwater is a Forged-in-the-Dark setting about a crew of daring scoundrels seeking their
+        fortunes in the canals of a drowned, lantern-lit city.
       </Paragraph>
       <Paragraph variant='muted' size='sm' spacing='none'>
         Create your character, form your crew, and start your criminal enterprise today.
