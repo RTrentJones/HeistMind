@@ -5,7 +5,7 @@ ways: as your **character sheet anywhere** (build a rules-valid scoundrel and cr
 app offers is legal for your ruleset — and bring it to any table), and as the **live mechanical layer
 for async, play-by-post games on Discord** (rolls, clocks, stress, per-score gear, crew/faction state,
 and a score-grouped campaign log the table builds as the story posts over days). The narrative stays in
-Discord prose; the mechanics live here — *think "Avrae for Forged in the Dark."* Play can happen in
+Discord prose; the mechanics live here — _think "Avrae for Forged in the Dark."_ Play can happen in
 person, on Discord, or in-app — take what you want and leave the rest.
 
 ## 🚀 Quick Start
@@ -193,4 +193,7 @@ Repo conventions, commands, and the deploy loop live in `CLAUDE.md`.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+The code is licensed under the MIT License — see [LICENSE](./LICENSE). Built-in game
+content (the catalog rulesets) carries its own per-ruleset licenses (CC BY 3.0 / CC0 /
+CC BY 4.0) — see [NOTICE.md](./NOTICE.md) for the full breakdown, attributions, and
+the not-affiliated disclaimer.

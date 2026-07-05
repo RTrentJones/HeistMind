@@ -1,6 +1,7 @@
 {
   "name": "@heist-mind/discord",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "HeistMind's Discord client: Ed25519 request verification, the interaction router, slash-command handlers over the engine, and the command manifest + registration script. The web app's /api/discord route is a thin transport over this package.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
