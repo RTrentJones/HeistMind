@@ -424,6 +424,7 @@
       "faction": "Faction",
       "clock": "Clock",
       "xp": "XP",
+      "harm": "Harm",
       "note": "Note",
       "unnamedScore": "Untitled score",
       "noScore": "Between scores"

@@ -10,6 +10,8 @@ export interface Roll {
   kind: RollKind;
   label: string | null;
   dice: number;
+  /** True when the roll took the LOWEST of the dice (rating 0) — `dice` alone can't signal it. */
+  zeroDice: boolean;
   results: number[];
   outcome: RollOutcome;
   position: string | null;
