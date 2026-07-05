@@ -28,9 +28,13 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
 mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand, Campaigns/Rulesets
 nav, `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
-focus-revealed **skip-to-main** link, and the `<main id="main-content">` landmark. The header wraps
-(`flex-wrap`) instead of overflowing on mobile. The shell steps aside on `/` (marketing hero owns its
-header) and `/auth/*` (transient callback), which render their own full-screen layouts.
+focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
+**`Footer`** (`shared/components/Footer.tsx` — Terms/Privacy/DMCA/Acceptable-use/Licenses links +
+"© {year} HeistMind, operated by Trent Jones"). The header wraps (`flex-wrap`) instead of
+overflowing on mobile; the signed-out header also carries the **clickwrap** line
+(`ClickwrapNotice`, `sm:`+ only — page-level notices cover phones). The shell steps aside on `/`
+(marketing hero owns its header) and `/auth/*` (transient callback), which render their own
+full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` themselves.
 
 ---
 
@@ -64,6 +68,11 @@ header) and `/auth/*` (transient callback), which render their own full-screen l
   campaigns AND no characters) gets a guided **"Start here" 1-2-3** card (build a character ·
   create a campaign · join a game — each step a real link) instead of disconnected empty cards
   (F37, `pages.dashboard.startHere.*`).
+- **Legal touchpoints (2026-07-05):** every sign-in affordance carries the **clickwrap** line
+  ("By signing in, you agree to the Terms of Service and Privacy Policy" — `ClickwrapNotice`,
+  rendered under the dual CTA (both hero + bottom), inside `SignInGate`, and in the signed-out
+  header at `sm:`+); both sides of `/` render the shared **`Footer`** (five `/legal/*` links +
+  operator copyright).
 - **Actions:** (logged out) Sign in / Sign up with Discord; (signed in) jump to any campaign, character
   sheet, or a quick action.
 - **Nav:** → `/auth/callback` (after OAuth) → back to `/` (now the dashboard); → `/games`,

@@ -16,7 +16,9 @@ import {
   Text,
 } from '@heist-mind/ui';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
+import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
+import { Footer } from '@/shared/components/Footer';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -31,13 +33,16 @@ export function HomePage() {
   const signIn = () => void signInFlow();
 
   const dualCta = (size: 'lg' | 'default') => (
-    <Stack direction='row' gap='md' align='center' className='flex-wrap justify-center'>
-      <Button variant='ember' size={size} onClick={signIn}>
-        {t('landing.cta.gm')}
-      </Button>
-      <Button variant='outline' size={size} onClick={signIn}>
-        {t('landing.cta.player')}
-      </Button>
+    <Stack direction='column' gap='sm' align='center'>
+      <Stack direction='row' gap='md' align='center' className='flex-wrap justify-center'>
+        <Button variant='ember' size={size} onClick={signIn}>
+          {t('landing.cta.gm')}
+        </Button>
+        <Button variant='outline' size={size} onClick={signIn}>
+          {t('landing.cta.player')}
+        </Button>
+      </Stack>
+      <ClickwrapNotice className='text-center' />
     </Stack>
   );
 
@@ -131,6 +136,7 @@ export function HomePage() {
           </Stack>
         </Container>
       </Section>
+      <Footer />
     </Section>
   );
 }

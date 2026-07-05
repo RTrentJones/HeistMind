@@ -481,6 +481,21 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F83 — `hidden sm:block` never un-hides: the ui stylesheet's duplicate utilities shadow app responsive rules
+
+- **severity:** S3 · **type:** CX-flaw (styling footgun) · **(verified — caught by the footer/clickwrap e2e)**
+- **where:** `apps/web/src/app/globals.css` imports `tailwindcss` then `@heist-mind/ui/styles`;
+  the compiled `layout.css` ends up with the ui bundle's plain `.hidden` (line ~1300) AFTER the
+  app's `@media .sm\:block` (~851). Equal specificity → the later `.hidden` wins at every
+  width, so the `hidden sm:block` idiom silently never shows the element.
+- **root cause:** two full utility layers in one page stylesheet (app Tailwind output + the ui
+  package's prebuilt CSS), so base utilities from the second import outrank responsive variants
+  from the first.
+- **fix (workaround):** use width-scoped variants that don't rely on a base `hidden` —
+  `max-sm:hidden` instead of `hidden sm:block` (applied in `AuthHeader`'s clickwrap). Real fix
+  is deduping the double utility import; tracked here until someone takes that on.
+- **status:** open (workaround in place; audit other `hidden <bp>:` usages when touching them)
+
 ### F81 — "My Characters" is missing from the persistent nav
 
 - **severity:** S4 · **type:** CX-flaw
@@ -658,7 +673,7 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **severity:** S2 · **type:** FitD-gap
 - **where:** `core/rules/dice.ts` `resistanceStress` always used `Math.max(...results)`, but a
   0-attribute resistance rolls 2d and takes the **LOWEST** (the same zero-dice rule `rollOutcome`
-  applies). A `[1, 6]` zero-dice resist was computed as *free* instead of **5 stress** — and two
+  applies). A `[1, 6]` zero-dice resist was computed as _free_ instead of **5 stress** — and two
   6s on 0d even "crit-cleared". Affected core → engine (`rollResistance`) → web (`RollLog`
   display) → bot, since round 1.
 - **found by:** the Discord bot's local signed-POST harness on `/resist dice:0` (bot phase-0
