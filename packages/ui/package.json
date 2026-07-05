@@ -32,7 +32,8 @@
     "build-storybook": "storybook build",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "type-check": "tsc --noEmit -p tsconfig.json"
+    "type-check": "tsc --noEmit -p tsconfig.json",
+    "test-storybook:ci": "concurrently -k -s first -n SB,TEST \"http-server storybook-static --port 6006 --silent\" \"wait-on tcp:127.0.0.1:6006 && test-storybook --url http://127.0.0.1:6006\""
   },
   "dependencies": {
     "@heist-mind/shared": "workspace:*",
@@ -74,6 +75,7 @@
     "@storybook/react": "^8.0.0",
     "@storybook/react-vite": "^8.0.0",
     "@storybook/test": "^8.0.0",
+    "@storybook/test-runner": "^0.24.4",
     "@tailwindcss/postcss": "^4.1.10",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^14.3.1",
@@ -81,13 +83,16 @@
     "@types/jest": "^29.5.14",
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.16",
+    "concurrently": "^10.0.3",
+    "http-server": "^14.1.1",
     "jsdom": "^23.2.0",
     "postcss": "^8.4.32",
     "storybook": "^8.0.0",
     "tailwindcss": "^4.1.10",
     "tsup": "^8.5.0",
     "vite": "^5.0.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wait-on": "^9.0.10"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
