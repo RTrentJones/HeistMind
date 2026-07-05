@@ -253,6 +253,24 @@ describe('/vice indulge', () => {
   });
 });
 
+// A track-mode variant of the fixture — advancement opts into xpTracks like every builtin.
+const trackDetails = () =>
+  details({
+    ruleset: {
+      content: {
+        playbooks: [],
+        attributes: [{ id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish'] }],
+        characterCreation: { steps: [] },
+        skills: [],
+        specialAbilities: [{ id: 'battleborn', name: 'Battleborn', description: '' }],
+        advancement: {
+          advancementOptions: [{ id: 'a1', name: 'New ability', category: 'ability', cost: 2 }],
+          xpTracks: { playbook: 8, attribute: 6 },
+        },
+      },
+    },
+  });
+
 describe('/xp', () => {
   it('mark banks XP through the engine (ownership precheck + xp feed event)', async () => {
     const r = repos();
@@ -262,6 +280,54 @@ describe('/xp', () => {
     expect(r.characters.addExperience).toHaveBeenCalledWith('c1', 'p1', 1, expect.any(String));
     expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'xp' }));
     expect(content(calls)).toContain('marks 1 XP — **5** banked');
+  });
+
+  it('mark on a TRACK ruleset writes the playbook track the advance gate reads (audit P1)', async () => {
+    const r = repos({}, trackDetails());
+    const calls = await run(
+      await handleXp(ctx(r), cmd('xp', 'mark', [{ name: 'amount', type: 4, value: 1 }]))
+    );
+    expect(r.characters.addExperience).not.toHaveBeenCalled();
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({
+        characterData: expect.objectContaining({ xp: expect.objectContaining({ playbook: 1 }) }),
+      })
+    );
+    expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'xp' }));
+    expect(content(calls)).toContain('**Playbook 1/8**');
+  });
+
+  it('mark track:prowess marks the attribute track; an unknown track refuses', async () => {
+    const r = repos({}, trackDetails());
+    const calls = await run(
+      await handleXp(
+        ctx(r),
+        cmd('xp', 'mark', [
+          { name: 'amount', type: 4, value: 2 },
+          { name: 'track', type: 3, value: 'Prowess' },
+        ])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({
+        characterData: expect.objectContaining({
+          xp: expect.objectContaining({ attributes: { prowess: 2 } }),
+        }),
+      })
+    );
+    expect(content(calls)).toContain('**Prowess 2/6**');
+
+    const bad = await run(
+      await handleXp(
+        ctx(repos({}, trackDetails())),
+        cmd('xp', 'mark', [{ name: 'track', type: 3, value: 'Charisma' }])
+      )
+    );
+    expect(String(bad[1]?.payload)).toContain('isn’t an XP track');
   });
 
   it('advance decodes an ability pick and phrases the repo’s gate on refusal', async () => {
@@ -335,6 +401,21 @@ describe('sheet autocompletes', () => {
       { name: 'Learn Battleborn', value: 'ability:battleborn' },
       { name: '+1 Skirmish dot (2→3)', value: 'skill:Skirmish' },
     ]);
+  });
+
+  it('xp mark offers the ruleset’s tracks on a track ruleset, nothing on a flat one', async () => {
+    const tracked = await xpAutocomplete(
+      ctx(repos({}, trackDetails())),
+      auto('xp', 'mark', [{ name: 'track', type: 3, value: '' }])
+    );
+    expect(tracked).toEqual([
+      { name: 'Playbook', value: 'playbook' },
+      { name: 'Prowess', value: 'prowess' },
+    ]);
+    clearActorCache();
+    expect(
+      await xpAutocomplete(ctx(repos()), auto('xp', 'mark', [{ name: 'track', type: 3, value: '' }]))
+    ).toEqual([]);
   });
 
   it('degrades to [] with no repos', async () => {

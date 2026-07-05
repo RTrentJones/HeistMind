@@ -2,6 +2,7 @@
 // browser. These tests are also the Discord bot's contract: a command wrapping a use-case can rely
 // on exactly this sequencing.
 import { describe, expect, it, vi } from 'vitest';
+import { xpTrackSize } from '@heist-mind/core';
 import type {
   Character,
   CharacterWithDetails,
@@ -11,6 +12,7 @@ import type {
   Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
+import { DEFAULT_RULESET } from '@heist-mind/shared';
 import {
   advanceCharacter,
   applyStress,
@@ -516,10 +518,14 @@ describe('XP economy', () => {
   // The ownership precheck (service-role callers bypass RLS) reads the character by id first.
   const owns = () => vi.fn().mockResolvedValue(ok({ id: 'c1', createdBy: 'u1' } as Character));
 
-  it('markXp records the award and logs an xp event for a campaign character', async () => {
+  it('markXp on a FLAT-pool ruleset banks experience_points and logs an xp event', async () => {
+    // The bare CHARACTER fixture's content has no xpTracks → flat mode.
     const addExperience = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: 'g1' } as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
-    const r = repos({ characters: { addExperience, findById: owns() }, rolls: { create } });
+    const r = repos({
+      characters: { addExperience, findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      rolls: { create },
+    });
     const out = await markXp(r, {
       characterId: 'c1',
       userId: 'u1',
@@ -537,9 +543,13 @@ describe('XP economy', () => {
   });
 
   it('markXp skips the feed for a standalone character', async () => {
+    const standalone = { ...CHARACTER, gameId: null } as CharacterWithDetails;
     const addExperience = vi.fn().mockResolvedValue(ok({ id: 'c1', gameId: null } as Character));
     const create = vi.fn();
-    const r = repos({ characters: { addExperience, findById: owns() }, rolls: { create } });
+    const r = repos({
+      characters: { addExperience, findWithDetails: vi.fn().mockResolvedValue(ok(standalone)) },
+      rolls: { create },
+    });
     const out = await markXp(r, {
       characterId: 'c1',
       userId: 'u1',
@@ -550,6 +560,76 @@ describe('XP economy', () => {
     });
     expect(out.success).toBe(true);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  // ----- track mode (audit P1) — on the REAL shipped default ruleset, not invented content ----
+  describe('markXp — track mode', () => {
+    const TRACK_CHARACTER = {
+      ...CHARACTER,
+      ruleset: { content: DEFAULT_RULESET },
+    } as unknown as CharacterWithDetails;
+    const attribute = DEFAULT_RULESET.attributes[0]!;
+
+    const trackRepos = (character: CharacterWithDetails) => {
+      const update = vi.fn().mockImplementation((_id, _uid, data: { characterData: unknown }) =>
+        Promise.resolve(ok({ ...character, characterData: data.characterData } as Character))
+      );
+      const addExperience = vi.fn();
+      const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+      const r = repos({
+        characters: { addExperience, findWithDetails: vi.fn().mockResolvedValue(ok(character)) },
+        characterManagement: { updateCharacterWithValidation: update },
+        rolls: { create },
+      });
+      return { r, update, addExperience, create };
+    };
+
+    it('marks the PLAYBOOK track by default — the store advanceCharacter actually gates on', async () => {
+      const { r, update, addExperience, create } = trackRepos(TRACK_CHARACTER);
+      const out = await markXp(r, {
+        characterId: 'c1',
+        userId: 'u1',
+        amount: 1,
+        reason: 'x',
+        logLabel: 'Silks',
+        logNote: 'Marked 1 XP',
+      });
+      expect(out.success).toBe(true);
+      expect(addExperience).not.toHaveBeenCalled();
+      expect(update).toHaveBeenCalledWith('c1', 'u1', {
+        characterData: expect.objectContaining({
+          xp: expect.objectContaining({ playbook: 1 }),
+        }),
+      });
+      expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'xp' }));
+    });
+
+    it('marks an attribute track when asked, clamped to the track size', async () => {
+      const size = xpTrackSize(DEFAULT_RULESET, attribute.id);
+      const nearFull = {
+        ...TRACK_CHARACTER,
+        characterData: {
+          ...TRACK_CHARACTER.characterData,
+          xp: { playbook: 0, attributes: { [attribute.id]: size - 1 } },
+        },
+      } as unknown as CharacterWithDetails;
+      const { r, update } = trackRepos(nearFull);
+      const out = await markXp(r, {
+        characterId: 'c1',
+        userId: 'u1',
+        amount: 5, // overshoots — markXpTrack clamps at the track size
+        reason: 'x',
+        track: attribute.id,
+        logLabel: 'x',
+        logNote: 'x',
+      });
+      expect(out.success).toBe(true);
+      expect(update).toHaveBeenCalledWith('c1', 'u1', {
+        characterData: expect.objectContaining({
+          xp: expect.objectContaining({ attributes: { [attribute.id]: size } }),
+        }),
+      });
+    });
   });
 
   it('advanceCharacter routes through the validated advance and logs an xp event', async () => {

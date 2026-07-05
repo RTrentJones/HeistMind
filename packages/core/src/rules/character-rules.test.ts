@@ -20,7 +20,7 @@ import {
   xpMarks,
   xpTrackFull,
   advanceTrack,
-  markXp,
+  markXpTrack,
   clearXpTrack,
   PLAYBOOK_TRACK,
   DEFAULT_STRESS,
@@ -915,18 +915,18 @@ describe('XP tracks', () => {
     );
   });
 
-  it('markXp adds marks, clamped to [0, size], from empty or existing state', () => {
+  it('markXpTrack adds marks, clamped to [0, size], from empty or existing state', () => {
     const rs = trackRs();
     // from empty (no xp yet)
-    expect(markXp(rs, character(), PLAYBOOK_TRACK, 2)).toEqual({ playbook: 2, attributes: {} });
-    expect(markXp(rs, character(), 'force', 1)).toEqual({ playbook: 0, attributes: { force: 1 } });
+    expect(markXpTrack(rs, character(), PLAYBOOK_TRACK, 2)).toEqual({ playbook: 2, attributes: {} });
+    expect(markXpTrack(rs, character(), 'force', 1)).toEqual({ playbook: 0, attributes: { force: 1 } });
     // clamp at the top
     expect(
-      markXp(rs, character({ xp: { playbook: 7, attributes: {} } }), PLAYBOOK_TRACK, 5)
+      markXpTrack(rs, character({ xp: { playbook: 7, attributes: {} } }), PLAYBOOK_TRACK, 5)
     ).toEqual({ playbook: 8, attributes: {} });
     // clamp at the bottom, preserving the other track
     expect(
-      markXp(rs, character({ xp: { playbook: 4, attributes: { force: 1 } } }), 'force', -3)
+      markXpTrack(rs, character({ xp: { playbook: 4, attributes: { force: 1 } } }), 'force', -3)
     ).toEqual({ playbook: 4, attributes: { force: 0 } });
   });
 
