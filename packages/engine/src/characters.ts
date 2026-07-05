@@ -4,6 +4,9 @@
 import {
   clampStress,
   harmBounds,
+  markXpTrack,
+  PLAYBOOK_TRACK,
+  usesXpTracks,
   type Character,
   type CharacterAdvancement,
   type CharacterHarm,
@@ -100,6 +103,11 @@ export interface MarkXpInput {
   /** XP to add to the pool/track (the repository records the reason with the write). */
   amount: number;
   reason: string;
+  /**
+   * Which XP track to mark on a TRACK-mode ruleset (`'playbook'` or an attribute id); default
+   * playbook. Ignored on flat-pool rulesets.
+   */
+  track?: string;
   /** Log-event copy — the client's localized strings (the engine never owns copy). */
   logLabel: string;
   logNote: string;
@@ -107,25 +115,44 @@ export interface MarkXpInput {
 
 /**
  * Mark XP on a character and log it to the campaign feed (BRD R-C3: XP changes are logged
- * events). A standalone character has no feed — the mark still lands.
+ * events). MODE-AWARE (audit P1): a ruleset with `advancement.xpTracks` marks the chosen
+ * TRACK on `characterData.xp` — the store `advanceCharacter` actually gates on — through the
+ * validated write path; a flat-pool ruleset banks `experience_points` as before. A standalone
+ * character has no feed — the mark still lands.
  */
 export async function markXp(
   repos: DatabaseRepositories,
   input: MarkXpInput
 ): Promise<Result<Character>> {
-  const owned = await assertOwnsById(repos, input.characterId, input.userId);
+  const found = await repos.characters.findWithDetails(input.characterId);
+  if (!found.success) return found as Result<never>;
+  if (!found.data) return { success: false, error: { message: 'Character not found' } };
+  const char = found.data;
+  const owned = notOwner(char, input.userId);
   if (owned) return owned;
-  const updated = await repos.characters.addExperience(
-    input.characterId,
-    input.userId,
-    input.amount,
-    input.reason
-  );
+
+  let updated: Result<Character>;
+  if (usesXpTracks(char.ruleset.content)) {
+    const track = input.track ?? PLAYBOOK_TRACK;
+    const xp = markXpTrack(char.ruleset.content, char.characterData, track, input.amount);
+    updated = await repos.characterManagement.updateCharacterWithValidation(
+      char.id,
+      input.userId,
+      { characterData: { ...char.characterData, xp } }
+    );
+  } else {
+    updated = await repos.characters.addExperience(
+      input.characterId,
+      input.userId,
+      input.amount,
+      input.reason
+    );
+  }
   if (!updated.success) return updated;
-  if (updated.data.gameId !== null) {
+  if (char.gameId !== null) {
     const logged = await repos.rolls.create(input.userId, {
-      gameId: updated.data.gameId,
-      characterId: updated.data.id,
+      gameId: char.gameId,
+      characterId: char.id,
       kind: 'xp',
       label: input.logLabel,
       dice: 0,

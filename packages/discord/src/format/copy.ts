@@ -141,6 +141,10 @@ export const copy = {
   viceLog: 'Indulged their vice',
   xpMarked: (name: string, amount: number, total: number) =>
     `**${name}** marks ${amount} XP — **${total}** banked.`,
+  xpMarkedTrack: (name: string, amount: number, trackLabel: string, marks: number, size: number) =>
+    `**${name}** marks ${amount} XP — **${trackLabel} ${marks}/${size}**.`,
+  xpPlaybookTrack: 'Playbook',
+  xpTrackInvalid: 'That isn’t an XP track on your ruleset. Try the autocomplete suggestions.',
   xpLogMark: (amount: number) => `Marked ${amount} XP`,
   xpReasonDefault: 'Marked via Discord',
   xpAdvanced: (name: string, what: string) => `**${name}** advances — ${what}.`,

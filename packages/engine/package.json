@@ -31,6 +31,7 @@
     "@heist-mind/database": "workspace:*"
   },
   "devDependencies": {
+    "@heist-mind/shared": "workspace:^",
     "typescript": "^5.3.3",
     "vitest": "^2.1.9"
   }

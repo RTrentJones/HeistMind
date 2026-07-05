@@ -234,6 +234,9 @@ importers:
         specifier: workspace:*
         version: link:../database
     devDependencies:
+      '@heist-mind/shared':
+        specifier: workspace:^
+        version: link:../shared
       typescript:
         specifier: ^5.3.3
         version: 5.8.3

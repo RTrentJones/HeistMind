@@ -349,7 +349,7 @@ export function advanceTrack(ruleset: RulesetContent, adv: CharacterAdvancement)
 }
 
 /** New XP state with `delta` marks applied to a track, clamped to `[0, trackSize]`. */
-export function markXp(
+export function markXpTrack(
   ruleset: RulesetContent,
   data: CharacterData,
   track: string,

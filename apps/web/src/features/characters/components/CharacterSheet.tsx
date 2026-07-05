@@ -10,7 +10,7 @@ import {
   usesXpTracks,
   xpTrackSize,
   xpMarks,
-  markXp,
+  markXpTrack,
 } from '@heist-mind/core';
 import {
   Alert,
@@ -149,7 +149,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     const current = xpMarks(character.characterData, track);
     const target = Math.max(0, Math.min(value, xpTrackSize(content, track)));
     if (target === current) return;
-    const xp = markXp(content, character.characterData, track, target - current);
+    const xp = markXpTrack(content, character.characterData, track, target - current);
     updateCharData.mutate(
       { userId, data: { characterData: { ...character.characterData, xp } } },
       {

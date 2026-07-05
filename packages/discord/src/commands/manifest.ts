@@ -379,6 +379,13 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
             description: 'Why (recorded with the mark)',
             max_length: 100,
           },
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'track',
+            description: 'Which XP track (default: playbook)',
+            autocomplete: true,
+            max_length: 50,
+          },
         ],
       },
       {

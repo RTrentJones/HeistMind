@@ -3,8 +3,12 @@
 // resolve the actor's active character, realize dice where needed, and phrase the outcome).
 // All public: they're table-facing gameplay events, and in a DM "public" is just you.
 import {
+  PLAYBOOK_TRACK,
   rulesetActions,
   stressBounds,
+  usesXpTracks,
+  xpMarks,
+  xpTrackSize,
   type CharacterWithDetails,
   type HarmLevel,
 } from '@heist-mind/core';
@@ -213,17 +217,41 @@ export const handleXp: CommandHandler = (ctx, interaction) => {
     if (sub === 'mark') {
       const amount = integerOption(interaction, 'amount') ?? 1;
       const reason = stringOption(interaction, 'reason')?.trim() || copy.xpReasonDefault;
+      const content = character.ruleset.content;
+      // Track rulesets (all the builtins) mark characterData.xp — the store advanceCharacter
+      // actually gates on (audit P1); flat-pool rulesets bank experience_points as before.
+      const trackMode = usesXpTracks(content);
+      const requested = stringOption(interaction, 'track')?.trim().toLowerCase();
+      let track: string = PLAYBOOK_TRACK;
+      let trackLabel: string = copy.xpPlaybookTrack;
+      if (trackMode && requested && requested !== PLAYBOOK_TRACK) {
+        const attr = (content.attributes ?? []).find(
+          a => a.id.toLowerCase() === requested || a.name.toLowerCase() === requested
+        );
+        if (!attr) return failEphemeral(followUp, copy.xpTrackInvalid);
+        track = attr.id;
+        trackLabel = attr.name;
+      }
       const out = await markXp(repos, {
         characterId: character.id,
         userId: character.createdBy,
         amount,
         reason,
+        ...(trackMode ? { track } : {}),
         logLabel: character.name,
         logNote: copy.xpLogMark(amount),
       });
       if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
       return followUp.editOriginal({
-        content: copy.xpMarked(character.name, amount, out.data.experiencePoints),
+        content: trackMode
+          ? copy.xpMarkedTrack(
+              character.name,
+              amount,
+              trackLabel,
+              xpMarks(out.data.characterData, track),
+              xpTrackSize(content, track)
+            )
+          : copy.xpMarked(character.name, amount, out.data.experiencePoints),
       });
     }
 
@@ -276,7 +304,10 @@ export async function harmAutocomplete(
   }
 }
 
-/** Suggest buyable advances for `/xp advance pick:` — unowned abilities + action dots. */
+/**
+ * /xp suggestions: `mark track:` offers the ruleset's XP tracks (playbook + attributes);
+ * `advance pick:` offers unowned abilities + action dots.
+ */
 export async function xpAutocomplete(
   ctx: BotContext,
   interaction: APIApplicationCommandAutocompleteInteraction
@@ -285,6 +316,19 @@ export async function xpAutocomplete(
     const character = await activeCharacter(ctx, interaction);
     if (!character) return [];
     const content = character.ruleset.content;
+    const sub = subcommandName(interaction as unknown as APIApplicationCommandInteraction);
+
+    if (sub === 'mark') {
+      if (!usesXpTracks(content)) return [];
+      const typed = typedValue(interaction, 'track');
+      return [
+        { name: copy.xpPlaybookTrack, value: PLAYBOOK_TRACK },
+        ...(content.attributes ?? []).map(a => ({ name: a.name, value: a.id })),
+      ]
+        .filter(c => c.name.toLowerCase().includes(typed))
+        .slice(0, 25);
+    }
+
     const owned = character.characterData.specialAbilities;
     const typed = typedValue(interaction, 'pick');
     const abilities = content.specialAbilities
