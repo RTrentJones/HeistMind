@@ -481,6 +481,51 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F81 — "My Characters" is missing from the persistent nav
+
+- **severity:** S4 · **type:** CX-flaw
+- **where:** `apps/web/src/features/auth/components/AuthHeader.tsx` (~:54-57) — nav links are
+  Campaigns + Rulesets only; `/characters` (a Phase-5 primary surface and the Mode-1 home) is
+  reachable only via the dashboard section or breadcrumbs.
+- **fix:** add a "My characters" link to the header nav (i18n key exists in `navigation.*` space).
+- **status:** open
+
+### F80 — UI primitives with zero or story-less coverage
+
+- **severity:** S4 · **type:** CX-flaw (test-estate)
+- **where:** `packages/ui` — `Select` and `Textarea` have **no unit test and no story** (used
+  across the wizard and forms); the FitD gameplay primitives `Clock` (3 unit cases) and
+  `HarmTracker` (2) have **no Storybook story**, so the CI smoke never renders the visual core of
+  play; 15 of 23 components are unit-untested overall (floor 40/62/44/40 reflects it).
+- **fix:** stories for Clock/HarmTracker/Select/Textarea first (smoke coverage is nearly free),
+  then unit tests ratcheting the ui floor upward.
+- **status:** open
+
+### F79 — Dashboard content is never asserted, and two sections load without affordances
+
+- **severity:** S4 · **type:** CX-flaw (+ test-estate)
+- **where:** `e2e/specs/dashboard.spec.ts` asserts headings/chrome only — never that a user's
+  campaigns/characters/activity actually render; the `dashboard` feature has no unit test; and
+  `Dashboard.tsx` renders `loading ? null` for the Characters and Recent-activity sections (only
+  Campaigns gets a spinner), so they pop in.
+- **fix:** extend the spec to seed-and-assert real content on `/`; add loading affordances to the
+  two sections.
+- **status:** open
+
+### F78 — The deploy gate is blind to gameplay and the bot (all local-stack specs skip on deployed targets)
+
+- **severity:** S3 · **type:** CX-flaw (test-estate)
+- **where:** `greenlight-verify.yml` runs the suite against the deployed URL where
+  `isLocalStack() === false`, so every `gm-*` gameplay spec self-skips; `discord.spec.ts` +
+  `discord-parity.spec.ts` additionally need the local test keypair, so the LIVE `/api/discord`
+  behavior on beta/prod is exercised only by the keyless posture check (unsigned → 401).
+- **root cause:** data-mutating specs need the per-env schema + admin provisioning that only the
+  local stack guarantees; the bot specs can't sign for the real Discord apps.
+- **fix (incremental):** a small deployed-safe smoke tier — read-only gameplay assertions against
+  seeded beta data + the existing posture check; longer term, a beta-scoped persona pool enabling
+  one thin write-path spec on the deploy gate.
+- **status:** open
+
 ### F77 — Hub fortune roll + record-result affordance contradicts the journey text (decide: gate or relabel)
 
 - **severity:** S4 · **type:** CX-flaw
@@ -747,7 +792,9 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   → a `packages/ui` `<Select>` with a real associated `<label>` + shared token (see `CODE-QUALITY.md`
   PR3). **fixed @bebe87f** — `packages/ui/src/components/Select.tsx` (label/aria-label + token);
   all 9 raw selects migrated, the copy-pasted `sel` className removed.
-- **F60** · CX · Clarity/consistency cluster (each small, batch as a polish pass): context-less
+- **F60** · CX · Clarity/consistency cluster (each small, batch as a polish pass; 2026-07-05 audit
+  adds: raw `error.message` strings surfaced in destructive alerts by `CrewSheet`, `FactionsPanel`,
+  and `ScorePanel`): context-less
   "Loading…" spinners; button loading inconsistent (spinner vs disable); generic vs specific errors
   (join-code, panels); ruleset catalog doesn't flag "already in your rulesets"; ruleset picker lacks a
   one-line blurb; standalone sheet has no "standalone — no campaign" banner; indulge-vice has no
