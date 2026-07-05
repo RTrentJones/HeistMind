@@ -31,19 +31,20 @@ const details = (over: Record<string, unknown> = {}) => ({
   gameId: 'g1',
   game: null,
   experiencePoints: 4,
+  // The REAL content shape (F69): action names on `attributes[].skills`; ratings key by NAME.
   ruleset: {
     content: {
       playbooks: [],
-      attributes: [],
+      attributes: [{ id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish'] }],
       characterCreation: { steps: [] },
-      skills: [{ id: 'skirmish', name: 'Skirmish', description: '', attribute: 'prowess' }],
+      skills: [],
       specialAbilities: [{ id: 'battleborn', name: 'Battleborn', description: '' }],
       advancement: { advancementOptions: [{ id: 'a1', name: 'New ability', category: 'ability', cost: 2 }] },
     },
   },
   characterData: {
     playbook: 'cutter',
-    skills: { skirmish: 2 },
+    skills: { Skirmish: 2 },
     attributes: {},
     specialAbilities: [],
     stress: 4,
@@ -232,12 +233,12 @@ describe('/harm', () => {
 });
 
 describe('/vice indulge', () => {
-  it('rolls the zero-dice pool (no attributes) and clears the LOWEST die of stress', async () => {
+  it('rolls the lowest-attribute pool and clears the highest die of stress', async () => {
     const r = repos();
     const calls = await run(await handleVice(ctx(r, [3, 5]), cmd('vice', 'indulge')));
     const embed = (calls[0]?.payload as { embeds: APIEmbed[] }).embeds[0];
-    // Lowest attribute 0 → 2d take-lowest → cleared 3; stress 4 → 1. Not overindulged.
-    expect(embed?.title).toContain('0d (2d, take lowest)');
+    // One rated Prowess action → prowess 1 → 1d; rolled [3] clears 3; stress 4 → 1. No overindulgence.
+    expect(embed?.title).toContain('indulges — 1d');
     expect(embed?.description).toContain('Cleared **3** stress — now 1/9');
     expect(embed?.description).not.toContain('Overindulged');
     expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'downtime' }));
@@ -332,7 +333,7 @@ describe('sheet autocompletes', () => {
     );
     expect(choices).toEqual([
       { name: 'Learn Battleborn', value: 'ability:battleborn' },
-      { name: '+1 Skirmish dot (2→3)', value: 'skill:skirmish' },
+      { name: '+1 Skirmish dot (2→3)', value: 'skill:Skirmish' },
     ]);
   });
 

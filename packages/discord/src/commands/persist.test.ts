@@ -17,6 +17,7 @@ const fail = (message: string) => ({ success: false as const, error: { message }
 
 const GAME = { id: 'g1', name: 'The Docks Job', state: 'active' };
 
+// The REAL content shape (F69): action names ride `attributes[].skills`; ratings key by NAME.
 const details = (gameId: string | null) => ({
   id: 'c1',
   name: 'Silks',
@@ -26,12 +27,12 @@ const details = (gameId: string | null) => ({
   ruleset: {
     content: {
       playbooks: [],
-      attributes: [],
+      attributes: [{ id: 'prowess', name: 'Prowess', description: '', skills: ['Skirmish'] }],
       characterCreation: { steps: [] },
-      skills: [{ id: 'skirmish', name: 'Skirmish', description: '', attribute: 'prowess' }],
+      skills: [],
     },
   },
-  characterData: { playbook: 'cutter', skills: { skirmish: 2 }, attributes: {}, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+  characterData: { playbook: 'cutter', skills: { Skirmish: 2 }, attributes: {}, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
 });
 
 function repos(overrides: Record<string, unknown> = {}): DatabaseRepositories {
