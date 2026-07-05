@@ -57,7 +57,15 @@
     "character": "Character",
     "newCampaign": "New campaign",
     "newCharacter": "New character",
-    "uploadRuleset": "Upload ruleset"
+    "uploadRuleset": "Upload ruleset",
+    "footer": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "dmca": "DMCA",
+      "acceptableUse": "Acceptable use",
+      "licenses": "Licenses",
+      "copyright": "© {{year}} HeistMind, operated by Trent Jones"
+    }
   },
   "components": {
     "header": {
@@ -613,6 +621,13 @@
     "gate": {
       "heading": "Sign in to continue",
       "signInCta": "Sign In with Discord"
+    },
+    "clickwrap": {
+      "prefix": "By signing in, you agree to the ",
+      "termsLink": "Terms of Service",
+      "joiner": " and ",
+      "privacyLink": "Privacy Policy",
+      "suffix": "."
     },
     "signIn": {
       "title": "Enter the Shadows",

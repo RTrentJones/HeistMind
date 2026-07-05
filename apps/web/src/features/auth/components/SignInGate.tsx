@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, Card, Container, Heading, Stack, Text } from '@heist-mind/ui';
+import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
 import { useTranslation } from '@/lib/i18n/hooks';
 
@@ -24,6 +25,7 @@ export function SignInGate({ prompt, heading }: { prompt: string; heading?: stri
           <Button variant='default' onClick={() => void signIn()} loading={isSigningIn}>
             {t('auth.gate.signInCta')}
           </Button>
+          <ClickwrapNotice />
         </Stack>
       </Card>
     </Container>

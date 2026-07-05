@@ -22,4 +22,18 @@ test.describe('home page (anonymous)', () => {
     // The authenticated affordance must NOT be present when signed out.
     await expect(page.getByRole('button', { name: /sign out/i })).toHaveCount(0);
   });
+
+  test('footer links the legal documents and the clickwrap names the terms', async ({ page }) => {
+    await page.goto('/');
+
+    // The clickwrap line rides the hero CTA (two renders on the page — hero + bottom CTA).
+    await expect(page.getByText(/by signing in, you agree to the/i).first()).toBeVisible();
+
+    // Footer → terms lands on the document, not a 404.
+    await page
+      .getByRole('contentinfo')
+      .getByRole('link', { name: /^terms$/i })
+      .click();
+    await expect(page.getByRole('heading', { level: 1, name: /terms of service/i })).toBeVisible();
+  });
 });

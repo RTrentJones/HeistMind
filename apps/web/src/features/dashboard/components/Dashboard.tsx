@@ -14,6 +14,7 @@ import {
 } from '@heist-mind/ui';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { Footer } from '@/shared/components/Footer';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
@@ -251,6 +252,7 @@ export function Dashboard() {
           </Stack>
         </Container>
       </main>
+      <Footer />
     </div>
   );
 }

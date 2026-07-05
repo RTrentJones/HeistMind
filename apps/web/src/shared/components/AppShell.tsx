@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { Breadcrumbs } from '@/shared/components/Breadcrumbs';
+import { Footer } from '@/shared/components/Footer';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AuthHeader />
       <Breadcrumbs />
       <main id='main-content'>{children}</main>
+      <Footer />
     </>
   );
 }

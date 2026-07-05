@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
+import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
 import {
   Button,
@@ -76,6 +77,11 @@ export function AuthHeader() {
             <Button variant='default' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
               {t('auth.header.signUpDiscord')}
             </Button>
+            {/* w-full drops the notice to its own wrapped line; hidden on phones — the page-level
+                notices (hero CTA / SignInGate) carry the clickwrap there. max-sm:hidden, NOT
+                `hidden sm:block`: the ui package's stylesheet re-declares `.hidden` after the
+                app's responsive rules, so the sm:block override never wins (F83). */}
+            <ClickwrapNotice className='max-sm:hidden w-full text-right' />
           </Stack>
         )}
       </HeaderActions>
