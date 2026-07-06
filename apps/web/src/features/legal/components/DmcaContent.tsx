@@ -51,7 +51,7 @@ export function DmcaContent() {
 
       <LegalSection title='3. Designated agent'>
         <Paragraph variant='description'>
-          Trent Jones (HeistMind)
+          DMCA Agent, HeistMind
           <br />
           Email: legal@heistmind.com
         </Paragraph>
@@ -64,7 +64,8 @@ export function DmcaContent() {
           >
             U.S. Copyright Office&rsquo;s DMCA Designated Agent Directory
           </a>{' '}
-          (search &ldquo;HeistMind&rdquo;). Email is the fastest way to reach the agent.
+          (search &ldquo;HeistMind&rdquo;; service-provider registration no. DMCA-1075105). Email is
+          the fastest way to reach the agent.
         </Paragraph>
       </LegalSection>
 
