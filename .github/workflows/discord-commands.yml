@@ -40,6 +40,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The manifest imports @heist-mind/core (HARM_LEVELS since #141), and workspace imports
+      # resolve to dist/ — a bare install loads nothing (the same class as the verify-gate fix,
+      # #140). Registration failed silently from #141 until this step existed.
+      - name: Build workspace packages the manifest imports
+        run: pnpm exec turbo run build --filter=@heist-mind/core
+
       - name: Register commands
         env:
           DISCORD_APP_ID: ${{ github.ref == 'refs/heads/main' && secrets.DISCORD_APP_ID || secrets.DISCORD_DEV_APP_ID }}
