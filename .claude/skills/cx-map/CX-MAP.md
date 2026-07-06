@@ -42,13 +42,18 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 
 ### `/` — Home (marketing when logged out, dashboard when signed in)
 
-- **Coming-soon gate (prod holding page):** when `NEXT_PUBLIC_COMING_SOON=1` (set in the Vercel
-  **Production** env only; off on beta/preview/local), `page.tsx` renders `<ComingSoon/>` instead
-  of the switch, and `middleware.ts` redirects every route except `/` and `/legal/*` back to `/` —
-  which disables sign-in on prod (no route into the app; `/auth/callback` redirects home too). The
-  Discord/API routes are excluded from the matcher and keep working. Gate + allow-list live in
-  `apps/web/src/lib/coming-soon.ts`. Unset the var + redeploy prod to go live. (Beta stays fully
-  functional throughout.)
+- **Coming-soon gate (prod holding page) — PRODUCTION deployment only, `main` only:** `COMING_SOON`
+  (`apps/web/src/lib/coming-soon.ts`) keys on `VERCEL_ENV === 'production'` and lives **only on
+  `main`**, never on `development` — so beta, Vercel previews, and local are always un-gated (their
+  e2e suites run the real app), and only the prod deployment is gated. No env var to set. When
+  gated: `page.tsx` renders `<ComingSoon/>` at `/`, `middleware.ts` redirects every route except
+  `/` and `/legal/*` back to `/`, and `AuthHeader` omits its signed-out sign-in buttons — so there
+  is no login anywhere on prod. Discord/API routes are excluded from the matcher and keep working;
+  legal pages stay live (registered DMCA agent page). `NEXT_PUBLIC_VERCEL_ENV` is mapped from
+  `VERCEL_ENV` in `next.config.ts` so the client bundle agrees with the server/edge. The public
+  specs (home, auth-discord, auth-callback) are gate-tolerant via `e2e/support/coming-soon.ts` so
+  the prod post-deploy verify stays green. To bring prod online for real: revert this on `main`
+  (or reconcile `main` with `development`). _`main`-only; `development` has no gate._
 - **File:** `apps/web/src/app/page.tsx` — a **server component** (exports the per-route `metadata` —
   the real `<title>`/description for the one public URL) that renders
   `<HomeSwitch marketing={<HomePage/>}/>`; `HomeSwitch`

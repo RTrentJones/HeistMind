@@ -147,6 +147,8 @@ jobs:
 
       # PLAYWRIGHT_BASE_URL is unset → playwright.config boots `pnpm dev:web` against the local
       # stack. global-setup mints + injects the GM/Player sessions using the service-role key.
+      # The prod-only coming-soon gate (main) keys on VERCEL_ENV, which is unset locally, so the
+      # suite exercises the real app here with no extra config.
       - name: Run Playwright suite
         run: pnpm exec playwright test
 
