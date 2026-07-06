@@ -102,7 +102,7 @@ export function TermsContent() {
             Settings
           </Link>{' '}
           — deletion is permanent and removes your profile and Your Content. We may suspend or
-          terminate accounts that violate these terms, with notice where practical.
+          terminate accounts that violate these terms.
         </Paragraph>
       </LegalSection>
 
