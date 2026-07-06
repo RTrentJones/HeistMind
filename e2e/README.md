@@ -51,7 +51,7 @@ pnpm test:e2e:ui         # Playwright UI mode
 pnpm test:e2e:report     # open the last HTML report
 
 # Against an already-running / deployed app instead:
-PLAYWRIGHT_BASE_URL=https://beta.heistmind.app pnpm test:e2e
+PLAYWRIGHT_BASE_URL=https://beta.heistmind.com pnpm test:e2e
 ```
 
 ## Layout

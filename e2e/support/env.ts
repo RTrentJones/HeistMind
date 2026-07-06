@@ -9,7 +9,7 @@
 // stays green on the api check alone when ANTHROPIC_API_KEY is missing.
 
 export interface E2EEnv {
-  /** Origin the app is served from, e.g. http://localhost:3000 or https://beta.heistmind.app */
+  /** Origin the app is served from, e.g. http://localhost:3000 or https://beta.heistmind.com */
   baseURL: string;
   /** Supabase REST/Auth URL the running app talks to (for admin user provisioning). */
   supabaseUrl?: string;
