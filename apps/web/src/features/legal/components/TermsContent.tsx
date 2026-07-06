@@ -133,10 +133,14 @@ export function TermsContent() {
         </Paragraph>
       </LegalSection>
 
-      <LegalSection title='12. Governing law'>
+      <LegalSection title='12. Governing law and forum'>
         <Paragraph variant='description'>
           These terms are governed by the laws of the State of California, USA, without regard to
-          conflict of law principles. The governing language of these terms is English.
+          conflict of law principles. Any dispute arising out of or relating to these terms or the
+          Service that is not otherwise resolved will be brought exclusively in the state or federal
+          courts located in Los Angeles County, California, and you and {OPERATOR} each consent to
+          the personal jurisdiction of those courts and waive any objection to venue there. The
+          governing language of these terms is English.
         </Paragraph>
       </LegalSection>
 
