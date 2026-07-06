@@ -8,7 +8,7 @@ name: Keep Alive
 #   SUPABASE_PROJECT_ID   already used by supabase-ci.yml (the project ref)
 #   SUPABASE_ANON_KEY     the project's anon/public key
 # Optional:
-#   SITE_URL              deployed URL to keep warm, e.g. https://heistmind.app
+#   SITE_URL              deployed URL to keep warm, e.g. https://www.heistmind.com
 #
 # NOTE: GitHub only runs scheduled workflows from the repository's DEFAULT
 # branch (currently `main`). This file must reach `main` before the cron fires.
