@@ -6,16 +6,20 @@ import Link from 'next/link';
 import { Paragraph } from '@heist-mind/ui';
 import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
-const OPERATOR = 'HeistMind, operated by Trent Jones';
+// The party is an individual (no entity formed); "HeistMind" is the defined shorthand for him,
+// established in the opening paragraph. Used where the party is named as such (e.g. the forum
+// clause); the liability clause reads better with the defined "we".
+const OPERATOR = 'HeistMind';
 
 export function TermsContent() {
   return (
     <LegalPageLayout title='Terms of Service' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
-        These terms are an agreement between you and {OPERATOR} (&ldquo;we&rdquo;, &ldquo;us&rdquo;)
-        about your use of heistmind and its related services (the &ldquo;Service&rdquo;) — a free
-        tool for managing Forged-in-the-Dark tabletop RPG characters, crews, and campaigns. By
-        creating an account or using the Service, you agree to these terms.
+        These terms are an agreement between you and Trent Jones, the individual who operates
+        HeistMind (&ldquo;HeistMind&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), about your use of
+        HeistMind and its related services (the &ldquo;Service&rdquo;) — a free tool for managing
+        Forged-in-the-Dark tabletop RPG characters, crews, and campaigns. By creating an account or
+        using the Service, you agree to these terms.
       </Paragraph>
 
       <LegalSection title='1. Eligibility and accounts'>
@@ -118,7 +122,7 @@ export function TermsContent() {
 
       <LegalSection title='10. Limitation of liability'>
         <Paragraph variant='description'>
-          To the maximum extent permitted by law, {OPERATOR} will not be liable for any indirect,
+          To the maximum extent permitted by law, we will not be liable for any indirect,
           incidental, special, consequential, or punitive damages, or any loss of data, use, or
           goodwill, arising from your use of the Service. Our total liability for any claim relating
           to the Service is limited to US $50 (reflecting that the Service is free).

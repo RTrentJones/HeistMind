@@ -17,6 +17,6 @@ describe('Footer', () => {
     for (const [name, href] of expected) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     }
-    expect(screen.getByText(/HeistMind, operated by Trent Jones/)).toBeInTheDocument();
+    expect(screen.getByText(/Trent Jones \(HeistMind\)/)).toBeInTheDocument();
   });
 });
