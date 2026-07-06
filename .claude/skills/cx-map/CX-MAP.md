@@ -42,6 +42,13 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 
 ### `/` — Home (marketing when logged out, dashboard when signed in)
 
+- **Coming-soon gate (prod holding page):** when `NEXT_PUBLIC_COMING_SOON=1` (set in the Vercel
+  **Production** env only; off on beta/preview/local), `page.tsx` renders `<ComingSoon/>` instead
+  of the switch, and `middleware.ts` redirects every route except `/` and `/legal/*` back to `/` —
+  which disables sign-in on prod (no route into the app; `/auth/callback` redirects home too). The
+  Discord/API routes are excluded from the matcher and keep working. Gate + allow-list live in
+  `apps/web/src/lib/coming-soon.ts`. Unset the var + redeploy prod to go live. (Beta stays fully
+  functional throughout.)
 - **File:** `apps/web/src/app/page.tsx` — a **server component** (exports the per-route `metadata` —
   the real `<title>`/description for the one public URL) that renders
   `<HomeSwitch marketing={<HomePage/>}/>`; `HomeSwitch`
