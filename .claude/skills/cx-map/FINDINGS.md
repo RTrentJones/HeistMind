@@ -481,6 +481,27 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F84 — Account deletion 500s for any user who owns a campaign (trigger breaks the auth cascade)
+
+- **severity:** S2 · **type:** CX-flaw / bug · **(verified — caught by the beta walkthrough of `/settings` deletion, reproduced locally)**
+- **where:** `update_game_player_count()` (`supabase/migrations/00002_core_schema.sql:412-428`) —
+  fires on DELETE of `game_players`, runs `UPDATE games …` UNQUALIFIED with INVOKER privileges.
+- **root cause:** GoTrue's `auth.admin.deleteUser` cascade (auth.users → public.profiles →
+  `<env>.games` → `<env>.game_players`) runs as `supabase_auth_admin`, which has no USAGE on the
+  env schemas. Postgres search_path resolution **silently skips schemas the role can't use**, so
+  `games` doesn't resolve → `relation "games" does not exist` → the whole deletion aborts →
+  GoTrue 500 `unexpected_failure`. Every normal app path works (PostgREST invokers have USAGE),
+  which is why this only surfaced on the account-deletion cascade. A bare user (no campaigns)
+  deletes fine; any user who ever created a campaign cannot delete their account.
+- **fix:** migration `00021_account_deletion_cascade.sql` — `SECURITY DEFINER` + pinned
+  `search_path` on `update_game_player_count()` / `auto_assign_game_master()` /
+  `get_user_game_role()` (the last was already SECURITY DEFINER but missing the pinned path —
+  its own latent bug). Verified locally: API-level deleteUser now succeeds for a user with
+  ruleset + game + campaign membership. Lesson: any trigger reachable from an auth-schema
+  cascade must be SECURITY DEFINER with a pinned search_path — invoker privileges don't
+  survive the schema boundary.
+- **status:** fixed (account-deletion-cascade PR) — retry the beta walkthrough after merge+deploy.
+
 ### F83 — `hidden sm:block` never un-hides: the ui stylesheet's duplicate utilities shadow app responsive rules
 
 - **severity:** S3 · **type:** CX-flaw (styling footgun) · **(verified — caught by the footer/clickwrap e2e)**
