@@ -500,7 +500,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   ruleset + game + campaign membership. Lesson: any trigger reachable from an auth-schema
   cascade must be SECURITY DEFINER with a pinned search_path — invoker privileges don't
   survive the schema boundary.
-- **status:** fixed (account-deletion-cascade PR) — retry the beta walkthrough after merge+deploy.
+- **status:** fixed (PR #160). Regression guard added: `e2e/specs/account-deletion.spec.ts`
+  deletes a throwaway campaign-owning persona via both the `/api/account/delete` route and the
+  `/settings` UI; verified it fails (500) against the reverted trigger and passes with the fix.
+  Retry the beta walkthrough after merge+deploy.
 
 ### F83 — `hidden sm:block` never un-hides: the ui stylesheet's duplicate utilities shadow app responsive rules
 
