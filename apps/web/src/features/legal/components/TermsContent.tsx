@@ -146,9 +146,10 @@ export function TermsContent() {
 
       <LegalSection title='13. Changes to these terms'>
         <Paragraph variant='description'>
-          We may update these terms; material changes will be announced on the site with an updated
-          effective date. Continuing to use the Service after a change takes effect means you accept
-          the updated terms.
+          We may change these terms at any time, at our discretion. The version posted here is the
+          current one; when we change it we update the &ldquo;Last updated&rdquo; date at the top of
+          this page. Changes take effect when posted, and continuing to use the Service after that
+          means you accept them. Please check this page from time to time.
         </Paragraph>
       </LegalSection>
 
