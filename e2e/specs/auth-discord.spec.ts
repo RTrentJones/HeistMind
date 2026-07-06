@@ -7,10 +7,13 @@
 // round-trip stays a documented manual check (see e2e/README.md).
 
 import { test, expect } from '../support/fixtures';
+import { onComingSoon } from '../support/coming-soon';
 
 test.describe('Discord sign-in wiring', () => {
   test('sign-in initiates the Supabase Discord OAuth redirect', async ({ page }) => {
     await page.goto('/');
+    const signUp = page.getByRole('button', { name: /sign up with discord/i });
+    test.skip(await onComingSoon(page, signUp), 'prod coming-soon gate — sign-in is not shown');
 
     // Capture the GoTrue authorize hand-off. We don't follow it into discord.com.
     const authorizeRequest = page.waitForRequest(req => /\/auth\/v1\/authorize/.test(req.url()), {

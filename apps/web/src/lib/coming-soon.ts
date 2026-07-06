@@ -1,11 +1,15 @@
-// The prod "coming soon" gate.
+// The prod "coming soon" gate — ON in the production deployment only, automatically.
 //
-// Ships DEFAULT-OFF: `NEXT_PUBLIC_COMING_SOON` is unset on beta, preview, and locally, so this
-// changes nothing there. Set `NEXT_PUBLIC_COMING_SOON=1` in the Vercel *Production* environment
-// only (then redeploy prod) to put prod behind a holding page and block sign-in while beta is
-// polished; delete the var + redeploy to go live — no code change either way. NEXT_PUBLIC_ so the
-// value is inlined into the middleware, server, and client bundles at build time.
-export const COMING_SOON = process.env.NEXT_PUBLIC_COMING_SOON === '1';
+// This lives ONLY on `main` (prod); it is deliberately NOT on `development`, so beta never shows
+// the holding page. It keys on Vercel's deployment environment, so it needs NO env var to be set:
+//   - production deployment → gated (holding page, no login)
+//   - preview / beta / local → un-gated (the real app), so their e2e suites exercise it normally.
+//
+// VERCEL_ENV is read at runtime on the server/edge; NEXT_PUBLIC_VERCEL_ENV is inlined for the
+// client (mapped from VERCEL_ENV in next.config.ts) — the `??` keeps all three runtimes in sync.
+// To bring prod online for real, revert this commit on `main`.
+export const COMING_SOON: boolean =
+  (process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV) === 'production';
 
 /**
  * While the gate is on, only the holding page and the public legal pages stay reachable; every

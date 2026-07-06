@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
+import { COMING_SOON } from '@/lib/coming-soon';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
 import {
   Button,
@@ -69,7 +70,8 @@ export function AuthHeader() {
               {t('auth.header.signOut')}
             </Button>
           </Stack>
-        ) : (
+        ) : COMING_SOON ? null : (
+          // Prod is behind the always-on coming-soon gate (main only) — no sign-in is shown.
           <Stack direction='row' gap='sm' align='center' className='flex-wrap justify-end'>
             <Button variant='ghost' size='sm' onClick={handleDiscordSignIn} loading={isLoading}>
               {t('auth.header.signIn')}
