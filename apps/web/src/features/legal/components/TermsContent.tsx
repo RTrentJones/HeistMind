@@ -6,16 +6,20 @@ import Link from 'next/link';
 import { Paragraph } from '@heist-mind/ui';
 import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
-const OPERATOR = 'HeistMind, operated by Trent Jones';
+// The party is an individual (no entity formed); "HeistMind" is the defined shorthand for him,
+// established in the opening paragraph. Used where the party is named as such (e.g. the forum
+// clause); the liability clause reads better with the defined "we".
+const OPERATOR = 'HeistMind';
 
 export function TermsContent() {
   return (
     <LegalPageLayout title='Terms of Service' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
-        These terms are an agreement between you and {OPERATOR} (&ldquo;we&rdquo;, &ldquo;us&rdquo;)
-        about your use of heistmind and its related services (the &ldquo;Service&rdquo;) — a free
-        tool for managing Forged-in-the-Dark tabletop RPG characters, crews, and campaigns. By
-        creating an account or using the Service, you agree to these terms.
+        These terms are an agreement between you and Trent Jones, the individual who operates
+        HeistMind (&ldquo;HeistMind&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), about your use of
+        HeistMind and its related services (the &ldquo;Service&rdquo;) — a free tool for managing
+        Forged-in-the-Dark tabletop RPG characters, crews, and campaigns. By creating an account or
+        using the Service, you agree to these terms.
       </Paragraph>
 
       <LegalSection title='1. Eligibility and accounts'>
@@ -102,7 +106,7 @@ export function TermsContent() {
             Settings
           </Link>{' '}
           — deletion is permanent and removes your profile and Your Content. We may suspend or
-          terminate accounts that violate these terms, with notice where practical.
+          terminate accounts that violate these terms.
         </Paragraph>
       </LegalSection>
 
@@ -118,7 +122,7 @@ export function TermsContent() {
 
       <LegalSection title='10. Limitation of liability'>
         <Paragraph variant='description'>
-          To the maximum extent permitted by law, {OPERATOR} will not be liable for any indirect,
+          To the maximum extent permitted by law, we will not be liable for any indirect,
           incidental, special, consequential, or punitive damages, or any loss of data, use, or
           goodwill, arising from your use of the Service. Our total liability for any claim relating
           to the Service is limited to US $50 (reflecting that the Service is free).
@@ -133,18 +137,23 @@ export function TermsContent() {
         </Paragraph>
       </LegalSection>
 
-      <LegalSection title='12. Governing law'>
+      <LegalSection title='12. Governing law and forum'>
         <Paragraph variant='description'>
           These terms are governed by the laws of the State of California, USA, without regard to
-          conflict of law principles. The governing language of these terms is English.
+          conflict of law principles. Any dispute arising out of or relating to these terms or the
+          Service that is not otherwise resolved will be brought exclusively in the state or federal
+          courts located in Los Angeles County, California, and you and {OPERATOR} each consent to
+          the personal jurisdiction of those courts and waive any objection to venue there. The
+          governing language of these terms is English.
         </Paragraph>
       </LegalSection>
 
       <LegalSection title='13. Changes to these terms'>
         <Paragraph variant='description'>
-          We may update these terms; material changes will be announced on the site with an updated
-          effective date. Continuing to use the Service after a change takes effect means you accept
-          the updated terms.
+          We may change these terms at any time, at our discretion. The version posted here is the
+          current one; when we change it we update the &ldquo;Last updated&rdquo; date at the top of
+          this page. Changes take effect when posted, and continuing to use the Service after that
+          means you accept them. Please check this page from time to time.
         </Paragraph>
       </LegalSection>
 
