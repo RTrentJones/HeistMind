@@ -142,6 +142,7 @@ e2e/.report/
 e2e/.results/
 e2e/.coverage/
 e2e/.screenshots/
+e2e/.shots/
 greenlight-playwright-suite.patch
 
 # Design Sync — generated card bundle (build artifact; pnpm design:bundle)
