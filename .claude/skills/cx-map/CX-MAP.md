@@ -281,12 +281,15 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
     the CC BY 3.0 attribution paragraph, CC0/CC BY 4.0 notes, not-affiliated disclaimer, MIT note).
 - **Copy:** deliberately **not** i18n'd (canonical English legal text behind file-level
   eslint-disable; governing-language clause in the terms). Filled 2026-07-05: effective date
-  July 5, 2026; governing law California; contact `legal@heistmind.com`; DMCA agent Trent Jones
-  (postal/phone via the Copyright Office directory listing). **Prod promote still requires the
-  copyright.gov agent registration to actually exist** (the page claims it).
+  July 5, 2026 (terms bumped to July 9, 2026 — §7 now promises notice "so you can save what
+  matters to you", not "export": the app has no export feature, per the 2026-07-09 legal
+  review); governing law California; contact `legal@heistmind.com`; DMCA agent Trent Jones
+  (postal/phone via the Copyright Office directory listing — §512(c)(2) sufficiency logged as
+  F85, open). **Prod promote still requires the copyright.gov agent registration to actually
+  exist** (the page claims it).
 - **Nav:** public, no auth gate; AppShell chrome is automatic (paths aren't `/` or `/auth/*`).
   Footer links (separate PR) are the discovery path.
-- _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
+- _Last verified:_ 2026-07-09 (terms §7 wording + date; F85 logged)
 
 ### `/settings` — Account settings (self-service deletion)
 

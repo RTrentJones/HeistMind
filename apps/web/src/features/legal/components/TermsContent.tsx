@@ -13,7 +13,7 @@ const OPERATOR = 'HeistMind';
 
 export function TermsContent() {
   return (
-    <LegalPageLayout title='Terms of Service' effectiveDate='July 5, 2026'>
+    <LegalPageLayout title='Terms of Service' effectiveDate='July 9, 2026'>
       <Paragraph variant='description'>
         These terms are an agreement between you and Trent Jones, the individual who operates
         HeistMind (&ldquo;HeistMind&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), about your use of
@@ -95,7 +95,7 @@ export function TermsContent() {
         <Paragraph variant='description'>
           The Service is free to use and comes with no service-level commitment. Features may change
           or be discontinued at any time. We will make reasonable efforts to give notice before
-          discontinuing the Service so you can export what matters to you.
+          discontinuing the Service so you can save what matters to you.
         </Paragraph>
       </LegalSection>
 

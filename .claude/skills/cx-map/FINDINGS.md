@@ -481,6 +481,22 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F85 — DMCA page lists only the agent's email; §512(c)(2) wants the full contact set on-site
+
+- **severity:** S3 · **type:** legal-compliance (surfaced by the product-legal plugin review, 2026-07-09)
+- **where:** `apps/web/src/features/legal/components/DmcaContent.tsx` §3 ("Designated agent")
+- **root cause:** deliberate privacy trade-off in the legal-pages series: the page gives the
+  agent's email and links the Copyright Office directory (reg. DMCA-1075105) for postal/phone.
+  A strict reading of 17 U.S.C. §512(c)(2) has the provider make the agent's name, address,
+  phone number, AND email available "on its website"; the directory-link approach may be
+  under-inclusive, and safe-harbor conditions reward strict compliance — the safe harbor is
+  the main shield on the product's core risk (user-uploaded rulesets). _[verify with counsel]_
+- **fix:** publish the registered postal address + phone on the page (a PO Box or
+  registered-agent address if home-address privacy is the blocker), or get counsel's
+  confirmation that the directory link satisfies §512(c)(2). Owner decided 2026-07-09 to keep
+  the directory link for now; revisit alongside any counsel touchpoint.
+- **status:** open
+
 ### F84 — Account deletion 500s for any user who owns a campaign (trigger breaks the auth cascade)
 
 - **severity:** S2 · **type:** CX-flaw / bug · **(verified — caught by the beta walkthrough of `/settings` deletion, reproduced locally)**
