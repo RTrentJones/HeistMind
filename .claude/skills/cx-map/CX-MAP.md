@@ -233,10 +233,12 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
   A **guidance card** (F35) outlines the required/optional JSON shape and points to the starter
   catalog as the no-JSON path. **IP attestation (2026-07-05):** a required checkbox ("I have the
   right to upload this content…") gates the Upload button — the ToS §2 warranty restated at the
-  moment it matters — with a muted line linking `/legal/terms` and `/legal/dmca`. (The e2e
+  moment it matters — with muted lines stating the concrete AUP rule ("Own words only: game
+  mechanics can be reimplemented, but text copied from commercial game books can't be uploaded",
+  linking `/legal/acceptable-use`) and linking `/legal/terms` + `/legal/dmca`. (The e2e
   `uploadRuleset` helper checks it for every spec.)
 - **Nav:** → `/rulesets` on success.
-- _Last verified:_ 2026-07-05 (attestation gate added)
+- _Last verified:_ 2026-07-09 (AUP rule line added to the attestation)
 
 ### `/characters` — My Characters (Phase 5 — portable characters)
 
@@ -281,12 +283,15 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
     the CC BY 3.0 attribution paragraph, CC0/CC BY 4.0 notes, not-affiliated disclaimer, MIT note).
 - **Copy:** deliberately **not** i18n'd (canonical English legal text behind file-level
   eslint-disable; governing-language clause in the terms). Filled 2026-07-05: effective date
-  July 5, 2026; governing law California; contact `legal@heistmind.com`; DMCA agent Trent Jones
-  (postal/phone via the Copyright Office directory listing). **Prod promote still requires the
-  copyright.gov agent registration to actually exist** (the page claims it).
+  July 5, 2026 (terms bumped to July 9, 2026 — §7 now promises notice "so you can save what
+  matters to you", not "export": the app has no export feature, per the 2026-07-09 legal
+  review); governing law California; contact `legal@heistmind.com`; DMCA agent Trent Jones
+  (postal/phone via the Copyright Office directory listing — §512(c)(2) sufficiency logged as
+  F85, open). **Prod promote still requires the copyright.gov agent registration to actually
+  exist** (the page claims it).
 - **Nav:** public, no auth gate; AppShell chrome is automatic (paths aren't `/` or `/auth/*`).
   Footer links (separate PR) are the discovery path.
-- _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
+- _Last verified:_ 2026-07-09 (terms §7 wording + date; F85 logged)
 
 ### `/settings` — Account settings (self-service deletion)
 
