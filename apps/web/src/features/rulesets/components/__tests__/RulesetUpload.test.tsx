@@ -40,7 +40,7 @@ describe('RulesetUpload attestation gate', () => {
     expect(button).toBeDisabled();
   });
 
-  it('links the Terms and DMCA policy next to the attestation', () => {
+  it('links the Terms, DMCA, and Acceptable Use policies next to the attestation', () => {
     renderUpload();
     expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute(
       'href',
@@ -50,5 +50,11 @@ describe('RulesetUpload attestation gate', () => {
       'href',
       '/legal/dmca'
     );
+    expect(screen.getByRole('link', { name: 'Acceptable Use Policy' })).toHaveAttribute(
+      'href',
+      '/legal/acceptable-use'
+    );
+    // The concrete rule the AUP link anchors: no book text, own words.
+    expect(screen.getByText(/own words only/i)).toBeInTheDocument();
   });
 });
