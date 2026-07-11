@@ -47,6 +47,9 @@ test.describe('GM: rulesets & games', () => {
     const state = gmPage.getByLabel('Campaign state');
     await expect(state).toHaveValue('draft');
     await state.selectOption('active');
+    // Let the write round-trip (mutation → invalidate → refetch) BEFORE reloading — a reload
+    // racing the mutation reads back 'draft' and flakes (first full-CI run caught this).
+    await expect(state).toHaveValue('active', { timeout: 15_000 });
     await gmPage.reload();
     await expect(gmPage.getByLabel('Campaign state')).toHaveValue('active', { timeout: 15_000 });
   });

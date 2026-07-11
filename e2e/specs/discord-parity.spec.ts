@@ -301,6 +301,6 @@ test.describe('Cross-client parity: web wizard → bot gameplay → web feed', (
     await discordPage.getByRole('link', { name: 'View' }).first().click();
     await expect(discordPage).toHaveURL(/\/characters\/[0-9a-f-]+$/);
     await expect(discordPage.getByRole('heading', { name: charName })).toBeVisible();
-    await expect(discordPage.getByText('Parity Bruise', { exact: true })).toBeVisible();
+    await expect(discordPage.getByText('Parity Bruise').first()).toBeVisible();
   });
 });

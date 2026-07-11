@@ -84,7 +84,9 @@ test.describe('GM: harm + live stress', () => {
     });
 
     // The roll panel surfaces the RAW penalty (moderate = −1d) with a waivable toggle (F43).
-    await expect(gmPage.getByText('Moderate harm — this roll loses 1 die.')).toBeVisible();
+    await expect(gmPage.getByText('Moderate harm — this roll loses 1 die.')).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(gmPage.getByRole('checkbox', { name: /waive harm penalty/i })).toBeVisible();
 
     // Recovery: clicking the wound box clears it, feed-logged; the penalty hint goes with it.

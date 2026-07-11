@@ -447,7 +447,7 @@
       "assistNone": "No assist",
       "assistOption": "Assist: {{name}} (+1d, they mark 1 stress)",
       "assistNote": "Assisted by {{name}} (+1d — they mark 1 stress)",
-      "fortuneTypeLabel": "Fortune roll type",
+      "fortuneTypeLabel": "Fortune type",
       "fortuneType": {
         "fortune": "Fortune",
         "engagement": "Engagement",

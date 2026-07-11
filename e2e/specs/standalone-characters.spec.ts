@@ -13,7 +13,7 @@ test.describe.configure({ timeout: 180_000 });
 async function addBrackwater(page: import('@playwright/test').Page) {
   await page.goto('/rulesets');
   await page
-    .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+    .getByRole('button', { name: /Add Brackwater to my rulesets|Refresh my Brackwater copy/i })
     .first()
     .click();
   await expect(page.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
@@ -63,7 +63,7 @@ test.describe('Phase 5: portable characters', () => {
     // "add another system" section, so no empty-account precondition is needed.
     await gmPage.goto('/characters/new');
     await gmPage
-      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets|Refresh my Brackwater copy/i })
       .first()
       .click();
     await expect(gmPage.getByLabel('Character name')).toBeVisible({ timeout: 30_000 });

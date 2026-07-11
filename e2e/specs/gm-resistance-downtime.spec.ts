@@ -50,11 +50,13 @@ test.describe('GM: resistance + downtime', () => {
     });
 
     // --- Resistance: roll against an attribute → an entry lands in the shared roll log, annotated
-    // with the stress it cost. A fresh Razor has ZERO action dots, so this is always a ZERO-DICE
-    // resist (2d take-LOWEST, F64). The faces are random but the log prints them, so assert the
-    // DISPLAYED stress is consistent with the faces — the audit-P2 regression: before rolls
-    // persisted `zero_dice`, the feed recomputed from 6−HIGHEST and disagreed with the sheet. ---
+    // with the stress it cost. Resistance rolls the ATTRIBUTE (F23), so pin the ZERO-DICE path
+    // (2d take-LOWEST, F64) by resisting with Edge — 0-rated on a fresh Razor (Grit seeds 2).
+    // The faces are random but the log prints them, so assert the DISPLAYED stress is consistent
+    // with the faces — the audit-P2 regression: before rolls persisted `zero_dice`, the feed
+    // recomputed from 6−HIGHEST and disagreed with the sheet. ---
     await gmPage.getByLabel('Roll type').selectOption('resistance');
+    await gmPage.getByLabel('Resisted attribute').selectOption('Edge');
     await gmPage.getByRole('button', { name: 'Resist', exact: true }).click();
     const resistLine = gmPage.getByText(/resisted — \d stress/).first();
     await expect(resistLine).toBeVisible({ timeout: 15_000 });

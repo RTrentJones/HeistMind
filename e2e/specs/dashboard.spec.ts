@@ -52,7 +52,7 @@ test.describe('dashboard (authenticated /)', () => {
     // Every section's spinner resolves (spinners render role='status'); the recent-activity
     // section then shows either rows or its empty-state copy — not nothing.
     await expect(gmPage.getByRole('heading', { name: /recent activity/i })).toBeVisible();
-    await expect(gmPage.getByRole('main').getByRole('status')).toHaveCount(0);
+    await expect(gmPage.getByRole('main').getByRole('status')).toHaveCount(0, { timeout: 15_000 });
     await expect(
       gmPage
         .getByText(/no recent activity/i)

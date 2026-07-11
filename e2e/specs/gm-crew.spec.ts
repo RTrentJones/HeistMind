@@ -21,7 +21,7 @@ test.describe('GM: crew sheet', () => {
   }) => {
     await gmPage.goto('/rulesets');
     await gmPage
-      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets|Refresh my Brackwater copy/i })
       .first()
       .click();
     await expect(gmPage.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
@@ -66,7 +66,7 @@ test.describe('GM: crew sheet', () => {
   }) => {
     await gmPage.goto('/rulesets');
     await gmPage
-      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets|Refresh my Brackwater copy/i })
       .first()
       .click();
     await expect(gmPage.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
