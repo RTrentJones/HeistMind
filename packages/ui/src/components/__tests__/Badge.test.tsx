@@ -240,12 +240,15 @@ describe('Badge Component', () => {
     it('supports aria-describedby for additional context', () => {
       render(
         <div>
-          <Badge aria-describedby='badge-description'>New</Badge>
+          <Badge data-testid='badge' aria-describedby='badge-description'>
+            New
+          </Badge>
           <div id='badge-description'>Indicates a new item</div>
         </div>
       );
 
-      const badge = screen.getByRole('status');
+      // No default role (a badge is not a live region) — select by testid instead.
+      const badge = screen.getByTestId('badge');
       expect(badge).toHaveAttribute('aria-describedby', 'badge-description');
     });
 

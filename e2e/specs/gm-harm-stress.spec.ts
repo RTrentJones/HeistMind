@@ -83,16 +83,12 @@ test.describe('GM: harm + live stress', () => {
       timeout: 10_000,
     });
 
-    // The roll panel surfaces the RAW penalty (moderate = −1d) with a waivable toggle (F43).
-    await expect(gmPage.getByText('Moderate harm — this roll loses 1 die.')).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(gmPage.getByRole('checkbox', { name: /waive harm penalty/i })).toBeVisible();
+    // (The F43 roll-panel penalty hint is asserted in gm-dice-rolls: it lives in ACTION mode,
+    // and cinders is a point-buy ruleset whose sheet panel has no action rolls to penalize.)
 
-    // Recovery: clicking the wound box clears it, feed-logged; the penalty hint goes with it.
+    // Recovery: clicking the wound box clears it, feed-logged.
     await gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' }).click();
     await expect(gmPage.getByText('Cleared harm: Cracked ribs')).toBeVisible({ timeout: 10_000 });
     await expect(gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' })).toHaveCount(0);
-    await expect(gmPage.getByText('Moderate harm — this roll loses 1 die.')).toHaveCount(0);
   });
 });

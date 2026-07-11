@@ -182,10 +182,14 @@ const Badge = React.memo(
         description: accessibleDescription,
       });
 
+      // No default role: `role='status'` makes every badge an aria-live region screen readers
+      // announce (and anything counting role=status — e.g. "all spinners resolved" checks —
+      // miscounts). A badge is static decoration; callers who mean a live region pass `role`.
+      // (Same bug class as Container's old default role='region'.)
       const ariaAttributes: AriaAttributes = {
         'aria-label': ariaLabel,
         'aria-describedby': ariaDescribedBy || gameAriaAttributes['aria-describedby'],
-        role: role || 'status',
+        role,
         ...(isClickable && { tabIndex: 0 }),
       };
 

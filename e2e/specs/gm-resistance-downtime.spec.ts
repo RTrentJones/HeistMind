@@ -75,7 +75,9 @@ test.describe('GM: resistance + downtime', () => {
       .first()
       .textContent();
     const before = Number((stressText ?? '0/9').split('/')[0]);
-    await gmPage.getByLabel('Flashback').fill('Bribed the harbormaster to look away last night');
+    await gmPage
+      .getByLabel('Flashback', { exact: true })
+      .fill('Bribed the harbormaster to look away last night');
     await gmPage.getByLabel('Flashback stress cost').selectOption('2');
     await gmPage.getByRole('button', { name: 'Flash back' }).click();
     await expect(
