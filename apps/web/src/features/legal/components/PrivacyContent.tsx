@@ -10,9 +10,9 @@ export function PrivacyContent() {
   return (
     <LegalPageLayout title='Privacy Policy' effectiveDate='July 5, 2026'>
       <Paragraph variant='description'>
-        HeistMind, operated by Trent Jones, is a free hobby service. This policy describes exactly
-        what we collect and why — which is deliberately little. We show no ads, run no analytics
-        trackers, and never sell your data.
+        HeistMind is a free, personal hobby project operated by Trent Jones. This policy describes
+        exactly what we collect and why — which is deliberately little. We show no ads, run no
+        analytics trackers, and never sell your data.
       </Paragraph>
 
       <LegalSection title='1. What we collect'>

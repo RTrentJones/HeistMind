@@ -157,6 +157,110 @@ export async function deleteTestUser(env: E2EEnv, userId: string): Promise<void>
   await admin.auth.admin.deleteUser(userId).catch(() => undefined);
 }
 
+/**
+ * Provision a UNIQUE, single-use persona (fresh email per call) — for destructive flows like
+ * account deletion, where the persona is meant to be consumed and must never collide with the
+ * deterministic personas or a retry. Born through `handle_new_user` (createUser fires it), so its
+ * `profiles` row is trigger-owned exactly like a real signup (F68 discipline). Caller owns
+ * teardown (delete it in a `finally` if the test bails before the deletion under test runs).
+ */
+export async function provisionThrowawayUser(env: E2EEnv): Promise<Required<TestUser>> {
+  const admin = adminClient(env);
+  const tag = randomUUID().slice(0, 8);
+  const user: TestUser = {
+    email: `e2e-del-${tag}@heistmind.test`,
+    password: `E2e-${randomUUID()}`,
+    username: `e2e-del-${tag}`,
+    discordId: '',
+  };
+  const { data, error } = await admin.auth.admin.createUser({
+    email: user.email,
+    password: user.password,
+    email_confirm: true,
+    user_metadata: { username: user.username, avatar_url: null },
+  });
+  if (error || !data.user) {
+    throw new Error(`Failed to provision throwaway user: ${error?.message ?? 'unknown'}`);
+  }
+  return { ...user, id: data.user.id };
+}
+
+/** Whether an auth user still exists — the post-deletion assertion (false ⇒ the cascade ran). */
+export async function userExists(env: E2EEnv, userId: string): Promise<boolean> {
+  const admin = adminClient(env);
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  return !error && Boolean(data.user);
+}
+
+/** Mint a real access token for a persona (the bearer the /api/account/delete route verifies). */
+export async function mintAccessToken(env: E2EEnv, user: TestUser): Promise<string> {
+  const client = createClient(env.supabaseUrl!, env.supabaseAnonKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await client.auth.signInWithPassword({
+    email: user.email,
+    password: user.password,
+  });
+  if (error || !data.session) {
+    throw new Error(`Could not mint token for ${user.email}: ${error?.message ?? 'no session'}`);
+  }
+  return data.session.access_token;
+}
+
+/** A service-role client scoped to the env's data schema (games/rulesets/game_players live there). */
+function dataClient(env: E2EEnv): SupabaseClient {
+  return createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    db: { schema: env.heistmindSchema },
+  });
+}
+
+/**
+ * Give a persona a campaign so its deletion exercises the FULL cascade (auth.users → profiles →
+ * games → game_players) — the exact path F84 broke. A bare account always deleted fine, so
+ * campaign ownership is the load-bearing condition. We insert the ruleset + game (the legitimate
+ * user actions); the `game_players` row is created by the `auto_assign_game_master` TRIGGER, not
+ * hand-seeded, and we ASSERT it appeared (F68: create the upstream event, verify the trigger row).
+ */
+export async function seedCampaignOwnedBy(
+  env: E2EEnv,
+  userId: string
+): Promise<{ rulesetId: string; gameId: string; gmPlayerRows: number }> {
+  const db = dataClient(env);
+  const tag = randomUUID().slice(0, 8);
+
+  const rs = await db
+    .from('rulesets')
+    .insert({
+      name: `DelTest RS ${tag}`,
+      version: '1.0.0',
+      content: { metadata: { name: `DelTest RS ${tag}` } },
+      created_by: userId,
+    })
+    .select('id')
+    .single();
+  if (rs.error) throw new Error(`seed ruleset failed: ${rs.error.message}`);
+
+  const game = await db
+    .from('games')
+    .insert({ name: `DelTest Game ${tag}`, created_by: userId, ruleset_id: rs.data.id })
+    .select('id')
+    .single();
+  if (game.error) throw new Error(`seed game failed: ${game.error.message}`);
+
+  const players = await db.from('game_players').select('id').eq('game_id', game.data.id);
+  if (players.error) throw new Error(`read game_players failed: ${players.error.message}`);
+
+  return { rulesetId: rs.data.id, gameId: game.data.id, gmPlayerRows: players.data.length };
+}
+
+/** Whether a seeded game still exists — proves the cascade reached the env schema (not just auth). */
+export async function gameExists(env: E2EEnv, gameId: string): Promise<boolean> {
+  const db = dataClient(env);
+  const { data } = await db.from('games').select('id').eq('id', gameId).maybeSingle();
+  return Boolean(data);
+}
+
 /** Delete every deterministic persona — best-effort, idempotent. Called by global-teardown so
  * the test accounts never persist in the project-global auth.users between runs. */
 export async function cleanupTestUsers(env: E2EEnv): Promise<void> {

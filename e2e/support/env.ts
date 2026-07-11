@@ -16,6 +16,9 @@ export interface E2EEnv {
   supabaseAnonKey?: string;
   /** Service-role key — required to mint test users without the Discord consent screen. */
   supabaseServiceRoleKey?: string;
+  /** Env-named Postgres schema the app + data live in (`development`/`production`); for seeding
+   * campaign data via the service-role client. Mirrors the app's NEXT_PUBLIC_HEISTMIND_SCHEMA. */
+  heistmindSchema: string;
   /** Vercel Deployment Protection bypass, needed to reach protected preview/beta deploys. */
   vercelBypass?: string;
 }
@@ -28,6 +31,7 @@ export function getE2EEnv(): E2EEnv {
     supabaseUrl: process.env.E2E_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.E2E_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    heistmindSchema: process.env.NEXT_PUBLIC_HEISTMIND_SCHEMA || 'development',
     vercelBypass: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
   };
 }
