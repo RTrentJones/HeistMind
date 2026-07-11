@@ -12,7 +12,15 @@ import type {
 } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clearActorCache } from '../authz';
-import { content, ctx, fail, ok, repos as baseRepos, run } from '../test/helpers';
+import {
+  characterOnDefaultRuleset,
+  content,
+  ctx,
+  fail,
+  ok,
+  repos as baseRepos,
+  run,
+} from '../test/helpers';
 import {
   handleHarm,
   handleStress,
@@ -165,6 +173,69 @@ describe('/harm', () => {
     );
     expect(calls.map(c => c.method)).toEqual(['delete', 'ephemeral']);
     expect(String(calls[1]?.payload)).toContain('trauma');
+  });
+
+  it('take with armor spends it — the harm lands one level lighter (F44)', async () => {
+    // The DEFAULT_RULESET fixture carries a real 'armor' item (fixture provenance).
+    const armored = characterOnDefaultRuleset({
+      characterData: { loadout: { level: 'normal', items: ['armor'] } },
+    });
+    const r = baseRepos({}, armored);
+    const calls = await run(
+      await handleHarm(
+        ctx(r),
+        cmd('harm', 'take', [
+          { name: 'level', type: 3, value: 'moderate' },
+          { name: 'description', type: 3, value: 'Slashed' },
+          { name: 'armor', type: 5, value: true },
+        ])
+      )
+    );
+    expect(content(calls)).toContain('**lesser** harm');
+    expect(content(calls)).toContain('one level lighter');
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'harm', note: 'Took lesser harm: Slashed' })
+    );
+  });
+
+  it('armor absorbs LESSER harm outright — nothing marked, the feed says so', async () => {
+    const armored = characterOnDefaultRuleset({
+      characterData: { loadout: { level: 'normal', items: ['armor'] } },
+    });
+    const r = baseRepos({}, armored);
+    const calls = await run(
+      await handleHarm(
+        ctx(r),
+        cmd('harm', 'take', [
+          { name: 'level', type: 3, value: 'lesser' },
+          { name: 'description', type: 3, value: 'Grazed' },
+          { name: 'armor', type: 5, value: true },
+        ])
+      )
+    );
+    expect(content(calls)).toContain('glances off');
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ note: 'Spent armor — absorbed the harm: Grazed' })
+    );
+  });
+
+  it('no armor in the loadout → the NO_ARMOR refusal, ephemeral, nothing written', async () => {
+    const r = repos(); // the default details() fixture carries no loadout at all
+    const calls = await run(
+      await handleHarm(
+        ctx(r),
+        cmd('harm', 'take', [
+          { name: 'level', type: 3, value: 'moderate' },
+          { name: 'description', type: 3, value: 'Slashed' },
+          { name: 'armor', type: 5, value: true },
+        ])
+      )
+    );
+    expect(calls.map(c => c.method)).toEqual(['delete', 'ephemeral']);
+    expect(String(calls[1]?.payload)).toContain('No armor');
+    expect(r.characterManagement.updateCharacterWithValidation).not.toHaveBeenCalled();
   });
 
   it('clear removes the picked entry; a missing one phrases the hint', async () => {

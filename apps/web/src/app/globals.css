@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
-/* Import UI package styles */
-@import "@heist-mind/ui/styles";
+/*
+ * F83 — ONE Tailwind utility layer per page. The design system contributes its THEME (tokens,
+ * component styles, .light/.dark overrides) into THIS Tailwind pass, and @source makes this pass
+ * scan the ui package's built JS so every class its components use gets generated here. The old
+ * `@import "@heist-mind/ui/styles"` pulled in a SECOND full compiled utility layer, whose later
+ * base `.hidden` outranked the app's responsive `sm:block` at every width.
+ */
+@import "@heist-mind/ui/theme";
+@source "../../../../packages/ui/dist";
 
 /*
  * The design system's `.font-display` token hardcodes the `'Cinzel', 'Playfair Display'` family

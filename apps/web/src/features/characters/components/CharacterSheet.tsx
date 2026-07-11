@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
+  availableArmor,
   clampStress,
+  deriveAttributes,
   stressBounds,
   usesActionRatings,
   rulesetActions,
@@ -90,6 +92,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [viceNote, setViceNote] = useState<string | null>(null);
   const [viceArmed, setViceArmed] = useState(false);
   const [harmNote, setHarmNote] = useState<string | null>(null);
+  // F44 — arm the next harm tap to spend armor (the harm lands one level lighter).
+  const [armArmor, setArmArmor] = useState(false);
   // Flashback (F16): what you retro-establish + the stress the GM prices it at.
   const [flashText, setFlashText] = useState('');
   const [flashStress, setFlashStress] = useState(1);
@@ -209,18 +213,26 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     const userId = user?.id;
     if (!userId || !character) return;
     setHarmNote(null);
+    const spendArmor = armArmor;
     takeHarmMut.mutate(
       {
         userId,
         level,
         description,
+        spendArmor,
         logLabel: character.name,
         logNote: applied =>
-          t('components.characterSheet.logHarmTaken', { level: applied, description }),
+          applied === null
+            ? t('components.characterSheet.logHarmAbsorbed', { description })
+            : t('components.characterSheet.logHarmTaken', { level: applied, description }),
       },
       {
         onSuccess: ({ appliedLevel }) => {
-          if (appliedLevel !== level)
+          setArmArmor(false);
+          if (appliedLevel === null) setHarmNote(t('components.characterSheet.harmAbsorbed'));
+          else if (spendArmor)
+            setHarmNote(t('components.characterSheet.harmArmorReduced', { level: appliedLevel }));
+          else if (appliedLevel !== level)
             setHarmNote(t('components.characterSheet.harmEscalated', { level: appliedLevel }));
         },
         onError: e => setSaveError(e.message ?? t('components.characterSheet.harmFailed')),
@@ -279,7 +291,15 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     );
   }
 
-  const attributes = character.characterData?.attributes ?? {};
+  // F23 — on action-rating rulesets the attributes are DERIVED (count of that attribute's actions
+  // rated 1+, i.e. the resistance dice), never the creation-time snapshot: an advanced action dot
+  // must move the resistance pool. Point-buy rulesets keep the stored values.
+  const sheetContent = character.ruleset.content;
+  const derivedMode = usesActionRatings(sheetContent);
+  const attributes = derivedMode
+    ? deriveAttributes(sheetContent, character.characterData)
+    : (character.characterData?.attributes ?? {});
+  const attributeName = (id: string) => sheetContent.attributes.find(a => a.id === id)?.name ?? id;
   const abilities = character.characterData?.specialAbilities ?? [];
   // F42 — mirror the RLS write policy (owner OR the campaign's GM) so viewers see a read-only
   // sheet instead of controls that render and then fail server-side.
@@ -382,31 +402,54 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
           <div>
             <Text as='strong'>{t('components.characterSheet.attributes')}</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {Object.entries(attributes).filter(([, v]) => v > 0).length > 0 ? (
-                Object.entries(attributes)
-                  .filter(([, v]) => v > 0)
-                  .map(([k, v]) => (
-                    <Badge key={k} variant='steel'>
-                      {k} {v}
+            {derivedMode ? (
+              // Derived mode shows EVERY attribute (0 is a real resistance pool — zero-dice).
+              <>
+                <Stack direction='row' gap='sm' className='flex-wrap'>
+                  {sheetContent.attributes.map(a => (
+                    <Badge key={a.id} variant='steel' data-testid={`sheet-attr-${a.id}`}>
+                      {a.name} {attributes[a.id] ?? 0}
                     </Badge>
-                  ))
-              ) : (
+                  ))}
+                </Stack>
                 <Text variant='muted' size='sm'>
-                  {t('components.characterSheet.noPoints')}
+                  {t('components.characterSheet.attributesDerived')}
                 </Text>
-              )}
-            </Stack>
+              </>
+            ) : (
+              <Stack direction='row' gap='sm' className='flex-wrap'>
+                {Object.entries(attributes).filter(([, v]) => v > 0).length > 0 ? (
+                  Object.entries(attributes)
+                    .filter(([, v]) => v > 0)
+                    .map(([k, v]) => (
+                      <Badge key={k} variant='steel'>
+                        {attributeName(k)} {v}
+                      </Badge>
+                    ))
+                ) : (
+                  <Text variant='muted' size='sm'>
+                    {t('components.characterSheet.noPoints')}
+                  </Text>
+                )}
+              </Stack>
+            )}
           </div>
         </Stack>
       </Card>
 
+      {/* F57 — phone-first ordering: below `sm`, the flex `order-*` classes pull the IN-PLAY
+          sections (Condition, Dice) up under the name card and push build detail (abilities,
+          campaign controls) down. Desktop keeps the DOM order. */}
       {/* Owner campaign controls (Phase 5/5b): bring a standalone character to a campaign, or move /
           return an in-campaign one. The component picks its mode from whether the character is linked. */}
-      {character.createdBy === user?.id && <AttachToCampaign character={character} />}
+      {character.createdBy === user?.id && (
+        <div className='max-sm:order-3'>
+          <AttachToCampaign character={character} />
+        </div>
+      )}
 
       {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
-      <Card variant='outline'>
+      <Card variant='outline' className='max-sm:order-2'>
         <Stack direction='column' gap='md'>
           <Heading level='h3'>{t('components.characterSheet.specialAbilities')}</Heading>
           {abilities.length > 0 ? (
@@ -490,7 +533,19 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
             content={character.ruleset.content}
             data={character.characterData}
             {...(canEdit
-              ? { quick: { busy, onTake: takeHarmQuick, onClear: clearHarmQuick } }
+              ? {
+                  quick: {
+                    busy,
+                    onTake: takeHarmQuick,
+                    onClear: clearHarmQuick,
+                    // F44 — spend armor: offered while the loadout carries unspent armor.
+                    armor: {
+                      available: availableArmor(sheetContent, character.characterData).length,
+                      armed: armArmor,
+                      onToggle: () => setArmArmor(a => !a),
+                    },
+                  },
+                }
               : {})}
           />
           {harmNote && (
@@ -501,20 +556,23 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Stack>
       </Card>
 
-      <XpTracksCard
-        content={character.ruleset.content}
-        data={character.characterData}
-        busy={busy}
-        canEdit={canEdit}
-        onMarkXp={setXp}
-        onAdvance={() => setEditorSection('advancement')}
-      />
+      {/* F57 — between-beat sections: on a phone these sit below Condition + Dice (order-1). */}
+      <Stack direction='column' gap='lg' className='max-sm:order-1'>
+        <XpTracksCard
+          content={character.ruleset.content}
+          data={character.characterData}
+          busy={busy}
+          canEdit={canEdit}
+          onMarkXp={setXp}
+          onAdvance={() => setEditorSection('advancement')}
+        />
 
-      {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
-          build editor. Resets against the campaign's active score. */}
-      <LoadoutCard character={character} activeScore={activeScore} canEdit={canEdit} />
+        {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
+            build editor. Resets against the campaign's active score. */}
+        <LoadoutCard character={character} activeScore={activeScore} canEdit={canEdit} />
 
-      <GearCard data={character.characterData} />
+        <GearCard data={character.characterData} />
+      </Stack>
 
       {/* Dice + shared campaign log: only in a campaign. A standalone character (Phase 5) has no
           shared feed — its sheet is the rules-valid build, brought to a table when you attach it. */}
@@ -522,13 +580,19 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         <Card variant='outline'>
           <Stack direction='column' gap='md'>
             <Heading level='h3'>{t('components.characterSheet.dice')}</Heading>
-            {usesActionRatings(character.ruleset.content) ? (
+            {/* F23 — resistance rolls the ATTRIBUTE (derived on action-rating rulesets, stored on
+                point-buy ones), matching the sheet's Attributes badges. */}
+            {derivedMode ? (
               <RollPanel
                 gameId={character.gameId}
                 characterId={character.id}
-                actions={rulesetActions(character.ruleset.content).map(name => ({
+                actions={rulesetActions(sheetContent).map(name => ({
                   name,
                   rating: character.characterData?.skills?.[name] ?? 0,
+                }))}
+                attributes={sheetContent.attributes.map(a => ({
+                  name: a.name,
+                  rating: attributes[a.id] ?? 0,
                 }))}
                 harm={character.characterData?.harm}
                 teammates={teammates}
@@ -537,6 +601,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               <RollPanel
                 gameId={character.gameId}
                 characterId={character.id}
+                attributes={sheetContent.attributes.map(a => ({
+                  name: a.name,
+                  rating: attributes[a.id] ?? 0,
+                }))}
                 teammates={teammates}
               />
             )}
@@ -578,7 +646,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       )}
 
       {editorSection && canEdit && (
-        <div ref={editorRef}>
+        // order-last: the F57 mobile reorder must never pull sections below the opened editor.
+        <div ref={editorRef} className='max-sm:order-last'>
           <CharacterEditor character={character} initialSection={editorSection} />
         </div>
       )}

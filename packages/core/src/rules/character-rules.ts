@@ -11,6 +11,7 @@ import type {
   CharacterXp,
   AbilityDefinition,
   AbilityEffects,
+  EquipmentItem,
   HarmLevel,
   PlaybookDefinition,
   CreationRestriction,
@@ -269,6 +270,27 @@ export function loadLimit(ruleset: RulesetContent, level: LoadLevel): number {
 export function loadUsed(ruleset: RulesetContent, data: CharacterData): number {
   const byId = new Map((ruleset.equipment?.items ?? []).map(i => [i.id, i.load ?? 0]));
   return (data.loadout?.items ?? []).reduce((n, id) => n + (byId.get(id) ?? 0), 0);
+}
+
+/**
+ * Whether an equipment item counts as armor for the SPEND-ARMOR move (F44). Rulesets don't carry
+ * a structured armor flag, so this follows the SRD-family naming convention (id or name says
+ * "armor"/"armour") — the same convention every builtin uses.
+ */
+export function isArmorItem(item: EquipmentItem): boolean {
+  return /armou?r/i.test(item.id) || /armou?r/i.test(item.name);
+}
+
+/**
+ * Armor carried in the CURRENT loadout and not yet expended this score (`loadout.armorSpent`).
+ * Armor is per-score: a fresh loadout (new score) writes a fresh `armorSpent`, refreshing it.
+ */
+export function availableArmor(ruleset: RulesetContent, data: CharacterData): EquipmentItem[] {
+  const carried = new Set(data.loadout?.items ?? []);
+  const spent = new Set(data.loadout?.armorSpent ?? []);
+  return (ruleset.equipment?.items ?? []).filter(
+    i => isArmorItem(i) && carried.has(i.id) && !spent.has(i.id)
+  );
 }
 
 /**

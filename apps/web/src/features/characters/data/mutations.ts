@@ -109,8 +109,10 @@ export function useTakeHarm(characterId: string, gameId: string | null) {
       userId: string;
       level: HarmLevel;
       description: string;
+      /** F44 — expend armor from the loadout; the harm lands one level lighter (null = absorbed). */
+      spendArmor?: boolean;
       logLabel: string;
-      logNote: (appliedLevel: HarmLevel) => string;
+      logNote: (appliedLevel: HarmLevel | null) => string;
     }) => unwrap(await takeHarm(getRepositories(), { characterId, ...vars })),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: characterKeys.all });

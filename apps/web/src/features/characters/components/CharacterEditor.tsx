@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   clampStress,
+  deriveAttributes,
   stressBounds,
+  usesActionRatings,
   usesXpTracks,
   xpTrackSize,
   xpMarks,
@@ -150,29 +152,48 @@ export function CharacterEditor({
             </Stack>
 
             <Heading level='h3'>{t('components.characterEditor.attributes')}</Heading>
-            <Text variant='muted' size='sm'>
-              {t('components.characterEditor.attributesNote')}
-            </Text>
-            {content.attributes.map(attr => (
-              <Card key={attr.id} variant='default'>
-                <div className='flex flex-wrap items-center justify-between gap-2.5'>
-                  <span className='font-display' style={{ fontSize: 18 }}>
-                    {attr.name}
-                  </span>
-                </div>
-                <StressTracker
-                  current={draft.attributes[attr.id] ?? 0}
-                  max={attr.maxValue ?? 4}
-                  interactive
-                  showNumbers
-                  showLabel={false}
-                  size='lg'
-                  onChange={v =>
-                    patch({ attributes: { ...draft.attributes, [attr.id]: Math.max(0, v) } })
-                  }
-                />
-              </Card>
-            ))}
+            {usesActionRatings(content) ? (
+              // F23 — on action-rating rulesets attributes are DERIVED (actions rated 1+), so the
+              // editor shows them locked: raising them means raising action dots (Advancement tab).
+              <>
+                <Text variant='muted' size='sm'>
+                  {t('components.characterEditor.attributesDerivedNote')}
+                </Text>
+                <Stack direction='row' gap='sm' className='flex-wrap'>
+                  {content.attributes.map(attr => (
+                    <Badge key={attr.id} variant='steel' data-testid={`editor-attr-${attr.id}`}>
+                      {attr.name} {deriveAttributes(content, draft)[attr.id] ?? 0}
+                    </Badge>
+                  ))}
+                </Stack>
+              </>
+            ) : (
+              <>
+                <Text variant='muted' size='sm'>
+                  {t('components.characterEditor.attributesNote')}
+                </Text>
+                {content.attributes.map(attr => (
+                  <Card key={attr.id} variant='default'>
+                    <div className='flex flex-wrap items-center justify-between gap-2.5'>
+                      <span className='font-display' style={{ fontSize: 18 }}>
+                        {attr.name}
+                      </span>
+                    </div>
+                    <StressTracker
+                      current={draft.attributes[attr.id] ?? 0}
+                      max={attr.maxValue ?? 4}
+                      interactive
+                      showNumbers
+                      showLabel={false}
+                      size='lg'
+                      onChange={v =>
+                        patch({ attributes: { ...draft.attributes, [attr.id]: Math.max(0, v) } })
+                      }
+                    />
+                  </Card>
+                ))}
+              </>
+            )}
 
             <Button variant='ember' onClick={saveDraft} loading={saving}>
               {t('components.characterEditor.saveBuild')}

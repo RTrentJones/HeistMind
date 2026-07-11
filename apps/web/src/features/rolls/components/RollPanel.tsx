@@ -65,12 +65,15 @@ export function RollPanel({
   gameId,
   characterId,
   actions,
+  attributes,
   harm,
   teammates,
 }: {
   gameId: string;
   characterId?: string;
   actions?: ActionOption[];
+  /** The character's ATTRIBUTE ratings — RAW, resistance rolls the attribute, not an action (F23). */
+  attributes?: ActionOption[];
   /** The rolling character's harm — surfaces the RAW penalties on action rolls (F43). */
   harm?: CharacterHarm;
   /** Campaign teammates for the ASSIST move (F10): +1d, the helper marks 1 stress. */
@@ -82,10 +85,13 @@ export function RollPanel({
   const resistanceRoll = useResistanceRoll(gameId);
   const hasActions = !!actions?.length;
   const canResist = !!characterId;
-  // Resistance is rolled against the character's own ratings when we have them, else the BitD trio.
-  const resistOptions: ActionOption[] = hasActions
-    ? actions
-    : STANDARD_ATTRIBUTES.map(name => ({ name, rating: 0 }));
+  // Resistance rolls the character's ATTRIBUTES when provided (RAW; derived on action-rating
+  // rulesets), falling back to action ratings, else the BitD trio at 0 (zero-dice).
+  const resistOptions: ActionOption[] = attributes?.length
+    ? attributes
+    : hasActions
+      ? actions
+      : STANDARD_ATTRIBUTES.map(name => ({ name, rating: 0 }));
   const modes: RollMode[] = [
     ...(hasActions ? (['action'] as const) : []),
     'fortune',

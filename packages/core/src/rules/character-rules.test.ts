@@ -16,6 +16,8 @@ import {
   harmDicePenalty,
   worstHarmLevel,
   loadLimit,
+  availableArmor,
+  isArmorItem,
   loadUsed,
   usesXpTracks,
   xpTrackSize,
@@ -856,6 +858,29 @@ describe('loadout', () => {
     expect(
       loadUsed(loadRs(), character({ loadout: { level: 'normal', items: ['blade', 'armor'] } }))
     ).toBe(3);
+  });
+
+  it('isArmorItem follows the naming convention (id or name, armour spelling too)', () => {
+    expect(
+      isArmorItem({ id: 'armor', name: 'Armor', description: '', load: 2, category: 'g' })
+    ).toBe(true);
+    expect(
+      isArmorItem({ id: 'plate', name: 'Heavy Armour', description: '', load: 3, category: 'g' })
+    ).toBe(true);
+    expect(
+      isArmorItem({ id: 'blade', name: 'Blade', description: '', load: 1, category: 'w' })
+    ).toBe(false);
+  });
+
+  it('availableArmor = carried armor minus what this score already spent (F44)', () => {
+    const carried = character({ loadout: { level: 'normal', items: ['blade', 'armor'] } });
+    expect(availableArmor(loadRs(), carried).map(i => i.id)).toEqual(['armor']);
+    const spent = character({
+      loadout: { level: 'normal', items: ['blade', 'armor'], armorSpent: ['armor'] },
+    });
+    expect(availableArmor(loadRs(), spent)).toEqual([]);
+    // No loadout at all → nothing to spend.
+    expect(availableArmor(loadRs(), character())).toEqual([]);
   });
 
   it('allows load within the level limit and blocks over it', () => {

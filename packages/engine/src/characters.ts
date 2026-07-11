@@ -2,6 +2,7 @@
 // track escalation), the retire sequence, and the XP economy (mark XP / spend an advance) —
 // XP and harm changes are campaign-log events per BRD R-C3/R-E1.
 import {
+  availableArmor,
   clampStress,
   harmBounds,
   HARM_LEVELS,
@@ -136,11 +137,9 @@ export async function markXp(
   if (usesXpTracks(char.ruleset.content)) {
     const track = input.track ?? PLAYBOOK_TRACK;
     const xp = markXpTrack(char.ruleset.content, char.characterData, track, input.amount);
-    updated = await repos.characterManagement.updateCharacterWithValidation(
-      char.id,
-      input.userId,
-      { characterData: { ...char.characterData, xp } }
-    );
+    updated = await repos.characterManagement.updateCharacterWithValidation(char.id, input.userId, {
+      characterData: { ...char.characterData, xp },
+    });
   } else {
     updated = await repos.characters.addExperience(
       input.characterId,
@@ -215,25 +214,33 @@ export interface TakeHarmInput {
   level: HarmLevel;
   /** The injury as it reads on the sheet (e.g. "Broken ribs"). */
   description: string;
+  /**
+   * F44 — expend a carried, unspent armor item to reduce the harm ONE level before it lands
+   * (lesser → absorbed entirely). No armor available = failure `code: 'NO_ARMOR'`.
+   */
+  spendArmor?: boolean;
   /** Log-event label — the client's localized string (the engine never owns copy). */
   logLabel: string;
   /**
    * Log-event note FACTORY — called with the level the harm actually LANDED at, which the client
-   * can't know up front (RAW escalation happens here). Still client copy, just level-aware.
+   * can't know up front (RAW escalation happens here). `null` = armor absorbed it entirely.
+   * Still client copy, just level-aware.
    */
-  logNote: (appliedLevel: HarmLevel) => string;
+  logNote: (appliedLevel: HarmLevel | null) => string;
 }
 
 /**
  * Take harm at a level, escalating past full tracks the RAW way (a full lesser track makes the
  * harm moderate, and so on). Every track full = failure `code: 'HARM_FULL'` — that's
- * trauma/death territory, a table conversation, not an automated write. Logs a `harm` feed event
+ * trauma/death territory, a table conversation, not an automated write. With `spendArmor`, an
+ * available armor item is expended FIRST (marked on `loadout.armorSpent`) and the harm drops one
+ * level — lesser harm is absorbed outright (`appliedLevel: null`). Logs a `harm` feed event
  * when the character is in a campaign.
  */
 export async function takeHarm(
   repos: DatabaseRepositories,
   input: TakeHarmInput
-): Promise<Result<{ character: Character; appliedLevel: HarmLevel }>> {
+): Promise<Result<{ character: Character; appliedLevel: HarmLevel | null }>> {
   const found = await repos.characters.findWithDetails(input.characterId);
   if (!found.success) return found as Result<never>;
   if (!found.data) return { success: false, error: { message: 'Character not found' } };
@@ -241,12 +248,27 @@ export async function takeHarm(
   const owned = notOwner(char, input.userId);
   if (owned) return owned;
 
+  // Armor first (F44): expend one carried unspent armor item; the harm drops a level.
+  let dealtAt: HarmLevel | null = input.level;
+  let loadout = char.characterData.loadout;
+  if (input.spendArmor) {
+    const armor = availableArmor(char.ruleset.content, char.characterData)[0];
+    if (!armor || !loadout) {
+      return { success: false, error: { message: 'No armor to spend', code: 'NO_ARMOR' } };
+    }
+    loadout = { ...loadout, armorSpent: [...(loadout.armorSpent ?? []), armor.id] };
+    const idx = HARM_LEVELS.indexOf(input.level);
+    dealtAt = idx > 0 ? (HARM_LEVELS[idx - 1] ?? null) : null;
+  }
+
   const bounds = harmBounds(char.ruleset.content);
   const harm = char.characterData.harm ?? EMPTY_HARM;
-  const level = HARM_LEVELS.slice(HARM_LEVELS.indexOf(input.level)).find(
-    l => harm[l].length < bounds[l]
-  );
-  if (!level) {
+  const level =
+    dealtAt === null
+      ? null
+      : (HARM_LEVELS.slice(HARM_LEVELS.indexOf(dealtAt)).find(l => harm[l].length < bounds[l]) ??
+        undefined);
+  if (level === undefined) {
     return { success: false, error: { message: 'Every harm track is full', code: 'HARM_FULL' } };
   }
 
@@ -256,7 +278,8 @@ export async function takeHarm(
     {
       characterData: {
         ...char.characterData,
-        harm: { ...harm, [level]: [...harm[level], input.description] },
+        ...(loadout ? { loadout } : {}),
+        harm: level === null ? harm : { ...harm, [level]: [...harm[level], input.description] },
       },
     }
   );

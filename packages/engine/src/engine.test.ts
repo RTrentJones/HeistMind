@@ -2,7 +2,7 @@
 // browser. These tests are also the Discord bot's contract: a command wrapping a use-case can rely
 // on exactly this sequencing.
 import { describe, expect, it, vi } from 'vitest';
-import { xpTrackSize } from '@heist-mind/core';
+import { availableArmor, xpTrackSize } from '@heist-mind/core';
 import type {
   Character,
   CharacterWithDetails,
@@ -846,7 +846,7 @@ const withHarm = (harm: { lesser?: string[]; moderate?: string[]; severe?: strin
 
 // ONE shared level-aware note factory (rather than per-test arrows: several tests fail before
 // logging, and a never-invoked closure would ding the file's function coverage).
-const levelNote = (level: string) => `took ${level}`;
+const levelNote = (level: string | null) => `took ${level ?? 'nothing'}`;
 
 describe('takeHarm', () => {
   it('lands at the dealt level, writes the sheet, and logs a level-aware harm event', async () => {
@@ -950,6 +950,107 @@ describe('takeHarm', () => {
     });
     expect(out.success).toBe(true);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('takeHarm — spend armor (F44)', () => {
+  // Real ruleset content (fixture provenance): DEFAULT_RULESET ships 'armor' + 'heavy-armor'.
+  const armored = (loadout: { items: string[]; armorSpent?: string[] }) =>
+    ({
+      ...CHARACTER,
+      ruleset: { content: DEFAULT_RULESET },
+      characterData: {
+        ...CHARACTER.characterData,
+        loadout: { level: 'normal', ...loadout },
+      },
+    }) as unknown as CharacterWithDetails;
+  const armorNote = (level: string | null) => (level === null ? 'absorbed' : `took ${level}`);
+
+  it('lesser + armor → absorbed outright: armor marked spent, NO harm entry, feed logged', async () => {
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(armored({ items: ['armor'] }))) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'lesser',
+      description: 'Grazed',
+      spendArmor: true,
+      logLabel: 'Silks',
+      logNote: armorNote,
+    });
+    expect(out.success).toBe(true);
+    if (out.success) expect(out.data.appliedLevel).toBeNull();
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        loadout: expect.objectContaining({ armorSpent: ['armor'] }),
+        harm: { lesser: [], moderate: [], severe: [] },
+      }),
+    });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'absorbed' }));
+  });
+
+  it('moderate + armor → lands one level lighter (lesser) with the armor spent', async () => {
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(armored({ items: ['armor'] }))) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'moderate',
+      description: 'Slashed',
+      spendArmor: true,
+      logLabel: 'Silks',
+      logNote: armorNote,
+    });
+    expect(out.success).toBe(true);
+    if (out.success) expect(out.data.appliedLevel).toBe('lesser');
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        loadout: expect.objectContaining({ armorSpent: ['armor'] }),
+        harm: expect.objectContaining({ lesser: ['Slashed'] }),
+      }),
+    });
+  });
+
+  it('already-spent armor is gone this score → NO_ARMOR, nothing written (heavy still counts)', async () => {
+    const update = vi.fn();
+    const r = repos({
+      characters: {
+        findWithDetails: vi
+          .fn()
+          .mockResolvedValue(ok(armored({ items: ['armor'], armorSpent: ['armor'] }))),
+      },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'moderate',
+      description: 'Slashed',
+      spendArmor: true,
+      logLabel: 'Silks',
+      logNote: armorNote,
+    });
+    expect(out.success).toBe(false);
+    if (!out.success) expect(out.error.code).toBe('NO_ARMOR');
+    expect(update).not.toHaveBeenCalled();
+
+    // …but a carried heavy-armor is a second box: still spendable after the first is gone.
+    expect(
+      availableArmor(DEFAULT_RULESET, {
+        ...CHARACTER.characterData,
+        loadout: { level: 'normal', items: ['armor', 'heavy-armor'], armorSpent: ['armor'] },
+      } as CharacterWithDetails['characterData']).map(i => i.id)
+    ).toEqual(['heavy-armor']);
   });
 });
 

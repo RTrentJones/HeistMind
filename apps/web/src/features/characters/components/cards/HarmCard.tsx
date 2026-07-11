@@ -43,6 +43,8 @@ export function HarmCard({
     busy: boolean;
     onTake: (level: keyof CharacterHarm, description: string) => void;
     onClear: (level: keyof CharacterHarm, description: string) => void;
+    /** F44 — arm the next take to SPEND ARMOR (one level lighter). Hidden when none available. */
+    armor?: { available: number; armed: boolean; onToggle: () => void };
   };
 }) {
   const { t } = useTranslation();
@@ -96,6 +98,18 @@ export function HarmCard({
                 {t(HARM_LEVEL_KEY[level])}
               </Button>
             ))}
+            {quick.armor && quick.armor.available > 0 && (
+              // F44 — armed: the NEXT take spends one armor and lands a level lighter.
+              <Button
+                variant={quick.armor.armed ? 'ember' : 'outline'}
+                size='sm'
+                aria-pressed={quick.armor.armed}
+                disabled={quick.busy}
+                onClick={quick.armor.onToggle}
+              >
+                {t('components.characterSheet.spendArmor', { count: quick.armor.available })}
+              </Button>
+            )}
           </Stack>
         )}
         {trauma.length > 0 && (

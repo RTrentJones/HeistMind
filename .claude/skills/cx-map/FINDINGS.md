@@ -425,7 +425,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   common in-play taps (stress / harm / XP / roll / resist / loadout) aren't laid out phone-first.
 - **fix:** a mobile pass on the sheet — prioritize the in-play controls, collapse build detail,
   thumb-reachable primary actions. Design/responsive effort (no schema change).
-- **status:** open — **scoped as its own follow-up** (not part of the 2026-06-29 code-quality round).
+- **status:** **open — first increment landed (backlog round E, 2026-07-11):** below `sm` the
+  sheet reorders via flex `order-*` so the IN-PLAY sections come first (name card → Condition
+  [stress/harm/vice/flashback] → Dice + campaign log → XP/loadout/gear → abilities → campaign
+  controls; an opened editor stays last). Build detail was already collapse-friendly (abilities
+  are `<details>`). Remaining for the full pass: thumb-reachable primary actions (sticky
+  quick-bar), larger touch targets on the pips/dots, and a real device walkthrough.
 
 ### F58 — Full-reload flicker after every mutation; no optimism, no success toast
 
@@ -579,7 +584,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix (workaround):** use width-scoped variants that don't rely on a base `hidden` —
   `max-sm:hidden` instead of `hidden sm:block` (applied in `AuthHeader`'s clickwrap). Real fix
   is deduping the double utility import; tracked here until someone takes that on.
-- **status:** open (workaround in place; audit other `hidden <bp>:` usages when touching them)
+- **status:** **fixed (backlog round E, 2026-07-11) — the REAL fix: one utility layer per
+  page.** The ui package's stylesheet split into `theme.css` (tokens/`@theme`/component styles/
+  `.light`+`.dark` — exported raw as `@heist-mind/ui/theme`) and the standalone compiled
+  `./styles` (unchanged, for Storybook). The web app's `globals.css` now imports the THEME into
+  its own single Tailwind pass and `@source`s `packages/ui/dist`, so every class the components
+  use is generated once, in one ordered layer — no second base `.hidden` to shadow responsive
+  variants. Verified: ui build emits both artifacts, Storybook still builds, and the anonymous
+  e2e tier (home/legal/signin-gates — the specs that caught this) passes live. The
+  `max-sm:hidden` workaround in `AuthHeader` still works and stays.
 
 ### F82 — Repo shipped Duskwall _setting_ content outside the CC BY grant (IP audit 2026-07-05)
 
@@ -800,8 +813,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   'xp' feed event~~ — **(c) fixed in the XP round (2026-07-11, see F85):** the sheet's track
   marking now goes through engine `markXp` (signed delta + track), so every web XP mark logs the
   same 'xp' feed event the bot's `/xp mark` does. (a) and (b) remain the intentional leftovers.
-- **status:** **open (logged by design)** — the P1–P4/P7/P8 siblings were fixed in the audit
-  round (#136–#141+); (c) closed by the XP round.
+- **status:** **closed — logged by design (backlog round E, 2026-07-11).** (c) was fixed by the
+  XP round; (a) `adaptations`/`is_template` are documented Phase-5c placeholders whose fate is
+  owned by that phase (wire or delete WHEN 5c lands — nothing to do until then), and (b) the
+  vestigial `CharacterData.items` seed is inert (never read; `loadout.items` is the real
+  surface) and removing it is a data-shape migration with zero user value. Both stay documented
+  here as the reference; neither is actionable backlog. The P1–P4/P7/P8 siblings were fixed in
+  the audit round (#136–#141+).
 
 ### F67 — No player-facing web page documents the Discord bot
 
@@ -898,7 +916,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   ratings; the editor still exposes them as directly editable (dead data, since the validator skips
   attribute caps in action mode). `CharacterSheet.tsx:146`, `CharacterEditor.tsx` (~231–250),
   `character-rules.ts` (~337). **(verified)** → derive on the sheet; hide/lock attributes in
-  action-rating mode. **open**
+  action-rating mode. **fixed (backlog round E, 2026-07-11)** — on action-rating rulesets the
+  sheet DERIVES attributes live (`deriveAttributes`, all shown incl. 0 = zero-dice resist, with a
+  "derived from action ratings" note); the editor's Build tab shows them as locked badges pointing
+  at Advancement instead of editable trackers; and `RollPanel` grew an `attributes` prop so
+  RESISTANCE rolls the attribute (RAW), not an action rating — the sheet passes derived (or
+  stored, on point-buy rulesets) values. e2e: derived-note assertion in `gm-loadout.spec.ts`.
 - **F24** · CX · ActionRatingsStep doesn't explain attributes are _derived_ (count of actions ≥1).
   `ActionRatingsStep.tsx:34,50–52` → one-line helper text. **fixed** — a muted helper above the
   attribute cards explains the rating = its actions rated 1+ (and that it's the resistance dice).
@@ -984,7 +1007,17 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   hints — position/effect remain the table's call. Covered by `roll-pool.test.ts`,
   `roll.sheet.test.ts`, and the `gm-harm-stress.spec.ts` journey.
 - **F44** · FitD · Armor has no mechanical effect (harm reduction / heavy −1d). loadout carries armor
-  but rolls/harm ignore it → "spend armor" to reduce harm; heavy-armor note. **open**
+  but rolls/harm ignore it → "spend armor" to reduce harm; heavy-armor note. **fixed (backlog
+  round E, 2026-07-11)** — the SPEND-ARMOR move, engine-first: `CharacterLoadout.armorSpent`
+  tracks the boxes expended this score (a fresh loadout refreshes them, matching RAW per-score
+  armor); core `isArmorItem`/`availableArmor` find carried unspent armor (SRD-family naming
+  convention, "armour" included); engine `takeHarm` gained `spendArmor` — the harm drops ONE
+  level before landing (lesser → absorbed outright, `appliedLevel: null`), no armor →
+  `NO_ARMOR`. Both clients drive it: the sheet's harm quick-row grew an armed "Spend armor
+  (n left)" toggle with absorbed/lightened notices, and the bot's `/harm take` grew an `armor`
+  boolean (+ absorbed/no-armor copy, help line). Unit-tested at all three layers (core rules,
+  engine, bot handler); e2e journey in `gm-loadout.spec.ts` (arm → moderate lands lesser →
+  toggle gone → feed carries the lightened level).
 - **F45** · FitD · Load level is character-static, not chosen per score. `CharacterLoadout.level` is
   baked in → allow per-score load choice when a score/heist entity exists. **fixed/superseded**
   (verified 2026-07-05 audit): `LoadoutCard.tsx:130-144` offers light/normal/heavy per score.
@@ -1001,7 +1034,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   downtime safety and every score runs hotter" line beside the badge.
 - **F48** · FitD · Contacts have no mechanical tie-in (bonds/leverage/"call on a contact").
   `domain-types.ts` contacts + `CharacterSheet.tsx:369–407` display only → optional contact-aid hook.
-  **open**
+  **closed — by design (backlog round E, 2026-07-11).** Contacts DID get their CX fix: the wizard
+  picks friend/rival from the playbook roster and the sheet shows them (F12, round C). The
+  remaining "mechanical tie-in" is deliberately out: RAW, calling on a contact is a fiction move
+  the GM prices per situation (a fortune roll, a favor, a downtime action — all of which the app
+  already offers à la carte); there is no fixed rule for the tracker to enforce, and inventing
+  one would violate the core-value principle (BRD: never automate a table conversation). Reopen
+  only if a ruleset ships STRUCTURED contact mechanics for the engine to model.
 - **F49** · FitD · Indulge-vice (clear stress) has no affordance even though vice is captured.
   **fixed (stale — closed on verification, backlog round A)**: the sheet has had "Indulge vice
   (clear stress)" through engine `indulgeVice` since the F15 MVP; e2e-covered in
@@ -1028,7 +1067,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   one-crew/one-PC model); **Girl by Moonlight** (transformation/eclipse + promises — no
   `CharacterData`/roll-loop home); **The Wildsea** (non-FitD dice: count 6s, no position/effect);
   **Slugblaster** (Style/Stuff/Bull token economy). The major-gap items co-require open roll-loop
-  findings (F3, F9, F10, F14, F15). Treat each as its own future epic, not a data-only add. **open**
+  findings (F3, F9, F10, F14, F15). Treat each as its own future epic, not a data-only add.
+  **closed — deferred by design (backlog round E, 2026-07-11).** This is a PRODUCT-ROADMAP list,
+  not a CX flaw this backlog can burn down: each entry is its own engine epic (new mechanics,
+  new data models, in two cases licensing work) that the BRD's phased plan owns. Keeping it
+  open here made the findings log read permanently unfinished for work that was never
+  in its scope. The catalog analysis above stays as the reference for whichever epic gets
+  picked up first.
 - **F59** · CX/a11y · No design-system `<Select>`; raw `<select>` in ~9 files with a copy-pasted
   className and inconsistent labelling (RollPanel uses `aria-label` only; others wrap a bare `<label>`).
   → a `packages/ui` `<Select>` with a real associated `<label>` + shared token (see `CODE-QUALITY.md`

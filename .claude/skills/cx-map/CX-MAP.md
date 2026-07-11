@@ -240,10 +240,22 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   "escalated" notice) and click-the-wound-to-clear, both through engine `takeHarm`/`clearHarm`
   (feed-logged, bot parity). The roll panel surfaces the wound's RAW consequences: moderate harm
   auto-applies **−1d** (waivable, noted in the feed), lesser hints reduced effect, severe warns
-  "needs help or a push". **Error split (F73, 2026-07-11):**
+  "needs help or a push". **Spend armor (F44, backlog round E):** while the current-score loadout
+  carries unspent armor, the harm quick-row shows an armed **"Spend armor (n left)"** toggle — the
+  next take lands ONE level lighter (lesser is absorbed outright, with an "glanced off" notice),
+  the armor box is consumed for the score (refreshed by a fresh loadout), and the feed carries
+  the lightened level. Bot parity: `/harm take` has an `armor` boolean. **Derived attributes
+  (F23, backlog round E):** on action-rating rulesets the header card's attributes are DERIVED
+  live from action dots (all shown, 0 included, with a "derived from action ratings" note), the
+  editor shows them locked (raise via Advancement), and **resistance rolls the attribute** (RAW)
+  — the roll panel's resist select lists the attributes, not actions. **Phone-first order (F57
+  increment):** below `sm` the sheet reorders (flex `order-*`) to name → Condition → Dice/log →
+  XP/loadout/gear → abilities → campaign controls, editor pinned last. **Error split (F73,
+  2026-07-11):**
   a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
   the sheet and leaves it interactive; only a load failure / not-found swaps the page for
   `ErrorDisplay`.
+- _Last verified:_ 2026-07-11 (backlog round E: F44 armor, F23 derived attributes, F57 mobile order)
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -434,7 +446,9 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
   the character's own ruleset, `extra`/`push`; **moderate harm auto-applies −1d** — the title shows
   the malus, the note names it, severe adds a needs-help warning — F43), `/stress add|clear`,
-  `/harm take|clear` (RAW escalation), `/vice indulge`, `/xp mark|advance` — the sheet commands
+  `/harm take|clear` (RAW escalation; `armor:true` spends a carried armor box so the harm lands
+  one level lighter — lesser is absorbed outright, no armor phrases the refusal — F44),
+  `/vice indulge`, `/xp mark|advance` — the sheet commands
   feed-log via the same engine use-cases the web calls.
 - **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews

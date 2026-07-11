@@ -143,6 +143,13 @@ export const copy = {
     `No harm entry “${entry}” on that track. Try the autocomplete suggestions.`,
   harmLogTaken: (level: string, description: string) => `Took ${level} harm: ${description}`,
   harmLogCleared: (level: string, description: string) => `Cleared ${level} harm: ${description}`,
+  // F44 — spend armor: the harm drops a level (lesser is absorbed outright).
+  harmAbsorbed: (name: string, description: string) =>
+    `**${name}** spends armor — “${description}” glances off. No harm marked.`,
+  harmArmorReduced: 'Armor spent — the harm landed one level lighter.',
+  harmLogAbsorbed: (description: string) => `Spent armor — absorbed the harm: ${description}`,
+  noArmor:
+    'No armor to spend — none carried in the current loadout, or it’s already spent this score.',
   viceTitle: (name: string, dice: number) =>
     dice === 0 ? `${name} indulges — 0d (2d, take lowest)` : `${name} indulges — ${dice}d`,
   viceCleared: (cleared: number, stress: number, max: number) =>
@@ -172,7 +179,7 @@ export const copy = {
       '`/roll dice:3` action roll · `/resist` · `/fortune` · `/dice 2d6+1`',
       '',
       '**Your sheet** — sign in with Discord on the site once, then `/character use`',
-      '`/roll action:Skirmish` (+`extra`, `push`) · `/character show` · `/stress add|clear` · `/harm take|clear` · `/vice indulge` · `/xp mark|advance`',
+      '`/roll action:Skirmish` (+`extra`, `push`) · `/character show` · `/stress add|clear` · `/harm take|clear` (+`armor` to soak a level) · `/vice indulge` · `/xp mark|advance`',
       '',
       '**Linked campaigns** — the GM runs `/heist link` in a channel',
       'Sheet rolls and `/resist` there land in the campaign log. `/log` records a settled result · `/heist status` shows score/crew/clocks.',

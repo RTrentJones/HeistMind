@@ -81,6 +81,11 @@ export interface CharacterLoadout {
    * groups not using scores — loadout then behaves as a single resettable "current" loadout.
    */
   scoreId?: string;
+  /**
+   * Armor item ids expended this score (F44 — "spend armor" reduces incoming harm one level).
+   * Lives on the loadout because armor is per-score: writing a fresh loadout refreshes it.
+   */
+  armorSpent?: string[];
 }
 
 export interface CharacterHarm {

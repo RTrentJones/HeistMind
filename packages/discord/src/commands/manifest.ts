@@ -313,6 +313,12 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
             required: true,
             max_length: 100,
           },
+          {
+            type: ApplicationCommandOptionType.Boolean,
+            name: 'armor',
+            description: 'Spend armor from your loadout — the harm lands one level lighter',
+            required: false,
+          },
         ],
       },
       {
