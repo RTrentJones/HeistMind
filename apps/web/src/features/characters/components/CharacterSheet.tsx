@@ -29,10 +29,13 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCharacterDetail } from '@/features/characters/data/queries';
 import {
   useAddExperience,
+  useClearHarm,
   useIndulgeVice,
+  useTakeHarm,
   useUpdateCharacter,
   useUpdateCharacterData,
 } from '@/features/characters/data/mutations';
+import type { HarmLevel } from '@heist-mind/core';
 import { viceDicePool } from '@heist-mind/engine';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -60,6 +63,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const updateCharData = useUpdateCharacterData(characterId);
   const addXpMut = useAddExperience(characterId, character?.gameId ?? null);
   const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
+  const takeHarmMut = useTakeHarm(characterId, character?.gameId ?? null);
+  const clearHarmMut = useClearHarm(characterId, character?.gameId ?? null);
 
   // F73 — inline-save failures stay on the sheet (dismissible alert below); only load failures
   // swap the page for ErrorDisplay.
@@ -75,12 +80,15 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   }, [editorSection]);
   const [name, setName] = useState('');
   const [viceNote, setViceNote] = useState<string | null>(null);
+  const [harmNote, setHarmNote] = useState<string | null>(null);
 
   const busy =
     updateChar.isPending ||
     updateCharData.isPending ||
     addXpMut.isPending ||
-    indulgeViceMut.isPending;
+    indulgeViceMut.isPending ||
+    takeHarmMut.isPending ||
+    clearHarmMut.isPending;
 
   const saveName = () => {
     const userId = user?.id;
@@ -179,6 +187,46 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         ),
       },
       { onError: e => setSaveError(e.message ?? t('components.characterSheet.markXpFailed')) }
+    );
+  };
+
+  // Harm quick actions (F65) — the same engine use-cases the bot's /harm take|clear drive: RAW
+  // escalation past a full track, and a 'harm' feed event so the table sees the wound.
+  const takeHarmQuick = (level: HarmLevel, description: string) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    setHarmNote(null);
+    takeHarmMut.mutate(
+      {
+        userId,
+        level,
+        description,
+        logLabel: character.name,
+        logNote: applied =>
+          t('components.characterSheet.logHarmTaken', { level: applied, description }),
+      },
+      {
+        onSuccess: ({ appliedLevel }) => {
+          if (appliedLevel !== level)
+            setHarmNote(t('components.characterSheet.harmEscalated', { level: appliedLevel }));
+        },
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.harmFailed')),
+      }
+    );
+  };
+  const clearHarmQuick = (level: HarmLevel, description: string) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    setHarmNote(null);
+    clearHarmMut.mutate(
+      {
+        userId,
+        level,
+        description,
+        logLabel: character.name,
+        logNote: t('components.characterSheet.logHarmCleared', { description }),
+      },
+      { onError: e => setSaveError(e.message ?? t('components.characterSheet.harmFailed')) }
     );
   };
 
@@ -387,7 +435,18 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               {viceNote}
             </Alert>
           )}
-          <HarmCard content={character.ruleset.content} data={character.characterData} />
+          <HarmCard
+            content={character.ruleset.content}
+            data={character.characterData}
+            {...(canEdit
+              ? { quick: { busy, onTake: takeHarmQuick, onClear: clearHarmQuick } }
+              : {})}
+          />
+          {harmNote && (
+            <Alert variant='warning' size='sm'>
+              {harmNote}
+            </Alert>
+          )}
         </Stack>
       </Card>
 
@@ -420,6 +479,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   name,
                   rating: character.characterData?.skills?.[name] ?? 0,
                 }))}
+                harm={character.characterData?.harm}
               />
             ) : (
               <RollPanel gameId={character.gameId} characterId={character.id} />

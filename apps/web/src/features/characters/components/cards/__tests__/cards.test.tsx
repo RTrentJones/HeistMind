@@ -41,6 +41,39 @@ describe('HarmCard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Haunted' }));
     expect(onPatch).toHaveBeenCalledWith({ trauma: ['Cold', 'Haunted'] });
   });
+
+  it('quick mode (F65): take-harm sends the level + description, then clears the input', async () => {
+    const onTake = vi.fn();
+    render(
+      <HarmCard content={CONTENT} data={DATA} quick={{ busy: false, onTake, onClear: () => {} }} />
+    );
+    const input = screen.getByLabelText('Take harm');
+    await userEvent.type(input, 'Concussion');
+    await userEvent.click(screen.getByRole('button', { name: '+ Moderate' }));
+    expect(onTake).toHaveBeenCalledWith('moderate', 'Concussion');
+    expect(input).toHaveValue('');
+  });
+
+  it('quick mode: clicking a wound box clears that entry', async () => {
+    const onClear = vi.fn();
+    render(
+      <HarmCard content={CONTENT} data={DATA} quick={{ busy: false, onTake: () => {}, onClear }} />
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Clear harm: Bruised' }));
+    expect(onClear).toHaveBeenCalledWith('lesser', 'Bruised');
+  });
+
+  it('quick mode: everything disables while a save is in flight', () => {
+    render(
+      <HarmCard
+        content={CONTENT}
+        data={DATA}
+        quick={{ busy: true, onTake: () => {}, onClear: () => {} }}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Clear harm: Bruised' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '+ Lesser' })).toBeDisabled();
+  });
 });
 
 describe('GearCard', () => {

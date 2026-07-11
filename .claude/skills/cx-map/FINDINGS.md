@@ -481,6 +481,24 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F86 — Bot lagged the web on crew advancement; harm rules absent from every roll surface (bot-parity round)
+
+- **severity:** S2 · **type:** CX + FitD-gap (cross-client parity cluster) · **(2026-07-11)**
+- **where / what:** (1) the engine's `markCrewXp`/`takeCrewAdvance` (F85) were web-only — no
+  `/crew xp` or `/crew advance` subcommands, so a Discord-first table couldn't run crew
+  advancement at all and couldn't even SEE crew XP; (2) the BitD harm penalties existed only as a
+  doc comment (`domain/character.ts`) — neither the web `RollPanel` nor the bot's `/roll action:`
+  applied or mentioned them (F43); (3) web harm edits bypassed the feed (F65).
+- **fix / status:** **fixed (bot-parity round, 2026-07-11)** — `/crew xp [amount]` (add marks,
+  negative unmarks, clamped to the 8-box track; a full track's reply points at `/crew advance`)
+  and `/crew advance` (refuses a non-full track BEFORE any write, mirroring `/crew tier`); both
+  feed-logged via the engine. `/heist help` + the README command table updated; `gm.test.ts`
+  covers mark/clamp/refusal/reset. F43 + F65 fixed alongside (see their entries) — the two
+  clients now agree on harm and crew advancement end-to-end.
+- **residue:** a signed e2e for `/crew xp` on the local stack (the GM-command signed-POST
+  harness covers the family; add when next touching `discord.spec.ts`), and F66 (thread under a
+  category link) remains the last bot known-gap.
+
 ### F85 — XP marking + crew XP: silent feeds, buried advance, two interaction models (XP-round cluster)
 
 - **severity:** S2 · **type:** CX-flaw + FitD-consistency · **(2026-07-11 XP-experience pass)**
@@ -735,8 +753,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **where:** the landing page's play-by-post track now names the live bot, and `/heist help` is the
   in-Discord reference — but the web app has no page a GM can send players ("install the app / sign
   in once / `/character use`"), and no install ("Add to server") link anywhere.
-- **status:** **open** — a small static `/discord` page (getting-started + the command table from
-  `packages/discord/README.md` + the app-directory install link once the prod app exists).
+- **status:** **fixed (bot-parity round, 2026-07-11)** — public **`/discord`** page
+  (`DiscordGuideContent`, legal-page pattern): the two-sentence pitch, a 3-step getting-started
+  (dice first → one web sign-in IS the link → `/character use` + linked-channel logging), and the
+  full command reference mirroring `/heist help` + the README table (incl. the new
+  `/crew xp|advance`). Linked from the landing's play-by-post track ("How the bot works →").
+  Covered by `e2e/specs/discord-page.spec.ts` (anonymous, coming-soon-tolerant; verified live).
+  _Residue:_ the app-directory "Add to server" install link still waits on the prod Discord app.
 
 ### F66 — A thread under a CATEGORY-linked parent doesn't resolve the link
 
@@ -755,8 +778,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (phase-3), but the web sheet edits harm only inside the full editor's batch `saveBuild`
   (`HarmCard` `onPatch` → whole-`characterData` write) — no feed event, no RAW escalation. The two
   clients now behave differently for the same action.
-- **status:** **open** — add sheet-level quick actions (or rewire the editor's harm section) through
-  the same engine use-cases; the web catches up to the bot, closing R-E1 for harm end-to-end.
+- **status:** **fixed (bot-parity round, 2026-07-11)** — the sheet's Condition card grew one-tap
+  harm moves through the SAME engine use-cases the bot drives: a **"Take harm"** row
+  (description + level, RAW escalation past full tracks with an inline "escalated to X" notice)
+  and **click-the-wound-to-clear** (ui `HarmTracker` gained an optional `onClearEntry` — filled
+  boxes become accessible clear buttons; story variant + unit tests). Both write via new
+  `useTakeHarm`/`useClearHarm` hooks and land `harm` feed events — R-E1 closed for harm
+  end-to-end. The editor's batch harm editing remains for build corrections. Covered by
+  `cards.test.tsx` (quick mode) + the new `gm-harm-stress.spec.ts` journey (take → feed →
+  penalty → clear → feed). `discord-parity.spec.ts` keeps the cross-client half.
 
 ### F64 — Zero-dice resistance computed stress from the HIGHEST die (should be lowest)
 
@@ -857,7 +887,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   a read-only sheet. (The campaign panels — crew/clocks/factions/scores — were already `isGm`-gated.)
 - **F43** · FitD · Harm penalties (−1d / reduced effect at moderate, incapacitated at severe) aren't
   applied or surfaced on rolls. `RollPanel.tsx` has no harm input → show harm + default
-  effect/limit. **open**
+  effect/limit. **fixed (bot-parity round, 2026-07-11)** — RAW corrected to the SRD (level 1 =
+  reduced effect, level 2 = −1d, level 3 = incapacitated): new core `worstHarmLevel` +
+  `harmDicePenalty` (same-kind penalties never stack; unit-tested). BOTH clients apply the −1d on
+  action rolls: web `RollPanel` (auto, with a "Waive harm penalty" toggle + level hints; the feed
+  note names the malus) and the bot's `/roll action:` (title shows `−1d`, note "−1d (moderate
+  harm)"; severe adds "needs help or a push"). Effect reduction / incapacitation stay surfaced as
+  hints — position/effect remain the table's call. Covered by `roll-pool.test.ts`,
+  `roll.sheet.test.ts`, and the `gm-harm-stress.spec.ts` journey.
 - **F44** · FitD · Armor has no mechanical effect (harm reduction / heavy −1d). loadout carries armor
   but rolls/harm ignore it → "spend armor" to reduce harm; heavy-armor note. **open**
 - **F45** · FitD · Load level is character-static, not chosen per score. `CharacterLoadout.level` is

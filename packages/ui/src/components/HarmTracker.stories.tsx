@@ -52,3 +52,20 @@ export const CustomBounds: Story = {
     bounds: { lesser: 3, moderate: 2, severe: 2 },
   },
 };
+
+export const ClearableEntries: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `onClearEntry`, each wound becomes a button that clears it (recovery) — hover shifts it toward the healing palette.',
+      },
+    },
+  },
+  args: {
+    harm: { lesser: ['Bruised'], moderate: ['Sprained ankle'], severe: [] },
+    bounds: BITD_BOUNDS,
+    onClearEntry: () => {},
+    clearLabel: (text: string) => `Clear harm: ${text}`,
+  },
+};

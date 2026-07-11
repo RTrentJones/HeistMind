@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { harmDicePenalty, worstHarmLevel, type CharacterHarm } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
@@ -48,10 +49,13 @@ export function RollPanel({
   gameId,
   characterId,
   actions,
+  harm,
 }: {
   gameId: string;
   characterId?: string;
   actions?: ActionOption[];
+  /** The rolling character's harm — surfaces the RAW penalties on action rolls (F43). */
+  harm?: CharacterHarm;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -80,6 +84,13 @@ export function RollPanel({
   const [push, setPush] = useState(false);
   const [bargain, setBargain] = useState(false);
   const [bargainNote, setBargainNote] = useState('');
+  // F43 — harm penalties, RAW (SRD, Harm): moderate harm = −1d on action rolls (applied by
+  // default, waivable when the table rules otherwise), lesser = reduced effect (surfaced),
+  // severe = can't act without help or pushing (surfaced).
+  const worstHarm = harm ? worstHarmLevel({ harm }) : null;
+  const harmPenalty = harm ? harmDicePenalty({ harm }) : 0;
+  const [waiveHarm, setWaiveHarm] = useState(false);
+  const appliedHarmPenalty = waiveHarm ? 0 : harmPenalty;
   const [rolling, setRolling] = useState(false);
   const [last, setLast] = useState<{
     outcome: keyof typeof OUTCOME_KEY;
@@ -118,12 +129,21 @@ export function RollPanel({
 
       const isActionRoll = mode === 'action';
       const rating = isActionRoll ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune;
-      // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2
-      // take-lowest) — the pool math is the pure, unit-tested `rollPool`.
-      const { count, zeroDice } = rollPool({ mode, rating, push, bargain, fortune });
+      // Push and devil's bargain each add a die; moderate harm costs one (a 0-pool still rolls
+      // 2 take-lowest) — the pool math is the pure, unit-tested `rollPool`.
+      const { count, zeroDice } = rollPool({
+        mode,
+        rating,
+        push,
+        bargain,
+        harmPenalty: isActionRoll ? appliedHarmPenalty : 0,
+        fortune,
+      });
       const results = realize(count);
       // Record the moves so the feed shows what was spent / accepted.
       const notes: string[] = [];
+      if (isActionRoll && appliedHarmPenalty > 0)
+        notes.push(t('components.rollPanel.harmPenaltyNote'));
       if (isActionRoll && push) notes.push(t('components.rollPanel.pushedNote'));
       if (isActionRoll && bargain)
         notes.push(
@@ -246,6 +266,16 @@ export function RollPanel({
               />
               {t('components.rollPanel.bargain')}
             </label>
+            {harmPenalty > 0 && (
+              <label className='flex cursor-pointer items-center gap-1.5 text-sm'>
+                <input
+                  type='checkbox'
+                  checked={waiveHarm}
+                  onChange={e => setWaiveHarm(e.target.checked)}
+                />
+                {t('components.rollPanel.waiveHarm')}
+              </label>
+            )}
             {bargain && (
               <Input
                 size='sm'
@@ -294,6 +324,23 @@ export function RollPanel({
       {isZeroDiceAction && (
         <Text size='sm' variant='muted'>
           {t('components.rollPanel.zeroDiceHint')}
+        </Text>
+      )}
+      {mode === 'action' && worstHarm === 'severe' && (
+        <Alert variant='warning' size='sm'>
+          {t('components.rollPanel.harmSevereHint')}
+        </Alert>
+      )}
+      {mode === 'action' && harmPenalty > 0 && (
+        <Text size='sm' variant='muted'>
+          {waiveHarm
+            ? t('components.rollPanel.harmWaivedHint')
+            : t('components.rollPanel.harmModerateHint')}
+        </Text>
+      )}
+      {mode === 'action' && worstHarm === 'lesser' && (
+        <Text size='sm' variant='muted'>
+          {t('components.rollPanel.harmLesserHint')}
         </Text>
       )}
       {last && (

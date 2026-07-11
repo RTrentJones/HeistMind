@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   Badge,
   Button,
@@ -89,6 +90,10 @@ export function HomePage() {
                     <Stack gap='sm' align='start'>
                       <Text variant='secondary'>{t('landing.tracks.pbp.body')}</Text>
                       <Badge variant='gold'>{t('landing.tracks.pbp.tag')}</Badge>
+                      {/* F67 — the player-facing bot guide a GM can send their table. */}
+                      <Link href='/discord' className='text-sm underline'>
+                        {t('landing.tracks.pbp.guideLink')}
+                      </Link>
                     </Stack>
                   </CardContent>
                 </Card>

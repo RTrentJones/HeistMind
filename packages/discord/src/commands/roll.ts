@@ -8,8 +8,10 @@
 //             footer saying why.
 import {
   diceForRating,
+  harmDicePenalty,
   rollOutcome,
   rulesetActions,
+  worstHarmLevel,
   type CharacterWithDetails,
 } from '@heist-mind/core';
 import { rollAction } from '@heist-mind/engine';
@@ -89,7 +91,10 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       if (!resolved) return failEphemeral(followUp, copy.unknownAction(action));
 
       const rating = character.characterData.skills[resolved] ?? 0;
-      const pool = rating + extra + (push ? 1 : 0);
+      // F43 — moderate harm costs a die, RAW; the sheet is the source of truth in both clients
+      // (the web panel applies the same penalty). `extra` remains the GM's lever to waive it.
+      const harmPenalty = harmDicePenalty(character.characterData);
+      const pool = rating + extra + (push ? 1 : 0) - harmPenalty;
       const { count, zeroDice } = diceForRating(pool);
       const results = ctx.realize(count);
 
@@ -124,9 +129,18 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
         if (push) pushNote = copy.pushedCharged; // the engine really charged the 2 stress
       }
 
-      const noteParts = [...(pushNote ? [pushNote] : []), ...(note ? [note] : [])];
+      const harmNotes = [
+        ...(harmPenalty > 0 ? [copy.harmPenaltyNote] : []),
+        ...(worstHarmLevel(character.characterData) === 'severe' ? [copy.severeHarmNote] : []),
+      ];
+      const noteParts = [...harmNotes, ...(pushNote ? [pushNote] : []), ...(note ? [note] : [])];
       const embed = rollEmbed({
-        title: copy.sheetRollTitle(character.name, resolved, rating, extra, push),
+        title: copy.sheetRollTitle(
+          character.name,
+          resolved,
+          rating,
+          extra + (push ? 1 : 0) - harmPenalty
+        ),
         results,
         outcome: rollOutcome(results, { zeroDice }),
         detail: copy.positionEffect(position, effect),
@@ -143,7 +157,11 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
   const manualNotes = [...(push ? [copy.pushedReminder] : []), ...(note ? [note] : [])];
   return inline(
     replyEmbed(
-      finish(copy.rollTitle(pool), pool, manualNotes.length > 0 ? manualNotes.join(' · ') : undefined)
+      finish(
+        copy.rollTitle(pool),
+        pool,
+        manualNotes.length > 0 ? manualNotes.join(' · ') : undefined
+      )
     )
   );
 };

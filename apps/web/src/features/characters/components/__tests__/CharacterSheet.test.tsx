@@ -35,6 +35,8 @@ vi.mock('@/features/characters/data/mutations', () => ({
   useUpdateCharacterData: () => updateCharData,
   useAddExperience: () => noopMutation,
   useIndulgeVice: () => noopMutation,
+  useTakeHarm: () => noopMutation,
+  useClearHarm: () => noopMutation,
 }));
 vi.mock('@/features/auth/stores/auth-store', () => ({
   useAuth: () => ({ user: { id: 'u1' } }),

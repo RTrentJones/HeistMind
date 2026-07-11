@@ -8,15 +8,18 @@ import type {
   CharacterAdvancement,
   CharacterLoadout,
   CharacterWithDetails,
+  HarmLevel,
   UpdateCharacterData,
 } from '@heist-mind/core';
 import {
   advanceCharacter,
   applyStress,
+  clearHarm,
   indulgeVice,
   markXp,
   retireCharacter,
   saveLoadout,
+  takeHarm,
   type IndulgeViceOutcome,
 } from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
@@ -87,6 +90,46 @@ export function useAddExperience(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await markXp(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * Take harm via the ENGINE (RAW escalation past full tracks + a 'harm' feed event — the same
+ * implementation the bot's `/harm take` drives; F65 closes the web side). Returns the level the
+ * harm actually LANDED at so the sheet can flag an escalation.
+ */
+export function useTakeHarm(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      userId: string;
+      level: HarmLevel;
+      description: string;
+      logLabel: string;
+      logNote: (appliedLevel: HarmLevel) => string;
+    }) => unwrap(await takeHarm(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/** Clear ONE harm entry via the ENGINE (recovery; logs a 'harm' feed event — F65 web parity). */
+export function useClearHarm(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      userId: string;
+      level: HarmLevel;
+      description: string;
+      logLabel: string;
+      logNote: string;
+    }): Promise<Character> => unwrap(await clearHarm(getRepositories(), { characterId, ...vars })),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: characterKeys.all });
       if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });

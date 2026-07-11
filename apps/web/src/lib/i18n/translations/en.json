@@ -290,6 +290,12 @@
       "unmarkXpAria": "Unmark — back to {{count}} XP",
       "logXpMarkTrack": "Marked {{count}} XP — {{track}}",
       "logXpUnmarkTrack": "Removed {{count}} XP — {{track}}",
+      "takeHarmLabel": "Take harm",
+      "clearHarmAria": "Clear harm: {{name}}",
+      "logHarmTaken": "Took {{level}} harm: {{description}}",
+      "logHarmCleared": "Cleared harm: {{description}}",
+      "harmEscalated": "That track was full — the harm escalated to {{level}}.",
+      "harmFailed": "Couldn't update harm",
       "gearAndCoin": "Gear & Coin",
       "loadBadge": "{{level}} load · {{used}}/{{limit}}",
       "coin": "{{coins}} coin",
@@ -417,7 +423,13 @@
       "bargainPlaceholder": "The complication you accept…",
       "pushedNote": "Pushed (+1d, 2 stress)",
       "bargainNote": "Devil's bargain: {{note}}",
-      "bargainNoteEmpty": "Devil's bargain (+1d)"
+      "bargainNoteEmpty": "Devil's bargain (+1d)",
+      "waiveHarm": "Waive harm penalty",
+      "harmPenaltyNote": "−1d (moderate harm)",
+      "harmModerateHint": "Moderate harm — this roll loses 1 die.",
+      "harmWaivedHint": "Harm penalty waived — the GM ruled the wound doesn't hinder this action.",
+      "harmLesserHint": "Lesser harm — expect reduced effect.",
+      "harmSevereHint": "Severe harm — you can't act without help or pushing yourself."
     },
     "rollLog": {
       "empty": "No rolls yet.",
@@ -761,7 +773,8 @@
         "pbp": {
           "title": "Play-by-post on Discord",
           "body": "The async mechanical layer for your game, live in your server: sheet-rated rolls, stress, harm, XP, clocks, and GM controls as slash commands. Link a channel to your campaign and every command lands in the score-grouped campaign log as the story unfolds.",
-          "tag": "Like Avrae for D&D — but built for Forged in the Dark."
+          "tag": "Like Avrae for D&D — but built for Forged in the Dark.",
+          "guideLink": "How the bot works — commands & getting started →"
         }
       },
       "pillars": {

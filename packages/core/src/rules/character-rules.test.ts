@@ -13,6 +13,8 @@ import {
   actionDotsSpent,
   deriveAttributes,
   harmBounds,
+  harmDicePenalty,
+  worstHarmLevel,
   loadLimit,
   loadUsed,
   usesXpTracks,
@@ -767,6 +769,39 @@ describe('action ratings', () => {
 });
 
 describe('harm', () => {
+  it('worstHarmLevel reports the most serious recorded level, null when unharmed', () => {
+    expect(worstHarmLevel(character())).toBeNull();
+    expect(
+      worstHarmLevel(character({ harm: { lesser: ['Bruised'], moderate: [], severe: [] } }))
+    ).toBe('lesser');
+    expect(
+      worstHarmLevel(character({ harm: { lesser: ['Bruised'], moderate: ['Winded'], severe: [] } }))
+    ).toBe('moderate');
+    expect(
+      worstHarmLevel(character({ harm: { lesser: [], moderate: [], severe: ['Gutted'] } }))
+    ).toBe('severe');
+  });
+
+  it('harmDicePenalty is −1d when any moderate harm is recorded, never stacking', () => {
+    expect(harmDicePenalty(character())).toBe(0);
+    expect(
+      harmDicePenalty(character({ harm: { lesser: ['Bruised'], moderate: [], severe: [] } }))
+    ).toBe(0);
+    expect(
+      harmDicePenalty(character({ harm: { lesser: [], moderate: ['Winded'], severe: [] } }))
+    ).toBe(1);
+    // Two moderate wounds still cost ONE die (same-kind penalties don't stack, RAW).
+    expect(
+      harmDicePenalty(
+        character({ harm: { lesser: [], moderate: ['Winded', 'Concussion'], severe: [] } })
+      )
+    ).toBe(1);
+    // Severe alone incapacitates but does not change the pool.
+    expect(
+      harmDicePenalty(character({ harm: { lesser: [], moderate: [], severe: ['Gutted'] } }))
+    ).toBe(0);
+  });
+
   it('harmBounds defaults to BitD (2/2/1) and honors a ruleset override', () => {
     expect(harmBounds(ruleset())).toEqual(DEFAULT_HARM);
     expect(harmBounds(ruleset({ harm: { lesser: 3, moderate: 2, severe: 1 } }))).toEqual({
@@ -918,8 +953,14 @@ describe('XP tracks', () => {
   it('markXpTrack adds marks, clamped to [0, size], from empty or existing state', () => {
     const rs = trackRs();
     // from empty (no xp yet)
-    expect(markXpTrack(rs, character(), PLAYBOOK_TRACK, 2)).toEqual({ playbook: 2, attributes: {} });
-    expect(markXpTrack(rs, character(), 'force', 1)).toEqual({ playbook: 0, attributes: { force: 1 } });
+    expect(markXpTrack(rs, character(), PLAYBOOK_TRACK, 2)).toEqual({
+      playbook: 2,
+      attributes: {},
+    });
+    expect(markXpTrack(rs, character(), 'force', 1)).toEqual({
+      playbook: 0,
+      attributes: { force: 1 },
+    });
     // clamp at the top
     expect(
       markXpTrack(rs, character({ xp: { playbook: 7, attributes: {} } }), PLAYBOOK_TRACK, 5)

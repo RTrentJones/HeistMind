@@ -10,7 +10,8 @@ export const OUTCOME_LABEL: Record<RollOutcome, string> = {
 };
 
 export const copy = {
-  rollTitle: (dice: number) => (dice === 0 ? 'Action roll — 0d (2d, take lowest)' : `Action roll — ${dice}d`),
+  rollTitle: (dice: number) =>
+    dice === 0 ? 'Action roll — 0d (2d, take lowest)' : `Action roll — ${dice}d`,
   fortuneTitle: (dice: number) =>
     dice === 0 ? 'Fortune roll — 0d (2d, take lowest)' : `Fortune roll — ${dice}d`,
   resistTitle: (dice: number, attribute: string | null) =>
@@ -57,7 +58,8 @@ export const copy = {
   notMember: 'This channel is linked to a HeistMind campaign you’re not a member of.',
   campaignNotFound: (name: string) =>
     `No campaign of yours is named “${name}”. Try the autocomplete suggestions.`,
-  noCategoryHere: 'This channel isn’t inside a category — link the channel or the whole server instead.',
+  noCategoryHere:
+    'This channel isn’t inside a category — link the channel or the whole server instead.',
   alreadyLinked: 'That Discord surface is already linked to a campaign — unlink it first.',
   linked: (campaign: string, scope: string) =>
     `**${campaign}** is now linked to this ${scope}. Rolls and \`/log\` entries here land in its campaign log.`,
@@ -92,9 +94,9 @@ export const copy = {
   unknownAction: (name: string) =>
     `“${name}” isn't an action on your active character's ruleset. Try the autocomplete suggestions.`,
   pushedReminder: 'Pushed (+1d) — mark 2 stress on your sheet',
-  sheetRollTitle: (character: string, action: string, rating: number, extra: number, push: boolean) => {
-    const bonus = extra + (push ? 1 : 0);
-    return `${character} — ${action} ${rating}d${bonus > 0 ? ` +${bonus}d` : ''}`;
+  sheetRollTitle: (character: string, action: string, rating: number, modifier: number) => {
+    const mod = modifier > 0 ? ` +${modifier}d` : modifier < 0 ? ` −${-modifier}d` : '';
+    return `${character} — ${action} ${rating}d${mod}`;
   },
   noActiveScore: 'No active score — `/score start` begins one.',
   scoreStarted: (name: string | null) => (name ? `Score started — **${name}**.` : 'Score started.'),
@@ -106,6 +108,15 @@ export const copy = {
   crewLogHeat: (amount: number) => `+${amount} heat`,
   crewLogTier: 'Advanced a tier',
   crewLogIncarcerate: 'Incarceration — Wanted down one, Heat cleared',
+  harmPenaltyNote: '−1d (moderate harm)',
+  severeHarmNote: 'Severe harm — acting needs help or a push',
+  crewLogXp: (xp: number, total: number) => `Crew XP ${xp}/${total}`,
+  crewXpMarked: (xp: number, total: number, ready: boolean) =>
+    `Crew XP **${xp}/${total}**${ready ? ' — full! Take it with `/crew advance`.' : '.'}`,
+  crewAdvanceNotReady: (xp: number, total: number) =>
+    `The advancement track isn’t full — ${xp}/${total}.`,
+  crewLogAdvance: 'Crew advance taken — new crew ability unlocked',
+  crewAdvanceTaken: 'Advance taken — the track resets. Pick a new crew ability on the crew sheet.',
   clockNotFound: (name: string) => `No clock “${name}”. Try the autocomplete suggestions.`,
   clockTicked: (name: string, filled: number, segments: number) =>
     `**${name}** — ${filled}/${segments}.`,
@@ -167,7 +178,7 @@ export const copy = {
       'Sheet rolls and `/resist` there land in the campaign log. `/log` records a settled result · `/heist status` shows score/crew/clocks.',
       '',
       '**GM controls — in the linked channel**',
-      '`/score start|end` · `/crew heat|tier|incarcerate` · `/clock tick` · `/faction status`',
+      '`/score start|end` · `/crew heat|tier|incarcerate|xp|advance` · `/clock tick` · `/faction status`',
       '',
       `Build characters, campaigns, and rulesets at ${siteUrl}.`,
     ].join('\n'),

@@ -427,7 +427,7 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
   },
   {
     name: 'crew',
-    description: 'GM: crew progression — heat, tier, incarceration',
+    description: 'GM: crew progression — heat, tier, incarceration, advancement XP',
     ...GUILD_ONLY,
     options: [
       {
@@ -454,6 +454,25 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
         type: ApplicationCommandOptionType.Subcommand,
         name: 'incarcerate',
         description: 'Someone takes the fall: Wanted −1, Heat cleared',
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'xp',
+        description: 'Mark crew advancement XP (a full 8-box track earns an advance)',
+        options: [
+          {
+            type: ApplicationCommandOptionType.Integer,
+            name: 'amount',
+            description: 'Marks to add (default 1; negative unmarks)',
+            min_value: -8,
+            max_value: 8,
+          },
+        ],
+      },
+      {
+        type: ApplicationCommandOptionType.Subcommand,
+        name: 'advance',
+        description: 'Spend a FULL advancement track: reset it and take a new crew ability',
       },
     ],
   },

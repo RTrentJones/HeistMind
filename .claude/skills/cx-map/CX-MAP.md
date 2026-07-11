@@ -234,7 +234,13 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   `useCharacterAdvancement`); `CrewSheet` got the same card split (`crews/components/cards/`).
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
-  stress-release half of the FitD pressure loop (MVP downtime). **Error split (F73, 2026-07-11):**
+  stress-release half of the FitD pressure loop (MVP downtime).
+  **Harm (F65/F43, 2026-07-11):** the Condition card's harm track is live for the owner/GM — a
+  "Take harm" row (description + level; RAW escalation past full tracks, with an inline
+  "escalated" notice) and click-the-wound-to-clear, both through engine `takeHarm`/`clearHarm`
+  (feed-logged, bot parity). The roll panel surfaces the wound's RAW consequences: moderate harm
+  auto-applies **−1d** (waivable, noted in the feed), lesser hints reduced effect, severe warns
+  "needs help or a push". **Error split (F73, 2026-07-11):**
   a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
   the sheet and leaves it interactive; only a load failure / not-found swaps the page for
   `ErrorDisplay`.
@@ -324,6 +330,19 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   Footer links (separate PR) are the discovery path.
 - _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
 
+### `/discord` — The bot guide (public, F67)
+
+- **Files:** `apps/web/src/app/discord/page.tsx` (server component + `metadata`) →
+  `DiscordGuideContent` (`apps/web/src/features/marketing/components/`) — the legal-page pattern;
+  command names/syntax are deliberately literal (they must match the registered commands).
+- **Purpose:** the page a GM sends players — what the bot is, a 3-step getting-started (try the
+  dice with no account → one web Discord sign-in IS the account link → `/character use` and roll
+  from the sheet in a linked channel), and the full command reference (mirrors `/heist help` and
+  `packages/discord/README.md`'s table — update the three together).
+- **Nav:** public, no auth gate; linked from the landing's play-by-post track ("How the bot
+  works →"). On gated prod the route redirects home (only `/` + `/legal/*` stay reachable).
+- _Last verified:_ 2026-07-11 (feature introduction — bot-parity round, F67)
+
 ### `/settings` — Account settings (self-service deletion)
 
 - **File:** `apps/web/src/app/settings/page.tsx` → `AccountSettings`
@@ -353,7 +372,9 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-11 (XP round (F85): sheet XP marks feed-logged via engine markXp, shared
+_Last verified:_ 2026-07-11 (bot-parity round (F86/F43/F65/F67): harm quick actions + roll
+penalties on the sheet, the `/discord` guide page + landing link, and same day the XP round
+(F85): sheet XP marks feed-logged via engine markXp, shared
 gold `XpTrack` boxes on character + crew tracks, "Take advance" CTA → editor Advancement tab,
 crew XP mark/advance through new engine `markCrewXp`/`takeCrewAdvance` (feed-logged, guarded) +
 post-advance notice; same day, CX round: F72 SignInGate on all six secondary routes; F73 sheet
@@ -405,22 +426,27 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   · `/dice` · `/heist about|help`. Pure compute, nothing stored.
 - **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
-  the character's own ruleset, `extra`/`push`), `/stress add|clear`, `/harm take|clear` (RAW
-  escalation), `/vice indulge`, `/xp mark|advance` — the sheet commands feed-log via the same
-  engine use-cases the web calls.
+  the character's own ruleset, `extra`/`push`; **moderate harm auto-applies −1d** — the title shows
+  the malus, the note names it, severe adds a needs-help warning — F43), `/stress add|clear`,
+  `/harm take|clear` (RAW escalation), `/vice indulge`, `/xp mark|advance` — the sheet commands
+  feed-log via the same engine use-cases the web calls.
 - **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
   that campaign (embed footer says "Logged to …" or exactly why not); `/log` (attributed,
   score-tagged); `/heist status` (member snapshot).
-- **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate` · `/clock tick`
-  (filling announces "It comes to a head!") · `/faction status`. GM-gated INCLUDING autocompletes —
-  campaign state never leaks through suggestions.
+- **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
+  (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, `advance` spends a FULL
+  track and refuses otherwise, both feed-logged; F86) · `/clock tick` (filling announces "It comes
+  to a head!") · `/faction status`. GM-gated INCLUDING autocompletes — campaign state never leaks
+  through suggestions.
 
 Failure posture everywhere: public defers that fail authz become delete + ephemeral; non-members
-learn nothing (not even the campaign's name). Known gaps: F65 (web harm parity), F66 (threads under
-a category link), F67 (no web docs page).
+learn nothing (not even the campaign's name). Known gaps: F66 (threads under a category link) is
+the last bot gap — F65 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-07-05 (go-live smoke fixed F68 discord_id trigger-link + F69 rulesetActions resolution; residue tracked as F70/F71; previously phases 0–3 complete #121–#132)
+_Last verified:_ 2026-07-11 (bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
+help/README updated; previously 2026-07-05 go-live smoke fixed F68 discord_id trigger-link + F69
+rulesetActions resolution; residue tracked as F70/F71; phases 0–3 complete #121–#132)
 
 ---
 

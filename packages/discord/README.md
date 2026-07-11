@@ -24,12 +24,12 @@ The E2E suite does the same automatically: `playwright.config.ts` generates
 One Discord application has ONE interactions endpoint URL, so beta and prod each get their own app
 (test on beta with the dev app before promoting):
 
-| | Dev app ("HeistMind Dev") | Prod app ("HeistMind") |
-|---|---|---|
-| Interactions endpoint | `https://<beta domain>/api/discord` | `https://<prod domain>/api/discord` |
-| Registered from branch | `development` | `main` |
-| GitHub Actions secrets | `DISCORD_DEV_APP_ID`, `DISCORD_DEV_BOT_TOKEN` | `DISCORD_APP_ID`, `DISCORD_BOT_TOKEN` |
-| Vercel env (per target) | `DISCORD_PUBLIC_KEY` (preview/beta) | `DISCORD_PUBLIC_KEY` (production) |
+|                         | Dev app ("HeistMind Dev")                     | Prod app ("HeistMind")                |
+| ----------------------- | --------------------------------------------- | ------------------------------------- |
+| Interactions endpoint   | `https://<beta domain>/api/discord`           | `https://<prod domain>/api/discord`   |
+| Registered from branch  | `development`                                 | `main`                                |
+| GitHub Actions secrets  | `DISCORD_DEV_APP_ID`, `DISCORD_DEV_BOT_TOKEN` | `DISCORD_APP_ID`, `DISCORD_BOT_TOKEN` |
+| Vercel env (per target) | `DISCORD_PUBLIC_KEY` (preview/beta)           | `DISCORD_PUBLIC_KEY` (production)     |
 
 Setup, per app, in the [Discord developer portal](https://discord.com/developers/applications):
 
@@ -50,26 +50,27 @@ Use `scripts/discord-post.mjs` for local iteration instead.
 
 `/heist help` shows this in Discord, grouped by what each command needs.
 
-| Command                             | Needs                             | Does                                                                                                            |
-| ----------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `/roll dice:` `[position]` `[effect]` `[note]` | nothing                | Manual FitD action roll (0d = 2d take-lowest), classified outcome                                                 |
-| `/resist dice:` `[attribute]`       | nothing                           | Resistance roll — stress = 6 − highest; a crit clears 1                                                           |
-| `/fortune dice:`                    | nothing                           | Fortune roll                                                                                                      |
-| `/dice notation:`                   | nothing                           | Plain NdM±k                                                                                                       |
-| `/heist about` · `/heist help`      | nothing                           | Deploy probe / this reference                                                                                     |
-| `/character use\|show\|unset`       | account                           | Pick / show / clear your ACTIVE character (one at a time)                                                         |
-| `/roll action:` `[extra]` `[push]`  | active character                  | Sheet-rated roll; push charges its 2 stress when the roll persists                                                |
-| `/stress add\|clear`                | active character                  | Clamped stress delta on the sheet                                                                                 |
-| `/harm take\|clear`                 | active character                  | Harm with RAW track escalation / clear one entry — both feed-logged                                               |
-| `/vice indulge`                     | active character                  | Lowest-attribute vice roll; clears stress; flags overindulgence                                                   |
-| `/xp mark\|advance`                 | active character                  | Bank pool XP / spend an advance (abilities + action dots, autocompleted)                                          |
-| `/heist link\|unlink`               | GM, in a guild                    | Link a campaign to the channel, its category, or the whole server                                                 |
-| `/heist status`                     | member, linked channel            | Score / crew / running clocks at a glance                                                                         |
-| `/log text:`                        | member, linked channel            | Record a settled result — attributed, active-score-tagged                                                         |
-| `/score start\|end`                 | GM, linked channel                | Operation lifecycle (feed events tagged to the score)                                                             |
-| `/crew heat\|tier\|incarcerate`     | GM, linked channel                | Heat→wanted cascade · spend a full Rep track · Wanted −1 + Heat cleared                                           |
-| `/clock tick`                       | GM, linked channel                | Advance/wind a clock; FILLING it announces the milestone                                                          |
-| `/faction status`                   | GM, linked channel                | Set the −3 war … +3 allied standing                                                                               |
+| Command                                        | Needs                  | Does                                                                                         |
+| ---------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
+| `/roll dice:` `[position]` `[effect]` `[note]` | nothing                | Manual FitD action roll (0d = 2d take-lowest), classified outcome                            |
+| `/resist dice:` `[attribute]`                  | nothing                | Resistance roll — stress = 6 − highest; a crit clears 1                                      |
+| `/fortune dice:`                               | nothing                | Fortune roll                                                                                 |
+| `/dice notation:`                              | nothing                | Plain NdM±k                                                                                  |
+| `/heist about` · `/heist help`                 | nothing                | Deploy probe / this reference                                                                |
+| `/character use\|show\|unset`                  | account                | Pick / show / clear your ACTIVE character (one at a time)                                    |
+| `/roll action:` `[extra]` `[push]`             | active character       | Sheet-rated roll; push charges its 2 stress when the roll persists                           |
+| `/stress add\|clear`                           | active character       | Clamped stress delta on the sheet                                                            |
+| `/harm take\|clear`                            | active character       | Harm with RAW track escalation / clear one entry — both feed-logged                          |
+| `/vice indulge`                                | active character       | Lowest-attribute vice roll; clears stress; flags overindulgence                              |
+| `/xp mark\|advance`                            | active character       | Bank pool XP / spend an advance (abilities + action dots, autocompleted)                     |
+| `/heist link\|unlink`                          | GM, in a guild         | Link a campaign to the channel, its category, or the whole server                            |
+| `/heist status`                                | member, linked channel | Score / crew / running clocks at a glance                                                    |
+| `/log text:`                                   | member, linked channel | Record a settled result — attributed, active-score-tagged                                    |
+| `/score start\|end`                            | GM, linked channel     | Operation lifecycle (feed events tagged to the score)                                        |
+| `/crew heat\|tier\|incarcerate`                | GM, linked channel     | Heat→wanted cascade · spend a full Rep track · Wanted −1 + Heat cleared                      |
+| `/crew xp\|advance`                            | GM, linked channel     | Mark crew advancement XP (8-box track) · spend a FULL track: reset + take a new crew ability |
+| `/clock tick`                                  | GM, linked channel     | Advance/wind a clock; FILLING it announces the milestone                                     |
+| `/faction status`                              | GM, linked channel     | Set the −3 war … +3 allied standing                                                          |
 
 In a linked channel, `/roll action:` and `/resist` PERSIST through the engine when the roller is a
 member and their active character crews that campaign — the embed footer says where the roll landed

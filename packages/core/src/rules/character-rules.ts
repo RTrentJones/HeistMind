@@ -11,6 +11,7 @@ import type {
   CharacterXp,
   AbilityDefinition,
   AbilityEffects,
+  HarmLevel,
   PlaybookDefinition,
   CreationRestriction,
   StressRules,
@@ -18,6 +19,7 @@ import type {
   LoadLevel,
   ValidationError,
 } from '../domain';
+import { HARM_LEVELS } from '../domain';
 
 /** A minimal crew shape for crew-aware validation — just the abilities the crew currently holds. */
 export interface CrewContext {
@@ -231,6 +233,28 @@ export const DEFAULT_HARM: HarmRules = { lesser: 2, moderate: 2, severe: 1 };
 /** Harm-track box counts, defaulting to BitD values when the ruleset omits `harm`. */
 export function harmBounds(ruleset: RulesetContent): HarmRules {
   return ruleset.harm ?? DEFAULT_HARM;
+}
+
+/**
+ * The most serious harm level with a recorded entry ('severe' > 'moderate' > 'lesser'), or null
+ * when unharmed. Drives the RAW penalties a roll surface must show
+ * ([SRD, Harm](https://bladesinthedark.com/harm-healing)): lesser → reduced effect, moderate →
+ * −1d, severe → incapacitated (needs help or push).
+ */
+export function worstHarmLevel(data: Pick<CharacterData, 'harm'>): HarmLevel | null {
+  for (const level of [...HARM_LEVELS].reverse()) {
+    if ((data.harm?.[level] ?? []).length > 0) return level;
+  }
+  return null;
+}
+
+/**
+ * Dice penalty harm applies to an action roll (BitD RAW: any level-2/moderate harm = −1d; lesser
+ * reduces effect and severe incapacitates, neither changes the pool). Each recorded moderate harm
+ * says "−1d", but penalties of the same kind don't stack — the pool loses one die, not one per wound.
+ */
+export function harmDicePenalty(data: Pick<CharacterData, 'harm'>): number {
+  return (data.harm?.moderate ?? []).length > 0 ? 1 : 0;
 }
 
 /** BitD default load capacities, used when a ruleset omits `equipment.loadCapacity`. */

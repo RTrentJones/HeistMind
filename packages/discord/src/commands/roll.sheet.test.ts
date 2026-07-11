@@ -8,7 +8,15 @@ import type {
 } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, type vi } from 'vitest';
 import { clearActorCache } from '../authz';
-import { ctx, ok, RATED_ACTION, repos, run, UNRATED_ACTION } from '../test/helpers';
+import {
+  characterOnDefaultRuleset,
+  ctx,
+  ok,
+  RATED_ACTION,
+  repos,
+  run,
+  UNRATED_ACTION,
+} from '../test/helpers';
 import { handleRoll, rollAutocomplete } from './roll';
 
 afterEach(() => clearActorCache());
@@ -63,6 +71,28 @@ describe('/roll action (sheet form)', () => {
     const result = await handleRoll(ctx(null, []), cmd([]));
     expect(result.work).toBeUndefined();
     expect((result.response as { data?: { flags?: number } }).data?.flags).toBe(64);
+  });
+
+  it('moderate harm costs a die (F43) — the title shows the malus and the note names it', async () => {
+    // characterOnDefaultRuleset gives RATED_ACTION 2 dots; the wound takes one back.
+    const wounded = repos(
+      {},
+      characterOnDefaultRuleset({
+        characterData: {
+          skills: { [RATED_ACTION]: 2 },
+          harm: { lesser: [], moderate: ['Winded'], severe: [] },
+        },
+      })
+    );
+    const calls = await run(
+      await handleRoll(ctx(wounded, [5]), cmd([{ name: 'action', type: 3, value: RATED_ACTION }]))
+    );
+    const embed = (calls[0]?.payload as { embeds: { title: string; description: string }[] })
+      .embeds[0];
+    // rating 2 − 1 harm = 1d rolled, and the title says so.
+    expect(embed?.title).toBe(`Silks — ${RATED_ACTION} 2d −1d`);
+    expect(embed?.description).toContain('[5]');
+    expect(embed?.description).toContain('moderate harm');
   });
 
   it('an UNRATED action rolls the zero-dice rule', async () => {

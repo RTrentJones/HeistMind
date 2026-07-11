@@ -122,6 +122,58 @@ describe('/crew', () => {
     const refusal = await run(await handleCrew(ctx(bare), guildCmd('crew', 'incarcerate')));
     expect(String(refusal[1]?.payload)).toContain('No crew sheet');
   });
+
+  it('xp adds marks to the advancement track (clamped) and logs a crew event', async () => {
+    const withXp = repos({
+      crews: {
+        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, resources: { 'crew-xp': 5 } })),
+        update: vi.fn().mockResolvedValue(ok(CREW)),
+      },
+    });
+    const calls = await run(
+      await handleCrew(ctx(withXp), guildCmd('crew', 'xp', [{ name: 'amount', type: 4, value: 2 }]))
+    );
+    expect(withXp.crews.update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 7 } });
+    expect(withXp.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'crew', note: 'Crew XP 7/8' })
+    );
+    expect(content(calls)).toContain('7/8');
+
+    // Filling the track points at /crew advance.
+    const nearFull = repos({
+      crews: {
+        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, resources: { 'crew-xp': 7 } })),
+        update: vi.fn().mockResolvedValue(ok(CREW)),
+      },
+    });
+    const full = await run(await handleCrew(ctx(nearFull), guildCmd('crew', 'xp')));
+    expect(nearFull.crews.update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 8 } });
+    expect(content(full)).toContain('/crew advance');
+  });
+
+  it('advance spends a FULL track and logs; a non-full track refuses BEFORE any write', async () => {
+    const full = repos({
+      crews: {
+        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, resources: { 'crew-xp': 8 } })),
+        update: vi.fn().mockResolvedValue(ok(CREW)),
+      },
+    });
+    const calls = await run(await handleCrew(ctx(full), guildCmd('crew', 'advance')));
+    expect(full.crews.update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 0 } });
+    expect(full.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'crew' }));
+    expect(content(calls)).toContain('Advance taken');
+
+    const grinding = repos({
+      crews: {
+        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, resources: { 'crew-xp': 6 } })),
+        update: vi.fn(),
+      },
+    });
+    const refusal = await run(await handleCrew(ctx(grinding), guildCmd('crew', 'advance')));
+    expect(grinding.crews.update).not.toHaveBeenCalled();
+    expect(String(refusal[1]?.payload)).toContain('6/8');
+  });
 });
 
 describe('/clock tick', () => {
