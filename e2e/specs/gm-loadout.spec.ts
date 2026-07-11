@@ -24,7 +24,7 @@ test.describe('GM: loadout, coin & contacts (Brackwater)', () => {
     // Load the bundled Brackwater starter and spin up a campaign + a minimal Knife.
     await gmPage.goto('/rulesets');
     await gmPage
-      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+      .getByRole('button', { name: /Add Brackwater to my rulesets|Refresh my Brackwater copy/i })
       .first()
       .click();
     await expect(gmPage.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
@@ -55,6 +55,9 @@ test.describe('GM: loadout, coin & contacts (Brackwater)', () => {
     await gmPage.getByRole('link', { name: 'View' }).first().click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f-]+$/);
 
+    // F23 — Brackwater rates actions, so the sheet's attributes are DERIVED (and say so).
+    await expect(gmPage.getByText(/Derived from action ratings/).first()).toBeVisible();
+
     // --- Loadout is now a per-score choice on the sheet (not the build editor). ---
     // Default load is "normal" (cap 5). Heavy Armor (3) + Large Weapon (2) + Climbing Gear (2) = 7.
     await gmPage.getByRole('checkbox', { name: /Heavy Armor/ }).check();
@@ -71,6 +74,23 @@ test.describe('GM: loadout, coin & contacts (Brackwater)', () => {
     await expect(gmPage.getByText('Load 5/5')).toBeVisible();
     await expect(gmPage.getByText(/Over capacity/)).toHaveCount(0);
     await gmPage.getByRole('button', { name: 'Save loadout' }).click();
+
+    // --- F44: SPEND ARMOR — arm the toggle, take moderate harm, and it lands a level lighter
+    // (lesser), consuming the carried Heavy Armor for the rest of the score. ---
+    const spendArmor = gmPage.getByRole('button', { name: /Spend armor \(1 left\)/ });
+    await expect(spendArmor).toBeVisible({ timeout: 15_000 });
+    await gmPage.getByLabel('Take harm').fill('Crossbow bolt');
+    await spendArmor.click();
+    await gmPage.getByRole('button', { name: '+ Moderate' }).click();
+    await expect(gmPage.getByText(/landed one level lighter, at lesser/)).toBeVisible({
+      timeout: 15_000,
+    });
+    // The armor box is spent — the toggle is gone until a fresh loadout refreshes it.
+    await expect(gmPage.getByRole('button', { name: /Spend armor/ })).toHaveCount(0);
+    // The wound sits on the LESSER track and the feed carries the lightened level.
+    await expect(gmPage.getByText(/Took lesser harm: Crossbow bolt/).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     // --- Coin / stash / contacts stay in the build editor. ---
     await gmPage.getByRole('button', { name: 'Edit build' }).click();

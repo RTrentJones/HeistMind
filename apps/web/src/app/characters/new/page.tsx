@@ -14,6 +14,7 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
@@ -35,11 +36,7 @@ export default function NewStandaloneCharacterPage() {
   const [picked, setPicked] = useState<Ruleset | null>(null);
 
   if (!isAuthenticated) {
-    return (
-      <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('characters.authPrompt')}</Text>
-      </Container>
-    );
+    return <SignInGate heading={t('characters.newTitle')} prompt={t('characters.authPrompt')} />;
   }
 
   // Ruleset chosen → run the wizard standalone (no gameId); land on the new standalone sheet.
@@ -92,11 +89,17 @@ export default function NewStandaloneCharacterPage() {
             {rulesets.data.map(rs => (
               <Card key={rs.id} variant='outline'>
                 <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-                  <div>
+                  <div className='min-w-0'>
                     <Heading level='h3'>{rs.name}</Heading>
                     <Text variant='muted' size='sm'>
                       {t('characters.rulesetVersion', { version: rs.version })}
                     </Text>
+                    {/* F60 — a one-line blurb so the pick is informed, not a bare name+version. */}
+                    {rs.description && (
+                      <Text variant='muted' size='sm' className='mt-1'>
+                        {rs.description}
+                      </Text>
+                    )}
                   </div>
                   <Button variant='ember' size='sm' onClick={() => setPicked(rs)}>
                     {t('characters.build')}

@@ -29,11 +29,16 @@ import type {
 } from 'discord-api-types/v10';
 import { copy } from '../format/copy';
 import { rollEmbed } from '../format/embeds';
-import { integerOption, stringOption, subcommandName, typedOptionValue } from '../options';
+import {
+  booleanOption,
+  integerOption,
+  stringOption,
+  subcommandName,
+  typedOptionValue,
+} from '../options';
 import { deferred, failEphemeral } from '../respond';
 import type { BotContext, CommandHandler, FollowUpClient } from '../types';
 import { activeCharacter } from './roll';
-
 
 function asHarmLevel(value: string | null): HarmLevel | null {
   return HARM_LEVELS.find(l => l === value) ?? null;
@@ -93,24 +98,40 @@ export const handleHarm: CommandHandler = (ctx, interaction) => {
     if (sub === 'take') {
       const description = stringOption(interaction, 'description')?.trim() ?? '';
       if (!description) return failEphemeral(followUp, copy.unknownCommand);
+      const spendArmor = booleanOption(interaction, 'armor') === true;
       const out = await takeHarm(repos, {
         characterId: character.id,
         userId: character.createdBy,
         level,
         description,
+        spendArmor,
         logLabel: character.name,
-        logNote: applied => copy.harmLogTaken(applied, description),
+        logNote: applied =>
+          applied === null
+            ? copy.harmLogAbsorbed(description)
+            : copy.harmLogTaken(applied, description),
       });
       if (!out.success) {
-        return failEphemeral(
-          followUp,
-          out.error.code === 'HARM_FULL' ? copy.harmFull : copy.somethingBroke
-        );
+        const message =
+          out.error.code === 'HARM_FULL'
+            ? copy.harmFull
+            : out.error.code === 'NO_ARMOR'
+              ? copy.noArmor
+              : copy.somethingBroke;
+        return failEphemeral(followUp, message);
       }
       const applied = out.data.appliedLevel;
+      // Armor absorbed it entirely — nothing landed on the sheet (F44).
+      if (applied === null) {
+        return followUp.editOriginal({ content: copy.harmAbsorbed(character.name, description) });
+      }
       const line = copy.harmTaken(character.name, applied, description);
-      const escalated = applied !== level ? ` ${copy.harmEscalated(level, applied)}` : '';
-      return followUp.editOriginal({ content: `${line}${escalated}` });
+      const armorNote = spendArmor ? ` ${copy.harmArmorReduced}` : '';
+      // After the armor reduction (one level down), a full track can still escalate it (RAW).
+      // (applied !== null guarantees a level above lesser was dealt, so the fallback never fires.)
+      const dealtAt = spendArmor ? (HARM_LEVELS[HARM_LEVELS.indexOf(level) - 1] ?? level) : level;
+      const escalated = applied !== dealtAt ? ` ${copy.harmEscalated(dealtAt, applied)}` : '';
+      return followUp.editOriginal({ content: `${line}${armorNote}${escalated}` });
     }
 
     if (sub === 'clear') {
@@ -166,7 +187,11 @@ export const handleVice: CommandHandler = (ctx, interaction) => {
 function decodePick(
   character: CharacterWithDetails,
   pick: string
-): { advancement: Parameters<typeof advanceCharacter>[1]['advancement']; what: string; logNote: string } | null {
+): {
+  advancement: Parameters<typeof advanceCharacter>[1]['advancement'];
+  what: string;
+  logNote: string;
+} | null {
   const content = character.ruleset.content;
   const [kind, id] = pick.split(':', 2);
   if (kind === 'ability' && id) {
@@ -282,7 +307,10 @@ export async function harmAutocomplete(
     const level = asHarmLevel(
       stringOption(interaction as unknown as APIApplicationCommandInteraction, 'level')
     );
-    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'entry');
+    const typed = typedOptionValue(
+      interaction as unknown as APIApplicationCommandInteraction,
+      'entry'
+    );
     const entries = level ? harm[level] : HARM_LEVELS.flatMap(l => harm[l]);
     return [...new Set(entries)]
       .filter(e => e.toLowerCase().includes(typed))
@@ -309,7 +337,10 @@ export async function xpAutocomplete(
 
     if (sub === 'mark') {
       if (!usesXpTracks(content)) return [];
-      const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'track');
+      const typed = typedOptionValue(
+        interaction as unknown as APIApplicationCommandInteraction,
+        'track'
+      );
       return [
         { name: copy.xpPlaybookTrack, value: PLAYBOOK_TRACK },
         ...(content.attributes ?? []).map(a => ({ name: a.name, value: a.id })),
@@ -319,7 +350,10 @@ export async function xpAutocomplete(
     }
 
     const owned = character.characterData.specialAbilities;
-    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'pick');
+    const typed = typedOptionValue(
+      interaction as unknown as APIApplicationCommandInteraction,
+      'pick'
+    );
     const abilities = content.specialAbilities
       .filter(a => !owned.includes(a.id))
       .map(a => ({ name: `Learn ${a.name}`, value: `ability:${a.id}` }));
@@ -327,9 +361,7 @@ export async function xpAutocomplete(
       const rating = character.characterData.skills[name] ?? 0;
       return { name: `+1 ${name} dot (${rating}→${rating + 1})`, value: `skill:${name}` };
     });
-    return [...abilities, ...dots]
-      .filter(c => c.name.toLowerCase().includes(typed))
-      .slice(0, 25);
+    return [...abilities, ...dots].filter(c => c.name.toLowerCase().includes(typed)).slice(0, 25);
   } catch {
     return [];
   }

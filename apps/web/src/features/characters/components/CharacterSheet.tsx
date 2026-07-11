@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  availableArmor,
   clampStress,
+  deriveAttributes,
   stressBounds,
   usesActionRatings,
   rulesetActions,
@@ -10,7 +12,7 @@ import {
   usesXpTracks,
   xpTrackSize,
   xpMarks,
-  markXpTrack,
+  PLAYBOOK_TRACK,
 } from '@heist-mind/core';
 import {
   Alert,
@@ -21,18 +23,23 @@ import {
   Heading,
   Input,
   LoadingSpinner,
+  Select,
   Stack,
   StressTracker,
   Text,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useCharacterDetail } from '@/features/characters/data/queries';
+import { useCharacterDetail, useCharactersByGame } from '@/features/characters/data/queries';
 import {
   useAddExperience,
+  useClearHarm,
+  useFlashback,
   useIndulgeVice,
+  useTakeHarm,
   useUpdateCharacter,
   useUpdateCharacterData,
 } from '@/features/characters/data/mutations';
+import type { HarmLevel } from '@heist-mind/core';
 import { viceDicePool } from '@heist-mind/engine';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -60,18 +67,45 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const updateCharData = useUpdateCharacterData(characterId);
   const addXpMut = useAddExperience(characterId, character?.gameId ?? null);
   const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
+  const takeHarmMut = useTakeHarm(characterId, character?.gameId ?? null);
+  const clearHarmMut = useClearHarm(characterId, character?.gameId ?? null);
+  const flashbackMut = useFlashback(character?.gameId ?? null);
+  // Campaign roster for the ASSIST move (F10) — teammates are everyone else's active characters.
+  const rosterQuery = useCharactersByGame(character?.gameId ?? undefined);
+  const teammates = (rosterQuery.data ?? [])
+    .filter(c => c.id !== characterId && c.status === 'active')
+    .map(c => ({ id: c.id, name: c.name }));
 
-  const [error, setError] = useState<string | null>(null);
+  // F73 — inline-save failures stay on the sheet (dismissible alert below); only load failures
+  // swap the page for ErrorDisplay.
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
+  // The build editor: null = closed; a section = open on that tab. The sheet's "Take advance" CTA
+  // opens it straight on Advancement (the spend used to hide behind Edit build → tab).
+  const [editorSection, setEditorSection] = useState<'build' | 'advancement' | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const showEditor = editorSection !== null;
+  useEffect(() => {
+    if (editorSection) editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [editorSection]);
   const [name, setName] = useState('');
   const [viceNote, setViceNote] = useState<string | null>(null);
+  const [viceArmed, setViceArmed] = useState(false);
+  const [harmNote, setHarmNote] = useState<string | null>(null);
+  // F44 — arm the next harm tap to spend armor (the harm lands one level lighter).
+  const [armArmor, setArmArmor] = useState(false);
+  // Flashback (F16): what you retro-establish + the stress the GM prices it at.
+  const [flashText, setFlashText] = useState('');
+  const [flashStress, setFlashStress] = useState(1);
 
   const busy =
     updateChar.isPending ||
     updateCharData.isPending ||
     addXpMut.isPending ||
-    indulgeViceMut.isPending;
+    indulgeViceMut.isPending ||
+    takeHarmMut.isPending ||
+    clearHarmMut.isPending ||
+    flashbackMut.isPending;
 
   const saveName = () => {
     const userId = user?.id;
@@ -80,7 +114,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       { userId, data: { name: name.trim() } },
       {
         onSuccess: () => setEditing(false),
-        onError: e => setError(e.message ?? t('components.characterSheet.saveNameFailed')),
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.saveNameFailed')),
       }
     );
   };
@@ -96,7 +130,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         logLabel: character.name,
         logNote: t('components.characterSheet.logXpMark'),
       },
-      { onError: e => setError(e.message ?? t('components.characterSheet.addXpFailed')) }
+      { onError: e => setSaveError(e.message ?? t('components.characterSheet.addXpFailed')) }
     );
   };
 
@@ -111,7 +145,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     updateCharData.mutate(
       { userId, data: { characterData } },
       {
-        onError: e => setError(e.message ?? t('components.characterSheet.saveStressFailed')),
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.saveStressFailed')),
       }
     );
   };
@@ -136,38 +170,123 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       // Overindulging (cleared more than was marked) is a real consequence the GM narrates.
       setViceNote(outcome.overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
     } catch (e) {
-      setError((e as Error).message ?? t('components.downtime.indulgeVice.failed'));
+      setSaveError((e as Error).message ?? t('components.downtime.indulgeVice.failed'));
     }
   };
 
-  // Mark XP into a track (playbook or an attribute id). Sets the track to `value`, clamped, and
-  // saves through the same validated path — every player sees the marks on load (the async loop).
+  // Mark XP into a track (playbook or an attribute id) via the ENGINE `markXp` use-case — the
+  // same path the Discord bot's `/xp mark` drives — so the mark lands through the validated write
+  // AND logs an 'xp' event to the campaign feed (BRD R-C3; this was the one silent XP write, F70c).
   const setXp = (track: string, value: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
     const content = character.ruleset.content;
     const current = xpMarks(character.characterData, track);
     const target = Math.max(0, Math.min(value, xpTrackSize(content, track)));
-    if (target === current) return;
-    const xp = markXpTrack(content, character.characterData, track, target - current);
-    updateCharData.mutate(
-      { userId, data: { characterData: { ...character.characterData, xp } } },
+    const delta = target - current;
+    if (delta === 0) return;
+    const trackName =
+      track === PLAYBOOK_TRACK
+        ? t('components.characterSheet.playbook')
+        : (content.attributes.find(a => a.id === track)?.name ?? track);
+    addXpMut.mutate(
       {
-        onError: e => setError(e.message ?? t('components.characterSheet.markXpFailed')),
+        userId,
+        amount: delta,
+        reason: 'Track mark',
+        track,
+        logLabel: character.name,
+        logNote: t(
+          delta > 0
+            ? 'components.characterSheet.logXpMarkTrack'
+            : 'components.characterSheet.logXpUnmarkTrack',
+          { count: Math.abs(delta), track: trackName }
+        ),
+      },
+      { onError: e => setSaveError(e.message ?? t('components.characterSheet.markXpFailed')) }
+    );
+  };
+
+  // Harm quick actions (F65) — the same engine use-cases the bot's /harm take|clear drive: RAW
+  // escalation past a full track, and a 'harm' feed event so the table sees the wound.
+  const takeHarmQuick = (level: HarmLevel, description: string) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    setHarmNote(null);
+    const spendArmor = armArmor;
+    takeHarmMut.mutate(
+      {
+        userId,
+        level,
+        description,
+        spendArmor,
+        logLabel: character.name,
+        logNote: applied =>
+          applied === null
+            ? t('components.characterSheet.logHarmAbsorbed', { description })
+            : t('components.characterSheet.logHarmTaken', { level: applied, description }),
+      },
+      {
+        onSuccess: ({ appliedLevel }) => {
+          setArmArmor(false);
+          if (appliedLevel === null) setHarmNote(t('components.characterSheet.harmAbsorbed'));
+          else if (spendArmor)
+            setHarmNote(t('components.characterSheet.harmArmorReduced', { level: appliedLevel }));
+          else if (appliedLevel !== level)
+            setHarmNote(t('components.characterSheet.harmEscalated', { level: appliedLevel }));
+        },
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.harmFailed')),
+      }
+    );
+  };
+  const clearHarmQuick = (level: HarmLevel, description: string) => {
+    const userId = user?.id;
+    if (!userId || !character) return;
+    setHarmNote(null);
+    clearHarmMut.mutate(
+      {
+        userId,
+        level,
+        description,
+        logLabel: character.name,
+        logNote: t('components.characterSheet.logHarmCleared', { description }),
+      },
+      { onError: e => setSaveError(e.message ?? t('components.characterSheet.harmFailed')) }
+    );
+  };
+
+  // F57 — the phone thumb bar jumps to a sheet section by id.
+  const jumpTo = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Flashback (F16) — pay the priced stress and put the retro-established beat in the feed.
+  const doFlashback = () => {
+    const userId = user?.id;
+    const text = flashText.trim();
+    if (!userId || !character || !text) return;
+    flashbackMut.mutate(
+      {
+        character,
+        userId,
+        stress: flashStress,
+        logLabel: character.name,
+        logNote: t('components.downtime.flashback.logNote', { count: flashStress, text }),
+      },
+      {
+        onSuccess: () => setFlashText(''),
+        onError: e => setSaveError(e.message ?? t('components.downtime.flashback.failed')),
       }
     );
   };
 
   if (characterQuery.isLoading) return <LoadingSpinner />;
-  // A save error blows the sheet back to the error state (unchanged from the pre-seam behavior);
-  // a thrown query is a load failure, and a resolved-but-null character is a genuine not-found.
-  if (error || characterQuery.isError || !character) {
-    const message =
-      error ??
-      (characterQuery.isError
-        ? ((characterQuery.error as Error | null)?.message ??
-          t('components.characterSheet.loadFailed'))
-        : t('components.characterSheet.notFound'));
+  // A thrown query is a load failure, and a resolved-but-null character is a genuine not-found —
+  // both swap the page. Inline-save failures render the dismissible alert inside the sheet instead.
+  if (characterQuery.isError || !character) {
+    const message = characterQuery.isError
+      ? ((characterQuery.error as Error | null)?.message ??
+        t('components.characterSheet.loadFailed'))
+      : t('components.characterSheet.notFound');
     return (
       <ErrorDisplay
         title={t('components.characterSheet.loadError')}
@@ -176,7 +295,15 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     );
   }
 
-  const attributes = character.characterData?.attributes ?? {};
+  // F23 — on action-rating rulesets the attributes are DERIVED (count of that attribute's actions
+  // rated 1+, i.e. the resistance dice), never the creation-time snapshot: an advanced action dot
+  // must move the resistance pool. Point-buy rulesets keep the stored values.
+  const sheetContent = character.ruleset.content;
+  const derivedMode = usesActionRatings(sheetContent);
+  const attributes = derivedMode
+    ? deriveAttributes(sheetContent, character.characterData)
+    : (character.characterData?.attributes ?? {});
+  const attributeName = (id: string) => sheetContent.attributes.find(a => a.id === id)?.name ?? id;
   const abilities = character.characterData?.specialAbilities ?? [];
   // F42 — mirror the RLS write policy (owner OR the campaign's GM) so viewers see a read-only
   // sheet instead of controls that render and then fail server-side.
@@ -184,7 +311,19 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     user?.id != null && (user.id === character.createdBy || user.id === character.game?.createdBy);
 
   return (
-    <Stack direction='column' gap='lg'>
+    // max-sm:pb-16 clears the fixed thumb bar (below) so the last card is never hidden under it.
+    <Stack direction='column' gap='lg' className='max-sm:pb-16'>
+      {saveError && (
+        <Alert variant='destructive' dismissible onDismiss={() => setSaveError(null)}>
+          {saveError}
+        </Alert>
+      )}
+      {/* F60 — a standalone sheet says so, instead of just silently missing the campaign sections. */}
+      {!character.gameId && (
+        <Alert variant='info' size='sm'>
+          {t('components.characterSheet.standaloneBanner')}
+        </Alert>
+      )}
       <Card variant='character'>
         <Stack direction='column' gap='md'>
           {editing ? (
@@ -234,7 +373,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   >
                     {t('common.actions.edit')}
                   </Button>
-                  <Button variant='outline' size='sm' onClick={() => setShowEditor(s => !s)}>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setEditorSection(s => (s ? null : 'build'))}
+                  >
                     {showEditor
                       ? t('components.characterSheet.closeEditor')
                       : t('components.characterSheet.editBuild')}
@@ -264,31 +407,54 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
           <div>
             <Text as='strong'>{t('components.characterSheet.attributes')}</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {Object.entries(attributes).filter(([, v]) => v > 0).length > 0 ? (
-                Object.entries(attributes)
-                  .filter(([, v]) => v > 0)
-                  .map(([k, v]) => (
-                    <Badge key={k} variant='steel'>
-                      {k} {v}
+            {derivedMode ? (
+              // Derived mode shows EVERY attribute (0 is a real resistance pool — zero-dice).
+              <>
+                <Stack direction='row' gap='sm' className='flex-wrap'>
+                  {sheetContent.attributes.map(a => (
+                    <Badge key={a.id} variant='steel' data-testid={`sheet-attr-${a.id}`}>
+                      {a.name} {attributes[a.id] ?? 0}
                     </Badge>
-                  ))
-              ) : (
+                  ))}
+                </Stack>
                 <Text variant='muted' size='sm'>
-                  {t('components.characterSheet.noPoints')}
+                  {t('components.characterSheet.attributesDerived')}
                 </Text>
-              )}
-            </Stack>
+              </>
+            ) : (
+              <Stack direction='row' gap='sm' className='flex-wrap'>
+                {Object.entries(attributes).filter(([, v]) => v > 0).length > 0 ? (
+                  Object.entries(attributes)
+                    .filter(([, v]) => v > 0)
+                    .map(([k, v]) => (
+                      <Badge key={k} variant='steel'>
+                        {attributeName(k)} {v}
+                      </Badge>
+                    ))
+                ) : (
+                  <Text variant='muted' size='sm'>
+                    {t('components.characterSheet.noPoints')}
+                  </Text>
+                )}
+              </Stack>
+            )}
           </div>
         </Stack>
       </Card>
 
+      {/* F57 — phone-first ordering: below `sm`, the flex `order-*` classes pull the IN-PLAY
+          sections (Condition, Dice) up under the name card and push build detail (abilities,
+          campaign controls) down. Desktop keeps the DOM order. */}
       {/* Owner campaign controls (Phase 5/5b): bring a standalone character to a campaign, or move /
           return an in-campaign one. The component picks its mode from whether the character is linked. */}
-      {character.createdBy === user?.id && <AttachToCampaign character={character} />}
+      {character.createdBy === user?.id && (
+        <div className='max-sm:order-3'>
+          <AttachToCampaign character={character} />
+        </div>
+      )}
 
       {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
-      <Card variant='outline'>
+      <Card variant='outline' className='max-sm:order-2'>
         <Stack direction='column' gap='md'>
           <Heading level='h3'>{t('components.characterSheet.specialAbilities')}</Heading>
           {abilities.length > 0 ? (
@@ -320,7 +486,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Stack>
       </Card>
 
-      <Card variant='outline'>
+      <Card variant='outline' id='sheet-condition' className='scroll-mt-4'>
         <Stack direction='column' gap='md'>
           <Heading level='h3'>{t('components.characterSheet.condition')}</Heading>
           <StressTracker
@@ -333,14 +499,26 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           />
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             {canEdit && (
+              // F60 — indulging rolls dice and clears a rolled amount; a misclick shouldn't spend
+              // the downtime. Two-click confirm, disarmed on blur.
               <Button
                 variant='outline'
                 size='sm'
                 loading={busy}
                 disabled={(character.characterData?.stress ?? 0) === 0}
-                onClick={() => void indulgeVice()}
+                onClick={() => {
+                  if (!viceArmed) {
+                    setViceArmed(true);
+                    return;
+                  }
+                  setViceArmed(false);
+                  void indulgeVice();
+                }}
+                onBlur={() => setViceArmed(false)}
               >
-                {t('components.downtime.indulgeVice.action')}
+                {viceArmed
+                  ? t('components.downtime.indulgeVice.confirm')
+                  : t('components.downtime.indulgeVice.action')}
               </Button>
             )}
             {character.characterData?.vice && (
@@ -356,48 +534,147 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               {viceNote}
             </Alert>
           )}
-          <HarmCard content={character.ruleset.content} data={character.characterData} />
+          <HarmCard
+            content={character.ruleset.content}
+            data={character.characterData}
+            {...(canEdit
+              ? {
+                  quick: {
+                    busy,
+                    onTake: takeHarmQuick,
+                    onClear: clearHarmQuick,
+                    // F44 — spend armor: offered while the loadout carries unspent armor.
+                    armor: {
+                      available: availableArmor(sheetContent, character.characterData).length,
+                      armed: armArmor,
+                      onToggle: () => setArmArmor(a => !a),
+                    },
+                  },
+                }
+              : {})}
+          />
+          {harmNote && (
+            <Alert variant='warning' size='sm'>
+              {harmNote}
+            </Alert>
+          )}
         </Stack>
       </Card>
 
-      <XpTracksCard
-        content={character.ruleset.content}
-        data={character.characterData}
-        busy={busy}
-        canEdit={canEdit}
-        onMarkXp={setXp}
-      />
+      {/* F57 — between-beat sections: on a phone these sit below Condition + Dice (order-1). */}
+      <Stack direction='column' gap='lg' className='max-sm:order-1 scroll-mt-4' id='sheet-xp'>
+        <XpTracksCard
+          content={character.ruleset.content}
+          data={character.characterData}
+          busy={busy}
+          canEdit={canEdit}
+          onMarkXp={setXp}
+          onAdvance={() => setEditorSection('advancement')}
+        />
 
-      {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
-          build editor. Resets against the campaign's active score. */}
-      <LoadoutCard character={character} activeScore={activeScore} canEdit={canEdit} />
+        {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
+            build editor. Resets against the campaign's active score. */}
+        <LoadoutCard character={character} activeScore={activeScore} canEdit={canEdit} />
 
-      <GearCard data={character.characterData} />
+        <GearCard data={character.characterData} />
+      </Stack>
 
       {/* Dice + shared campaign log: only in a campaign. A standalone character (Phase 5) has no
           shared feed — its sheet is the rules-valid build, brought to a table when you attach it. */}
       {character.gameId && (
-        <Card variant='outline'>
+        <Card variant='outline' id='sheet-dice' className='scroll-mt-4'>
           <Stack direction='column' gap='md'>
             <Heading level='h3'>{t('components.characterSheet.dice')}</Heading>
-            {usesActionRatings(character.ruleset.content) ? (
+            {/* F23 — resistance rolls the ATTRIBUTE (derived on action-rating rulesets, stored on
+                point-buy ones), matching the sheet's Attributes badges. */}
+            {derivedMode ? (
               <RollPanel
                 gameId={character.gameId}
                 characterId={character.id}
-                actions={rulesetActions(character.ruleset.content).map(name => ({
+                actions={rulesetActions(sheetContent).map(name => ({
                   name,
                   rating: character.characterData?.skills?.[name] ?? 0,
                 }))}
+                attributes={sheetContent.attributes.map(a => ({
+                  name: a.name,
+                  rating: attributes[a.id] ?? 0,
+                }))}
+                harm={character.characterData?.harm}
+                teammates={teammates}
               />
             ) : (
-              <RollPanel gameId={character.gameId} characterId={character.id} />
+              <RollPanel
+                gameId={character.gameId}
+                characterId={character.id}
+                attributes={sheetContent.attributes.map(a => ({
+                  name: a.name,
+                  rating: attributes[a.id] ?? 0,
+                }))}
+                teammates={teammates}
+              />
+            )}
+            {/* Flashback (F16) — spend stress to retro-establish; the feed carries the beat. */}
+            {canEdit && (
+              <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+                <Input
+                  size='sm'
+                  label={t('components.downtime.flashback.label')}
+                  placeholder={t('components.downtime.flashback.placeholder')}
+                  value={flashText}
+                  onChange={e => setFlashText(e.target.value)}
+                />
+                <Select
+                  aria-label={t('components.downtime.flashback.stressLabel')}
+                  selectSize='sm'
+                  value={flashStress}
+                  onChange={e => setFlashStress(Number(e.target.value))}
+                >
+                  {[0, 1, 2].map(n => (
+                    <option key={n} value={n}>
+                      {t('components.downtime.flashback.stressOption', { count: n })}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  disabled={!flashText.trim() || busy}
+                  onClick={doFlashback}
+                >
+                  {t('components.downtime.flashback.action')}
+                </Button>
+              </Stack>
             )}
             <RollLog gameId={character.gameId} />
           </Stack>
         </Card>
       )}
 
-      {showEditor && canEdit && <CharacterEditor character={character} />}
+      {editorSection && canEdit && (
+        // order-last: the F57 mobile reorder must never pull sections below the opened editor.
+        <div ref={editorRef} className='max-sm:order-last'>
+          <CharacterEditor character={character} initialSection={editorSection} />
+        </div>
+      )}
+
+      {/* F57 — the phone THUMB BAR: fixed quick jumps to the in-play sections, one thumb-reach
+          away no matter how far the sheet has scrolled. Hidden from `sm` up. */}
+      <nav
+        aria-label={t('components.characterSheet.quickNav')}
+        className='sm:hidden fixed inset-x-0 bottom-0 z-20 flex justify-around gap-1 border-t border-border-primary bg-background-primary/95 px-2 py-1.5 backdrop-blur'
+      >
+        <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-condition')}>
+          {t('components.characterSheet.quickCondition')}
+        </Button>
+        {character.gameId && (
+          <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-dice')}>
+            {t('components.characterSheet.quickDice')}
+          </Button>
+        )}
+        <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-xp')}>
+          {t('components.characterSheet.quickXp')}
+        </Button>
+      </nav>
     </Stack>
   );
 }

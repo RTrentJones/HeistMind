@@ -71,11 +71,7 @@ test.describe('Discord interactions endpoint', () => {
     const gm = await ensureTestUser(env, TEST_USERS.discord);
     const discordId = TEST_USERS.discord.discordId!;
     const admin = createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!);
-    const linked = await admin
-      .from('profiles')
-      .select('discord_id')
-      .eq('id', gm.id!)
-      .single();
+    const linked = await admin.from('profiles').select('discord_id').eq('id', gm.id!).single();
     expect(linked.data?.discord_id, 'the signup trigger must write discord_id').toBe(discordId);
     const dev = admin.schema('development');
     await dev.from('characters').delete().eq('created_by', gm.id!).eq('name', 'Bot Runner');
@@ -85,7 +81,16 @@ test.describe('Discord interactions endpoint', () => {
         name: 'Bot Runner',
         created_by: gm.id!,
         playbook_type: 'cutter',
-        character_data: { playbook: 'cutter', attributes: {}, skills: {}, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+        character_data: {
+          playbook: 'cutter',
+          attributes: {},
+          skills: {},
+          specialAbilities: [],
+          stress: 0,
+          trauma: [],
+          contacts: [],
+          custom: {},
+        },
       })
       .select('id')
       .single();
@@ -248,7 +253,16 @@ test.describe('Discord interactions endpoint', () => {
         game_id: game.data!.id,
         original_ruleset_id: ruleset.data!.id,
         playbook_type: DEFAULT_RULESET.playbooks[0]!.id,
-        character_data: { playbook: DEFAULT_RULESET.playbooks[0]!.id, attributes: {}, skills: { [ACTION]: 2 }, specialAbilities: [], stress: 0, trauma: [], contacts: [], custom: {} },
+        character_data: {
+          playbook: DEFAULT_RULESET.playbooks[0]!.id,
+          attributes: {},
+          skills: { [ACTION]: 2 },
+          specialAbilities: [],
+          stress: 0,
+          trauma: [],
+          contacts: [],
+          custom: {},
+        },
       })
       .select('id')
       .single();
@@ -278,9 +292,7 @@ test.describe('Discord interactions endpoint', () => {
           .select('kind, label, character_id')
           .eq('game_id', game.data!.id)
           .eq('kind', 'action');
-        return rows.data?.some(
-          r => r.label === ACTION && r.character_id === character.data!.id
-        );
+        return rows.data?.some(r => r.label === ACTION && r.character_id === character.data!.id);
       })
       .toBe(true);
 
@@ -321,9 +333,76 @@ test.describe('Discord interactions endpoint', () => {
       })
     );
     expect(strangerAuto.status()).toBe(200);
-    expect(
-      ((await strangerAuto.json()) as { data: { choices: unknown[] } }).data.choices
-    ).toEqual([]);
+    expect(((await strangerAuto.json()) as { data: { choices: unknown[] } }).data.choices).toEqual(
+      []
+    );
+
+    // Act 3.7 (F86): crew advancement over the wire — /crew xp fills the 8-box track and
+    // /crew advance spends it; both persist AND land 'crew' feed events via the engine.
+    await dev.from('crews').delete().eq('game_id', game.data!.id);
+    const crew = await dev
+      .from('crews')
+      .insert({ game_id: game.data!.id, created_by: gm.id! })
+      .select('id')
+      .single();
+    expect(crew.error).toBeNull();
+
+    const crewXp = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: {
+          name: 'crew',
+          type: 1,
+          options: [{ name: 'xp', type: 1, options: [{ name: 'amount', type: 4, value: 8 }] }],
+        },
+      })
+    );
+    expect(crewXp.status()).toBe(200);
+    expect(((await crewXp.json()) as { type: number }).type).toBe(5);
+    await expect
+      .poll(async () => {
+        const row = await dev.from('crews').select('resources').eq('id', crew.data!.id).single();
+        return (row.data?.resources as Record<string, number> | null)?.['crew-xp'] ?? null;
+      })
+      .toBe(8);
+    await expect
+      .poll(async () => {
+        const rows = await dev
+          .from('rolls')
+          .select('note, kind')
+          .eq('game_id', game.data!.id)
+          .eq('kind', 'crew');
+        return rows.data?.some(r => r.note === 'Crew XP 8/8');
+      })
+      .toBe(true);
+
+    const crewAdvance = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: { name: 'crew', type: 1, options: [{ name: 'advance', type: 1, options: [] }] },
+      })
+    );
+    expect(crewAdvance.status()).toBe(200);
+    await expect
+      .poll(async () => {
+        const row = await dev.from('crews').select('resources').eq('id', crew.data!.id).single();
+        return (row.data?.resources as Record<string, number> | null)?.['crew-xp'] ?? null;
+      })
+      .toBe(0);
+    await expect
+      .poll(async () => {
+        const rows = await dev
+          .from('rolls')
+          .select('note, kind')
+          .eq('game_id', game.data!.id)
+          .eq('kind', 'crew');
+        return rows.data?.some(r => r.note === 'Crew advance taken — new crew ability unlocked');
+      })
+      .toBe(true);
 
     // Act 4: a NON-member Discord user is walled off (no roll row appears for them).
     const strangerId = 'e2e-discord-stranger';
@@ -386,6 +465,8 @@ test.describe('Discord endpoint posture (any target)', () => {
     });
     const body = await response.text();
     expect(response.status(), `endpoint must hold a public key (503 = missing): ${body}`).toBe(401);
-    expect(body, 'Vercel protection must stay off this route').not.toContain('Protected deployment');
+    expect(body, 'Vercel protection must stay off this route').not.toContain(
+      'Protected deployment'
+    );
   });
 });

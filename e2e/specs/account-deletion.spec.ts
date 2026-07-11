@@ -1,4 +1,5 @@
-// Account deletion — the F84 regression guard.
+// Account deletion — the F88 regression guard (landed on development as "F84"; renumbered in the
+// FINDINGS merge — this branch already used F84 for the stress-pip a11y finding).
 //
 // The bug: `/settings` deletion 500'd for any user who OWNS A CAMPAIGN. GoTrue's deleteUser
 // cascade (auth.users → public.profiles → <env>.games → <env>.game_players) fired the
@@ -25,7 +26,7 @@ import {
 
 const env = getE2EEnv();
 
-test.describe('Account deletion (F84 — cascade through a campaign-owning account)', () => {
+test.describe('Account deletion (F88 — cascade through a campaign-owning account)', () => {
   // Seeds the per-env schema + needs the service-role key — local stack only, like the GM specs.
   test.beforeEach(() => {
     test.skip(
@@ -41,7 +42,7 @@ test.describe('Account deletion (F84 — cascade through a campaign-owning accou
     const user = await provisionThrowawayUser(env);
     try {
       const seed = await seedCampaignOwnedBy(env, user.id);
-      // The trigger-owned GM membership must exist — it's the cascade row that broke F84. Without
+      // The trigger-owned GM membership must exist — it's the cascade row that broke F88. Without
       // it this test would pass even against the bug (a bare user always deleted cleanly).
       expect(seed.gmPlayerRows).toBeGreaterThan(0);
 

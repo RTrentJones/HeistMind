@@ -9,8 +9,10 @@
 //      its action label, and the harm event with the NEUTRAL 'Harm' kind badge (not a dice
 //      outcome badge) — and the harm entry shows on the character sheet.
 //
-// The harm feed-badge assertion lives HERE because the web cannot create harm events at all —
-// only the bot logs `harm` feed events (F65) — so no web-only spec can ever render one.
+// The harm feed-badge assertion originally lived HERE because only the bot could log `harm`
+// feed events; F65 has since given the web sheet the same engine-backed quick actions
+// (gm-harm-stress.spec.ts covers the web side) — this spec still owns the CROSS-CLIENT half:
+// the bot's harm write rendering in the web feed.
 //
 // Gated like discord.spec.ts: the locally-managed dev server (playwright.config injected our
 // test public key), the local test keypair, and the service-role admin client for DB polling.
@@ -299,6 +301,6 @@ test.describe('Cross-client parity: web wizard → bot gameplay → web feed', (
     await discordPage.getByRole('link', { name: 'View' }).first().click();
     await expect(discordPage).toHaveURL(/\/characters\/[0-9a-f-]+$/);
     await expect(discordPage.getByRole('heading', { name: charName })).toBeVisible();
-    await expect(discordPage.getByText('Parity Bruise', { exact: true })).toBeVisible();
+    await expect(discordPage.getByText('Parity Bruise').first()).toBeVisible();
   });
 });

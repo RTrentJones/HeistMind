@@ -103,11 +103,11 @@ export * from './components/Badge';
 export * from './components/Tooltip';
 export * from './components/ThemeToggle';
 
-
 // Game-specific components
 export * from './components/StressTracker';
 export * from './components/HarmTracker';
 export * from './components/Clock';
+export * from './components/XpTrack';
 
 // Styles - export path for manual import to prevent duplicate CSS
 // Import './styles/globals.css' in your app's main file only once

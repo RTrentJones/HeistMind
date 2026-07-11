@@ -2,14 +2,16 @@
 // against the LINKED campaign (guild-context only) behind the GM gate. Thin wrappers over the
 // engine use-cases (which persist AND feed-log each change); successes post publicly, failures
 // are ephemeral and leak nothing to non-GMs.
-import { advanceTier, type Game } from '@heist-mind/core';
+import { advanceTier, crewAdvanceReady, crewXp, CREW_XP_TRACK, type Game } from '@heist-mind/core';
 import {
   advanceCrewTier,
   applyCrewHeat,
   endScore,
   incarcerateCrew,
+  markCrewXp,
   setFactionStatus,
   startScore,
+  takeCrewAdvance,
   tickClock,
 } from '@heist-mind/engine';
 import type {
@@ -51,7 +53,7 @@ async function gmContext(
   if (!userId) return failEphemeral(copy.unknownCommand);
   const actor = await resolveActor(ctx.repos, userId);
   if (!actor) return failEphemeral(copy.signInFirst(ctx.siteUrl));
-  const game = await resolveLinkedGame(ctx.repos, interaction);
+  const game = await resolveLinkedGame(ctx.repos, interaction, ctx.fetchChannelParent);
   if (!game) return failEphemeral(copy.notLinked);
   if (!(await isGM(ctx.repos, actor.id, game.id))) return failEphemeral(copy.gmOnly);
   return { repos: ctx.repos, actorId: actor.id, game };
@@ -156,12 +158,49 @@ export const handleCrew: CommandHandler = (ctx, interaction) => {
       return done(out.data);
     }
 
+    if (sub === 'xp') {
+      const amount = integerOption(interaction, 'amount') ?? 1;
+      const target = Math.max(0, Math.min(crewXp(crew.resources) + amount, CREW_XP_TRACK));
+      const out = await markCrewXp(gm.repos, {
+        crew,
+        userId: gm.actorId,
+        xp: target,
+        logLabel: crewName,
+        logNote: copy.crewLogXp(target, CREW_XP_TRACK),
+      });
+      if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
+      return followUp.editOriginal({
+        content: `**${crewName}** — ${copy.crewXpMarked(target, CREW_XP_TRACK, target >= CREW_XP_TRACK)}`,
+      });
+    }
+
+    if (sub === 'advance') {
+      // The rule refuses a non-full track — refuse HERE so no misleading feed event lands.
+      if (!crewAdvanceReady(crew.resources)) {
+        return failEphemeral(
+          followUp,
+          copy.crewAdvanceNotReady(crewXp(crew.resources), CREW_XP_TRACK)
+        );
+      }
+      const out = await takeCrewAdvance(gm.repos, {
+        crew,
+        userId: gm.actorId,
+        logLabel: crewName,
+        logNote: copy.crewLogAdvance,
+      });
+      if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
+      return followUp.editOriginal({ content: `**${crewName}** — ${copy.crewAdvanceTaken}` });
+    }
+
     return failEphemeral(followUp, copy.unknownCommand);
   });
 };
 
 /** Match an autocomplete-submitted id first, a hand-typed name second. */
-function pickByIdOrName<T extends { id: string; name: string }>(list: T[], typed: string): T | null {
+function pickByIdOrName<T extends { id: string; name: string }>(
+  list: T[],
+  typed: string
+): T | null {
   return (
     list.find(x => x.id === typed) ??
     list.find(x => x.name.toLowerCase() === typed.toLowerCase()) ??
@@ -236,7 +275,7 @@ async function gmGame(
   if (!ctx.repos || !userId) return null;
   const actor = await resolveActor(ctx.repos, userId);
   if (!actor) return null;
-  const game = await resolveLinkedGame(ctx.repos, interaction);
+  const game = await resolveLinkedGame(ctx.repos, interaction, ctx.fetchChannelParent);
   if (!game) return null;
   // Autocomplete must not leak campaign state to non-GMs — same gate as the handlers.
   if (!(await isGM(ctx.repos, actor.id, game.id))) return null;
@@ -253,7 +292,10 @@ export async function clockAutocomplete(
     if (!gm) return [];
     const clocks = await gm.repos.clocks.findByGame(gm.game.id);
     if (!clocks.success) return [];
-    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'clock');
+    const typed = typedOptionValue(
+      interaction as unknown as APIApplicationCommandInteraction,
+      'clock'
+    );
     return clocks.data
       .filter(c => c.name.toLowerCase().includes(typed))
       .slice(0, 25)
@@ -273,7 +315,10 @@ export async function factionAutocomplete(
     if (!gm) return [];
     const factions = await gm.repos.factions.findByGame(gm.game.id);
     if (!factions.success) return [];
-    const typed = typedOptionValue(interaction as unknown as APIApplicationCommandInteraction, 'faction');
+    const typed = typedOptionValue(
+      interaction as unknown as APIApplicationCommandInteraction,
+      'faction'
+    );
     return factions.data
       .filter(f => f.name.toLowerCase().includes(typed))
       .slice(0, 25)

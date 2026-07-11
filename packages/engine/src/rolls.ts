@@ -17,15 +17,25 @@ export interface ActionRollInput {
   zeroDice: boolean;
   position?: string;
   effect?: string;
-  /** Pre-roll moves note (client copy: pushed / devil's bargain). */
+  /** Pre-roll moves note (client copy: pushed / devil's bargain / assisted-by). */
   note?: string;
   /** Pushing yourself costs 2 stress, applied win or lose (needs a characterId). */
   pushed?: boolean;
+  /**
+   * Teamwork — ASSIST (BitD: a teammate takes 1 stress to add +1d; F10). The CLIENT adds the die
+   * to the pool it realizes; the engine charges the assister's stress with the roll when the
+   * ROLLER may write that character (their own alt, or the GM). Ownership is a hard security
+   * boundary — when the assister belongs to another player, the charge is refused with
+   * NOT_OWNER and the roll still lands: the feed note names the assist, and the assister marks
+   * their own 1 stress from their sheet (the async self-service the table already uses).
+   */
+  assist?: { characterId: string };
 }
 
 const PUSH_STRESS_COST = 2;
+const ASSIST_STRESS_COST = 1;
 
-/** Persist an action/fortune roll, then charge the push cost when one was taken. */
+/** Persist an action/fortune roll, then charge the push + assist stress costs taken with it. */
 export async function rollAction(
   repos: DatabaseRepositories,
   input: ActionRollInput
@@ -50,6 +60,18 @@ export async function rollAction(
       stress: PUSH_STRESS_COST,
     });
     if (!stressed.success) return stressed as Result<never>;
+  }
+  if (input.assist !== undefined) {
+    const assisted = await applyStress(repos, {
+      characterId: input.assist.characterId,
+      userId: input.userId,
+      stress: ASSIST_STRESS_COST,
+    });
+    // NOT_OWNER = the assister is another player's character — the roll stands; they self-mark
+    // (see the assist doc above). Anything else is a real failure.
+    if (!assisted.success && assisted.error.code !== 'NOT_OWNER') {
+      return assisted as Result<never>;
+    }
   }
   return created;
 }

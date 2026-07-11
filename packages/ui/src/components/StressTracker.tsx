@@ -27,9 +27,11 @@ const StressTracker: React.FC<StressTrackerProps> = ({
   const level = calculateStressLevel(current, max);
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
+  // Phones get bigger pips (F57): 24px is a hard thumb target; 32px fits nine across a 390px
+  // viewport with the gaps intact.
   const sizes = {
     sm: 'w-4 h-4',
-    default: 'w-6 h-6',
+    default: 'w-6 h-6 max-sm:w-8 max-sm:h-8',
     lg: 'w-8 h-8',
   };
 
@@ -96,12 +98,12 @@ const StressTracker: React.FC<StressTrackerProps> = ({
               className={cn(
                 'text-sm font-medium',
                 level === 'critical'
-                  ? 'text-semantic-error'
+                  ? 'text-semantic-error-fg'
                   : level === 'high'
-                    ? 'text-game-ember'
+                    ? 'text-game-ember-fg'
                     : level === 'medium'
-                      ? 'text-semantic-warning'
-                      : 'text-semantic-success'
+                      ? 'text-semantic-warning-fg'
+                      : 'text-semantic-success-fg'
               )}
             >
               {current}/{max}
@@ -116,6 +118,14 @@ const StressTracker: React.FC<StressTrackerProps> = ({
             <motion.button
               key={index}
               type='button'
+              // F84 — pips are buttons; give each the action it performs (the top filled pip
+              // toggles back down, any other sets the track to itself).
+              aria-label={
+                index + 1 === current
+                  ? `Clear stress to ${current - 1}`
+                  : `Set stress to ${index + 1}`
+              }
+              aria-pressed={index < current}
               className={cn(
                 'rounded-full border-2 transition-all duration-200',
                 sizes[size],
@@ -163,9 +173,10 @@ const ActionDots: React.FC<ActionDotsProps> = ({
 }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
+  // Same phone-size bump as the stress pips (F57) — action dots are tapped mid-play too.
   const sizes = {
     sm: 'w-3 h-3',
-    default: 'w-4 h-4',
+    default: 'w-4 h-4 max-sm:w-6 max-sm:h-6',
     lg: 'w-6 h-6',
   };
 
@@ -239,6 +250,14 @@ const ActionDots: React.FC<ActionDotsProps> = ({
           <motion.button
             key={index}
             type='button'
+            // F84 — same naming scheme as the stress pips, scoped by the row's label so pages
+            // with many dot rows (the wizard, the editor) stay unambiguous.
+            aria-label={
+              index + 1 === current
+                ? `Clear ${label ?? 'rating'} to ${current - 1}`
+                : `Set ${label ?? 'rating'} to ${index + 1}`
+            }
+            aria-pressed={index < current}
             className={cn(
               'rounded-full border-2 transition-all duration-200',
               sizes[size],

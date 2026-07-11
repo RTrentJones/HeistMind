@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.18.0' # keep in lockstep with .nvmrc
+  NODE_VERSION: '20.19.0' # keep in lockstep with .nvmrc
   PNPM_VERSION: '9.15.0'
 
 jobs:
@@ -46,11 +46,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # ADVISORY dead-code scan (audit D6 — knip would have flagged the F68-era dead auth
-      # surface). Stays continue-on-error until the first-run noise (see the job log) is
-      # triaged; promote to blocking after.
-      - name: Dead-code scan (knip, advisory)
-        continue-on-error: true
+      # BLOCKING dead-code scan (audit D6 / F71 — knip would have flagged the F68-era dead
+      # auth surface). The first-run noise was triaged in the F71 sweep (dead files/exports
+      # deleted, unused deps pruned, knip.json scoped); keep it at exit 0.
+      - name: Dead-code scan (knip)
         run: pnpm exec knip
 
       # Type integrity is covered twice already: the compile-time checks in
@@ -147,6 +146,8 @@ jobs:
 
       # PLAYWRIGHT_BASE_URL is unset → playwright.config boots `pnpm dev:web` against the local
       # stack. global-setup mints + injects the GM/Player sessions using the service-role key.
+      # The prod-only coming-soon gate (main) keys on VERCEL_ENV, which is unset locally, so the
+      # suite exercises the real app here with no extra config.
       - name: Run Playwright suite
         run: pnpm exec playwright test
 

@@ -143,13 +143,14 @@ export const WithIcons: Story = {
 export const IconButtons: Story = {
   render: () => (
     <div className='flex gap-4 p-6 bg-background-secondary rounded-lg border border-border-primary'>
-      <Button size='icon-sm' variant='ghost'>
+      {/* Icon-only buttons NEED an aria-label — the icon alone has no accessible name. */}
+      <Button size='icon-sm' variant='ghost' aria-label='Reveal'>
         <Eye className='w-4 h-4' />
       </Button>
-      <Button size='icon' variant='outline'>
+      <Button size='icon' variant='outline' aria-label='Attack'>
         <Sword className='w-4 h-4' />
       </Button>
-      <Button size='icon-lg' variant='ember'>
+      <Button size='icon-lg' variant='ember' aria-label='Defend'>
         <Shield className='w-4 h-4' />
       </Button>
     </div>

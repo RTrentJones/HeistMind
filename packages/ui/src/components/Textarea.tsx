@@ -33,6 +33,7 @@ const Textarea = React.memo(
         error,
         success,
         warning,
+        helpText,
         resizable = true,
         disabled,
         ...props
@@ -57,7 +58,7 @@ const Textarea = React.memo(
         describedBy:
           [
             props['aria-describedby'],
-            props.helpText ? ids.help : null,
+            helpText ? ids.help : null,
             message ? ids.error : null,
             label ? ids.label : null,
           ]
@@ -76,19 +77,19 @@ const Textarea = React.memo(
               htmlFor={resolvedId}
               className={cn(
                 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground-primary',
-                resolvedState === 'error' && 'text-semantic-error',
-                resolvedState === 'success' && 'text-semantic-success',
-                resolvedState === 'warning' && 'text-semantic-warning',
-                props.required && 'after:content-["*"] after:ml-1 after:text-semantic-error'
+                resolvedState === 'error' && 'text-semantic-error-fg',
+                resolvedState === 'success' && 'text-semantic-success-fg',
+                resolvedState === 'warning' && 'text-semantic-warning-fg',
+                props.required && 'after:content-["*"] after:ml-1 after:text-semantic-error-fg'
               )}
             >
               {label}
             </label>
           )}
 
-          {props.helpText && (
+          {helpText && (
             <div id={ids.help} className='text-sm text-foreground-muted'>
-              {props.helpText}
+              {helpText}
             </div>
           )}
 
@@ -124,9 +125,9 @@ const Textarea = React.memo(
               id={ids.error}
               className={cn(
                 'text-sm',
-                resolvedState === 'error' && 'text-semantic-error',
-                resolvedState === 'success' && 'text-semantic-success',
-                resolvedState === 'warning' && 'text-semantic-warning'
+                resolvedState === 'error' && 'text-semantic-error-fg',
+                resolvedState === 'success' && 'text-semantic-success-fg',
+                resolvedState === 'warning' && 'text-semantic-warning-fg'
               )}
               initial={getInitialAnimation({ opacity: 0, height: 0 })}
               animate={{ opacity: 1, height: 'auto' }}

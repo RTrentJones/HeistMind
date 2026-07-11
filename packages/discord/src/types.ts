@@ -24,6 +24,12 @@ export interface BotContext {
    * authz prelude (resolve actor → assert ownership/membership) before acting.
    */
   repos: DatabaseRepositories | null;
+  /**
+   * Resolve a channel's parent (category) id via a bot-token REST fetch — the ONE link-resolution
+   * case the interaction payload can't answer: a thread under a channel that's only
+   * CATEGORY-linked (F66). Absent/null without a bot token; the retry is then skipped.
+   */
+  fetchChannelParent?: ((channelId: string) => Promise<string | null>) | null;
 }
 
 /**
@@ -33,10 +39,7 @@ export interface BotContext {
  */
 export interface FollowUpClient {
   /** Replace the deferred placeholder with the real reply. */
-  editOriginal(payload: {
-    content?: string;
-    embeds?: unknown[];
-  }): Promise<void>;
+  editOriginal(payload: { content?: string; embeds?: unknown[] }): Promise<void>;
   /** Remove a PUBLIC deferred placeholder (pair with sendEphemeral for authz failures). */
   deleteOriginal(): Promise<void>;
   /** Send a separate ephemeral message (only the invoker sees it). */

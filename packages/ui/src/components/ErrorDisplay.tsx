@@ -9,10 +9,11 @@ import { Button } from './Button';
 const errorDisplayVariants = cva(['rounded-lg border p-4', 'transition-all duration-200'], {
   variants: {
     variant: {
-      default: 'bg-semantic-error/10 border-semantic-error/20 text-semantic-error',
+      // text-semantic-error-fg, not -error: the fill color is below AA as small TEXT (F87).
+      default: 'bg-semantic-error/10 border-semantic-error/20 text-semantic-error-fg',
       subtle: 'bg-background-secondary border-border-primary text-foreground-primary',
       solid: 'bg-semantic-error text-white border-semantic-error',
-      outline: 'bg-transparent border-semantic-error text-semantic-error',
+      outline: 'bg-transparent border-semantic-error text-semantic-error-fg',
     },
     size: {
       sm: 'p-3 text-sm',
@@ -113,10 +114,11 @@ const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(
             {title}
           </h4>
         )}
+        {/* Full-strength text: the old /80 and /70 opacities composited the already-borderline
+            error color into the tinted background and failed AA outright (F87). */}
         {message && (
           <p
             className={cn(
-              'text-current/80',
               size === 'lg' ? 'text-base' : size === 'sm' ? 'text-xs' : 'text-sm',
               title && 'mt-1'
             )}
@@ -124,9 +126,7 @@ const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(
             {message}
           </p>
         )}
-        {children && (
-          <div className={cn('text-current/70', (title || message) && 'mt-2')}>{children}</div>
-        )}
+        {children && <div className={cn((title || message) && 'mt-2')}>{children}</div>}
       </div>
     );
 

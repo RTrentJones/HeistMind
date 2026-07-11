@@ -12,6 +12,7 @@ interface HarmRulesLike {
   moderate: number;
   severe: number;
 }
+export type HarmTrackerLevel = keyof HarmLike;
 
 const ROWS: { key: keyof HarmLike; label: string }[] = [
   { key: 'severe', label: 'Severe' },
@@ -20,14 +21,22 @@ const ROWS: { key: keyof HarmLike; label: string }[] = [
 ];
 
 /**
- * Read-only FitD harm track: three levels (Severe / Moderate / Lesser) shown top-down with one box
- * per allowed entry; filled boxes carry the harm description. Editing lives in the character editor.
+ * FitD harm track: three levels (Severe / Moderate / Lesser) shown top-down with one box per
+ * allowed entry; filled boxes carry the harm description. Read-only by default; pass
+ * `onClearEntry` to make each filled box a button that clears that wound (recovery) — the
+ * accessible name comes from `clearLabel` so the consumer owns the copy.
  */
-const HarmTracker: React.FC<{ harm: HarmLike; bounds: HarmRulesLike; className?: string }> = ({
-  harm,
-  bounds,
-  className,
-}) => (
+const HarmTracker: React.FC<{
+  harm: HarmLike;
+  bounds: HarmRulesLike;
+  className?: string;
+  /** When set, filled boxes become clear buttons (recovery). */
+  onClearEntry?: (level: HarmTrackerLevel, text: string) => void;
+  /** Accessible name for a clear button; defaults to `Clear harm: <text>`. */
+  clearLabel?: (text: string) => string;
+  /** Disable the clear buttons while a save is in flight. */
+  disabled?: boolean;
+}> = ({ harm, bounds, className, onClearEntry, clearLabel, disabled }) => (
   <div className={cn('flex flex-col gap-2', className)}>
     {ROWS.map(({ key, label }) => {
       const entries = harm?.[key] ?? [];
@@ -38,14 +47,33 @@ const HarmTracker: React.FC<{ harm: HarmLike; bounds: HarmRulesLike; className?:
           <div className='flex flex-wrap gap-1.5'>
             {Array.from({ length: boxes }, (_, i) => {
               const text = entries[i];
+              const filledClass =
+                'border-semantic-error/60 bg-semantic-error/15 text-foreground-primary';
+              if (text && onClearEntry) {
+                return (
+                  <button
+                    key={i}
+                    type='button'
+                    disabled={disabled}
+                    aria-label={clearLabel ? clearLabel(text) : `Clear harm: ${text}`}
+                    onClick={() => onClearEntry(key, text)}
+                    className={cn(
+                      'min-w-12 cursor-pointer rounded-md border px-2 py-0.5 text-center text-xs',
+                      filledClass,
+                      'transition-colors hover:border-semantic-success/60 hover:bg-semantic-success/15',
+                      'disabled:cursor-not-allowed disabled:opacity-50'
+                    )}
+                  >
+                    {text} <span aria-hidden='true'>×</span>
+                  </button>
+                );
+              }
               return (
                 <span
                   key={i}
                   className={cn(
                     'min-w-12 rounded-md border px-2 py-0.5 text-center text-xs',
-                    text
-                      ? 'border-semantic-error/60 bg-semantic-error/15 text-foreground-primary'
-                      : 'border-border-primary text-foreground-muted'
+                    text ? filledClass : 'border-border-primary text-foreground-muted'
                   )}
                 >
                   {text || '—'}

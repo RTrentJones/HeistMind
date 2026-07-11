@@ -2,7 +2,7 @@
 
 import { useShallow } from 'zustand/react/shallow';
 import type { CreationOption, CreationStep } from '@heist-mind/core';
-import { Badge, Card, Input, Stack } from '@heist-mind/ui';
+import { Badge, Card, Input, Select, Stack, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 
@@ -14,12 +14,61 @@ type IdentityField = (typeof IDENTITY_FIELDS)[keyof typeof IDENTITY_FIELDS];
  *  - When the step is a single identity field (heritage/background/vice) WITH options, render those
  *    options as selectable cards (the value is the option name, so it reads well on the sheet).
  *  - Otherwise (a generic combined "identity" step, or no options), fall back to free-text inputs.
+ * The playbook's close friend / rival picks (F12 — BitD identity) ride the LAST identity field
+ * (vice) so per-field rulesets collect them exactly once; the combined fallback carries them too.
  */
 export function IdentityStep({ step }: { step?: CreationStep }) {
   const field = step ? IDENTITY_FIELDS[step.id as keyof typeof IDENTITY_FIELDS] : undefined;
   const options = step?.options ?? [];
-  if (field && options.length > 0) return <FieldPicker field={field} options={options} />;
-  return <FreeTextIdentity />;
+  const body = field && options.length > 0 ? <FieldPicker field={field} options={options} /> : null;
+  return (
+    <Stack direction='column' gap='lg' align='start'>
+      {body ?? <FreeTextIdentity />}
+      {(field === 'vice' || !body) && <ContactsPicker />}
+    </Stack>
+  );
+}
+
+/** Close friend / rival from the playbook's contact list (F12). Hidden when the playbook has none. */
+function ContactsPicker() {
+  const { t } = useTranslation();
+  const { contacts, picked, setContact } = useCharacterCreationStore(
+    useShallow(s => ({
+      contacts: s.ruleset?.content.playbooks.find(p => p.id === s.draft.playbook)?.contacts ?? [],
+      picked: s.draft.contacts,
+      setContact: s.setContact,
+    }))
+  );
+  if (contacts.length === 0) return null;
+
+  const current = (rel: string) => picked.find(c => c.relationship === rel)?.name ?? '';
+  const row = (rel: 'friend' | 'rival', label: string) => (
+    <Select
+      label={label}
+      selectSize='sm'
+      value={current(rel)}
+      onChange={e => setContact(rel, contacts.find(c => c.name === e.target.value) ?? null)}
+    >
+      <option value=''>{t('components.steps.identity.contactNone')}</option>
+      {contacts.map(c => (
+        <option key={c.name} value={c.name}>
+          {c.name}
+          {c.description ? ` — ${c.description}` : ''}
+        </option>
+      ))}
+    </Select>
+  );
+
+  return (
+    <Stack direction='column' gap='sm' align='start' className='w-full max-w-lg'>
+      <Text as='strong'>{t('components.steps.identity.contactsHeading')}</Text>
+      <Text variant='muted' size='sm'>
+        {t('components.steps.identity.contactsHelp')}
+      </Text>
+      {row('friend', t('components.steps.identity.friendLabel'))}
+      {row('rival', t('components.steps.identity.rivalLabel'))}
+    </Stack>
+  );
 }
 
 /** Card picker for one identity field, driven by the step's options. */
@@ -87,7 +136,7 @@ function FreeTextIdentity() {
   );
 
   return (
-    <div className='flex flex-col gap-[18px]' style={{ maxWidth: 480 }}>
+    <div className='flex w-full max-w-lg flex-col gap-[18px]'>
       <Input
         label={t('components.steps.identity.heritageLabel')}
         placeholder={t('components.steps.identity.heritagePlaceholder')}

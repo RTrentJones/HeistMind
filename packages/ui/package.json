@@ -14,6 +14,7 @@
       "default": "./dist/index.js"
     },
     "./styles": "./dist/index.css",
+    "./theme": "./dist/theme.css",
     "./tailwind": "./tailwind.config.mjs"
   },
   "files": [
@@ -37,26 +38,7 @@
     "test-storybook:ci": "concurrently -k -s first -n SB,TEST \"http-server storybook-static --port 6006 --silent\" \"wait-on tcp:127.0.0.1:6006 && test-storybook --url http://127.0.0.1:6006\""
   },
   "dependencies": {
-    "@heist-mind/shared": "workspace:*",
-    "@radix-ui/react-accordion": "^1.2.11",
-    "@radix-ui/react-alert-dialog": "^1.1.14",
-    "@radix-ui/react-avatar": "^1.1.10",
-    "@radix-ui/react-checkbox": "^1.3.2",
-    "@radix-ui/react-dialog": "^1.1.14",
-    "@radix-ui/react-dropdown-menu": "^2.1.15",
-    "@radix-ui/react-label": "^2.1.7",
-    "@radix-ui/react-popover": "^1.1.14",
-    "@radix-ui/react-progress": "^1.1.7",
-    "@radix-ui/react-radio-group": "^1.3.7",
-    "@radix-ui/react-scroll-area": "^1.2.9",
-    "@radix-ui/react-select": "^2.2.5",
-    "@radix-ui/react-separator": "^1.1.7",
-    "@radix-ui/react-slider": "^1.3.5",
     "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.2.5",
-    "@radix-ui/react-tabs": "^1.1.12",
-    "@radix-ui/react-toast": "^1.2.14",
-    "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-tooltip": "^1.2.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
@@ -84,6 +66,7 @@
     "@types/jest": "^29.5.14",
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.16",
+    "axe-playwright": "^2.2.2",
     "concurrently": "^10.0.3",
     "http-server": "^14.1.1",
     "jsdom": "^23.2.0",

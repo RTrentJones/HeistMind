@@ -2,7 +2,7 @@
 // browser. These tests are also the Discord bot's contract: a command wrapping a use-case can rely
 // on exactly this sequencing.
 import { describe, expect, it, vi } from 'vitest';
-import { xpTrackSize } from '@heist-mind/core';
+import { availableArmor, xpTrackSize } from '@heist-mind/core';
 import type {
   Character,
   CharacterWithDetails,
@@ -22,8 +22,14 @@ import {
   takeHarm,
 } from './characters';
 import { tickClock } from './clocks';
-import { advanceCrewTier, applyCrewHeat, incarcerateCrew } from './crews';
-import { indulgeVice, viceDicePool } from './downtime';
+import {
+  advanceCrewTier,
+  applyCrewHeat,
+  incarcerateCrew,
+  markCrewXp,
+  takeCrewAdvance,
+} from './crews';
+import { flashback, indulgeVice, viceDicePool } from './downtime';
 import { setFactionStatus } from './factions';
 import { saveLoadout } from './loadout';
 import { rollAction, rollResistance } from './rolls';
@@ -238,6 +244,113 @@ describe('rollResistance', () => {
   });
 });
 
+describe('rollAction — assist (F10)', () => {
+  const baseInput = {
+    gameId: 'g1',
+    userId: 'u1',
+    characterId: 'c1',
+    kind: 'action' as const,
+    label: 'skirmish',
+    dice: 3,
+    results: [6, 4, 2],
+    zeroDice: false,
+  };
+
+  it('charges the assister 1 stress when the roller may write them (own alt / GM)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const helper = { ...CHARACTER, id: 'c2', createdBy: 'u1' } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: {
+        findWithDetails: vi.fn((id: string) =>
+          Promise.resolve(ok(id === 'c2' ? helper : CHARACTER))
+        ),
+      },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollAction(r, { ...baseInput, assist: { characterId: 'c2' } });
+    expect(out.success).toBe(true);
+    // helper sits at stress 6 → +1 = 7.
+    expect(update).toHaveBeenCalledWith('c2', 'u1', {
+      characterData: expect.objectContaining({ stress: 7 }),
+    });
+  });
+
+  it("another player's assister is NOT written — the roll stands, they self-mark", async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn();
+    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(foreign)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollAction(r, { ...baseInput, assist: { characterId: 'c9' } });
+    expect(out.success).toBe(true); // NOT_OWNER degrades to feed-attribution, never a failure
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('flashback (F16)', () => {
+  it('charges the priced stress (clamped) and logs the note to the feed', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await flashback(r, {
+      character: CHARACTER,
+      userId: 'u1',
+      stress: 2,
+      logLabel: 'Silks',
+      logNote: 'Flashback (2 stress): bribed the doorman yesterday',
+    });
+    expect(out.success).toBe(true);
+    // 6 + 2 = 8 on the default 9-track.
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 8 }),
+    });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        kind: 'note',
+        note: 'Flashback (2 stress): bribed the doorman yesterday',
+      })
+    );
+  });
+
+  it('a FREE flashback (0 stress) only logs; a stranger is refused', async () => {
+    const update = vi.fn();
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await flashback(r, {
+      character: CHARACTER,
+      userId: 'u1',
+      stress: 0,
+      logLabel: 'Silks',
+      logNote: 'Flashback: cased the vault',
+    });
+    expect(out.success).toBe(true);
+    expect(update).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalled();
+
+    const refused = await flashback(r, {
+      character: CHARACTER,
+      userId: 'someone-else',
+      stress: 0,
+      logLabel: 'l',
+      logNote: 'n',
+    });
+    expect(refused.success).toBe(false);
+  });
+});
+
 describe('indulgeVice', () => {
   it('derives the pool from the lowest attribute (empty fixture → 0 rating → 2d take-lowest)', () => {
     // The bare fixture has no ruleset attribute definitions, so the lowest derived attribute is 0
@@ -443,6 +556,52 @@ describe('crew progression', () => {
     expect((failing as unknown as { rolls: { create: unknown } }).rolls.create).not
       .toHaveBeenCalled;
   });
+
+  it('markCrewXp sets the advancement track (clamped) and logs a crew event', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    const out = await markCrewXp(r, {
+      crew: { ...CREW, resources: { 'crew-xp': 3 } } as unknown as Crew,
+      userId: 'u1',
+      xp: 5,
+      logLabel: 'Crew',
+      logNote: 'xp 5/8',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 5 } });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ gameId: 'g1', kind: 'crew', note: 'xp 5/8' })
+    );
+  });
+
+  it('takeCrewAdvance resets a FULL track to 0 and logs; refuses a non-full track', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    const full = { ...CREW, resources: { 'crew-xp': 8 } } as unknown as Crew;
+    const out = await takeCrewAdvance(r, { crew: full, userId: 'u1', logLabel: 'l', logNote: 'n' });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 0 } });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'crew' }));
+
+    // The rule lives in the write path, not the button: a non-full track is refused, no write.
+    const guarded = repos({
+      crews: { update: vi.fn() },
+      rolls: { create: vi.fn() },
+    });
+    const refused = await takeCrewAdvance(guarded, {
+      crew: { ...CREW, resources: { 'crew-xp': 7 } } as unknown as Crew,
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: 'n',
+    });
+    expect(refused.success).toBe(false);
+    expect(
+      (guarded as unknown as { crews: { update: ReturnType<typeof vi.fn> } }).crews.update
+    ).not.toHaveBeenCalled();
+  });
 });
 
 describe('setFactionStatus', () => {
@@ -571,9 +730,11 @@ describe('XP economy', () => {
     const attribute = DEFAULT_RULESET.attributes[0]!;
 
     const trackRepos = (character: CharacterWithDetails) => {
-      const update = vi.fn().mockImplementation((_id, _uid, data: { characterData: unknown }) =>
-        Promise.resolve(ok({ ...character, characterData: data.characterData } as Character))
-      );
+      const update = vi
+        .fn()
+        .mockImplementation((_id, _uid, data: { characterData: unknown }) =>
+          Promise.resolve(ok({ ...character, characterData: data.characterData } as Character))
+        );
       const addExperience = vi.fn();
       const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
       const r = repos({
@@ -685,7 +846,7 @@ const withHarm = (harm: { lesser?: string[]; moderate?: string[]; severe?: strin
 
 // ONE shared level-aware note factory (rather than per-test arrows: several tests fail before
 // logging, and a never-invoked closure would ding the file's function coverage).
-const levelNote = (level: string) => `took ${level}`;
+const levelNote = (level: string | null) => `took ${level ?? 'nothing'}`;
 
 describe('takeHarm', () => {
   it('lands at the dealt level, writes the sheet, and logs a level-aware harm event', async () => {
@@ -789,6 +950,107 @@ describe('takeHarm', () => {
     });
     expect(out.success).toBe(true);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('takeHarm — spend armor (F44)', () => {
+  // Real ruleset content (fixture provenance): DEFAULT_RULESET ships 'armor' + 'heavy-armor'.
+  const armored = (loadout: { items: string[]; armorSpent?: string[] }) =>
+    ({
+      ...CHARACTER,
+      ruleset: { content: DEFAULT_RULESET },
+      characterData: {
+        ...CHARACTER.characterData,
+        loadout: { level: 'normal', ...loadout },
+      },
+    }) as unknown as CharacterWithDetails;
+  const armorNote = (level: string | null) => (level === null ? 'absorbed' : `took ${level}`);
+
+  it('lesser + armor → absorbed outright: armor marked spent, NO harm entry, feed logged', async () => {
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(armored({ items: ['armor'] }))) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'lesser',
+      description: 'Grazed',
+      spendArmor: true,
+      logLabel: 'Silks',
+      logNote: armorNote,
+    });
+    expect(out.success).toBe(true);
+    if (out.success) expect(out.data.appliedLevel).toBeNull();
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        loadout: expect.objectContaining({ armorSpent: ['armor'] }),
+        harm: { lesser: [], moderate: [], severe: [] },
+      }),
+    });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'absorbed' }));
+  });
+
+  it('moderate + armor → lands one level lighter (lesser) with the armor spent', async () => {
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(armored({ items: ['armor'] }))) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'moderate',
+      description: 'Slashed',
+      spendArmor: true,
+      logLabel: 'Silks',
+      logNote: armorNote,
+    });
+    expect(out.success).toBe(true);
+    if (out.success) expect(out.data.appliedLevel).toBe('lesser');
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        loadout: expect.objectContaining({ armorSpent: ['armor'] }),
+        harm: expect.objectContaining({ lesser: ['Slashed'] }),
+      }),
+    });
+  });
+
+  it('already-spent armor is gone this score → NO_ARMOR, nothing written (heavy still counts)', async () => {
+    const update = vi.fn();
+    const r = repos({
+      characters: {
+        findWithDetails: vi
+          .fn()
+          .mockResolvedValue(ok(armored({ items: ['armor'], armorSpent: ['armor'] }))),
+      },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await takeHarm(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      level: 'moderate',
+      description: 'Slashed',
+      spendArmor: true,
+      logLabel: 'Silks',
+      logNote: armorNote,
+    });
+    expect(out.success).toBe(false);
+    if (!out.success) expect(out.error.code).toBe('NO_ARMOR');
+    expect(update).not.toHaveBeenCalled();
+
+    // …but a carried heavy-armor is a second box: still spendable after the first is gone.
+    expect(
+      availableArmor(DEFAULT_RULESET, {
+        ...CHARACTER.characterData,
+        loadout: { level: 'normal', items: ['armor', 'heavy-armor'], armorSpent: ['armor'] },
+      } as CharacterWithDetails['characterData']).map(i => i.id)
+    ).toEqual(['heavy-armor']);
   });
 });
 

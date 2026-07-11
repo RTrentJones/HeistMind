@@ -26,8 +26,9 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 ## App shell
 
 Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
-mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand, Campaigns/Rulesets
-nav, `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
+mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand,
+Campaigns/Characters/Rulesets/Settings nav — the Characters link is the Mode-1 "My characters"
+home, F81 — `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
 focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
 **`Footer`** (`shared/components/Footer.tsx` — Terms/Privacy/DMCA/Acceptable-use/Licenses links +
 "© {year} HeistMind, operated by Trent Jones"). The header wraps (`flex-wrap`) instead of
@@ -36,12 +37,31 @@ overflowing on mobile; the signed-out header also carries the **clickwrap** line
 (marketing hero owns its header) and `/auth/*` (transient callback), which render their own
 full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` themselves.
 
+**Signed-out gate (F39/F72, complete as of 2026-07-11):** every auth-required route — primary
+(`/games`, `/rulesets`, `/characters`, `/settings`, `/games/[id]`) **and** secondary (`/games/new`,
+`/games/[id]/characters/new`, `/games/[id]/characters/[id]`, `/characters/new`,
+`/characters/[id]`, `/rulesets/new`) — renders `SignInGate` (heading + prompt + a working Discord
+sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
+`e2e/specs/signin-gates.spec.ts`.
+
 ---
 
 ## Routes
 
 ### `/` — Home (marketing when logged out, dashboard when signed in)
 
+- **Coming-soon gate (prod holding page) — PRODUCTION deployment only, `main` only:** `COMING_SOON`
+  (`apps/web/src/lib/coming-soon.ts`) keys on `VERCEL_ENV === 'production'` and lives **only on
+  `main`**, never on `development` — so beta, Vercel previews, and local are always un-gated (their
+  e2e suites run the real app), and only the prod deployment is gated. No env var to set. When
+  gated: `page.tsx` renders `<ComingSoon/>` at `/`, `middleware.ts` redirects every route except
+  `/` and `/legal/*` back to `/`, and `AuthHeader` omits its signed-out sign-in buttons — so there
+  is no login anywhere on prod. Discord/API routes are excluded from the matcher and keep working;
+  legal pages stay live (registered DMCA agent page). `NEXT_PUBLIC_VERCEL_ENV` is mapped from
+  `VERCEL_ENV` in `next.config.ts` so the client bundle agrees with the server/edge. The public
+  specs (home, auth-discord, auth-callback) are gate-tolerant via `e2e/support/coming-soon.ts` so
+  the prod post-deploy verify stays green. To bring prod online for real: revert this on `main`
+  (or reconcile `main` with `development`). _`main`-only; `development` has no gate._
 - **File:** `apps/web/src/app/page.tsx` — a **server component** (exports the per-route `metadata` —
   the real `<title>`/description for the one public URL) that renders
   `<HomeSwitch marketing={<HomePage/>}/>`; `HomeSwitch`
@@ -62,8 +82,9 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
   rulesets · upload ruleset); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
   state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
   · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
-  `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change. Copy in
-  `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
+  `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change.
+  All three sections show a `LoadingSpinner` while loading (F79 — Characters + Recent activity
+  used to collapse to nothing until the fetch resolved). Copy in `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
   `/characters` routes (Phase 5 — portable characters; see below). A **brand-new user** (no
   campaigns AND no characters) gets a guided **"Start here" 1-2-3** card (build a character ·
   create a campaign · join a game — each step a real link) instead of disconnected empty cards
@@ -127,8 +148,15 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
     heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. Also renders any
     **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
     threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
+    **Crew advancement (XP round, F85):** the 8-box track is the same clickable `XpTrack` a
+    character sheet uses (GM marks; players see it read-only); marks and the "Take advance
+    (reset XP)" spend run through engine `markCrewXp`/`takeCrewAdvance` so both land in the
+    campaign log, the advance refuses a non-full track, and a post-advance notice points the GM
+    at the crew-ability list.
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
+    _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
+    F74; CrewSheet always did.)_
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
     status (−3..+3) and their project clocks. GM-editable.
   - `ScorePanel` (`apps/web/src/features/scores/components/ScorePanel.tsx`) — the **score / operation
@@ -149,9 +177,10 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
       **xp** / **harm** / note) with a neutral kind badge. **Every mechanical change reaches the
       feed** (round-3 PR-3 + bot phase-3, via engine use-cases): crew heat/tier/incarceration,
       faction status shifts, a clock **filling** (routine ticks stay panel-only), XP marks/advances,
-      and harm taken/cleared — alongside rolls, downtime, loadout, and score lifecycle. _One web
-      exception (F70): the sheet's track-XP marking (`setXp`) writes tracks without an `xp` feed
-      event — only the flat-pool button and the bot's `/xp mark` log one._
+      and harm taken/cleared — alongside rolls, downtime, loadout, and score lifecycle. _The old
+      web exception (F70c — silent track-XP marks) closed in the XP round (F85): every sheet XP
+      mark now logs an `xp` event ("Marked N XP — <track>"), and crew XP marks/advances log
+      `crew` events._
       Entries are **grouped by score** (newest operation first, under its name); with no scores in
       play it falls back to a flat feed.
 - **Role:** GM edits campaign objects; players read them.
@@ -193,6 +222,10 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 - **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; **set the per-score loadout**
   (level + items, Save); roll an action **or resist** (stress applies live to the `StressTracker`);
   **Indulge vice** (downtime) to clear stress to 0, logged to the feed; edit build.
+  **XP (XP round, F85):** the Experience card's tracks are gold `XpTrack` boxes with accessible
+  per-box names; every mark goes through engine `markXp` (feed-logged, "Marked N XP — <track>"),
+  and a FULL track grows a **"Take advance"** CTA that opens the editor directly on its
+  Advancement tab (scrolled into view) — the spend is one click from where the XP was earned.
 - **Role-gating (F42, 2026-07-01):** write affordances mirror the RLS policy — the **owner or the
   campaign's GM** sees the edit controls (rename, edit build, stress tracker, indulge vice, XP
   marking, loadout save); any other member gets a **read-only sheet** (values + trackers visible,
@@ -202,6 +235,30 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
   stress-release half of the FitD pressure loop (MVP downtime).
+  **Harm (F65/F43, 2026-07-11):** the Condition card's harm track is live for the owner/GM — a
+  "Take harm" row (description + level; RAW escalation past full tracks, with an inline
+  "escalated" notice) and click-the-wound-to-clear, both through engine `takeHarm`/`clearHarm`
+  (feed-logged, bot parity). The roll panel surfaces the wound's RAW consequences: moderate harm
+  auto-applies **−1d** (waivable, noted in the feed), lesser hints reduced effect, severe warns
+  "needs help or a push". **Spend armor (F44, backlog round E):** while the current-score loadout
+  carries unspent armor, the harm quick-row shows an armed **"Spend armor (n left)"** toggle — the
+  next take lands ONE level lighter (lesser is absorbed outright, with an "glanced off" notice),
+  the armor box is consumed for the score (refreshed by a fresh loadout), and the feed carries
+  the lightened level. Bot parity: `/harm take` has an `armor` boolean. **Derived attributes
+  (F23, backlog round E):** on action-rating rulesets the header card's attributes are DERIVED
+  live from action dots (all shown, 0 included, with a "derived from action ratings" note), the
+  editor shows them locked (raise via Advancement), and **resistance rolls the attribute** (RAW)
+  — the roll panel's resist select lists the attributes, not actions. **Phone-first (F57):**
+  below `sm` the sheet reorders (flex `order-*`) to name → Condition → Dice/log →
+  XP/loadout/gear → abilities → campaign controls (editor pinned last), a fixed **thumb bar**
+  (nav "Sheet sections": Condition · Dice · XP & gear) jumps to the section anchors, and the
+  stress pips / action dots grow to thumb size (32px / 24px). Covered by
+  `e2e/specs/mobile-sheet.spec.ts` at 390×844. **Error split (F73,
+  2026-07-11):**
+  a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
+  the sheet and leaves it interactive; only a load failure / not-found swaps the page for
+  `ErrorDisplay`.
+- _Last verified:_ 2026-07-11 (backlog rounds E+F: F44 armor, F23 derived attributes, F57 phone-first sheet)
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -288,6 +345,19 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
   Footer links (separate PR) are the discovery path.
 - _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
 
+### `/discord` — The bot guide (public, F67)
+
+- **Files:** `apps/web/src/app/discord/page.tsx` (server component + `metadata`) →
+  `DiscordGuideContent` (`apps/web/src/features/marketing/components/`) — the legal-page pattern;
+  command names/syntax are deliberately literal (they must match the registered commands).
+- **Purpose:** the page a GM sends players — what the bot is, a 3-step getting-started (try the
+  dice with no account → one web Discord sign-in IS the account link → `/character use` and roll
+  from the sheet in a linked channel), and the full command reference (mirrors `/heist help` and
+  `packages/discord/README.md`'s table — update the three together).
+- **Nav:** public, no auth gate; linked from the landing's play-by-post track ("How the bot
+  works →"). On gated prod the route redirects home (only `/` + `/legal/*` stay reachable).
+- _Last verified:_ 2026-07-11 (feature introduction — bot-parity round, F67)
+
 ### `/settings` — Account settings (self-service deletion)
 
 - **File:** `apps/web/src/app/settings/page.tsx` → `AccountSettings`
@@ -317,7 +387,21 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-05 (IP-audit copy reskin (F82): sign-in "First time in the shadows?", scoundrel feature line, game/score name placeholders now Brackwater-flavored — no Duskwall setting names in product copy; same day: full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
+_Last verified:_ 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
+surfaces auth errors as a dismissible banner (F40); faction WAR callout at −3 (F47); zero-dice
+rolls annotated in the log (F7 closed); wizard playbook-switch + cancel are two-click with
+draft-saved reassurance (F27/F28); catalog flags owned copies, picker blurbs, standalone-sheet
+banner, vice two-click confirm, duplicate toast, friendly panel errors (F60); badge/width polish
+(F53/F54); stale F49/F50/F51 closed on verification. Same day, bot-parity round
+(F86/F43/F65/F67): harm quick actions + roll
+penalties on the sheet, the `/discord` guide page + landing link, and same day the XP round
+(F85): sheet XP marks feed-logged via engine markXp, shared
+gold `XpTrack` boxes on character + crew tracks, "Take advance" CTA → editor Advancement tab,
+crew XP mark/advance through new engine `markCrewXp`/`takeCrewAdvance` (feed-logged, guarded) +
+post-advance notice; same day, CX round: F72 SignInGate on all six secondary routes; F73 sheet
+error split; F74 hub-panel loading guards; F79 dashboard loading affordances + seeded e2e; F81
+Characters nav link; F80 Select/Textarea/Clock/HarmTracker stories + tests; new spec
+`signin-gates.spec.ts`; previously 2026-07-05 IP-audit copy reskin (F82): sign-in "First time in the shadows?", scoundrel feature line, game/score name placeholders now Brackwater-flavored — no Duskwall setting names in product copy; same day: full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
 
 ---
 
@@ -363,22 +447,32 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   · `/dice` · `/heist about|help`. Pure compute, nothing stored.
 - **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
-  the character's own ruleset, `extra`/`push`), `/stress add|clear`, `/harm take|clear` (RAW
-  escalation), `/vice indulge`, `/xp mark|advance` — the sheet commands feed-log via the same
-  engine use-cases the web calls.
+  the character's own ruleset, `extra`/`push`; **moderate harm auto-applies −1d** — the title shows
+  the malus, the note names it, severe adds a needs-help warning — F43), `/stress add|clear`,
+  `/harm take|clear` (RAW escalation; `armor:true` spends a carried armor box so the harm lands
+  one level lighter — lesser is absorbed outright, no armor phrases the refusal — F44),
+  `/vice indulge`, `/xp mark|advance` — the sheet commands
+  feed-log via the same engine use-cases the web calls.
 - **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
   that campaign (embed footer says "Logged to …" or exactly why not); `/log` (attributed,
   score-tagged); `/heist status` (member snapshot).
-- **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate` · `/clock tick`
-  (filling announces "It comes to a head!") · `/faction status`. GM-gated INCLUDING autocompletes —
-  campaign state never leaks through suggestions.
+- **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
+  (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, `advance` spends a FULL
+  track and refuses otherwise, both feed-logged; F86) · `/clock tick` (filling announces "It comes
+  to a head!") · `/faction status`. GM-gated INCLUDING autocompletes — campaign state never leaks
+  through suggestions.
 
 Failure posture everywhere: public defers that fail authz become delete + ephemeral; non-members
-learn nothing (not even the campaign's name). Known gaps: F65 (web harm parity), F66 (threads under
-a category link), F67 (no web docs page).
+learn nothing (not even the campaign's name). **No bot known-gaps remain:** F66 (threads under a
+category link) closed via the app's first bot-token fetch — a thread whose parent channel is only
+CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
+(web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-07-05 (go-live smoke fixed F68 discord_id trigger-link + F69 rulesetActions resolution; residue tracked as F70/F71; previously phases 0–3 complete #121–#132)
+_Last verified:_ 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
+e2e (Act 3.7); same day bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
+help/README updated; previously 2026-07-05 go-live smoke fixed F68 discord_id trigger-link + F69
+rulesetActions resolution; residue tracked as F70/F71; phases 0–3 complete #121–#132)
 
 ---
 
@@ -407,7 +501,9 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
 1. GM **starts a score** (`ScorePanel`) and seeds clocks for obstacles. 2. Players **set their
    per-score loadout** on their sheets (`LoadoutCard`: level + items → Save). 3. Players roll actions
    from their sheets (`RollPanel`: action → rating → roll → logged, auto-tagged with the active score). 4. When a consequence lands, the player **resists** (`RollPanel` resistance mode → `6 − highest die`
-   stress applied live). 5. GM makes fortune/GM rolls from the hub `RollPanel`. 6. Anything settled **in
+   stress applied live). 5. **Anyone** rolls fortune from the hub `RollPanel` (deliberately
+   member-open — F77 decided for bot parity: `/fortune` is open to everyone while `/log` stays
+   member-gated; the section copy now says so). 6. Anything settled **in
    person or on Discord** gets recorded via `AddResultForm` so the log stays complete. 7. All events
    land in `RollLog`, grouped under the score, with who + when (every player sees on reload). 8. GM
    ticks clocks; adjusts crew heat/rep. 9. Players **indulge vice** (downtime) to clear stress. 10. GM

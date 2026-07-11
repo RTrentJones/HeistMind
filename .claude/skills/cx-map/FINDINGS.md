@@ -201,9 +201,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `RollLog` shows bare results; `Roll` has no `zeroDice` field to persist it.
 - **root cause:** A rating-0 roll shows two dice with no "take lowest" note — reads as a bug.
 - **fix:** Annotate zero-dice rolls in panel + log ("2d, take lowest"); persist `zeroDice` on `Roll`.
-- **status:** partially resolved (PR #59) — the panel now shows a hint when a rating-0 action is
-  selected ("No rating in this action — roll 2 dice and take the lowest."). Persisting `zeroDice` on
-  the `Roll` + annotating it in the log is still open.
+- **status:** **fixed (fully — backlog round A, 2026-07-11)** — the panel hint shipped in PR #59;
+  `zeroDice` persistence landed with migration `00020` (audit P2); and the last piece, the in-log
+  annotation, now renders per entry: "0d — rolled 2, took the lowest" on any `zeroDice` (or legacy
+  `dice === 0`) roll.
 
 ### F8 — Position/effect dropdowns are unexplained jargon
 
@@ -234,7 +235,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Group play — central to a crew game — has no scaffolding (assist = 1 stress, group
   action, etc.).
 - **fix:** Group-action mode linking a lead roll + assist rolls; assisters take stress; mark linked.
-- **status:** open
+- **status:** **fixed — ASSIST (the everyday teamwork move) shipped (backlog round C, 2026-07-11)**:
+  the sheet's action roll offers "Assist: <teammate> (+1d, they mark 1 stress)" over the campaign
+  roster; engine `rollAction` gained `assist` — the die rides the pool, the helper's stress is
+  charged when the roller may write them (own alt / GM) and otherwise the feed note tells the
+  helper to self-mark (ownership is a hard security boundary; NOT*OWNER never fails the roll).
+  Engine + roll-pool unit-tested. \_Residue (open, by design):* **lead group action / set up /
+  protect** are GM-arbitrated multi-roll orchestrations — better run in prose with individual
+  rolls; revisit if tables ask for linked-roll mechanics.
 
 ### F11 — Starting abilities can be unchecked
 
@@ -255,7 +263,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Close friend / rival is part of Blades character identity and is skipped at
   creation.
 - **fix:** A contacts step (or extend Identity) picking from the playbook's contacts.
-- **status:** open
+- **status:** **fixed (backlog round C, 2026-07-11)** — the Identity step's LAST field (vice, or
+  the combined fallback) carries a "Friends & rivals" picker over the playbook's contact list
+  (`setContact('friend'|'rival', …)` — at most one each, replace/clear semantics, store
+  unit-tested); hidden for playbooks without contacts. Optional per RAW — never blocks Next.
 
 ### F13 — Loadout is on the build, not per-score ~~(was: "wizard never sets loadout")~~
 
@@ -305,7 +316,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Spend-stress-to-retro-establish is a core player-agency move, especially valuable
   in async play where forward planning is hard.
 - **fix:** A flashback action: narrate + stress cost → logged roll linked to the triggering moment.
-- **status:** open
+- **status:** **fixed (backlog round C, 2026-07-11)** — new engine `flashback` use-case (pay the
+  GM-priced 0/1/2 stress through the clamped write, land the retro-established beat in the feed
+  as a note; ownership-gated; engine-tested) + a sheet Flashback row in the Dice card (what you
+  establish + stress select + button). E2E in `gm-resistance-downtime.spec.ts` (feed entry +
+  stress charge asserted).
 
 ### F17 — Crew rep hard-caps at 12 with no rep→tier advancement
 
@@ -410,7 +425,17 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   common in-play taps (stress / harm / XP / roll / resist / loadout) aren't laid out phone-first.
 - **fix:** a mobile pass on the sheet — prioritize the in-play controls, collapse build detail,
   thumb-reachable primary actions. Design/responsive effort (no schema change).
-- **status:** open — **scoped as its own follow-up** (not part of the 2026-06-29 code-quality round).
+- **status:** **fixed (backlog rounds E+F, 2026-07-11).** The full pass, in three moves:
+  **(1) in-play first** — below `sm` the sheet reorders via flex `order-*` (name card →
+  Condition [stress/harm/vice/flashback] → Dice + campaign log → XP/loadout/gear → abilities →
+  campaign controls; an opened editor stays last); build detail was already collapse-friendly
+  (abilities are `<details>`). **(2) thumb-reachable actions** — a fixed phone-only THUMB BAR
+  (`nav "Sheet sections"`: Condition · Dice · XP & gear) jumps to the section ids from anywhere
+  on the sheet, and the sheet reserves bottom padding for it. **(3) touch targets** — stress
+  pips grow 24→32px and action dots 16→24px below `sm` (nine pips still fit a 390px viewport).
+  Walked through at a real phone viewport by the new `e2e/specs/mobile-sheet.spec.ts` (390×844:
+  order asserted by bounding-box Y, bar hidden on desktop, both jumps land in-viewport).
+  Residue worth a hallway test on physical devices someday, but the finding's scope is built.
 
 ### F58 — Full-reload flicker after every mutation; no optimism, no success toast
 
@@ -481,7 +506,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
-### F84 — Account deletion 500s for any user who owns a campaign (trigger breaks the auth cascade)
+### F88 — Account deletion 500s for any user who owns a campaign (trigger breaks the auth cascade)
+
+_(Landed on `development` numbered F84, which this branch had already assigned to the
+stress-pip a11y finding below — renumbered F88 in the merge; `account-deletion.spec.ts`
+is its regression guard.)_
 
 - **severity:** S2 · **type:** CX-flaw / bug · **(verified — caught by the beta walkthrough of `/settings` deletion, reproduced locally)**
 - **where:** `update_game_player_count()` (`supabase/migrations/00002_core_schema.sql:412-428`) —
@@ -505,6 +534,76 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `/settings` UI; verified it fails (500) against the reverted trigger and passes with the fix.
   Retry the beta walkthrough after merge+deploy.
 
+### F86 — Bot lagged the web on crew advancement; harm rules absent from every roll surface (bot-parity round)
+
+- **severity:** S2 · **type:** CX + FitD-gap (cross-client parity cluster) · **(2026-07-11)**
+- **where / what:** (1) the engine's `markCrewXp`/`takeCrewAdvance` (F85) were web-only — no
+  `/crew xp` or `/crew advance` subcommands, so a Discord-first table couldn't run crew
+  advancement at all and couldn't even SEE crew XP; (2) the BitD harm penalties existed only as a
+  doc comment (`domain/character.ts`) — neither the web `RollPanel` nor the bot's `/roll action:`
+  applied or mentioned them (F43); (3) web harm edits bypassed the feed (F65).
+- **fix / status:** **fixed (bot-parity round, 2026-07-11)** — `/crew xp [amount]` (add marks,
+  negative unmarks, clamped to the 8-box track; a full track's reply points at `/crew advance`)
+  and `/crew advance` (refuses a non-full track BEFORE any write, mirroring `/crew tier`); both
+  feed-logged via the engine. `/heist help` + the README command table updated; `gm.test.ts`
+  covers mark/clamp/refusal/reset. F43 + F65 fixed alongside (see their entries) — the two
+  clients now agree on harm and crew advancement end-to-end.
+- **residue:** ~~a signed e2e for `/crew xp` on the local stack~~ **closed (rerun round,
+  2026-07-11)** — `discord.spec.ts` Act 3.7 drives `/crew xp amount:8` → resources hit 8/8 + a
+  'crew' feed event, then `/crew advance` → track resets to 0 + the advance feed event. F66 is
+  also fixed (see its entry) — no bot known-gaps remain.
+
+### F85 — XP marking + crew XP: silent feeds, buried advance, two interaction models (XP-round cluster)
+
+- **severity:** S2 · **type:** CX-flaw + FitD-consistency · **(2026-07-11 XP-experience pass)**
+- **where / what (five sub-flaws, all verified):**
+  (1) `CharacterSheet.setXp` wrote track XP directly (`useUpdateCharacterData`) with **no feed
+  event**, while flat-mode "Add XP" and the bot's `/xp mark` logged one — the primary BitD path
+  was the silent one (= F70c). (2) Crew XP had **no engine use-case at all**: `CrewAdvanceTrack`
+  marks and the "Take advance" reset were raw `crews.update` writes — never reached the campaign
+  log, unlike heat/tier/incarcerate. (3) "Take advance (reset XP)" was a **bare reset** — no link
+  to actually picking a crew ability, no post-advance feedback. (4) A full character track showed
+  a passive badge but **no way to act on it** — the spend hid behind Edit build → Advancement,
+  explained only in prose. (5) Character XP used clickable boxes while crew XP used ± steppers —
+  **two interaction models for one concept** — and both reused `StressTracker`, whose danger
+  palette (red/pulse near full) reads as _bad news_ on an XP track that's actually filling with
+  good news.
+- **fix / status:** **fixed (XP round, 2026-07-11)** —
+  • engine: `markCrewXp` + `takeCrewAdvance` use-cases (feed-logged; advance REFUSES a non-full
+  track server-path-side), `updateAndLog` extended to `resources`; unit-tested in `engine.test.ts`.
+  • web: sheet `setXp` → engine `markXp` (signed delta + track name in the log note); crew
+  mark/advance → the new hooks (`useMarkCrewXp`/`useTakeCrewAdvance`); post-advance info notice
+  ("pick a new crew ability below").
+  • ui: new **`XpTrack`** component (packages/ui) — gold-on-earn square boxes (deliberately not
+  the stress palette), per-box accessible names ("Mark N XP" / "Unmark — back to N"; the F84
+  lesson applied), ready badge + CTA slot; story + unit tests. Used by BOTH `XpTracksCard` and
+  `CrewAdvanceTrack`, so marking XP looks and works the same everywhere.
+  • sheet: full track grows a **"Take advance"** CTA that opens the editor directly on the
+  Advancement tab (editor accepts `initialSection`, scrolls into view); the card prose now names
+  the CTA.
+  • coverage: `XpTracksCard.test.tsx` + `CrewAdvanceTrack.test.tsx` (web), `XpTrack.test.tsx` +
+  story (ui), `gm-xp-tracks.spec.ts` extended (feed events asserted for playbook + attribute
+  marks, CTA presence), `gm-crew.spec.ts` gains a full crew mark→ready→advance→feed journey.
+- **residue (open, small):** trigger shortcuts still cover only the playbook track (attribute
+  triggers have no shortcut — RAW marks them via desperate rolls, a future roll-integration);
+  no undo for a _logged_ mark beyond re-clicking the track.
+
+### F84 — StressTracker pips are unlabeled buttons (no accessible name)
+
+- **severity:** S3 · **type:** CX-flaw (a11y, F76 family) · **(found 2026-07-11 writing the F73 test)**
+- **where:** `packages/ui/src/components/StressTracker.tsx` (~:116) — each stress pip is a
+  `motion.button` with no `aria-label`/text; the F73 regression test had to select them by
+  className. `ActionDots` (~:239) has the same shape.
+- **root cause:** the pips were built as visual affordances; screen-reader/AT users get a row of
+  anonymous buttons with no way to know which stress value each sets.
+- **fix:** per-pip `aria-label` ("Set stress to N" / "Clear stress") + `aria-pressed` or a
+  radiogroup pattern; then the F73 test can select by role+name. Fits the F76 axe-in-CI push.
+- **status:** **fixed (rerun round, 2026-07-11)** — every pip in `StressTracker` AND `ActionDots`
+  carries its action as the accessible name ("Set stress to N", the top filled pip "Clear stress
+  to N−1"; dots scope by their row label — "Set Track to 1") plus `aria-pressed`. The F73 sheet
+  test and the stress e2e steps (`gm-harm-stress`, `gm-resistance-downtime`) now select by
+  role+name instead of className; unit-tested in `StressTracker.test.tsx`.
+
 ### F83 — `hidden sm:block` never un-hides: the ui stylesheet's duplicate utilities shadow app responsive rules
 
 - **severity:** S3 · **type:** CX-flaw (styling footgun) · **(verified — caught by the footer/clickwrap e2e)**
@@ -518,7 +617,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix (workaround):** use width-scoped variants that don't rely on a base `hidden` —
   `max-sm:hidden` instead of `hidden sm:block` (applied in `AuthHeader`'s clickwrap). Real fix
   is deduping the double utility import; tracked here until someone takes that on.
-- **status:** open (workaround in place; audit other `hidden <bp>:` usages when touching them)
+- **status:** **fixed (backlog round E, 2026-07-11) — the REAL fix: one utility layer per
+  page.** The ui package's stylesheet split into `theme.css` (tokens/`@theme`/component styles/
+  `.light`+`.dark` — exported raw as `@heist-mind/ui/theme`) and the standalone compiled
+  `./styles` (unchanged, for Storybook). The web app's `globals.css` now imports the THEME into
+  its own single Tailwind pass and `@source`s `packages/ui/dist`, so every class the components
+  use is generated once, in one ordered layer — no second base `.hidden` to shadow responsive
+  variants. Verified: ui build emits both artifacts, Storybook still builds, and the anonymous
+  e2e tier (home/legal/signin-gates — the specs that caught this) passes live. The
+  `max-sm:hidden` workaround in `AuthHeader` still works and stays.
 
 ### F82 — Repo shipped Duskwall _setting_ content outside the CC BY grant (IP audit 2026-07-05)
 
@@ -548,7 +655,9 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Campaigns + Rulesets only; `/characters` (a Phase-5 primary surface and the Mode-1 home) is
   reachable only via the dashboard section or breadcrumbs.
 - **fix:** add a "My characters" link to the header nav (i18n key exists in `navigation.*` space).
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — the authenticated header nav is now Campaigns ·
+  Characters · Rulesets · Settings (`navigation.characters`); pinned by
+  `e2e/specs/signin-gates.spec.ts` (banner link → `/characters` → "My characters" heading).
 
 ### F80 — UI primitives with zero or story-less coverage
 
@@ -559,7 +668,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   play; 15 of 23 components are unit-untested overall (floor 40/62/44/40 reflects it).
 - **fix:** stories for Clock/HarmTracker/Select/Textarea first (smoke coverage is nearly free),
   then unit tests ratcheting the ui floor upward.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — CSF3 stories added for all four
+  (`Select|Textarea|Clock|HarmTracker.stories.tsx`, auto-picked-up by the Storybook test-runner
+  smoke) and unit tests for `Select` + `Textarea` (label association, aria-label fallback,
+  error/aria-invalid, help-text describedby, resizable). The Textarea test caught a real defect:
+  `helpText` leaked onto the DOM `<textarea>` via prop spread (React unknown-prop warning) — now
+  destructured out. The broader "15 of 23 components unit-untested" ratchet remains future work.
 
 ### F79 — Dashboard content is never asserted, and two sections load without affordances
 
@@ -570,7 +684,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Campaigns gets a spinner), so they pop in.
 - **fix:** extend the spec to seed-and-assert real content on `/`; add loading affordances to the
   two sections.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — Characters + Recent-activity render a
+  `LoadingSpinner` while loading (matching Campaigns, no more pop-in), and `dashboard.spec.ts`
+  gained a local-stack test that seeds a campaign through the UI and asserts `/` really lists it,
+  every section's spinner resolves (`role='status'` count → 0), and the activity section shows
+  rows or its empty-state copy. (The `dashboard` feature still has no unit test — residue.)
 
 ### F78 — The deploy gate is blind to gameplay and the bot (all local-stack specs skip on deployed targets)
 
@@ -584,7 +702,18 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix (incremental):** a small deployed-safe smoke tier — read-only gameplay assertions against
   seeded beta data + the existing posture check; longer term, a beta-scoped persona pool enabling
   one thin write-path spec on the deploy gate.
-- **status:** open
+- **status:** **fixed (backlog round F, 2026-07-11).** Two tiers now cover the deploy gate:
+  **(1) read-only** — `signin-gates` / `discord-page` / `auth-callback` / `dashboard`'s
+  anonymous assertions all run against any deployed URL. **(2) write-path** — the new
+  `e2e/specs/deployed-write-smoke.spec.ts` gates on what a deployed write ACTUALLY needs
+  instead of `isLocalStack()`: an injected admin session (greenlight-verify already provides
+  `SUPABASE_SERVICE_ROLE_KEY` on non-Production deploys) plus a live PostgREST probe that the
+  per-env schema is exposed on the target's Supabase. Where both hold it drives the thinnest
+  real chain — builtin-ruleset INSERT through RLS → campaign create (membership trigger) →
+  reload-and-read-back; where they don't it self-skips with the exact missing precondition in
+  the skip reason (so the gap is named on every run, not silent). The live `/api/discord`
+  stays posture-check-only by design — the bot can't be signed for real Discord apps from CI
+  (documented in F86's close).
 
 ### F77 — Hub fortune roll + record-result affordance contradicts the journey text (decide: gate or relabel)
 
@@ -597,7 +726,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   wrong.
 - **fix:** Decide once: either gate the hub fortune panel to the GM, or (likelier, for bot parity)
   keep it member-open and reword the section label + J3 so a player rolling fortune isn't off-map.
-- **status:** open
+- **status:** **resolved (rerun round, 2026-07-11) — DECIDED: member-open, for bot parity.**
+  `/fortune` is open to everyone in Discord, so the web hub matches. The section copy now says so
+  ("Fortune roll — anyone at the table…", `game.fortuneRoll`) and J3 step 5 reads "Anyone rolls
+  fortune from the hub", with the decision recorded inline. No gating change.
 
 ### F76 — Accessibility is never enforced in CI (stories are render-only; no axe anywhere)
 
@@ -609,7 +741,18 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   asserts no interaction and no a11y. Keyboard/contrast/ARIA regressions (the F1/F41 class) ship green.
 - **fix:** Add axe assertions to the test-runner (`postVisit` + `checkA11y`, error mode on a curated
   rule set) and/or `play` functions for the interactive primitives (Select, Tooltip, ThemeToggle).
-- **status:** open
+- **status:** **fixed (backlog round 2026-07-11)** — `packages/ui/.storybook/test-runner.ts` now
+  runs axe on EVERY story (`preVisit` injectAxe → `postVisit` checkA11y via `axe-playwright`), so
+  the CI story smoke (190 stories) gates on a11y. Curated exclusions, each with a reason in the
+  config: the four fragment-vs-page rules (`region`, `landmark-one-main`, `page-has-heading-one`,
+  `bypass` — stories are components, not documents) and `color-contrast` (theme-wide palette debt,
+  tracked as **F87**). First enforcement pass fixed 12 stories' real violations (icon-only buttons
+  without aria-labels in Button/Tooltip/Header stories, unassociated form labels in
+  ErrorDisplay/Stack stories, duplicate banner landmarks in the Header galleries, heading-order in
+  Theme/Container stories, an unfocusable scroll region in Section) **and one component bug:
+  `Container` defaulted every plain layout div to an unnamed `role='region'` landmark — removed;
+  the `asMain`/`asSection`/`asArticle` props (which never changed the rendered element) now map to
+  real ARIA roles.** Verified locally: 190/190 pass through `test-storybook:ci`.
 
 ### F75 — Player-perspective and RLS tenant-isolation e2e are fixme scaffolds — two headline guarantees unproven
 
@@ -623,7 +766,16 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix:** Implement both specs on the existing `playerPage` fixture: (a) player joins, creates a
   rules-valid character, rolls, advances; (b) player B cannot read GM A's unrelated campaign objects,
   and member writes to GM-gated objects are refused.
-- **status:** open
+- **status:** **fixed (backlog round 2026-07-11)** — both scaffolds are real specs (4 tests,
+  local-stack gated like the other journey specs; CI executes them). `player-characters.spec.ts`:
+  one sequential player journey — join via code (the built front door; first-class invites are F5),
+  create a rules-valid cinders character, roll from the sheet, bank XP, hard-reload to prove
+  persistence, and the GM sees the player's activity on the shared log. `tenant-isolation.spec.ts`:
+  (1) a non-member sees neither the campaign in their list nor anything at its direct URL ("Game
+  not found" — RLS can't even distinguish not-yours from not-there); (2) a bogus join code is
+  refused; (3) a joined member gets the hub but NONE of the GM-gated controls (state select,
+  join-code management, clock creation), with a same-page GM-side control assertion guarding
+  against label drift.
 
 ### F74 — Hub panels flash their empty state during the initial load
 
@@ -633,7 +785,9 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   loading pattern.
 - **root cause:** Empty-state branch keyed on `data.length === 0` before the first fetch resolves.
 - **fix:** Mirror CrewSheet: loading branch before the empty branch on the three panels.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — all three panels early-return a muted
+  "Loading clocks/factions/scores…" placeholder (new `components.*Panel.loading` keys) while their
+  query's `isLoading` is true, mirroring `CrewSheet`.
 
 ### F73 — A transient inline-edit error replaces the whole character sheet
 
@@ -646,7 +800,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   inline-save failures (where in-place feedback is right — the F58 principle).
 - **fix:** Split the states: load errors keep the page swap; mutation errors render a dismissible
   inline Alert (or the notification store) and leave the sheet interactive.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — the shared `error` became `saveError`: every
+  inline mutation's `onError` now feeds a dismissible destructive `Alert` at the top of the sheet
+  (sheet stays mounted + interactive); only a thrown query / not-found swaps the page for
+  `ErrorDisplay`. Regression-tested in
+  `apps/web/src/features/characters/components/__tests__/CharacterSheet.test.tsx` (seam mocked,
+  real `DEFAULT_RULESET` content per the fixture-provenance rule).
 
 ### F72 — Six secondary routes still show bare "please sign in" text with no CTA (F39 residue)
 
@@ -659,7 +818,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** F39 was fixed for `/games`, `/rulesets`, `/characters`, `/games/[id]` and the
   fix never propagated to the secondary routes.
 - **fix:** Swap all six branches to `SignInGate` (mechanical; component already exists).
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — all six routes early-return `SignInGate`
+  (page-title headings passed where the page has one: create-campaign, new-character,
+  upload-ruleset). Pinned by the new `e2e/specs/signin-gates.spec.ts`: each route, anonymous,
+  must show the gate's Discord CTA + clickwrap (coming-soon-gate tolerant).
 
 ### F71 — Knip first-run triage backlog (advisory until clean)
 
@@ -669,8 +831,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (dead web mutation), two unused web lib files, and a batch of dependency/exports flags that
   need per-item verdicts (the Radix "unused dependency" wall in `packages/ui` looks like a
   resolver false-positive family).
-- **status:** **open** — triage the report, encode verdicts in `knip.json` ignores or deletions,
-  then flip the CI step to blocking.
+- **status:** **fixed (backlog round 2026-07-11)** — the full triage landed and the CI step is
+  now BLOCKING (no `continue-on-error`). Verdicts: deleted the dead code (web `design-tokens.ts` +
+  `i18n/server.ts`, `useApplyCharacterStress`, `useUpdateClock`, discord `ownsCharacter`, ui
+  `useDebouncedCallback` + `DebounceOptions`); pruned verified-unused deps (5 from `apps/web`
+  incl. the whole `@supabase/auth-ui-*` family, 19 from `packages/ui` — the Radix wall was NOT a
+  false-positive family: only `react-tooltip` and `react-slot` are imported); encoded the
+  keep-verdicts in `knip.json` (generated `supabase-types.ts`, ui type barrels, i18n dynamic
+  surface) with per-workspace scoping. `pnpm exec knip` exits 0 with zero findings AND zero
+  configuration hints.
 
 ### F70 — Audit round log-only piping residue (read-never-written / written-never-read)
 
@@ -678,11 +847,17 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **where:** (a) `characters.adaptations` + `characters.is_template` are read by the adapter but
   have no write path — Phase-5c placeholders; revisit when 5c lands or delete then.
   (b) `CharacterData.items` is seeded `[]` at creation (`creation-steps.ts`) and never read —
-  superseded by `loadout.items`. (c) web `setXp` (CharacterSheet) writes XP tracks WITHOUT an
-  'xp' feed event, while the bot's `/xp mark` (engine `markXp`, track-aware since the P1 fix)
-  logs one — R-C3 residue: converge the web sheet onto engine `markXp`.
-- **status:** **open (logged by design)** — the P1–P4/P7/P8 siblings were fixed in the audit
-  round (#136–#141+); these three are the intentional leftovers.
+  superseded by `loadout.items`. (c) ~~web `setXp` (CharacterSheet) writes XP tracks WITHOUT an
+  'xp' feed event~~ — **(c) fixed in the XP round (2026-07-11, see F85):** the sheet's track
+  marking now goes through engine `markXp` (signed delta + track), so every web XP mark logs the
+  same 'xp' feed event the bot's `/xp mark` does. (a) and (b) remain the intentional leftovers.
+- **status:** **closed — logged by design (backlog round E, 2026-07-11).** (c) was fixed by the
+  XP round; (a) `adaptations`/`is_template` are documented Phase-5c placeholders whose fate is
+  owned by that phase (wire or delete WHEN 5c lands — nothing to do until then), and (b) the
+  vestigial `CharacterData.items` seed is inert (never read; `loadout.items` is the real
+  surface) and removing it is a data-shape migration with zero user value. Both stay documented
+  here as the reference; neither is actionable backlog. The P1–P4/P7/P8 siblings were fixed in
+  the audit round (#136–#141+).
 
 ### F67 — No player-facing web page documents the Discord bot
 
@@ -690,8 +865,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **where:** the landing page's play-by-post track now names the live bot, and `/heist help` is the
   in-Discord reference — but the web app has no page a GM can send players ("install the app / sign
   in once / `/character use`"), and no install ("Add to server") link anywhere.
-- **status:** **open** — a small static `/discord` page (getting-started + the command table from
-  `packages/discord/README.md` + the app-directory install link once the prod app exists).
+- **status:** **fixed (bot-parity round, 2026-07-11)** — public **`/discord`** page
+  (`DiscordGuideContent`, legal-page pattern): the two-sentence pitch, a 3-step getting-started
+  (dice first → one web sign-in IS the link → `/character use` + linked-channel logging), and the
+  full command reference mirroring `/heist help` + the README table (incl. the new
+  `/crew xp|advance`). Linked from the landing's play-by-post track ("How the bot works →").
+  Covered by `e2e/specs/discord-page.spec.ts` (anonymous, coming-soon-tolerant; verified live).
+  _Residue:_ the app-directory "Add to server" install link still waits on the prod Discord app.
 
 ### F66 — A thread under a CATEGORY-linked parent doesn't resolve the link
 
@@ -701,7 +881,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   channel's **category** is linked, the category id isn't in the payload and `/roll`/`/log` in the
   thread say "not linked". Needs one bot-token channel fetch (the first bot-token call in the app)
   or a cached channel→category map.
-- **status:** **open** (documented since the phase-2 plan; logged so the backlog owns it).
+- **status:** **fixed (rerun round, 2026-07-11)** — `resolveLinkedGame` gained an optional retry:
+  when the payload candidates miss AND the interaction channel is a THREAD (types 10/11/12), one
+  bot-token REST fetch (`makeChannelParentFetcher`, the app's FIRST bot-token call — wired in the
+  transport from `DISCORD_BOT_TOKEN`) resolves the parent channel's category and the lookup
+  retries with it. Best-effort by design: no token / failed fetch / no match degrades to the old
+  "not linked". All seven `resolveLinkedGame` call sites pass `ctx.fetchChannelParent`.
+  Unit-tested in the new `links.test.ts` (retry hits, payload-resolves-skips-fetch, non-thread
+  skips, degradation matrix).
 
 ### F65 — Web harm edits still bypass the campaign feed (R-E1 residue)
 
@@ -710,8 +897,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (phase-3), but the web sheet edits harm only inside the full editor's batch `saveBuild`
   (`HarmCard` `onPatch` → whole-`characterData` write) — no feed event, no RAW escalation. The two
   clients now behave differently for the same action.
-- **status:** **open** — add sheet-level quick actions (or rewire the editor's harm section) through
-  the same engine use-cases; the web catches up to the bot, closing R-E1 for harm end-to-end.
+- **status:** **fixed (bot-parity round, 2026-07-11)** — the sheet's Condition card grew one-tap
+  harm moves through the SAME engine use-cases the bot drives: a **"Take harm"** row
+  (description + level, RAW escalation past full tracks with an inline "escalated to X" notice)
+  and **click-the-wound-to-clear** (ui `HarmTracker` gained an optional `onClearEntry` — filled
+  boxes become accessible clear buttons; story variant + unit tests). Both write via new
+  `useTakeHarm`/`useClearHarm` hooks and land `harm` feed events — R-E1 closed for harm
+  end-to-end. The editor's batch harm editing remains for build corrections. Covered by
+  `cards.test.tsx` (quick mode) + the new `gm-harm-stress.spec.ts` journey (take → feed →
+  penalty → clear → feed). `discord-parity.spec.ts` keeps the cross-client half.
 
 ### F64 — Zero-dice resistance computed stress from the HIGHEST die (should be lowest)
 
@@ -741,11 +935,47 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## S3 — minor
 
+### F87 — The ember/noir palette fails WCAG AA contrast across ~80 story surfaces (found by the F76 axe gate, 2026-07-11)
+
+- **severity:** S3 · **type:** CX-flaw (a11y, design tokens)
+- **where:** package-wide — the first F76 axe sweep flagged `color-contrast` (serious) on ~80 of
+  190 stories / ~223 nodes: `text-foreground-muted` + `text-foreground-secondary` on the dark
+  backgrounds, ghost/outline button text, badge variants, muted text inside `bg-background-secondary`
+  cards. Not a story problem — the design tokens themselves sit below 4.5:1.
+- **root cause:** The palette was tuned for atmosphere, never against a contrast budget. Nothing
+  gated it (F76), so it spread everywhere the muted/secondary tokens are used.
+- **fix:** A design-token pass: retune `foreground-muted`/`foreground-secondary` (and the ghost
+  button + badge text colors) against their real backgrounds to ≥4.5:1 (AA), then delete the
+  `color-contrast` exclusion in `packages/ui/.storybook/test-runner.ts` so the axe gate holds the
+  line. Token-level change — every consumer inherits the fix.
+- **status:** **fixed (backlog round F, 2026-07-11) — 223 nodes → 0, and the exclusion is
+  deleted (color-contrast now GATES in CI).** Three root causes, worst first: **(1)**
+  `ThemeProvider` was injecting a STALE JS token map as inline styles on `<html>`, outranking
+  every stylesheet — the earlier CSS-side muted-contrast fix (63.9% L) never actually applied
+  anywhere the provider ran, Storybook **and production web**. The injection is gone; the
+  `.light`/`.dark` classes in `theme.css` are the single token source (~75 nodes). **(2)**
+  Accent colors (brand/semantic/game) are tuned as FILLS (white text on top) and sit below AA
+  as small TEXT on the dark surfaces — new `--color-*-fg` TEXT-variant tokens (lighter in dark,
+  darker in light; `text-brand-fg`, `text-semantic-error-fg`, …) now back every text usage
+  across Alert, Badge (status/skill/stress tints), Button (outline/ghost/link), ErrorDisplay
+  (plus dropping its /80·/70 text opacities), Heading, Input, Select, Textarea, Text, Paragraph,
+  StressTracker, and the stories; `--color-brand-accent` nudged 65.1%→71% L (~130 nodes).
+  **(3)** two opacity animations dimmed text below AA mid-frame: the Badge `pulse` prop's
+  blanket `repeat: Infinity` also looped the mount fade (opacity cycling 0→1 forever — scoped
+  to scale only), and `stress-critical`'s `animate-pulse` became a box-shadow `pulse-glow`
+  keyframe that never touches opacity. Verified: 0 contrast violations across all 190 stories,
+  full `test-storybook:ci` green with the rule ENABLED, `pnpm validate` 15/15.
+
 - **F23** · CX · Sheet attributes are a creation-time snapshot, not re-derived from current action
   ratings; the editor still exposes them as directly editable (dead data, since the validator skips
   attribute caps in action mode). `CharacterSheet.tsx:146`, `CharacterEditor.tsx` (~231–250),
   `character-rules.ts` (~337). **(verified)** → derive on the sheet; hide/lock attributes in
-  action-rating mode. **open**
+  action-rating mode. **fixed (backlog round E, 2026-07-11)** — on action-rating rulesets the
+  sheet DERIVES attributes live (`deriveAttributes`, all shown incl. 0 = zero-dice resist, with a
+  "derived from action ratings" note); the editor's Build tab shows them as locked badges pointing
+  at Advancement instead of editable trackers; and `RollPanel` grew an `attributes` prop so
+  RESISTANCE rolls the attribute (RAW), not an action rating — the sheet passes derived (or
+  stored, on point-buy rulesets) values. e2e: derived-note assertion in `gm-loadout.spec.ts`.
 - **F24** · CX · ActionRatingsStep doesn't explain attributes are _derived_ (count of actions ≥1).
   `ActionRatingsStep.tsx:34,50–52` → one-line helper text. **fixed** — a muted helper above the
   attribute cards explains the rating = its actions rated 1+ (and that it's the resistance dice).
@@ -756,9 +986,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (`roster` vs `others` rendered identically) → a "Starting"/section header. **fixed** — the roster
   is labelled "{playbook}'s abilities" and the expanded others get a "From other playbooks" header.
 - **F27** · CX · Re-selecting a playbook silently resets abilities/attributes.
-  `character-creation-store.ts:135–154` `setPlaybook` → warn/confirm before reset. **open**
+  `character-creation-store.ts:135–154` `setPlaybook` → warn/confirm before reset. **fixed
+  (backlog round A, 2026-07-11)** — switching away from a chosen playbook is two-click: the first
+  arms a warning alert naming the reset ("dots and ability picks reset — click again"), the second
+  commits. First pick / re-click never warns.
 - **F28** · CX · Cancelling the wizard gives no "draft saved" reassurance (it _is_ persisted).
-  `CharacterCreationWizard.tsx:123–124` → confirm + reassure copy. **open**
+  `CharacterCreationWizard.tsx:123–124` → confirm + reassure copy. **fixed (backlog round A,
+  2026-07-11)** — the footer Cancel is two-click; armed it reads "Leave? Draft saved — click
+  again" (disarms on blur), naming exactly the reassurance the persisted draft earns.
 - **F29** · CX · Required name field has no visual required indicator.
   `CharacterCreationWizard.tsx:83` → asterisk/marker. **fixed (already)** — the shared `Input`
   renders a red `*` after the label when `required` (Input.tsx:224); the name field passes `required`.
@@ -769,9 +1004,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **fixed @4b7343e
   (PR #59)** — position/effect now joined with a slash only when both are present.
 - **F32** · CX · Game `state` (draft/recruiting/active/paused/completed) is shown as a badge with no
-  legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **partial** —
-  the state badge now has a tooltip explaining the lifecycle (draft → … → completed); a GM control to
-  _change_ the state is still open.
+  legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **fixed
+  (backlog round A, 2026-07-11)** — the campaign hub header now gives the GM a "Campaign state"
+  `Select` over the five lifecycle states (new `useUpdateGameState` seam hook over the repo's
+  existing `updateState`; members see the tooltip'd badge). Covered in `gm-games.spec.ts`
+  (change → reload → persisted).
 - **F33** · CX · Crew `hold` (strong/weak) shown + toggle with no explanation. `CrewSheet.tsx:172–182`
   → tooltip. **fixed @4b7343e (PR #59)** — hold has an explanatory tooltip (strong = stable, weak =
   one setback from breaking up).
@@ -800,7 +1037,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Discord" button (`signInWithProvider('discord')`); `games/new` still bare.
 - **F40** · CX · Auth-callback errors auto-redirect after ~2s (hard to read) and home doesn't surface
   `?error=auth_failed`. `auth/callback/page.tsx:29–46` → longer/explicit retry + a home banner.
-  **open**
+  **fixed (backlog round A, 2026-07-11)** — the callback holds the error for 6s (readable), and
+  home now surfaces `?error=auth_failed|auth_timeout` as a dismissible banner pointing at the
+  header's Sign In retry (`AuthErrorBanner`, Suspense-wrapped for the prerendered route).
+  `auth-callback.spec.ts` extended (banner shown → dismissed) and verified live in a browser.
 - **F41** · CX · No skip-to-main link; sticky header makes keyboard users tab through all nav.
   `packages/ui/src/components/Header.tsx` → skip link + `id="main-content"`. **fixed @d9d7d49 (PR #59)**
   — `AppShell` renders a focus-revealed skip link targeting the single `<main id="main-content">`.
@@ -812,31 +1052,66 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   a read-only sheet. (The campaign panels — crew/clocks/factions/scores — were already `isGm`-gated.)
 - **F43** · FitD · Harm penalties (−1d / reduced effect at moderate, incapacitated at severe) aren't
   applied or surfaced on rolls. `RollPanel.tsx` has no harm input → show harm + default
-  effect/limit. **open**
+  effect/limit. **fixed (bot-parity round, 2026-07-11)** — RAW corrected to the SRD (level 1 =
+  reduced effect, level 2 = −1d, level 3 = incapacitated): new core `worstHarmLevel` +
+  `harmDicePenalty` (same-kind penalties never stack; unit-tested). BOTH clients apply the −1d on
+  action rolls: web `RollPanel` (auto, with a "Waive harm penalty" toggle + level hints; the feed
+  note names the malus) and the bot's `/roll action:` (title shows `−1d`, note "−1d (moderate
+  harm)"; severe adds "needs help or a push"). Effect reduction / incapacitation stay surfaced as
+  hints — position/effect remain the table's call. Covered by `roll-pool.test.ts`,
+  `roll.sheet.test.ts`, and the `gm-harm-stress.spec.ts` journey.
 - **F44** · FitD · Armor has no mechanical effect (harm reduction / heavy −1d). loadout carries armor
-  but rolls/harm ignore it → "spend armor" to reduce harm; heavy-armor note. **open**
+  but rolls/harm ignore it → "spend armor" to reduce harm; heavy-armor note. **fixed (backlog
+  round E, 2026-07-11)** — the SPEND-ARMOR move, engine-first: `CharacterLoadout.armorSpent`
+  tracks the boxes expended this score (a fresh loadout refreshes them, matching RAW per-score
+  armor); core `isArmorItem`/`availableArmor` find carried unspent armor (SRD-family naming
+  convention, "armour" included); engine `takeHarm` gained `spendArmor` — the harm drops ONE
+  level before landing (lesser → absorbed outright, `appliedLevel: null`), no armor →
+  `NO_ARMOR`. Both clients drive it: the sheet's harm quick-row grew an armed "Spend armor
+  (n left)" toggle with absorbed/lightened notices, and the bot's `/harm take` grew an `armor`
+  boolean (+ absorbed/no-armor copy, help line). Unit-tested at all three layers (core rules,
+  engine, bot handler); e2e journey in `gm-loadout.spec.ts` (arm → moderate lands lesser →
+  toggle gone → feed carries the lightened level).
 - **F45** · FitD · Load level is character-static, not chosen per score. `CharacterLoadout.level` is
   baked in → allow per-score load choice when a score/heist entity exists. **fixed/superseded**
   (verified 2026-07-05 audit): `LoadoutCard.tsx:130-144` offers light/normal/heavy per score.
 - **F46** · FitD · Fortune rolls lack structured types (engagement / gather-info / situation) and
-  tiered readouts. `RollPanel.tsx:131–143` → a fortune-type selector + interpretation. **open**
+  tiered readouts. `RollPanel.tsx:131–143` → a fortune-type selector + interpretation. **fixed
+  (backlog round C, 2026-07-11)** — fortune mode gained a type selector (Fortune / Engagement /
+  Gather information; the type becomes the feed label) and a tiered SRD-phrased reading under the
+  result (crit exceptional · 6 good · 4–5 mixed · 1–3 poor).
 - **F47** · FitD · Faction projects/clocks and the war state (status −3) aren't surfaced; `Clock`
-  already supports `linked*`. `FactionsPanel.tsx` → link faction clocks; show "at war". **open**
+  already supports `linked*`. `FactionsPanel.tsx` → link faction clocks; show "at war". **fixed
+  (backlog round A, 2026-07-11)** — per-faction project clocks had already shipped
+  (`FactionsPanel` renders `linkedType==='faction'` `ClockTile`s + a GM add form); the missing
+  piece was the WAR callout: status ≤ −3 now shows an explicit red "At war — the crew loses its
+  downtime safety and every score runs hotter" line beside the badge.
 - **F48** · FitD · Contacts have no mechanical tie-in (bonds/leverage/"call on a contact").
   `domain-types.ts` contacts + `CharacterSheet.tsx:369–407` display only → optional contact-aid hook.
-  **open**
+  **closed — by design (backlog round E, 2026-07-11).** Contacts DID get their CX fix: the wizard
+  picks friend/rival from the playbook roster and the sheet shows them (F12, round C). The
+  remaining "mechanical tie-in" is deliberately out: RAW, calling on a contact is a fiction move
+  the GM prices per situation (a fortune roll, a favor, a downtime action — all of which the app
+  already offers à la carte); there is no fixed rule for the tracker to enforce, and inventing
+  one would violate the core-value principle (BRD: never automate a table conversation). Reopen
+  only if a ruleset ships STRUCTURED contact mechanics for the engine to model.
 - **F49** · FitD · Indulge-vice (clear stress) has no affordance even though vice is captured.
-  `CharacterEditor.tsx:220–223` vice input only → an "Indulge" action (ties into F15 downtime).
-  **open**
-- **F50** · FitD · Ability tier-gating has no advancement path (creation gates tier ≥2; a TODO notes
-  crew-tier gating is unimplemented). `character-rules.ts:~154` → re-evaluate unlocks at play time.
-  **open**
-- **F51** · FitD · No score/heist entity grouping a job's rolls/clocks/downtime; rolls append to one
-  global game log. → an optional Heist/Score aggregate (planning → active → downtime). Larger future
-  work; noted so it isn't mistaken for "covered". **open**
+  **fixed (stale — closed on verification, backlog round A)**: the sheet has had "Indulge vice
+  (clear stress)" through engine `indulgeVice` since the F15 MVP; e2e-covered in
+  `gm-resistance-downtime.spec.ts`. The entry simply never got flipped.
+- **F50** · FitD · Ability tier-gating has no advancement path. **fixed (stale — closed on
+  verification, backlog round A)**: play-time unlocks exist via the veteran budget
+  (`isAbilityUnlocked` + `veteranPicksUsed`, F62) and crew-aware validation (F54 WS); the old
+  crew-tier TODO is gone from `character-rules.ts`.
+- **F51** · FitD · No score/heist entity grouping a job's rolls/clocks/downtime. **fixed (stale —
+  closed on verification, backlog round A)**: the Score entity shipped as BRD Phase 1
+  (`ScorePanel` lifecycle; `RollLog` groups the feed by `scoreId` with per-score headers).
 - **F52** · CX · No post-roll consequence scaffolding (a partial/bad result doesn't prompt the GM to
   tick a clock / add heat / harm). `RollPanel.tsx:149–155` → a "consequences" quick-action card
-  linked to the roll. **open**
+  linked to the roll. **fixed (backlog round C, 2026-07-11)** — a partial/bad ACTION result now
+  raises a consequences hint naming the GM levers (tick a clock, add heat, deal harm — the sheet's
+  one-tap harm is right below) with a "Resist a consequence" button that flips the panel straight
+  into resistance mode.
 - **F55** · scope · Popular FitD games not yet offered as built-ins because the engine can't model
   their distinctive mechanics. The built-in catalog (`packages/shared/src/builtin-rulesets/`) ships
   Brackwater + Blades in the Dark (drop-in) + Wicked Ones (dungeon-as-crew + `crew.resourcePools`).
@@ -846,30 +1121,40 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   one-crew/one-PC model); **Girl by Moonlight** (transformation/eclipse + promises — no
   `CharacterData`/roll-loop home); **The Wildsea** (non-FitD dice: count 6s, no position/effect);
   **Slugblaster** (Style/Stuff/Bull token economy). The major-gap items co-require open roll-loop
-  findings (F3, F9, F10, F14, F15). Treat each as its own future epic, not a data-only add. **open**
+  findings (F3, F9, F10, F14, F15). Treat each as its own future epic, not a data-only add.
+  **closed — deferred by design (backlog round E, 2026-07-11).** This is a PRODUCT-ROADMAP list,
+  not a CX flaw this backlog can burn down: each entry is its own engine epic (new mechanics,
+  new data models, in two cases licensing work) that the BRD's phased plan owns. Keeping it
+  open here made the findings log read permanently unfinished for work that was never
+  in its scope. The catalog analysis above stays as the reference for whichever epic gets
+  picked up first.
 - **F59** · CX/a11y · No design-system `<Select>`; raw `<select>` in ~9 files with a copy-pasted
   className and inconsistent labelling (RollPanel uses `aria-label` only; others wrap a bare `<label>`).
   → a `packages/ui` `<Select>` with a real associated `<label>` + shared token (see `CODE-QUALITY.md`
   PR3). **fixed @bebe87f** — `packages/ui/src/components/Select.tsx` (label/aria-label + token);
   all 9 raw selects migrated, the copy-pasted `sel` className removed.
-- **F60** · CX · Clarity/consistency cluster (each small, batch as a polish pass; 2026-07-05 audit
-  adds: raw `error.message` strings surfaced in destructive alerts by `CrewSheet`, `FactionsPanel`,
-  and `ScorePanel`): context-less
-  "Loading…" spinners; button loading inconsistent (spinner vs disable); generic vs specific errors
-  (join-code, panels); ruleset catalog doesn't flag "already in your rulesets"; ruleset picker lacks a
-  one-line blurb; standalone sheet has no "standalone — no campaign" banner; indulge-vice has no
-  confirm/preview; duplicate-character has no success toast; no in-app FitD glossary beyond
-  position/effect tooltips. **open**
+- **F60** · CX · Clarity/consistency cluster. **fixed (backlog round B, 2026-07-11)** — the
+  cluster's items, closed: panel errors now lead with a friendly line and carry the raw repo
+  message as detail (`CrewSheet`/`FactionsPanel`/`ScorePanel`); the built-in catalog flags copies
+  you already own ("In your rulesets" badge, CTA becomes "Refresh my copy" — `StarterCatalogInline`
+  checks the owned list); the `/characters/new` ruleset picker shows each ruleset's one-line
+  description; a standalone sheet opens with a "Standalone character — not in a campaign yet"
+  banner; indulge-vice is a two-click confirm ("Roll it? Click again"); duplicating a character
+  fires a success toast. Context-less "Loading…" spinners were fixed with F74's per-panel loading
+  copy. _Residue (tracked here, small):_ button loading-state consistency and an in-app FitD
+  glossary beyond the position/effect tooltips.
 
 ---
 
 ## S4 — polish
 
 - **F53** · CX · ActionRatingsStep badge repeats the attribute name ("Insight" header + "Insight 2"
-  badge). `ActionRatingsStep.tsx:51` → show just the number. **open**
+  badge). `ActionRatingsStep.tsx:51` → show just the number. **fixed (backlog round A,
+  2026-07-11)** — badge shows just the number (`data-testid="derived-<attr>"`;
+  `gm-action-ratings.spec.ts` re-targeted).
 - **F54** · CX · Wizard name/identity inputs use fixed pixel `maxWidth` (460/480) rather than a
   responsive max. `CharacterCreationWizard.tsx:80`, `IdentityStep.tsx:87` → `w-full max-w-[...]`.
-  **open**
+  **fixed (backlog round A, 2026-07-11)** — both swapped to `w-full max-w-md` / `max-w-lg`.
 
 ---
 

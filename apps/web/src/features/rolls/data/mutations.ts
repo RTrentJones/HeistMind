@@ -40,6 +40,10 @@ export function useActionRoll(gameId: string) {
       if (input.pushed === true && input.characterId !== undefined) {
         void qc.invalidateQueries({ queryKey: characterKeys.detail(input.characterId) });
       }
+      // An assist may have charged the helper's stress (F10) — refresh their sheet too.
+      if (input.assist !== undefined) {
+        void qc.invalidateQueries({ queryKey: characterKeys.detail(input.assist.characterId) });
+      }
     },
   });
 }

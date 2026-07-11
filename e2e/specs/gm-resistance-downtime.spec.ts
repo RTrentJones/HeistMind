@@ -34,25 +34,43 @@ test.describe('GM: resistance + downtime', () => {
     await gmPage.getByRole('link', { name: 'View' }).first().click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f-]+$/);
 
-    // --- Downtime: indulge vice clears stress to 0. The button is disabled at 0 stress, so raise
-    // it to 3 on the live Condition tracker first, then indulge. ---
+    // --- Raise stress to a KNOWN 3/9 on the live Condition tracker. Every stress assertion
+    // below anchors on this — no tracker read-backs (they raced the post-mutation refetch). ---
     await expect(gmPage.getByRole('heading', { name: 'Condition' })).toBeVisible();
     await expect(gmPage.getByText('0/9')).toBeVisible();
-    await gmPage.locator('button.rounded-full').nth(2).click(); // set stress = 3
+    await gmPage.getByRole('button', { name: 'Set stress to 3' }).click(); // pip a11y names — F84
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 10_000 });
+
+    // --- Flashback (F16): retro-establish a beat for a priced stress cost; the feed carries it
+    // and the tracker shows the deterministic charge (3 + 2 = 5). ---
+    await gmPage
+      .getByLabel('Flashback', { exact: true })
+      .fill('Bribed the harbormaster to look away last night');
+    await gmPage.getByLabel('Flashback stress cost').selectOption('2');
+    await gmPage.getByRole('button', { name: 'Flash back' }).click();
+    await expect(
+      gmPage.getByText(/Flashback \(2 stress\): Bribed the harbormaster/).first()
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.getByText('5/9').first()).toBeVisible({ timeout: 10_000 });
+
+    // --- Downtime: indulge vice clears a rolled amount (the button is disabled at 0 stress;
+    // we're at 5). Two-click confirm (F60): the first click arms, the relabeled button commits. ---
     await gmPage.getByRole('button', { name: 'Indulge vice (clear stress)' }).click();
+    await gmPage.getByRole('button', { name: 'Roll it? Click again to indulge' }).click();
     // BitD vice roll clears a *rolled* amount (the lowest-attribute roll's highest die), so assert
-    // the downtime entry lands in the feed rather than a fixed 0/9.
+    // the downtime entry lands in the feed rather than a fixed value.
     await expect(gmPage.getByText(/Indulged vice — cleared/).first()).toBeVisible({
       timeout: 15_000,
     });
 
     // --- Resistance: roll against an attribute → an entry lands in the shared roll log, annotated
-    // with the stress it cost. A fresh Razor has ZERO action dots, so this is always a ZERO-DICE
-    // resist (2d take-LOWEST, F64). The faces are random but the log prints them, so assert the
-    // DISPLAYED stress is consistent with the faces — the audit-P2 regression: before rolls
-    // persisted `zero_dice`, the feed recomputed from 6−HIGHEST and disagreed with the sheet. ---
+    // with the stress it cost. Resistance rolls the ATTRIBUTE (F23), so pin the ZERO-DICE path
+    // (2d take-LOWEST, F64) by resisting with Edge — 0-rated on a fresh Razor (Grit seeds 2).
+    // The faces are random but the log prints them, so assert the DISPLAYED stress is consistent
+    // with the faces — the audit-P2 regression: before rolls persisted `zero_dice`, the feed
+    // recomputed from 6−HIGHEST and disagreed with the sheet. ---
     await gmPage.getByLabel('Roll type').selectOption('resistance');
+    await gmPage.getByLabel('Resisted attribute').selectOption('Edge');
     await gmPage.getByRole('button', { name: 'Resist', exact: true }).click();
     const resistLine = gmPage.getByText(/resisted — \d stress/).first();
     await expect(resistLine).toBeVisible({ timeout: 15_000 });

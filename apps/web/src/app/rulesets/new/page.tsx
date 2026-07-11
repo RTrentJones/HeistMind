@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Container, Heading, Stack, Text } from '@heist-mind/ui';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { RulesetUpload } from '@/features/rulesets/components/RulesetUpload';
 import { LoadDefaultRulesetButton } from '@/features/rulesets/components/LoadDefaultRulesetButton';
@@ -12,6 +13,10 @@ export default function NewRulesetPage() {
   const router = useRouter();
   const { t } = usePageTranslation();
 
+  if (!isAuthenticated) {
+    return <SignInGate heading={t('uploadRuleset.title')} prompt={t('uploadRuleset.authPrompt')} />;
+  }
+
   return (
     <Container maxWidth='3xl' padding='lg'>
       <Stack direction='column' gap='lg'>
@@ -21,22 +26,15 @@ export default function NewRulesetPage() {
           </Heading>
           <Text variant='muted'>{t('uploadRuleset.subtitle')}</Text>
         </Stack>
-        {isAuthenticated ? (
-          <Stack direction='column' gap='lg'>
-            <RulesetUpload />
-            <Stack direction='column' gap='xs' align='start'>
-              <Text variant='muted' size='sm'>
-                {t('uploadRuleset.starterPrompt')}
-              </Text>
-              <LoadDefaultRulesetButton
-                variant='outline'
-                onLoaded={() => router.push('/rulesets')}
-              />
-            </Stack>
+        <Stack direction='column' gap='lg'>
+          <RulesetUpload />
+          <Stack direction='column' gap='xs' align='start'>
+            <Text variant='muted' size='sm'>
+              {t('uploadRuleset.starterPrompt')}
+            </Text>
+            <LoadDefaultRulesetButton variant='outline' onLoaded={() => router.push('/rulesets')} />
           </Stack>
-        ) : (
-          <Text variant='muted'>{t('uploadRuleset.authPrompt')}</Text>
-        )}
+        </Stack>
       </Stack>
     </Container>
   );

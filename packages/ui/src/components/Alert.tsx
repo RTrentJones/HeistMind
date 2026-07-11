@@ -20,23 +20,23 @@ const alertVariants = cva(
         default: ['bg-background-secondary border-border-primary', 'text-foreground-primary'],
         destructive: [
           'bg-semantic-error/10 border-semantic-error/20',
-          'text-semantic-error',
-          '[&>svg]:text-semantic-error',
+          'text-semantic-error-fg',
+          '[&>svg]:text-semantic-error-fg',
         ],
         warning: [
           'bg-semantic-warning/10 border-semantic-warning/20',
-          'text-semantic-warning',
-          '[&>svg]:text-semantic-warning',
+          'text-semantic-warning-fg',
+          '[&>svg]:text-semantic-warning-fg',
         ],
         success: [
           'bg-semantic-success/10 border-semantic-success/20',
-          'text-semantic-success',
-          '[&>svg]:text-semantic-success',
+          'text-semantic-success-fg',
+          '[&>svg]:text-semantic-success-fg',
         ],
         info: [
           'bg-semantic-info/10 border-semantic-info/20',
-          'text-semantic-info',
-          '[&>svg]:text-semantic-info',
+          'text-semantic-info-fg',
+          '[&>svg]:text-semantic-info-fg',
         ],
       },
       size: {

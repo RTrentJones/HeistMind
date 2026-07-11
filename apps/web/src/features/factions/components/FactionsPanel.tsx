@@ -47,7 +47,12 @@ export function FactionsPanel({
 
   const factions = factionsQuery.data ?? [];
   const clocks = clocksQuery.data ?? [];
-  const shownError = error ?? factionsQuery.error?.message ?? null;
+  // F60 — friendly lead, raw repository message as detail.
+  const shownError =
+    error ??
+    (factionsQuery.error
+      ? `${t('components.factionsPanel.loadFailed')} — ${factionsQuery.error.message}`
+      : null);
 
   const addSuggested = () => {
     const userId = user?.id;
@@ -58,12 +63,24 @@ export function FactionsPanel({
       { userId, data: { gameId, name: pick, factionType: def?.type, tier: def?.tier ?? 0 } },
       {
         onSuccess: () => setPick(''),
-        onError: e => setError(e.message ?? t('components.factionsPanel.addFailed')),
+        onError: e =>
+          setError(
+            `${t('components.factionsPanel.addFailed')}${e.message ? ` — ${e.message}` : ''}`
+          ),
       }
     );
   };
 
   const available = (suggestions ?? []).filter(s => !factions.some(f => f.name === s.name));
+
+  // F74 — guard the initial load so the empty state doesn't flash before the first fetch resolves.
+  if (factionsQuery.isLoading) {
+    return (
+      <Text variant='muted' size='sm'>
+        {t('components.factionsPanel.loading')}
+      </Text>
+    );
+  }
 
   return (
     <Stack direction='column' gap='md'>
@@ -154,7 +171,11 @@ function FactionCard({
     deleteClock.isPending;
   const onErr = {
     onError: (e: unknown) =>
-      onError((e as Error).message ?? t('components.factionsPanel.updateFailed')),
+      onError(
+        `${t('components.factionsPanel.updateFailed')}${
+          (e as Error).message ? ` — ${(e as Error).message}` : ''
+        }`
+      ),
   };
 
   // Status is table-visible mechanical state (war … allied) — through the ENGINE so the shift
@@ -270,6 +291,13 @@ function FactionCard({
               </span>{' '}
               {factionStatusLabel(faction.status)}
             </Badge>
+            {/* F47 — status −3 is WAR, a table-changing state (extra heat, no downtime safety);
+                call it out beyond the generic red badge. */}
+            {faction.status <= -3 && (
+              <Text size='sm' className='text-semantic-error'>
+                {t('components.factionsPanel.atWarHint')}
+              </Text>
+            )}
             {isGm && (
               <Button
                 variant='outline'

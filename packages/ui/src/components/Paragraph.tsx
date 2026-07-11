@@ -89,9 +89,7 @@ const Paragraph = React.forwardRef<HTMLParagraphElement, ParagraphProps>(
         className={cn(paragraphVariants({ variant, size, spacing, maxWidth, align }), className)}
         {...rest}
       >
-        {leadingText && (
-          <span className='font-semibold text-brand-primary mr-2'>{leadingText}</span>
-        )}
+        {leadingText && <span className='font-semibold text-brand-fg mr-2'>{leadingText}</span>}
         {children}
       </p>
     );

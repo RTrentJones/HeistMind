@@ -357,37 +357,15 @@ export function ThemeProvider({
   // Get current theme
   const theme = resolvedMode === 'light' ? lightTheme : darkTheme;
 
-  // Apply theme to document
+  // Apply theme to document. ONLY the class flips — the token VALUES live in theme.css's
+  // `.light`/`.dark` blocks, the single source of truth. This provider used to also inject the
+  // (stale) JS token map as inline styles, which outranked every stylesheet — the F87 root
+  // cause: CSS-side contrast fixes silently never applied anywhere the provider ran.
   React.useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(resolvedMode);
-
-    // Set CSS custom properties for dynamic theming
-    Object.entries(theme.colors.background).forEach(([key, value]) => {
-      root.style.setProperty(`--color-background-${key}`, value);
-    });
-
-    Object.entries(theme.colors.foreground).forEach(([key, value]) => {
-      root.style.setProperty(`--color-foreground-${key}`, value);
-    });
-
-    Object.entries(theme.colors.brand).forEach(([key, value]) => {
-      root.style.setProperty(`--color-brand-${key}`, value);
-    });
-
-    Object.entries(theme.colors.semantic).forEach(([key, value]) => {
-      root.style.setProperty(`--color-semantic-${key}`, value);
-    });
-
-    Object.entries(theme.colors.game).forEach(([key, value]) => {
-      root.style.setProperty(`--color-game-${key}`, value);
-    });
-
-    Object.entries(theme.colors.border).forEach(([key, value]) => {
-      root.style.setProperty(`--color-border-${key}`, value);
-    });
-  }, [theme, resolvedMode]);
+  }, [resolvedMode]);
 
   const contextValue: ThemeContextValue = {
     theme,

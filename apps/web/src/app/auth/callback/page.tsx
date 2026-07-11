@@ -35,9 +35,10 @@ export default function AuthCallback() {
         'oauth.description': errorDescription ?? undefined,
       });
       setError(errorDescription || t('callback.failed'));
+      // F40 — long enough to actually read the message; home shows a retry banner on arrival.
       setTimeout(() => {
         router.push('/?error=auth_failed');
-      }, 2000);
+      }, 6000);
       return;
     }
 
@@ -48,7 +49,7 @@ export default function AuthCallback() {
         setError(t('callback.timeout'));
         setTimeout(() => {
           router.push('/?error=auth_timeout');
-        }, 2000);
+        }, 6000);
       }
     }, 15000); // 15 second timeout
 

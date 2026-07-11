@@ -94,7 +94,7 @@ Supabase + E2E specifics.
 
 ## Tech Stack
 
-- **Runtime**: Node 20.18.0+, pnpm 9.15.0+
+- **Runtime**: Node 20.19.0+, pnpm 9.15.0+
 - **Frontend**: Next.js 15.3, React 19, TypeScript 5 (strict mode)
 - **Styling**: Tailwind CSS 4 with PostCSS
 - **State**: Zustand 5 (devtools + persist middleware), TanStack Query 5

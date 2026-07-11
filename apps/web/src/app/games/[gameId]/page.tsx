@@ -2,20 +2,25 @@
 
 import { use } from 'react';
 import Link from 'next/link';
+import type { GameState } from '@heist-mind/core';
 import {
+  Badge,
   Button,
   Card,
   Container,
   ErrorDisplay,
   Heading,
   LoadingSpinner,
+  Select,
   Stack,
   Text,
+  Tooltip,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useCharactersByGame } from '@/features/characters/data/queries';
 import { useGameDetail } from '@/features/games/data/queries';
+import { useUpdateGameState } from '@/features/games/data/mutations';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 import { InviteCodeSection } from '@/features/games/components/InviteCodeSection';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
@@ -27,12 +32,16 @@ import { FactionsPanel } from '@/features/factions/components/FactionsPanel';
 import { ScorePanel } from '@/features/scores/components/ScorePanel';
 import { CharacterRoster } from '@/features/characters/components/CharacterRoster';
 
+// The campaign lifecycle, in play order (mirrors core's GameState union).
+const GAME_STATES: GameState[] = ['draft', 'recruiting', 'active', 'paused', 'completed'];
+
 export default function GameDetailPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = use(params);
   const { isAuthenticated, user } = useAuth();
   const { t } = usePageTranslation();
 
   const gameQuery = useGameDetail(gameId);
+  const updateState = useUpdateGameState(gameId);
   const charactersQuery = useCharactersByGame(gameId);
   const game = gameQuery.data ?? null;
   const characters = charactersQuery.data ?? [];
@@ -66,9 +75,37 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           <Heading level='h1' variant='hero'>
             {game.name}
           </Heading>
-          <Text variant='muted'>
-            {game.ruleset.name} · {game.state}
-          </Text>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+            <Text variant='muted'>{game.ruleset.name} ·</Text>
+            {game.createdBy === user?.id ? (
+              // F32 — the GM moves the campaign through its lifecycle right where it's shown.
+              <Tooltip variant='dark' content={t('gamesList.stateLegend')}>
+                <span>
+                  <Select
+                    aria-label={t('game.stateLabel')}
+                    selectSize='sm'
+                    value={game.state}
+                    disabled={updateState.isPending}
+                    onChange={e => {
+                      const userId = user?.id;
+                      if (!userId) return;
+                      updateState.mutate({ userId, state: e.target.value as GameState });
+                    }}
+                  >
+                    {GAME_STATES.map(s => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </Select>
+                </span>
+              </Tooltip>
+            ) : (
+              <Tooltip variant='dark' content={t('gamesList.stateLegend')}>
+                <Badge variant='outline'>{game.state}</Badge>
+              </Tooltip>
+            )}
+          </Stack>
           {game.description && <Text>{game.description}</Text>}
         </Stack>
 

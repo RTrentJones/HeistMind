@@ -13,21 +13,39 @@ import { useTranslation } from '@/lib/i18n/hooks';
 
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 
+// Static (non-template) keys so they stay in the typed TranslationKey union.
+const HARM_LEVEL_KEY = {
+  lesser: 'components.characterEditor.addLesser',
+  moderate: 'components.characterEditor.addModerate',
+  severe: 'components.characterEditor.addSevere',
+} as const;
+
 /**
- * The harm + trauma concept surface — ONE implementation for both modes. Without `edit`, it's the
- * sheet's read view (harm tracker + trauma badges, matching the Condition card). With `edit`, it's
- * the editor's stress-tab section: trauma picked from the ruleset's named conditions (or free text
- * when the ruleset has none) and harm entries added/removed per level; the editor supplies `onPatch`
- * into its validated draft and owns the save.
+ * The harm + trauma concept surface — ONE implementation for all modes. Without `edit`, it's the
+ * sheet's read view (harm tracker + trauma badges, matching the Condition card); add `quick` and
+ * the sheet view grows the in-play one-tap moves (F65): take harm at a level and clear a wound by
+ * clicking its box — both through the ENGINE use-cases the Discord bot drives, so every change
+ * lands in the campaign feed. With `edit`, it's the editor's stress-tab section: trauma picked
+ * from the ruleset's named conditions (or free text when the ruleset has none) and harm entries
+ * added/removed per level; the editor supplies `onPatch` into its validated draft and owns the save.
  */
 export function HarmCard({
   content,
   data,
   edit,
+  quick,
 }: {
   content: RulesetContent;
   data: CharacterData;
   edit?: { onPatch: (patch: Partial<CharacterData>) => void };
+  /** Sheet-face quick actions (owner/GM): engine-backed take/clear, feed-logged. */
+  quick?: {
+    busy: boolean;
+    onTake: (level: keyof CharacterHarm, description: string) => void;
+    onClear: (level: keyof CharacterHarm, description: string) => void;
+    /** F44 — arm the next take to SPEND ARMOR (one level lighter). Hidden when none available. */
+    armor?: { available: number; armed: boolean; onToggle: () => void };
+  };
 }) {
   const { t } = useTranslation();
   const [traumaInput, setTraumaInput] = useState('');
@@ -37,12 +55,63 @@ export function HarmCard({
   const trauma = data.trauma ?? [];
 
   if (!edit) {
+    const takeQuick = (level: keyof CharacterHarm) => {
+      const value = harmInput.trim();
+      if (!value || !quick) return;
+      quick.onTake(level, value);
+      setHarmInput('');
+    };
     return (
       <>
         <div>
           <Text as='strong'>{t('components.characterSheet.harm')}</Text>
-          <HarmTracker harm={harm} bounds={bounds} />
+          <HarmTracker
+            harm={harm}
+            bounds={bounds}
+            {...(quick
+              ? {
+                  onClearEntry: quick.onClear,
+                  clearLabel: (text: string) =>
+                    t('components.characterSheet.clearHarmAria', { name: text }),
+                  disabled: quick.busy,
+                }
+              : {})}
+          />
         </div>
+        {quick && (
+          <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+            <Input
+              size='sm'
+              label={t('components.characterSheet.takeHarmLabel')}
+              placeholder={t('components.characterEditor.harmPlaceholder')}
+              value={harmInput}
+              onChange={e => setHarmInput(e.target.value)}
+            />
+            {(['lesser', 'moderate', 'severe'] as const).map(level => (
+              <Button
+                key={level}
+                variant='outline'
+                size='sm'
+                disabled={!harmInput.trim() || quick.busy}
+                onClick={() => takeQuick(level)}
+              >
+                {t(HARM_LEVEL_KEY[level])}
+              </Button>
+            ))}
+            {quick.armor && quick.armor.available > 0 && (
+              // F44 — armed: the NEXT take spends one armor and lands a level lighter.
+              <Button
+                variant={quick.armor.armed ? 'ember' : 'outline'}
+                size='sm'
+                aria-pressed={quick.armor.armed}
+                disabled={quick.busy}
+                onClick={quick.armor.onToggle}
+              >
+                {t('components.characterSheet.spendArmor', { count: quick.armor.available })}
+              </Button>
+            )}
+          </Stack>
+        )}
         {trauma.length > 0 && (
           <div>
             <Text as='strong'>{t('components.characterSheet.trauma')}</Text>

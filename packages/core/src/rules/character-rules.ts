@@ -11,6 +11,8 @@ import type {
   CharacterXp,
   AbilityDefinition,
   AbilityEffects,
+  EquipmentItem,
+  HarmLevel,
   PlaybookDefinition,
   CreationRestriction,
   StressRules,
@@ -18,6 +20,7 @@ import type {
   LoadLevel,
   ValidationError,
 } from '../domain';
+import { HARM_LEVELS } from '../domain';
 
 /** A minimal crew shape for crew-aware validation — just the abilities the crew currently holds. */
 export interface CrewContext {
@@ -233,6 +236,28 @@ export function harmBounds(ruleset: RulesetContent): HarmRules {
   return ruleset.harm ?? DEFAULT_HARM;
 }
 
+/**
+ * The most serious harm level with a recorded entry ('severe' > 'moderate' > 'lesser'), or null
+ * when unharmed. Drives the RAW penalties a roll surface must show
+ * ([SRD, Harm](https://bladesinthedark.com/harm-healing)): lesser → reduced effect, moderate →
+ * −1d, severe → incapacitated (needs help or push).
+ */
+export function worstHarmLevel(data: Pick<CharacterData, 'harm'>): HarmLevel | null {
+  for (const level of [...HARM_LEVELS].reverse()) {
+    if ((data.harm?.[level] ?? []).length > 0) return level;
+  }
+  return null;
+}
+
+/**
+ * Dice penalty harm applies to an action roll (BitD RAW: any level-2/moderate harm = −1d; lesser
+ * reduces effect and severe incapacitates, neither changes the pool). Each recorded moderate harm
+ * says "−1d", but penalties of the same kind don't stack — the pool loses one die, not one per wound.
+ */
+export function harmDicePenalty(data: Pick<CharacterData, 'harm'>): number {
+  return (data.harm?.moderate ?? []).length > 0 ? 1 : 0;
+}
+
 /** BitD default load capacities, used when a ruleset omits `equipment.loadCapacity`. */
 const DEFAULT_LOAD: Record<LoadLevel, number> = { light: 3, normal: 5, heavy: 6 };
 
@@ -245,6 +270,27 @@ export function loadLimit(ruleset: RulesetContent, level: LoadLevel): number {
 export function loadUsed(ruleset: RulesetContent, data: CharacterData): number {
   const byId = new Map((ruleset.equipment?.items ?? []).map(i => [i.id, i.load ?? 0]));
   return (data.loadout?.items ?? []).reduce((n, id) => n + (byId.get(id) ?? 0), 0);
+}
+
+/**
+ * Whether an equipment item counts as armor for the SPEND-ARMOR move (F44). Rulesets don't carry
+ * a structured armor flag, so this follows the SRD-family naming convention (id or name says
+ * "armor"/"armour") — the same convention every builtin uses.
+ */
+export function isArmorItem(item: EquipmentItem): boolean {
+  return /armou?r/i.test(item.id) || /armou?r/i.test(item.name);
+}
+
+/**
+ * Armor carried in the CURRENT loadout and not yet expended this score (`loadout.armorSpent`).
+ * Armor is per-score: a fresh loadout (new score) writes a fresh `armorSpent`, refreshing it.
+ */
+export function availableArmor(ruleset: RulesetContent, data: CharacterData): EquipmentItem[] {
+  const carried = new Set(data.loadout?.items ?? []);
+  const spent = new Set(data.loadout?.armorSpent ?? []);
+  return (ruleset.equipment?.items ?? []).filter(
+    i => isArmorItem(i) && carried.has(i.id) && !spent.has(i.id)
+  );
 }
 
 /**

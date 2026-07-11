@@ -18,17 +18,17 @@ const headingVariants = cva(
       },
       variant: {
         default: 'text-foreground-primary',
-        primary: 'text-brand-primary',
+        primary: 'text-brand-fg',
         secondary: 'text-foreground-secondary',
         muted: 'text-foreground-muted',
         accent: 'text-brand-accent',
         gradient:
           'bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent bg-clip-text text-transparent',
         hero: 'bg-gradient-to-r from-brand-primary via-brand-accent to-brand-secondary bg-clip-text text-transparent',
-        game: 'text-game-ember',
-        danger: 'text-semantic-error',
-        success: 'text-semantic-success',
-        warning: 'text-semantic-warning',
+        game: 'text-game-ember-fg',
+        danger: 'text-semantic-error-fg',
+        success: 'text-semantic-success-fg',
+        warning: 'text-semantic-warning-fg',
       },
       align: {
         left: 'text-left',

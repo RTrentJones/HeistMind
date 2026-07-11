@@ -185,13 +185,15 @@ export const RealWorldExample: Story = {
         <div className='text-center space-y-8'>
           <div className='space-y-4'>
             <h1 className='text-4xl md:text-6xl font-bold text-foreground-primary'>
-              Welcome to <span className='text-brand-primary'>HeistMind</span>
+              Welcome to <span className='text-brand-fg'>HeistMind</span>
             </h1>
             <p className='text-xl text-foreground-secondary max-w-2xl mx-auto'>
               A complete character management platform for Forged in the Dark tabletop RPGs.
             </p>
           </div>
 
+          {/* Card titles render as h3 — bridge the outline so h1 → h3 doesn't skip a level. */}
+          <h2 className='sr-only'>What HeistMind does</h2>
           <div className='grid md:grid-cols-3 gap-6 mt-12'>
             <Card>
               <CardHeader>
@@ -261,7 +263,7 @@ export const ResponsiveDemo: Story = {
         className='bg-semantic-info/10 border border-semantic-info rounded-lg'
       >
         <div className='py-4'>
-          <h3 className='text-lg font-semibold text-semantic-info'>Mobile First (sm)</h3>
+          <h3 className='text-lg font-semibold text-semantic-info-fg'>Mobile First (sm)</h3>
           <p className='text-foreground-secondary text-sm'>
             Perfect for mobile-first content and narrow forms.
           </p>
@@ -273,7 +275,7 @@ export const ResponsiveDemo: Story = {
         className='bg-semantic-warning/10 border border-semantic-warning rounded-lg'
       >
         <div className='py-4'>
-          <h3 className='text-lg font-semibold text-semantic-warning'>Content Width (2xl)</h3>
+          <h3 className='text-lg font-semibold text-semantic-warning-fg'>Content Width (2xl)</h3>
           <p className='text-foreground-secondary text-sm'>
             Ideal for article content and reading experiences.
           </p>
@@ -285,7 +287,9 @@ export const ResponsiveDemo: Story = {
         className='bg-semantic-success/10 border border-semantic-success rounded-lg'
       >
         <div className='py-4'>
-          <h3 className='text-lg font-semibold text-semantic-success'>Application Width (7xl)</h3>
+          <h3 className='text-lg font-semibold text-semantic-success-fg'>
+            Application Width (7xl)
+          </h3>
           <p className='text-foreground-secondary text-sm'>
             Perfect for full-featured application layouts and dashboards.
           </p>

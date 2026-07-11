@@ -86,7 +86,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toHaveClass('bg-semantic-success/20');
-      expect(badge).toHaveClass('text-semantic-success');
+      expect(badge).toHaveClass('text-semantic-success-fg');
     });
 
     it('applies warning variant styling', () => {
@@ -98,7 +98,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toHaveClass('bg-semantic-warning/20');
-      expect(badge).toHaveClass('text-semantic-warning');
+      expect(badge).toHaveClass('text-semantic-warning-fg');
     });
 
     it('applies info variant styling', () => {
@@ -110,7 +110,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toHaveClass('bg-semantic-info/20');
-      expect(badge).toHaveClass('text-semantic-info');
+      expect(badge).toHaveClass('text-semantic-info-fg');
     });
   });
 
@@ -240,12 +240,15 @@ describe('Badge Component', () => {
     it('supports aria-describedby for additional context', () => {
       render(
         <div>
-          <Badge aria-describedby='badge-description'>New</Badge>
+          <Badge data-testid='badge' aria-describedby='badge-description'>
+            New
+          </Badge>
           <div id='badge-description'>Indicates a new item</div>
         </div>
       );
 
-      const badge = screen.getByRole('status');
+      // No default role (a badge is not a live region) — select by testid instead.
+      const badge = screen.getByTestId('badge');
       expect(badge).toHaveAttribute('aria-describedby', 'badge-description');
     });
 

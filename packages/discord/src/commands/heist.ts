@@ -31,7 +31,10 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
 
   if (sub === 'help') {
     return inline(
-      replyEmbed({ title: copy.helpTitle, description: copy.helpBody(ctx.siteUrl) }, { ephemeral: true })
+      replyEmbed(
+        { title: copy.helpTitle, description: copy.helpBody(ctx.siteUrl) },
+        { ephemeral: true }
+      )
     );
   }
 
@@ -112,7 +115,7 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
     }
 
     if (sub === 'unlink') {
-      const game = await resolveLinkedGame(repos, interaction);
+      const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
       if (!game) return failEphemeral(followUp, copy.notLinked);
       if (!(await isGM(repos, actor.id, game.id))) return failEphemeral(followUp, copy.gmOnly);
       const cleared = await repos.games.setDiscordLink(game.id, null);
@@ -129,9 +132,10 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
     }
 
     if (sub === 'status') {
-      const game = await resolveLinkedGame(repos, interaction);
+      const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
       if (!game) return failEphemeral(followUp, copy.notLinked);
-      if (!(await isMember(repos, actor.id, game.id))) return failEphemeral(followUp, copy.notMember);
+      if (!(await isMember(repos, actor.id, game.id)))
+        return failEphemeral(followUp, copy.notMember);
       const [score, crew, clocks] = await Promise.all([
         repos.scores.findActive(game.id),
         repos.crews.findByGame(game.id),

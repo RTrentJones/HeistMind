@@ -77,6 +77,30 @@ beforeEach(() => {
   store().reset();
 });
 
+describe('contacts (setContact — F12)', () => {
+  const CONTACT = { name: 'Marlane, a fence', description: 'moves hot goods' };
+  const OTHER = { name: 'Kess, a bluecap', description: 'watches the docks' };
+
+  it('picks at most one friend and one rival; repicking replaces; null clears', () => {
+    store().initFromRuleset(POINT_BUY);
+    store().setContact('friend', CONTACT);
+    store().setContact('rival', OTHER);
+    expect(store().draft.contacts).toEqual([
+      { name: CONTACT.name, description: CONTACT.description, relationship: 'friend' },
+      { name: OTHER.name, description: OTHER.description, relationship: 'rival' },
+    ]);
+
+    // Re-picking the friend REPLACES the slot (one per relationship).
+    store().setContact('friend', OTHER);
+    expect(store().draft.contacts.filter(c => c.relationship === 'friend')).toEqual([
+      { name: OTHER.name, description: OTHER.description, relationship: 'friend' },
+    ]);
+
+    store().setContact('rival', null);
+    expect(store().draft.contacts.some(c => c.relationship === 'rival')).toBe(false);
+  });
+});
+
 describe('point-buy affordability (setAttribute)', () => {
   beforeEach(() => {
     store().initFromRuleset(POINT_BUY);

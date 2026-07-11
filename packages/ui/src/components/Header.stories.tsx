@@ -50,7 +50,7 @@ export const Default: Story = {
       <>
         <HeaderBrand>
           <h1 className='text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -78,7 +78,7 @@ export const WithLogo: Story = {
           }
         >
           <h1 className='text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -107,12 +107,13 @@ export const UserAuthenticated: Story = {
           }
         >
           <h1 className='text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
           <div className='flex items-center gap-3'>
-            <Button variant='ghost' size='sm'>
+            {/* Icon-only buttons NEED an aria-label — the icon alone has no accessible name. */}
+            <Button variant='ghost' size='sm' aria-label='Notifications'>
               <Bell className='w-4 h-4' />
             </Button>
             <Badge variant='ember' size='sm'>
@@ -124,7 +125,7 @@ export const UserAuthenticated: Story = {
               </div>
               <span>Shadow McKenzie</span>
             </div>
-            <Button variant='ghost' size='sm'>
+            <Button variant='ghost' size='sm' aria-label='Settings'>
               <Settings className='w-4 h-4' />
             </Button>
           </div>
@@ -137,7 +138,9 @@ export const UserAuthenticated: Story = {
 export const VariantShowcase: Story = {
   render: () => (
     <div className='space-y-8 bg-background-primary min-h-screen'>
-      <Header variant='default'>
+      {/* A real page has ONE banner. A gallery of headers demos the visuals, so all but the
+          first opt out of the banner landmark (distinctly-labeled regions instead). */}
+      <Header variant='default' aria-label='Default header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Default Header</h2>
         </HeaderBrand>
@@ -148,7 +151,7 @@ export const VariantShowcase: Story = {
         </HeaderActions>
       </Header>
 
-      <Header variant='glass'>
+      <Header variant='glass' role='region' aria-label='Glass header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Glass Header</h2>
         </HeaderBrand>
@@ -159,7 +162,7 @@ export const VariantShowcase: Story = {
         </HeaderActions>
       </Header>
 
-      <Header variant='solid'>
+      <Header variant='solid' role='region' aria-label='Solid header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Solid Header</h2>
         </HeaderBrand>
@@ -170,7 +173,7 @@ export const VariantShowcase: Story = {
         </HeaderActions>
       </Header>
 
-      <Header variant='floating'>
+      <Header variant='floating' role='region' aria-label='Floating header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Floating Header</h2>
         </HeaderBrand>
@@ -202,7 +205,8 @@ export const VariantShowcase: Story = {
 export const SizeVariants: Story = {
   render: () => (
     <div className='space-y-8 bg-background-primary min-h-screen'>
-      <Header size='sm'>
+      {/* Same one-banner rule as VariantShowcase above. */}
+      <Header size='sm' aria-label='Small header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Small Header</h2>
         </HeaderBrand>
@@ -213,7 +217,7 @@ export const SizeVariants: Story = {
         </HeaderActions>
       </Header>
 
-      <Header size='default'>
+      <Header size='default' role='region' aria-label='Default-size header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Default Header</h2>
         </HeaderBrand>
@@ -224,7 +228,7 @@ export const SizeVariants: Story = {
         </HeaderActions>
       </Header>
 
-      <Header size='lg'>
+      <Header size='lg' role='region' aria-label='Large header'>
         <HeaderBrand>
           <h2 className='text-lg font-semibold'>Large Header</h2>
         </HeaderBrand>
@@ -265,7 +269,7 @@ export const ClickableBrand: Story = {
           }
         >
           <h1 className='text-xl font-bold'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -301,7 +305,7 @@ export const ComplexNavigation: Story = {
         >
           <div>
             <h1 className='text-lg font-bold text-foreground-primary'>
-              <span className='text-brand-primary'>Heist</span>Mind
+              <span className='text-brand-fg'>Heist</span>Mind
             </h1>
             <p className='text-xs text-foreground-muted'>Character Manager</p>
           </div>
@@ -361,7 +365,7 @@ export const ResponsiveExample: Story = {
           }
         >
           <h1 className='text-lg md:text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>

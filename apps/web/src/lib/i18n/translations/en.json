@@ -185,6 +185,7 @@
       "createCharacter": "Create character",
       "stepsLabel": "Creation steps",
       "cantContinue": "Can't continue yet —",
+      "cancelConfirm": "Leave? Draft saved — click again",
       "stepNumber": "STEP {{num}}",
       "summary": {
         "ariaLabel": "Character summary",
@@ -204,7 +205,8 @@
       },
       "playbook": {
         "empty": "This ruleset has no playbooks defined.",
-        "startsWith": "Starts with {{abilities}}"
+        "startsWith": "Starts with {{abilities}}",
+        "switchWarning": "Switch to {{playbook}}? Your assigned dots and ability picks reset — click it again to confirm."
       },
       "actionRatings": {
         "empty": "This ruleset has no actions defined.",
@@ -239,7 +241,12 @@
         "backgroundHelp": "The life they led before the crew found them.",
         "viceLabel": "Vice",
         "vicePlaceholder": "e.g. how they unwind between jobs",
-        "viceHelp": "How they blow off stress when the score is done."
+        "viceHelp": "How they blow off stress when the score is done.",
+        "contactsHeading": "Friends & rivals",
+        "contactsHelp": "Pick a close friend and a rival from your playbook's circle — part of who your scoundrel is.",
+        "contactNone": "— none yet —",
+        "friendLabel": "Close friend",
+        "rivalLabel": "Rival"
       },
       "choice": {
         "empty": "Nothing to choose for this step.",
@@ -271,6 +278,7 @@
       "xpBadge": "{{xp}} XP",
       "addXp": "Add XP",
       "attributes": "Attributes",
+      "attributesDerived": "Derived from action ratings (actions rated 1+) — these are your resistance dice.",
       "noPoints": "No points assigned.",
       "specialAbilities": "Special Abilities",
       "tier": "Tier {{tier}}",
@@ -280,11 +288,27 @@
       "harm": "Harm",
       "trauma": "Trauma",
       "experience": "Experience",
-      "markXpPre": "Mark XP as you play. When a track fills, open ",
-      "markXpBold": "Edit build → Advancement",
-      "markXpPost": " to clear it and take an advance.",
+      "markXpPre": "Mark XP as you play. When a track fills, hit ",
+      "markXpBold": "Take advance",
+      "markXpPost": " to spend it on a new ability or action dot.",
       "playbook": "Playbook",
       "fullReadyToAdvance": "Full — ready to advance",
+      "takeAdvance": "Take advance",
+      "markXpAria": "Mark {{count}} XP",
+      "unmarkXpAria": "Unmark — back to {{count}} XP",
+      "logXpMarkTrack": "Marked {{count}} XP — {{track}}",
+      "logXpUnmarkTrack": "Removed {{count}} XP — {{track}}",
+      "standaloneBanner": "Standalone character — not in a campaign yet. Bring it to one from the card below.",
+      "takeHarmLabel": "Take harm",
+      "clearHarmAria": "Clear harm: {{name}}",
+      "logHarmTaken": "Took {{level}} harm: {{description}}",
+      "logHarmCleared": "Cleared harm: {{description}}",
+      "harmEscalated": "That track was full — the harm escalated to {{level}}.",
+      "harmFailed": "Couldn't update harm",
+      "spendArmor": "Spend armor ({{count}} left)",
+      "harmAbsorbed": "Armor spent — the harm glanced off. Nothing marked.",
+      "harmArmorReduced": "Armor spent — it landed one level lighter, at {{level}}.",
+      "logHarmAbsorbed": "Spent armor — absorbed the harm: {{description}}",
       "gearAndCoin": "Gear & Coin",
       "loadBadge": "{{level}} load · {{used}}/{{limit}}",
       "coin": "{{coins}} coin",
@@ -293,7 +317,11 @@
       "friendsRivals": "Friends & Rivals",
       "friend": "Friend: {{name}}",
       "rival": "Rival: {{name}}",
-      "dice": "Dice"
+      "dice": "Dice",
+      "quickNav": "Sheet sections",
+      "quickCondition": "Condition",
+      "quickDice": "Dice",
+      "quickXp": "XP & gear"
     },
     "characterEditor": {
       "tabBuild": "Build",
@@ -310,6 +338,7 @@
       "vice": "Vice",
       "attributes": "Attributes",
       "attributesNote": "Bounded by each attribute's cap. Raising attributes during play is done through Advancement.",
+      "attributesDerivedNote": "Derived from action ratings — an attribute counts its actions rated 1+. Raise them by advancing action dots (Advancement tab).",
       "saveBuild": "Save build",
       "stress": "Stress",
       "stressMaxed": "Stress is maxed — take a trauma.",
@@ -412,10 +441,35 @@
       "bargainPlaceholder": "The complication you accept…",
       "pushedNote": "Pushed (+1d, 2 stress)",
       "bargainNote": "Devil's bargain: {{note}}",
-      "bargainNoteEmpty": "Devil's bargain (+1d)"
+      "bargainNoteEmpty": "Devil's bargain (+1d)",
+      "waiveHarm": "Waive harm penalty",
+      "assistLabel": "Assist",
+      "assistNone": "No assist",
+      "assistOption": "Assist: {{name}} (+1d, they mark 1 stress)",
+      "assistNote": "Assisted by {{name}} (+1d — they mark 1 stress)",
+      "fortuneTypeLabel": "Fortune type",
+      "fortuneType": {
+        "fortune": "Fortune",
+        "engagement": "Engagement",
+        "gatherInfo": "Gather information"
+      },
+      "fortuneReading": {
+        "crit": "Critical — exceptional: the best possible start, detail, or luck.",
+        "success": "6 — good: it goes well / you get solid, reliable information.",
+        "partial": "4–5 — mixed: it works with a complication / the picture is incomplete.",
+        "bad": "1–3 — poor: a bad break / vague or troubling information."
+      },
+      "consequenceHint": "Consequences land on a partial or worse — the GM can tick a clock, add heat, or deal harm (take it on your sheet); you can resist:",
+      "consequenceResist": "Resist a consequence",
+      "harmPenaltyNote": "−1d (moderate harm)",
+      "harmModerateHint": "Moderate harm — this roll loses 1 die.",
+      "harmWaivedHint": "Harm penalty waived — the GM ruled the wound doesn't hinder this action.",
+      "harmLesserHint": "Lesser harm — expect reduced effect.",
+      "harmSevereHint": "Severe harm — you can't act without help or pushing yourself."
     },
     "rollLog": {
       "empty": "No rolls yet.",
+      "zeroDice": "0d — rolled 2, took the lowest",
       "justNow": "just now",
       "minutesAgo": "{{count}}m ago",
       "hoursAgo": "{{count}}h ago",
@@ -470,6 +524,7 @@
       "failedDetach": "Couldn't remove the character from the campaign."
     },
     "scorePanel": {
+      "loading": "Loading scores…",
       "loadFailed": "Could not load scores.",
       "startFailed": "Could not start the score.",
       "endFailed": "Could not end the score.",
@@ -500,6 +555,7 @@
       "saveFailed": "Couldn't save the loadout ({{message}}) — your picks are kept, try again."
     },
     "clocksPanel": {
+      "loading": "Loading clocks…",
       "loadFailed": "Failed to load clocks",
       "createFailed": "Failed to create clock",
       "updateFailed": "Failed to update clock",
@@ -537,9 +593,14 @@
       "advanceTier": "Advance to Tier {{tier}} (spend 12 Rep)",
       "incarcerate": "Incarcerated (−1 Wanted, clear Heat)",
       "advancementXp": "Advancement",
-      "xpFraction": "{{xp}} / {{total}}",
+      "xpReady": "Full — ready to advance",
       "takeCrewAdvance": "Take advance (reset XP)",
-      "advanceReadyHint": "Track full — take a new crew ability below, then reset.",
+      "markCrewXpAria": "Mark {{count}} crew XP",
+      "unmarkCrewXpAria": "Unmark — back to {{count}} crew XP",
+      "logCrewXpNote": "Crew XP {{xp}}/{{total}}",
+      "logCrewAdvanceNote": "Crew advance taken — new crew ability unlocked",
+      "advanceTakenNotice": "Advance taken — pick a new crew ability below.",
+      "advanceReadyHint": "Track full — take the advance, then pick a new crew ability below.",
       "crewXpHint": "Mark XP when you pull off a smart operation, contend with a greater foe, bolster your reputation, or express the crew's nature.",
       "holdLabel": "Hold: {{value}}",
       "holdStrong": "strong",
@@ -567,6 +628,8 @@
       "logIncarcerateNote": "Incarceration — heat cleared, wanted {{wanted}}"
     },
     "factionsPanel": {
+      "loading": "Loading factions…",
+      "atWarHint": "At war — the crew loses its downtime safety and every score runs hotter.",
       "loadFailed": "Failed to load factions",
       "addFailed": "Failed to add faction",
       "updateFailed": "Update failed",
@@ -597,8 +660,18 @@
       "addClock": "Add clock"
     },
     "downtime": {
+      "flashback": {
+        "label": "Flashback",
+        "placeholder": "What did you set up in advance?",
+        "stressLabel": "Flashback stress cost",
+        "stressOption": "{{count}} stress",
+        "action": "Flash back",
+        "logNote": "Flashback ({{count}} stress): {{text}}",
+        "failed": "Couldn't record the flashback"
+      },
       "indulgeVice": {
         "action": "Indulge vice (clear stress)",
+        "confirm": "Roll it? Click again to indulge",
         "viceLabel": "Vice: {{vice}}",
         "logLabel": "Indulged vice — cleared {{count}} stress",
         "overindulged": "Overindulged — you cleared more stress than you had. The GM picks a consequence: attract trouble, brag (+2 heat), go lost for a while, or get cut off by your purveyor.",
@@ -611,13 +684,19 @@
       "refreshFailed": "Failed to refresh the ruleset.",
       "addFailed": "Failed to add the ruleset.",
       "addTitle": "Creates an editable copy of {{name}} in your rulesets.",
-      "addCta": "Add {{name}} to my rulesets"
+      "addCta": "Add {{name}} to my rulesets",
+      "refreshCta": "Refresh my {{name}} copy",
+      "alreadyAdded": "In your rulesets"
     },
     "starterCatalog": {
       "footnote": "Each loads as an editable copy you own; loading one again refreshes it to the latest bundle."
     }
   },
   "auth": {
+    "banner": {
+      "authFailed": "Sign-in didn't complete — Discord reported an error. Use the Sign In button above to try again.",
+      "authTimeout": "Sign-in timed out before Discord answered. Use the Sign In button above to try again."
+    },
     "gate": {
       "heading": "Sign in to continue",
       "signInCta": "Sign In with Discord"
@@ -748,7 +827,8 @@
         "pbp": {
           "title": "Play-by-post on Discord",
           "body": "The async mechanical layer for your game, live in your server: sheet-rated rolls, stress, harm, XP, clocks, and GM controls as slash commands. Link a channel to your campaign and every command lands in the score-grouped campaign log as the story unfolds.",
-          "tag": "Like Avrae for D&D — but built for Forged in the Dark."
+          "tag": "Like Avrae for D&D — but built for Forged in the Dark.",
+          "guideLink": "How the bot works — commands & getting started →"
         }
       },
       "pillars": {
@@ -853,6 +933,7 @@
       "meta": "{{playbook}} · {{campaign}}",
       "open": "Open",
       "duplicate": "Duplicate",
+      "duplicated": "Duplicated — “{{name}}” is ready.",
       "copyName": "{{name}} (copy)",
       "newCharacter": "New character",
       "empty": "No characters yet. Build a standalone scoundrel and bring it to any table.",
@@ -933,7 +1014,8 @@
       "factionsHeading": "Factions",
       "scoreHeading": "Score",
       "rollLogHeading": "Roll Log",
-      "fortuneRoll": "Fortune / GM roll",
+      "stateLabel": "Campaign state",
+      "fortuneRoll": "Fortune roll — anyone at the table (the GM's odds die, but players roll gather-info and the like too):",
       "recordResult": "Record a result settled in person or on Discord:",
       "backToCampaign": "← Back to campaign"
     }

@@ -90,7 +90,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </label>
         )}
         {control}
-        {error && <p className='text-sm text-semantic-error'>{error}</p>}
+        {error && <p className='text-sm text-semantic-error-fg'>{error}</p>}
       </div>
     );
   }

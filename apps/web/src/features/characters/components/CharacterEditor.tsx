@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   clampStress,
+  deriveAttributes,
   stressBounds,
+  usesActionRatings,
   usesXpTracks,
   xpTrackSize,
   xpMarks,
@@ -42,12 +44,21 @@ type Section = 'build' | 'stress' | 'gear' | 'advancement';
  * config. Writes invalidate the character queries, so the sheet's detail query refetches and the
  * fresh `character` prop resyncs the draft below — no save callback needed.
  */
-export function CharacterEditor({ character }: { character: CharacterWithDetails }) {
+export function CharacterEditor({
+  character,
+  initialSection = 'build',
+}: {
+  character: CharacterWithDetails;
+  /** Which tab opens first — the sheet's "Take advance" CTA jumps straight to `advancement`. */
+  initialSection?: Section;
+}) {
   const { t } = useTranslation();
   const content = character.ruleset.content;
   const bounds = stressBounds(content);
 
-  const [section, setSection] = useState<Section>('build');
+  const [section, setSection] = useState<Section>(initialSection);
+  // Follow a changed request from the opener (e.g. editor open on Build, then "Take advance").
+  useEffect(() => setSection(initialSection), [initialSection]);
   const [draft, setDraft] = useState<CharacterData>(() => structuredClone(character.characterData));
 
   // The campaign's crew, so level-ups validate in context: its abilities RAISE the live bounds —
@@ -92,8 +103,7 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
   // the editor does NOT own it, so every save carries the LIVE value. Otherwise a draft based on
   // a pre-refetch snapshot (the dirty-guard above keeps it, by design) would silently wipe a
   // loadout the sheet saved moments earlier: a full-object write from a stale base.
-  const saveDraft = () =>
-    void saveBuild({ ...draft, loadout: character.characterData.loadout });
+  const saveDraft = () => void saveBuild({ ...draft, loadout: character.characterData.loadout });
 
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const playbookContacts = playbook?.contacts ?? [];
@@ -142,29 +152,48 @@ export function CharacterEditor({ character }: { character: CharacterWithDetails
             </Stack>
 
             <Heading level='h3'>{t('components.characterEditor.attributes')}</Heading>
-            <Text variant='muted' size='sm'>
-              {t('components.characterEditor.attributesNote')}
-            </Text>
-            {content.attributes.map(attr => (
-              <Card key={attr.id} variant='default'>
-                <div className='flex flex-wrap items-center justify-between gap-2.5'>
-                  <span className='font-display' style={{ fontSize: 18 }}>
-                    {attr.name}
-                  </span>
-                </div>
-                <StressTracker
-                  current={draft.attributes[attr.id] ?? 0}
-                  max={attr.maxValue ?? 4}
-                  interactive
-                  showNumbers
-                  showLabel={false}
-                  size='lg'
-                  onChange={v =>
-                    patch({ attributes: { ...draft.attributes, [attr.id]: Math.max(0, v) } })
-                  }
-                />
-              </Card>
-            ))}
+            {usesActionRatings(content) ? (
+              // F23 — on action-rating rulesets attributes are DERIVED (actions rated 1+), so the
+              // editor shows them locked: raising them means raising action dots (Advancement tab).
+              <>
+                <Text variant='muted' size='sm'>
+                  {t('components.characterEditor.attributesDerivedNote')}
+                </Text>
+                <Stack direction='row' gap='sm' className='flex-wrap'>
+                  {content.attributes.map(attr => (
+                    <Badge key={attr.id} variant='steel' data-testid={`editor-attr-${attr.id}`}>
+                      {attr.name} {deriveAttributes(content, draft)[attr.id] ?? 0}
+                    </Badge>
+                  ))}
+                </Stack>
+              </>
+            ) : (
+              <>
+                <Text variant='muted' size='sm'>
+                  {t('components.characterEditor.attributesNote')}
+                </Text>
+                {content.attributes.map(attr => (
+                  <Card key={attr.id} variant='default'>
+                    <div className='flex flex-wrap items-center justify-between gap-2.5'>
+                      <span className='font-display' style={{ fontSize: 18 }}>
+                        {attr.name}
+                      </span>
+                    </div>
+                    <StressTracker
+                      current={draft.attributes[attr.id] ?? 0}
+                      max={attr.maxValue ?? 4}
+                      interactive
+                      showNumbers
+                      showLabel={false}
+                      size='lg'
+                      onChange={v =>
+                        patch({ attributes: { ...draft.attributes, [attr.id]: Math.max(0, v) } })
+                      }
+                    />
+                  </Card>
+                ))}
+              </>
+            )}
 
             <Button variant='ember' onClick={saveDraft} loading={saving}>
               {t('components.characterEditor.saveBuild')}

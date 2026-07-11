@@ -396,11 +396,16 @@ export const FormLayout: Story = {
         </div>
 
         <Stack gap='md'>
+          {/* htmlFor/id pairing — a visually adjacent label is not an ACCESSIBLE label. */}
           <div>
-            <label className='block text-sm font-medium text-foreground-primary mb-1'>
+            <label
+              htmlFor='form-layout-name'
+              className='block text-sm font-medium text-foreground-primary mb-1'
+            >
               Character Name
             </label>
             <input
+              id='form-layout-name'
               type='text'
               className='w-full px-3 py-2 border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary'
               placeholder='Enter character name'
@@ -408,10 +413,16 @@ export const FormLayout: Story = {
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-foreground-primary mb-1'>
+            <label
+              htmlFor='form-layout-class'
+              className='block text-sm font-medium text-foreground-primary mb-1'
+            >
               Character Class
             </label>
-            <select className='w-full px-3 py-2 border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary'>
+            <select
+              id='form-layout-class'
+              className='w-full px-3 py-2 border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary'
+            >
               <option>Select a class</option>
               <option>Lurk</option>
               <option>Cutter</option>
@@ -421,10 +432,14 @@ export const FormLayout: Story = {
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-foreground-primary mb-1'>
+            <label
+              htmlFor='form-layout-background'
+              className='block text-sm font-medium text-foreground-primary mb-1'
+            >
               Background
             </label>
             <textarea
+              id='form-layout-background'
               className='w-full px-3 py-2 border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary'
               rows={3}
               placeholder='Character background and history'

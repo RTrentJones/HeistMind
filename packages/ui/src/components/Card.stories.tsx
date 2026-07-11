@@ -158,7 +158,7 @@ export const CharacterCard: Story = {
               <div className='text-xs text-foreground-muted'>Survey</div>
             </div>
             <div className='text-center'>
-              <div className='text-2xl font-bold text-semantic-success'>4</div>
+              <div className='text-2xl font-bold text-semantic-success-fg'>4</div>
               <div className='text-xs text-foreground-muted'>Finesse</div>
             </div>
           </div>
@@ -193,11 +193,11 @@ export const GameThemed: Story = {
         <CardContent>
           <div className='space-y-3'>
             <div className='flex items-center gap-2'>
-              <Crown className='w-4 h-4 text-semantic-warning' />
+              <Crown className='w-4 h-4 text-semantic-warning-fg' />
               <span className='text-sm'>Target: The Brackwater Vault</span>
             </div>
             <div className='flex items-center gap-2'>
-              <Target className='w-4 h-4 text-semantic-error' />
+              <Target className='w-4 h-4 text-semantic-error-fg' />
               <span className='text-sm'>Security Level: High</span>
             </div>
             <div className='flex items-center gap-2'>
@@ -217,7 +217,7 @@ export const GameThemed: Story = {
           <CardDescription>High-risk situation detected</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-semantic-error'>
+          <p className='text-sm text-semantic-error-fg'>
             The City Watch is closing in. Your crew needs to make a quick escape or face the
             consequences.
           </p>
@@ -234,7 +234,7 @@ export const GameThemed: Story = {
           <CardDescription>Mission accomplished</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-semantic-success'>
+          <p className='text-sm text-semantic-success-fg'>
             The heist was a success! Your crew has gained reputation and coin.
           </p>
         </CardContent>
@@ -407,7 +407,7 @@ export const ThemeShowcase: Story = {
           </CardHeader>
           <CardContent>
             <div className='flex items-center gap-2'>
-              <Sword className='w-4 h-4 text-game-ember' />
+              <Sword className='w-4 h-4 text-game-ember-fg' />
               <span className='text-sm'>Combat Ready</span>
             </div>
           </CardContent>

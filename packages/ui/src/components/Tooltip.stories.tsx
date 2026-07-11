@@ -220,7 +220,7 @@ export const GameSpecific: Story = {
         </div>
 
         <div className='space-y-4'>
-          <h3 className='text-lg font-semibold text-semantic-error'>Action Tooltips</h3>
+          <h3 className='text-lg font-semibold text-semantic-error-fg'>Action Tooltips</h3>
 
           <div className='flex flex-wrap gap-3'>
             <ActionTooltip
@@ -259,20 +259,21 @@ export const WithIcons: Story = {
   render: () => (
     <TooltipProvider>
       <div className='flex gap-4 p-6 bg-background-primary rounded-lg'>
+        {/* Icon-only triggers still need aria-labels — the tooltip only shows on hover/focus. */}
         <Tooltip content='Get help with this feature' variant='glass'>
-          <Button variant='ghost' size='icon'>
+          <Button variant='ghost' size='icon' aria-label='Help'>
             <HelpCircle className='w-4 h-4' />
           </Button>
         </Tooltip>
 
         <Tooltip content='Important information about this setting' variant='ember'>
-          <Button variant='ghost' size='icon'>
+          <Button variant='ghost' size='icon' aria-label='Information'>
             <Info className='w-4 h-4' />
           </Button>
         </Tooltip>
 
         <Tooltip content='Warning: This action cannot be undone' variant='crimson'>
-          <Button variant='ghost' size='icon'>
+          <Button variant='ghost' size='icon' aria-label='Warning'>
             <AlertCircle className='w-4 h-4' />
           </Button>
         </Tooltip>

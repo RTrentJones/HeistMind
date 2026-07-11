@@ -37,16 +37,6 @@ export async function resolveActor(
   return found.data;
 }
 
-/** Whether the actor owns the character (creator = owner; the GM route arrives in Phase 2/3). */
-export async function ownsCharacter(
-  repos: DatabaseRepositories,
-  actorId: string,
-  characterId: string
-): Promise<boolean> {
-  const found = await repos.characters.findById(characterId);
-  return found.success && !!found.data && found.data.createdBy === actorId;
-}
-
 /** Whether the actor is an ACTIVE member of the campaign (players + the GM alike). */
 export async function isMember(
   repos: DatabaseRepositories,
@@ -54,10 +44,7 @@ export async function isMember(
   gameId: string
 ): Promise<boolean> {
   const members = await repos.gamePlayers.findByGame(gameId);
-  return (
-    members.success &&
-    members.data.some(m => m.playerId === actorId && m.status === 'active')
-  );
+  return members.success && members.data.some(m => m.playerId === actorId && m.status === 'active');
 }
 
 /** Whether the actor runs the campaign — the GM-only command gate. */

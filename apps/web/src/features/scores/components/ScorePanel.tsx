@@ -28,10 +28,14 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
   const active = scores.find(s => s.status === 'active') ?? null;
   const recent = scores.filter(s => s.status === 'completed').slice(0, RECENT_SCORES_SHOWN);
   const busy = startScoreMut.isPending || endScoreMut.isPending;
+  // F60 — friendly lead, raw repository message as detail.
   const shownError =
     error ??
-    scoresQuery.error?.message ??
-    (scoresQuery.isError ? t('components.scorePanel.loadFailed') : null);
+    (scoresQuery.isError
+      ? `${t('components.scorePanel.loadFailed')}${
+          scoresQuery.error?.message ? ` — ${scoresQuery.error.message}` : ''
+        }`
+      : null);
 
   // Start/end are ENGINE use-cases: the score lifecycle and its campaign-log event happen in one
   // sequenced operation — the panel just supplies the localized copy for the feed entry.
@@ -49,7 +53,11 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
       });
       setName('');
     } catch (e) {
-      setError((e as Error).message ?? t('components.scorePanel.startFailed'));
+      setError(
+        `${t('components.scorePanel.startFailed')}${
+          (e as Error).message ? ` — ${(e as Error).message}` : ''
+        }`
+      );
     }
   };
 
@@ -65,9 +73,23 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
         logNote: t('components.scorePanel.endedNote'),
       });
     } catch (e) {
-      setError((e as Error).message ?? t('components.scorePanel.endFailed'));
+      setError(
+        `${t('components.scorePanel.endFailed')}${
+          (e as Error).message ? ` — ${(e as Error).message}` : ''
+        }`
+      );
     }
   };
+
+  // F74 — guard the initial load so the "no active score" state doesn't flash before the first
+  // fetch resolves.
+  if (scoresQuery.isLoading) {
+    return (
+      <Text variant='muted' size='sm'>
+        {t('components.scorePanel.loading')}
+      </Text>
+    );
+  }
 
   return (
     <Stack direction='column' gap='sm'>

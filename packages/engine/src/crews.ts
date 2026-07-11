@@ -1,7 +1,16 @@
 // Crew progression use-cases: the rule-driven crew mutations (heat cascade, tier advance,
-// incarceration) each persist the computed state AND log a 'crew' event to the campaign feed —
-// previously the web computed these inline and the change never reached the shared log.
-import { applyHeat, advanceTier, incarcerate, type Crew, type Result } from '@heist-mind/core';
+// incarceration, advancement XP) each persist the computed state AND log a 'crew' event to the
+// campaign feed — previously the web computed these inline and the change never reached the
+// shared log.
+import {
+  applyHeat,
+  advanceTier,
+  crewAdvanceReady,
+  incarcerate,
+  withCrewXp,
+  type Crew,
+  type Result,
+} from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
 
 interface CrewLogInput {
@@ -16,7 +25,7 @@ interface CrewLogInput {
 async function updateAndLog(
   repos: DatabaseRepositories,
   input: CrewLogInput,
-  patch: Partial<Pick<Crew, 'heat' | 'wanted' | 'tier' | 'rep'>>
+  patch: Partial<Pick<Crew, 'heat' | 'wanted' | 'tier' | 'rep' | 'resources'>>
 ): Promise<Result<Crew>> {
   const updated = await repos.crews.update(input.crew.id, patch);
   if (!updated.success) return updated;
@@ -62,4 +71,38 @@ export function incarcerateCrew(
 ): Promise<Result<Crew>> {
   const next = incarcerate({ heat: input.crew.heat, wanted: input.crew.wanted });
   return updateAndLog(repos, input, next);
+}
+
+export interface MarkCrewXpInput extends CrewLogInput {
+  /** The new crew-XP value (set-to, matching the clickable track; clamped to [0, 8] in core). */
+  xp: number;
+}
+
+/**
+ * Set the crew's advancement-XP track (BitD crew XP) and log the change to the feed — the crew's
+ * XP marks are shared table state, so every player sees why the track moved.
+ */
+export function markCrewXp(
+  repos: DatabaseRepositories,
+  input: MarkCrewXpInput
+): Promise<Result<Crew>> {
+  return updateAndLog(repos, input, { resources: withCrewXp(input.crew.resources, input.xp) });
+}
+
+/**
+ * Spend a FULL crew advancement track: reset it to 0 and log the advance (BitD: the crew takes a
+ * new crew ability/upgrade). Refuses when the track isn't full — the write path enforces the rule,
+ * not just the button's visibility.
+ */
+export function takeCrewAdvance(
+  repos: DatabaseRepositories,
+  input: CrewLogInput
+): Promise<Result<Crew>> {
+  if (!crewAdvanceReady(input.crew.resources)) {
+    return Promise.resolve({
+      success: false,
+      error: { message: 'Crew advancement track is not full' },
+    });
+  }
+  return updateAndLog(repos, input, { resources: withCrewXp(input.crew.resources, 0) });
 }

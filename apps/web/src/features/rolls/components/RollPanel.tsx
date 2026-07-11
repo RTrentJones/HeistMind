@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { harmDicePenalty, worstHarmLevel, type CharacterHarm } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
@@ -44,14 +45,39 @@ const MODE_KEY = {
  * campaign's log. Dice are realized client-side; the repository recomputes the outcome from the
  * faces. A resistance roll also applies the stress it costs to the resisting character.
  */
+// Fortune-roll flavors (F46): all fortune mechanically, but the LABEL tells the table what was
+// asked, and the readout interprets the tiers the way the SRD phrases them.
+const FORTUNE_TYPES = ['fortune', 'engagement', 'gatherInfo'] as const;
+type FortuneType = (typeof FORTUNE_TYPES)[number];
+const FORTUNE_TYPE_KEY = {
+  fortune: 'components.rollPanel.fortuneType.fortune',
+  engagement: 'components.rollPanel.fortuneType.engagement',
+  gatherInfo: 'components.rollPanel.fortuneType.gatherInfo',
+} as const;
+const FORTUNE_READING_KEY = {
+  crit: 'components.rollPanel.fortuneReading.crit',
+  success: 'components.rollPanel.fortuneReading.success',
+  partial: 'components.rollPanel.fortuneReading.partial',
+  bad: 'components.rollPanel.fortuneReading.bad',
+} as const;
+
 export function RollPanel({
   gameId,
   characterId,
   actions,
+  attributes,
+  harm,
+  teammates,
 }: {
   gameId: string;
   characterId?: string;
   actions?: ActionOption[];
+  /** The character's ATTRIBUTE ratings — RAW, resistance rolls the attribute, not an action (F23). */
+  attributes?: ActionOption[];
+  /** The rolling character's harm — surfaces the RAW penalties on action rolls (F43). */
+  harm?: CharacterHarm;
+  /** Campaign teammates for the ASSIST move (F10): +1d, the helper marks 1 stress. */
+  teammates?: { id: string; name: string }[];
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -59,10 +85,13 @@ export function RollPanel({
   const resistanceRoll = useResistanceRoll(gameId);
   const hasActions = !!actions?.length;
   const canResist = !!characterId;
-  // Resistance is rolled against the character's own ratings when we have them, else the BitD trio.
-  const resistOptions: ActionOption[] = hasActions
-    ? actions
-    : STANDARD_ATTRIBUTES.map(name => ({ name, rating: 0 }));
+  // Resistance rolls the character's ATTRIBUTES when provided (RAW; derived on action-rating
+  // rulesets), falling back to action ratings, else the BitD trio at 0 (zero-dice).
+  const resistOptions: ActionOption[] = attributes?.length
+    ? attributes
+    : hasActions
+      ? actions
+      : STANDARD_ATTRIBUTES.map(name => ({ name, rating: 0 }));
   const modes: RollMode[] = [
     ...(hasActions ? (['action'] as const) : []),
     'fortune',
@@ -73,6 +102,9 @@ export function RollPanel({
   const [action, setAction] = useState(actions?.[0]?.name ?? '');
   const [resist, setResist] = useState(resistOptions[0]?.name ?? '');
   const [fortune, setFortune] = useState(1);
+  const [fortuneType, setFortuneType] = useState<FortuneType>('fortune');
+  // F10 — the assisting teammate's character id ('' = rolling alone).
+  const [assistId, setAssistId] = useState('');
   const [position, setPosition] = useState('risky');
   const [effect, setEffect] = useState('standard');
   // BitD pre-roll dice moves (action rolls only): push yourself (+1d for 2 stress) and a devil's
@@ -80,11 +112,19 @@ export function RollPanel({
   const [push, setPush] = useState(false);
   const [bargain, setBargain] = useState(false);
   const [bargainNote, setBargainNote] = useState('');
+  // F43 — harm penalties, RAW (SRD, Harm): moderate harm = −1d on action rolls (applied by
+  // default, waivable when the table rules otherwise), lesser = reduced effect (surfaced),
+  // severe = can't act without help or pushing (surfaced).
+  const worstHarm = harm ? worstHarmLevel({ harm }) : null;
+  const harmPenalty = harm ? harmDicePenalty({ harm }) : 0;
+  const [waiveHarm, setWaiveHarm] = useState(false);
+  const appliedHarmPenalty = waiveHarm ? 0 : harmPenalty;
   const [rolling, setRolling] = useState(false);
   const [last, setLast] = useState<{
     outcome: keyof typeof OUTCOME_KEY;
     results: number[];
     stress?: number;
+    kind?: RollMode;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,13 +158,25 @@ export function RollPanel({
 
       const isActionRoll = mode === 'action';
       const rating = isActionRoll ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune;
-      // Push and devil's bargain each add a die to an action roll (a 0-pool still rolls 2
-      // take-lowest) — the pool math is the pure, unit-tested `rollPool`.
-      const { count, zeroDice } = rollPool({ mode, rating, push, bargain, fortune });
+      const assistant = isActionRoll ? (teammates?.find(tm => tm.id === assistId) ?? null) : null;
+      // Push, devil's bargain, and an assist each add a die; moderate harm costs one (a 0-pool
+      // still rolls 2 take-lowest) — the pool math is the pure, unit-tested `rollPool`.
+      const { count, zeroDice } = rollPool({
+        mode,
+        rating,
+        push,
+        bargain,
+        assist: assistant !== null,
+        harmPenalty: isActionRoll ? appliedHarmPenalty : 0,
+        fortune,
+      });
       const results = realize(count);
       // Record the moves so the feed shows what was spent / accepted.
       const notes: string[] = [];
+      if (isActionRoll && appliedHarmPenalty > 0)
+        notes.push(t('components.rollPanel.harmPenaltyNote'));
       if (isActionRoll && push) notes.push(t('components.rollPanel.pushedNote'));
+      if (assistant) notes.push(t('components.rollPanel.assistNote', { name: assistant.name }));
       if (isActionRoll && bargain)
         notes.push(
           bargainNote.trim()
@@ -135,7 +187,7 @@ export function RollPanel({
         userId,
         ...(characterId !== undefined ? { characterId } : {}),
         kind: isActionRoll ? 'action' : 'fortune',
-        label: isActionRoll ? action : 'Fortune',
+        label: isActionRoll ? action : t(FORTUNE_TYPE_KEY[fortuneType]),
         dice: count,
         results,
         zeroDice,
@@ -143,8 +195,11 @@ export function RollPanel({
         ...(notes.length > 0 ? { note: notes.join(' · ') } : {}),
         // Pushing yourself costs 2 stress, applied win or lose (the engine charges it).
         pushed: isActionRoll && push,
+        // Assist (F10): the engine charges the helper's 1 stress when the roller may write them;
+        // otherwise the note above tells the helper to self-mark.
+        ...(assistant ? { assist: { characterId: assistant.id } } : {}),
       });
-      setLast({ outcome: created.outcome, results: created.results });
+      setLast({ outcome: created.outcome, results: created.results, kind: mode });
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
     } finally {
@@ -246,6 +301,31 @@ export function RollPanel({
               />
               {t('components.rollPanel.bargain')}
             </label>
+            {harmPenalty > 0 && (
+              <label className='flex cursor-pointer items-center gap-1.5 text-sm'>
+                <input
+                  type='checkbox'
+                  checked={waiveHarm}
+                  onChange={e => setWaiveHarm(e.target.checked)}
+                />
+                {t('components.rollPanel.waiveHarm')}
+              </label>
+            )}
+            {(teammates?.length ?? 0) > 0 && (
+              <Select
+                aria-label={t('components.rollPanel.assistLabel')}
+                selectSize='sm'
+                value={assistId}
+                onChange={e => setAssistId(e.target.value)}
+              >
+                <option value=''>{t('components.rollPanel.assistNone')}</option>
+                {(teammates ?? []).map(tm => (
+                  <option key={tm.id} value={tm.id}>
+                    {t('components.rollPanel.assistOption', { name: tm.name })}
+                  </option>
+                ))}
+              </Select>
+            )}
             {bargain && (
               <Input
                 size='sm'
@@ -258,18 +338,34 @@ export function RollPanel({
           </>
         )}
         {mode === 'fortune' && (
-          <Select
-            aria-label={t('components.rollPanel.fortuneLabel')}
-            selectSize='sm'
-            value={fortune}
-            onChange={e => setFortune(Number(e.target.value))}
-          >
-            {[0, 1, 2, 3, 4].map(n => (
-              <option key={n} value={n}>
-                {t('components.rollPanel.diceCount', { count: n })}
-              </option>
-            ))}
-          </Select>
+          <>
+            {/* F46 — what the fortune roll is FOR: same dice, but the label lands in the feed
+                and the readout below interprets the tiers. */}
+            <Select
+              aria-label={t('components.rollPanel.fortuneTypeLabel')}
+              selectSize='sm'
+              value={fortuneType}
+              onChange={e => setFortuneType(e.target.value as FortuneType)}
+            >
+              {FORTUNE_TYPES.map(ft => (
+                <option key={ft} value={ft}>
+                  {t(FORTUNE_TYPE_KEY[ft])}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label={t('components.rollPanel.fortuneLabel')}
+              selectSize='sm'
+              value={fortune}
+              onChange={e => setFortune(Number(e.target.value))}
+            >
+              {[0, 1, 2, 3, 4].map(n => (
+                <option key={n} value={n}>
+                  {t('components.rollPanel.diceCount', { count: n })}
+                </option>
+              ))}
+            </Select>
+          </>
         )}
         {mode === 'resistance' && (
           <Select
@@ -296,6 +392,23 @@ export function RollPanel({
           {t('components.rollPanel.zeroDiceHint')}
         </Text>
       )}
+      {mode === 'action' && worstHarm === 'severe' && (
+        <Alert variant='warning' size='sm'>
+          {t('components.rollPanel.harmSevereHint')}
+        </Alert>
+      )}
+      {mode === 'action' && harmPenalty > 0 && (
+        <Text size='sm' variant='muted'>
+          {waiveHarm
+            ? t('components.rollPanel.harmWaivedHint')
+            : t('components.rollPanel.harmModerateHint')}
+        </Text>
+      )}
+      {mode === 'action' && worstHarm === 'lesser' && (
+        <Text size='sm' variant='muted'>
+          {t('components.rollPanel.harmLesserHint')}
+        </Text>
+      )}
       {last && (
         <Stack direction='row' gap='sm' align='center'>
           {last.stress != null ? (
@@ -314,6 +427,26 @@ export function RollPanel({
             [{last.results.join(', ')}]
           </Text>
         </Stack>
+      )}
+      {/* F46 — the tiered fortune reading, phrased the way the SRD grades fortune results. */}
+      {last?.kind === 'fortune' && (
+        <Text variant='muted' size='sm'>
+          {t(FORTUNE_READING_KEY[last.outcome])}
+        </Text>
+      )}
+      {/* F52 — a partial/bad ACTION result is where consequences land; scaffold the next moves
+          instead of leaving the roller at a dead end. */}
+      {last?.kind === 'action' && (last.outcome === 'partial' || last.outcome === 'bad') && (
+        <Alert variant='warning' size='sm'>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+            <span>{t('components.rollPanel.consequenceHint')}</span>
+            {canResist && (
+              <Button variant='outline' size='sm' onClick={() => setMode('resistance')}>
+                {t('components.rollPanel.consequenceResist')}
+              </Button>
+            )}
+          </Stack>
+        </Alert>
       )}
     </Stack>
   );

@@ -8,15 +8,18 @@ import type {
   CharacterAdvancement,
   CharacterLoadout,
   CharacterWithDetails,
+  HarmLevel,
   UpdateCharacterData,
 } from '@heist-mind/core';
 import {
   advanceCharacter,
-  applyStress,
+  clearHarm,
+  flashback,
   indulgeVice,
   markXp,
   retireCharacter,
   saveLoadout,
+  takeHarm,
   type IndulgeViceOutcome,
 } from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
@@ -71,7 +74,11 @@ export function useAdvanceCharacter(characterId: string, gameId: string | null) 
   });
 }
 
-/** Award XP via the ENGINE (records the reason + logs an 'xp' feed event when in a campaign). */
+/**
+ * Award XP via the ENGINE (records the reason + logs an 'xp' feed event when in a campaign).
+ * On a track-mode ruleset pass `track` ('playbook' or an attribute id) and a signed `amount` —
+ * the engine marks that track through the validated write; flat-pool rulesets bank the amount.
+ */
 export function useAddExperience(characterId: string, gameId: string | null) {
   const qc = useQueryClient();
   return useMutation({
@@ -79,6 +86,7 @@ export function useAddExperience(characterId: string, gameId: string | null) {
       userId: string;
       amount: number;
       reason: string;
+      track?: string;
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await markXp(getRepositories(), { characterId, ...vars })),
@@ -90,16 +98,65 @@ export function useAddExperience(characterId: string, gameId: string | null) {
 }
 
 /**
- * Apply a resistance/push stress cost to a character via the ENGINE use-case (clamped
- * read-modify-write) — the same implementation the Discord bot will drive.
+ * Take harm via the ENGINE (RAW escalation past full tracks + a 'harm' feed event — the same
+ * implementation the bot's `/harm take` drives; F65 closes the web side). Returns the level the
+ * harm actually LANDED at so the sheet can flag an escalation.
  */
-export function useApplyCharacterStress() {
+export function useTakeHarm(characterId: string, gameId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { characterId: string; userId: string; stress: number }) =>
-      unwrap(await applyStress(getRepositories(), vars)),
-    onSuccess: (_d, vars) =>
-      qc.invalidateQueries({ queryKey: characterKeys.detail(vars.characterId) }),
+    mutationFn: async (vars: {
+      userId: string;
+      level: HarmLevel;
+      description: string;
+      /** F44 — expend armor from the loadout; the harm lands one level lighter (null = absorbed). */
+      spendArmor?: boolean;
+      logLabel: string;
+      logNote: (appliedLevel: HarmLevel | null) => string;
+    }) => unwrap(await takeHarm(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/** Clear ONE harm entry via the ENGINE (recovery; logs a 'harm' feed event — F65 web parity). */
+export function useClearHarm(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      userId: string;
+      level: HarmLevel;
+      description: string;
+      logLabel: string;
+      logNote: string;
+    }): Promise<Character> => unwrap(await clearHarm(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * A BitD flashback (F16) via the ENGINE: pay the GM-priced stress (clamped) and land the
+ * retro-established action in the campaign feed.
+ */
+export function useFlashback(gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      character: CharacterWithDetails;
+      userId: string;
+      stress: number;
+      logLabel: string;
+      logNote: string;
+    }) => unwrap(await flashback(getRepositories(), vars)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
   });
 }
 
