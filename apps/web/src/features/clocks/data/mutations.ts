@@ -5,7 +5,7 @@
 // Ticks go through the ENGINE use-case, which logs a 'clock' feed event when a tick FILLS the
 // clock (milestones reach the table; routine ticks stay panel-only).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Clock, CreateClockData, UpdateClockData } from '@heist-mind/core';
+import type { Clock, CreateClockData } from '@heist-mind/core';
 import { tickClock } from '@heist-mind/engine';
 import { rollKeys } from '@/features/rolls/data/queries';
 import { getRepositories } from '@/lib/auth';
@@ -17,15 +17,6 @@ export function useCreateClock(gameId: string) {
   return useMutation({
     mutationFn: (vars: { userId: string; data: CreateClockData }) =>
       getRepositories().clocks.create(vars.userId, vars.data).then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: clockKeys.byGame(gameId) }),
-  });
-}
-
-export function useUpdateClock(gameId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { id: string; patch: UpdateClockData }) =>
-      getRepositories().clocks.update(vars.id, vars.patch).then(unwrap),
     onSuccess: () => qc.invalidateQueries({ queryKey: clockKeys.byGame(gameId) }),
   });
 }

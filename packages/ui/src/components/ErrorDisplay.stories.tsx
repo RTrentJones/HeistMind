@@ -254,10 +254,15 @@ export const FormValidation: Story = {
   render: () => (
     <div className='space-y-4 max-w-md'>
       <div>
-        <label className='block text-sm font-medium text-foreground-primary mb-1'>
+        {/* htmlFor/id pairing — a visually adjacent label is not an ACCESSIBLE label. */}
+        <label
+          htmlFor='form-validation-email'
+          className='block text-sm font-medium text-foreground-primary mb-1'
+        >
           Email Address
         </label>
         <input
+          id='form-validation-email'
           type='email'
           className='w-full px-3 py-2 border border-semantic-error rounded-lg focus:outline-none focus:ring-2 focus:ring-semantic-error'
           value='invalid-email'
@@ -274,8 +279,14 @@ export const FormValidation: Story = {
       </div>
 
       <div>
-        <label className='block text-sm font-medium text-foreground-primary mb-1'>Password</label>
+        <label
+          htmlFor='form-validation-password'
+          className='block text-sm font-medium text-foreground-primary mb-1'
+        >
+          Password
+        </label>
         <input
+          id='form-validation-password'
           type='password'
           className='w-full px-3 py-2 border border-semantic-error rounded-lg focus:outline-none focus:ring-2 focus:ring-semantic-error'
           value='123'

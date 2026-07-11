@@ -192,6 +192,8 @@ export const RealWorldExample: Story = {
             </p>
           </div>
 
+          {/* Card titles render as h3 — bridge the outline so h1 → h3 doesn't skip a level. */}
+          <h2 className='sr-only'>What HeistMind does</h2>
           <div className='grid md:grid-cols-3 gap-6 mt-12'>
             <Card>
               <CardHeader>

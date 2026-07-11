@@ -309,8 +309,23 @@ export const WithBackground: Story = {
 
 export const StickyHeader: Story = {
   render: () => (
-    <div className='h-96 overflow-y-auto border border-border-primary rounded-lg'>
-      <Section variant='elevated' position='sticky' padding='sm' width='full' as='header'>
+    // A scrollable region must be keyboard-reachable (tabIndex) and named — sighted mouse
+    // users scroll it; keyboard users need to focus it to do the same.
+    <div
+      className='h-96 overflow-y-auto border border-border-primary rounded-lg'
+      role='region'
+      aria-label='Sticky header demo'
+      tabIndex={0}
+    >
+      {/* role='group': a header INSIDE a scroll container is not the page banner. */}
+      <Section
+        variant='elevated'
+        position='sticky'
+        padding='sm'
+        width='full'
+        as='header'
+        role='group'
+      >
         <div className='text-center'>
           <h3 className='font-semibold text-foreground-primary'>Sticky Header</h3>
           <p className='text-sm text-foreground-secondary'>

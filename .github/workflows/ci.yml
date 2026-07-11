@@ -46,11 +46,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # ADVISORY dead-code scan (audit D6 — knip would have flagged the F68-era dead auth
-      # surface). Stays continue-on-error until the first-run noise (see the job log) is
-      # triaged; promote to blocking after.
-      - name: Dead-code scan (knip, advisory)
-        continue-on-error: true
+      # BLOCKING dead-code scan (audit D6 / F71 — knip would have flagged the F68-era dead
+      # auth surface). The first-run noise was triaged in the F71 sweep (dead files/exports
+      # deleted, unused deps pruned, knip.json scoped); keep it at exit 0.
+      - name: Dead-code scan (knip)
         run: pnpm exec knip
 
       # Type integrity is covered twice already: the compile-time checks in

@@ -108,6 +108,9 @@ export const baseIgnores = {
     '**/coverage/**',
     '**/node_modules/**',
     '**/storybook-static/**',
+    // Storybook config (main/preview/test-runner) is tooling outside the src tsconfig project —
+    // the typed-lint project service can't parse it and it isn't product code.
+    '**/.storybook/**',
     '**/*.tsbuildinfo',
     '**/supabase-types.ts',
   ],

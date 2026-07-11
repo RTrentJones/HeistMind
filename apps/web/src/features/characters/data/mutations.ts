@@ -13,7 +13,6 @@ import type {
 } from '@heist-mind/core';
 import {
   advanceCharacter,
-  applyStress,
   clearHarm,
   flashback,
   indulgeVice,
@@ -156,20 +155,6 @@ export function useFlashback(gameId: string | null) {
       void qc.invalidateQueries({ queryKey: characterKeys.all });
       if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
-  });
-}
-
-/**
- * Apply a resistance/push stress cost to a character via the ENGINE use-case (clamped
- * read-modify-write) — the same implementation the Discord bot will drive.
- */
-export function useApplyCharacterStress() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (vars: { characterId: string; userId: string; stress: number }) =>
-      unwrap(await applyStress(getRepositories(), vars)),
-    onSuccess: (_d, vars) =>
-      qc.invalidateQueries({ queryKey: characterKeys.detail(vars.characterId) }),
   });
 }
 

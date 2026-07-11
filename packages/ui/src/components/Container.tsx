@@ -97,15 +97,16 @@ const Container = React.forwardRef<HTMLDivElement, ContainerProps>(
   ) => {
     const prefersReducedMotion = useReducedMotion();
 
-    // Determine the appropriate semantic element
-    const Element = asMain ? 'main' : asSection ? 'section' : asArticle ? 'article' : 'div';
-
-    // Build ARIA attributes
+    // MotionDiv always renders a <div>, so the as* props map to the equivalent ARIA landmark
+    // roles. A plain layout Container gets NO default role: an unnamed region is an anonymous
+    // landmark screen readers have to wade through (axe: landmark-unique) — callers who mean
+    // a landmark pass asSection/role plus an aria-label.
+    const semanticRole = asMain ? 'main' : asSection ? 'region' : asArticle ? 'article' : undefined;
     const ariaAttributes = {
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledBy,
       'aria-describedby': ariaDescribedBy,
-      role: role || (Element !== 'div' ? undefined : 'region'),
+      role: role ?? semanticRole,
     };
 
     // Custom styling for max-width override

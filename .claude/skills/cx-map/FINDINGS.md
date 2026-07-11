@@ -656,7 +656,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix (incremental):** a small deployed-safe smoke tier — read-only gameplay assertions against
   seeded beta data + the existing posture check; longer term, a beta-scoped persona pool enabling
   one thin write-path spec on the deploy gate.
-- **status:** open
+- **status:** **open (updated, backlog round 2026-07-11)** — the public deployed tier has grown
+  this session without needing the stack: `signin-gates.spec.ts` (six gated routes),
+  `discord-page.spec.ts`, `auth-callback.spec.ts`, and `dashboard.spec.ts`'s anonymous
+  assertions all run against a deployed URL. The remaining residue is unchanged and real:
+  nothing on the deploy gate exercises an authenticated write path (needs the beta-scoped
+  persona pool) and the live `/api/discord` is still posture-check-only. Kept open at S3 for
+  that residue, not for the (now covered) read-only surface.
 
 ### F77 — Hub fortune roll + record-result affordance contradicts the journey text (decide: gate or relabel)
 
@@ -684,7 +690,18 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   asserts no interaction and no a11y. Keyboard/contrast/ARIA regressions (the F1/F41 class) ship green.
 - **fix:** Add axe assertions to the test-runner (`postVisit` + `checkA11y`, error mode on a curated
   rule set) and/or `play` functions for the interactive primitives (Select, Tooltip, ThemeToggle).
-- **status:** open
+- **status:** **fixed (backlog round 2026-07-11)** — `packages/ui/.storybook/test-runner.ts` now
+  runs axe on EVERY story (`preVisit` injectAxe → `postVisit` checkA11y via `axe-playwright`), so
+  the CI story smoke (190 stories) gates on a11y. Curated exclusions, each with a reason in the
+  config: the four fragment-vs-page rules (`region`, `landmark-one-main`, `page-has-heading-one`,
+  `bypass` — stories are components, not documents) and `color-contrast` (theme-wide palette debt,
+  tracked as **F87**). First enforcement pass fixed 12 stories' real violations (icon-only buttons
+  without aria-labels in Button/Tooltip/Header stories, unassociated form labels in
+  ErrorDisplay/Stack stories, duplicate banner landmarks in the Header galleries, heading-order in
+  Theme/Container stories, an unfocusable scroll region in Section) **and one component bug:
+  `Container` defaulted every plain layout div to an unnamed `role='region'` landmark — removed;
+  the `asMain`/`asSection`/`asArticle` props (which never changed the rendered element) now map to
+  real ARIA roles.** Verified locally: 190/190 pass through `test-storybook:ci`.
 
 ### F75 — Player-perspective and RLS tenant-isolation e2e are fixme scaffolds — two headline guarantees unproven
 
@@ -698,7 +715,16 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix:** Implement both specs on the existing `playerPage` fixture: (a) player joins, creates a
   rules-valid character, rolls, advances; (b) player B cannot read GM A's unrelated campaign objects,
   and member writes to GM-gated objects are refused.
-- **status:** open
+- **status:** **fixed (backlog round 2026-07-11)** — both scaffolds are real specs (4 tests,
+  local-stack gated like the other journey specs; CI executes them). `player-characters.spec.ts`:
+  one sequential player journey — join via code (the built front door; first-class invites are F5),
+  create a rules-valid cinders character, roll from the sheet, bank XP, hard-reload to prove
+  persistence, and the GM sees the player's activity on the shared log. `tenant-isolation.spec.ts`:
+  (1) a non-member sees neither the campaign in their list nor anything at its direct URL ("Game
+  not found" — RLS can't even distinguish not-yours from not-there); (2) a bogus join code is
+  refused; (3) a joined member gets the hub but NONE of the GM-gated controls (state select,
+  join-code management, clock creation), with a same-page GM-side control assertion guarding
+  against label drift.
 
 ### F74 — Hub panels flash their empty state during the initial load
 
@@ -754,8 +780,15 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (dead web mutation), two unused web lib files, and a batch of dependency/exports flags that
   need per-item verdicts (the Radix "unused dependency" wall in `packages/ui` looks like a
   resolver false-positive family).
-- **status:** **open** — triage the report, encode verdicts in `knip.json` ignores or deletions,
-  then flip the CI step to blocking.
+- **status:** **fixed (backlog round 2026-07-11)** — the full triage landed and the CI step is
+  now BLOCKING (no `continue-on-error`). Verdicts: deleted the dead code (web `design-tokens.ts` +
+  `i18n/server.ts`, `useApplyCharacterStress`, `useUpdateClock`, discord `ownsCharacter`, ui
+  `useDebouncedCallback` + `DebounceOptions`); pruned verified-unused deps (5 from `apps/web`
+  incl. the whole `@supabase/auth-ui-*` family, 19 from `packages/ui` — the Radix wall was NOT a
+  false-positive family: only `react-tooltip` and `react-slot` are imported); encoded the
+  keep-verdicts in `knip.json` (generated `supabase-types.ts`, ui type barrels, i18n dynamic
+  surface) with per-workspace scoping. `pnpm exec knip` exits 0 with zero findings AND zero
+  configuration hints.
 
 ### F70 — Audit round log-only piping residue (read-never-written / written-never-read)
 
@@ -845,6 +878,21 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 ---
 
 ## S3 — minor
+
+### F87 — The ember/noir palette fails WCAG AA contrast across ~80 story surfaces (found by the F76 axe gate, 2026-07-11)
+
+- **severity:** S3 · **type:** CX-flaw (a11y, design tokens)
+- **where:** package-wide — the first F76 axe sweep flagged `color-contrast` (serious) on ~80 of
+  190 stories / ~223 nodes: `text-foreground-muted` + `text-foreground-secondary` on the dark
+  backgrounds, ghost/outline button text, badge variants, muted text inside `bg-background-secondary`
+  cards. Not a story problem — the design tokens themselves sit below 4.5:1.
+- **root cause:** The palette was tuned for atmosphere, never against a contrast budget. Nothing
+  gated it (F76), so it spread everywhere the muted/secondary tokens are used.
+- **fix:** A design-token pass: retune `foreground-muted`/`foreground-secondary` (and the ghost
+  button + badge text colors) against their real backgrounds to ≥4.5:1 (AA), then delete the
+  `color-contrast` exclusion in `packages/ui/.storybook/test-runner.ts` so the axe gate holds the
+  line. Token-level change — every consumer inherits the fix.
+- **status:** open (the exclusion in the test-runner config points here)
 
 - **F23** · CX · Sheet attributes are a creation-time snapshot, not re-derived from current action
   ratings; the editor still exposes them as directly editable (dead data, since the validator skips

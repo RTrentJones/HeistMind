@@ -2,19 +2,48 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["e2e/**/*.ts", "scripts/*.mjs", "verify/*.ts", "playwright.config.ts"],
+      "entry": ["e2e/**/*.ts", "scripts/*.mjs", "verify/*.ts"],
       "project": ["e2e/**/*.ts", "scripts/*.mjs", "verify/*.ts"]
     },
     "apps/web": {
-      "project": "src/**/*.{ts,tsx}"
+      "project": "src/**/*.{ts,tsx}",
+      "ignore": ["src/lib/i18n/**"]
     },
     "packages/*": {
-      "entry": ["src/index.ts", "src/registration/*.ts"],
       "project": "src/**/*.{ts,tsx}"
     },
-    "configs": {
-      "entry": ["*.mjs", "*.ts"]
+    "packages/ui": {
+      "project": "src/**/*.{ts,tsx}",
+      "ignore": [
+        "src/lib/accessibility.ts",
+        "src/lib/test-utils.tsx",
+        "src/lib/theme.ts",
+        "src/lib/types.ts",
+        "src/lib/variant-types.ts"
+      ]
+    },
+    "packages/database": {
+      "project": "src/**/*.{ts,tsx}",
+      "ignore": ["src/supabase-types.ts"]
+    },
+    "packages/discord": {
+      "entry": ["src/registration/*.ts"],
+      "project": "src/**/*.{ts,tsx}"
     }
   },
-  "ignoreDependencies": ["@heist-mind/eslint-config"]
+  "ignoreDependencies": [
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser",
+    "eslint-config-prettier",
+    "eslint-config-next",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-react",
+    "eslint-plugin-react-hooks",
+    "monocart-coverage-reports",
+    "vite",
+    "tailwindcss",
+    "@storybook/blocks"
+  ],
+  "ignoreBinaries": ["terraform"],
+  "ignoreExportsUsedInFile": true
 }

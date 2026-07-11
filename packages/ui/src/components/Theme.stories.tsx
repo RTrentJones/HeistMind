@@ -43,6 +43,9 @@ const ThemeShowcase = () => {
           </p>
         </div>
 
+        {/* Card titles render as h3 — bridge the outline so h1 → h3 doesn't skip a level. */}
+        <h2 className='sr-only'>Theme reference</h2>
+
         {/* Color Palette */}
         <Card variant='elevated' className='p-6'>
           <CardHeader>
@@ -185,11 +188,13 @@ const ThemeShowcase = () => {
             <CardDescription>Consistent text hierarchy across themes</CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
+            {/* A visual type-scale SAMPLE, not document structure — real heading elements here
+                would wreck the page outline (second h1, skipped levels). */}
             <div className='space-y-2'>
-              <h1 className='text-4xl font-bold text-foreground-primary'>Heading 1</h1>
-              <h2 className='text-3xl font-semibold text-foreground-primary'>Heading 2</h2>
-              <h3 className='text-2xl font-medium text-foreground-primary'>Heading 3</h3>
-              <h4 className='text-xl font-medium text-foreground-secondary'>Heading 4</h4>
+              <div className='text-4xl font-bold text-foreground-primary'>Heading 1</div>
+              <div className='text-3xl font-semibold text-foreground-primary'>Heading 2</div>
+              <div className='text-2xl font-medium text-foreground-primary'>Heading 3</div>
+              <div className='text-xl font-medium text-foreground-secondary'>Heading 4</div>
               <p className='text-base text-foreground-primary'>
                 Body text adapts to the current theme, maintaining readability and contrast.
               </p>
@@ -216,9 +221,9 @@ const ThemeShowcase = () => {
                   <Monitor className='w-4 h-4 text-white' />
                 </div>
                 <div>
-                  <h5 className='text-sm font-semibold text-foreground-primary'>
+                  <h4 className='text-sm font-semibold text-foreground-primary'>
                     Storybook Toolbar
-                  </h5>
+                  </h4>
                   <p className='text-xs text-foreground-muted'>
                     Use the paintbrush icon in the Storybook toolbar to switch between Light, Dark,
                     and System themes
