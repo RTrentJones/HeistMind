@@ -42,14 +42,15 @@ test.describe('GM: action ratings (Brackwater)', () => {
     // Budget = playbook's 3 seeded dots (Clash 2 + Marshal 1) + 4 creation points = 7 (BitD-canon).
     await expect(gmPage.getByText(/\/ 7 action dots/)).toBeVisible();
     // Cunning has no seeded actions (the knife seeds Clash + Marshal), so it derives 0 to start.
-    await expect(gmPage.getByText('Cunning 0')).toBeVisible();
+    // (F53: the badge shows just the number now — the header names the attribute.)
+    await expect(gmPage.getByTestId('derived-cunning')).toHaveText('0');
 
     // Assign two Cunning actions (the first dot of the first two actions, Track + Examine) →
     // derived Cunning becomes 2, and the spend rises to 5 (3 seeded + 2 assigned).
     const dots = gmPage.locator('button.rounded-full');
     await dots.nth(0).click();
     await dots.nth(2).click();
-    await expect(gmPage.getByText('Cunning 2')).toBeVisible();
+    await expect(gmPage.getByTestId('derived-cunning')).toHaveText('2');
     await expect(gmPage.getByText(/5 \/ 7 action dots/)).toBeVisible();
 
     // Abilities → identity steps → review → create (under-spent dots are a warning, not a block).

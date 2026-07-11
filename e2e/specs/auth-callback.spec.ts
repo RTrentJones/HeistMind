@@ -27,7 +27,11 @@ test.describe('auth callback', () => {
     await expect(failed).toBeVisible();
     await expect(page.getByText(/user denied the request/i)).toBeVisible();
 
-    // The page schedules a redirect back to home with an error marker.
+    // The page schedules a redirect back to home with an error marker…
     await page.waitForURL(/\/\?error=auth_failed/, { timeout: 10_000 });
+    // …which home now SURFACES (F40) as a dismissible banner with a retry pointer.
+    await expect(page.getByText(/sign-in didn't complete/i)).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: /dismiss alert/i }).click();
+    await expect(page.getByText(/sign-in didn't complete/i)).toHaveCount(0);
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useShallow } from 'zustand/react/shallow';
 import type { Ruleset } from '@heist-mind/core';
@@ -36,6 +36,8 @@ export function CharacterCreationWizard({
   onCancel,
 }: CharacterCreationWizardProps) {
   const router = useRouter();
+  // F28 — two-click cancel; the armed label reassures that the draft is saved.
+  const [cancelArmed, setCancelArmed] = useState(false);
   const { t } = useTranslation();
   const { steps, stepIndex, name, isLoading, init, setName, goNext, goBack, goToStep, submit } =
     useCharacterCreationStore(
@@ -84,7 +86,7 @@ export function CharacterCreationWizard({
   };
 
   const nameField = (
-    <div style={{ maxWidth: 460 }}>
+    <div className='w-full max-w-md'>
       <Input
         label={t('components.wizard.nameLabel')}
         required
@@ -127,8 +129,20 @@ export function CharacterCreationWizard({
         borderTop: '1px solid var(--color-border-primary)',
       }}
     >
-      <Button variant='ghost' onClick={onCancel ?? (() => router.back())}>
-        {t('common.actions.cancel')}
+      {/* F28 — leaving is safe (the draft persists to localStorage and auto-resumes), and the
+          two-click cancel SAYS so instead of silently navigating away. */}
+      <Button
+        variant='ghost'
+        onClick={() => {
+          if (!cancelArmed) {
+            setCancelArmed(true);
+            return;
+          }
+          (onCancel ?? (() => router.back()))();
+        }}
+        onBlur={() => setCancelArmed(false)}
+      >
+        {cancelArmed ? t('components.wizard.cancelConfirm') : t('common.actions.cancel')}
       </Button>
       {!canAdvance && blockingReason ? (
         <Text size='sm' role='status' className='min-w-0 flex-1 truncate text-semantic-warning'>

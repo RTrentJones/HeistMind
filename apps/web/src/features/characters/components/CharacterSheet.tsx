@@ -80,6 +80,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   }, [editorSection]);
   const [name, setName] = useState('');
   const [viceNote, setViceNote] = useState<string | null>(null);
+  const [viceArmed, setViceArmed] = useState(false);
   const [harmNote, setHarmNote] = useState<string | null>(null);
 
   const busy =
@@ -260,6 +261,12 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           {saveError}
         </Alert>
       )}
+      {/* F60 — a standalone sheet says so, instead of just silently missing the campaign sections. */}
+      {!character.gameId && (
+        <Alert variant='info' size='sm'>
+          {t('components.characterSheet.standaloneBanner')}
+        </Alert>
+      )}
       <Card variant='character'>
         <Stack direction='column' gap='md'>
           {editing ? (
@@ -412,14 +419,26 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           />
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             {canEdit && (
+              // F60 — indulging rolls dice and clears a rolled amount; a misclick shouldn't spend
+              // the downtime. Two-click confirm, disarmed on blur.
               <Button
                 variant='outline'
                 size='sm'
                 loading={busy}
                 disabled={(character.characterData?.stress ?? 0) === 0}
-                onClick={() => void indulgeVice()}
+                onClick={() => {
+                  if (!viceArmed) {
+                    setViceArmed(true);
+                    return;
+                  }
+                  setViceArmed(false);
+                  void indulgeVice();
+                }}
+                onBlur={() => setViceArmed(false)}
               >
-                {t('components.downtime.indulgeVice.action')}
+                {viceArmed
+                  ? t('components.downtime.indulgeVice.confirm')
+                  : t('components.downtime.indulgeVice.action')}
               </Button>
             )}
             {character.characterData?.vice && (

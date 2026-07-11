@@ -69,8 +69,8 @@ export function CrewSheet({
     incarcerateMut.isPending ||
     markCrewXpMut.isPending ||
     takeAdvanceMut.isPending;
-  const error =
-    crewQuery.error?.message ??
+  // F60 — lead with a friendly line; the raw repository message rides along as detail.
+  const mutationError =
     createCrewMut.error?.message ??
     updateCrewMut.error?.message ??
     applyHeatMut.error?.message ??
@@ -79,6 +79,11 @@ export function CrewSheet({
     markCrewXpMut.error?.message ??
     takeAdvanceMut.error?.message ??
     null;
+  const error = crewQuery.error
+    ? `${t('components.crewSheet.loadFailed')} — ${crewQuery.error.message}`
+    : mutationError
+      ? `${t('components.crewSheet.updateFailed')} — ${mutationError}`
+      : null;
 
   const createCrew = () => {
     const userId = user?.id;

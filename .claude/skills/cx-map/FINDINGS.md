@@ -201,9 +201,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `RollLog` shows bare results; `Roll` has no `zeroDice` field to persist it.
 - **root cause:** A rating-0 roll shows two dice with no "take lowest" note — reads as a bug.
 - **fix:** Annotate zero-dice rolls in panel + log ("2d, take lowest"); persist `zeroDice` on `Roll`.
-- **status:** partially resolved (PR #59) — the panel now shows a hint when a rating-0 action is
-  selected ("No rating in this action — roll 2 dice and take the lowest."). Persisting `zeroDice` on
-  the `Roll` + annotating it in the log is still open.
+- **status:** **fixed (fully — backlog round A, 2026-07-11)** — the panel hint shipped in PR #59;
+  `zeroDice` persistence landed with migration `00020` (audit P2); and the last piece, the in-log
+  annotation, now renders per entry: "0d — rolled 2, took the lowest" on any `zeroDice` (or legacy
+  `dice === 0`) roll.
 
 ### F8 — Position/effect dropdowns are unexplained jargon
 
@@ -846,9 +847,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (`roster` vs `others` rendered identically) → a "Starting"/section header. **fixed** — the roster
   is labelled "{playbook}'s abilities" and the expanded others get a "From other playbooks" header.
 - **F27** · CX · Re-selecting a playbook silently resets abilities/attributes.
-  `character-creation-store.ts:135–154` `setPlaybook` → warn/confirm before reset. **open**
+  `character-creation-store.ts:135–154` `setPlaybook` → warn/confirm before reset. **fixed
+  (backlog round A, 2026-07-11)** — switching away from a chosen playbook is two-click: the first
+  arms a warning alert naming the reset ("dots and ability picks reset — click again"), the second
+  commits. First pick / re-click never warns.
 - **F28** · CX · Cancelling the wizard gives no "draft saved" reassurance (it _is_ persisted).
-  `CharacterCreationWizard.tsx:123–124` → confirm + reassure copy. **open**
+  `CharacterCreationWizard.tsx:123–124` → confirm + reassure copy. **fixed (backlog round A,
+  2026-07-11)** — the footer Cancel is two-click; armed it reads "Leave? Draft saved — click
+  again" (disarms on blur), naming exactly the reassurance the persisted draft earns.
 - **F29** · CX · Required name field has no visual required indicator.
   `CharacterCreationWizard.tsx:83` → asterisk/marker. **fixed (already)** — the shared `Input`
   renders a red `*` after the label when `required` (Input.tsx:224); the name field passes `required`.
@@ -859,9 +865,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   effect isn't. `RollLog.tsx:49`. **(verified)** → only join when both exist. **fixed @4b7343e
   (PR #59)** — position/effect now joined with a slash only when both are present.
 - **F32** · CX · Game `state` (draft/recruiting/active/paused/completed) is shown as a badge with no
-  legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **partial** —
-  the state badge now has a tooltip explaining the lifecycle (draft → … → completed); a GM control to
-  _change_ the state is still open.
+  legend and no way to change it. `games/page.tsx:81` → lifecycle control + tooltip. **fixed
+  (backlog round A, 2026-07-11)** — the campaign hub header now gives the GM a "Campaign state"
+  `Select` over the five lifecycle states (new `useUpdateGameState` seam hook over the repo's
+  existing `updateState`; members see the tooltip'd badge). Covered in `gm-games.spec.ts`
+  (change → reload → persisted).
 - **F33** · CX · Crew `hold` (strong/weak) shown + toggle with no explanation. `CrewSheet.tsx:172–182`
   → tooltip. **fixed @4b7343e (PR #59)** — hold has an explanatory tooltip (strong = stable, weak =
   one setback from breaking up).
@@ -890,7 +898,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Discord" button (`signInWithProvider('discord')`); `games/new` still bare.
 - **F40** · CX · Auth-callback errors auto-redirect after ~2s (hard to read) and home doesn't surface
   `?error=auth_failed`. `auth/callback/page.tsx:29–46` → longer/explicit retry + a home banner.
-  **open**
+  **fixed (backlog round A, 2026-07-11)** — the callback holds the error for 6s (readable), and
+  home now surfaces `?error=auth_failed|auth_timeout` as a dismissible banner pointing at the
+  header's Sign In retry (`AuthErrorBanner`, Suspense-wrapped for the prerendered route).
+  `auth-callback.spec.ts` extended (banner shown → dismissed) and verified live in a browser.
 - **F41** · CX · No skip-to-main link; sticky header makes keyboard users tab through all nav.
   `packages/ui/src/components/Header.tsx` → skip link + `id="main-content"`. **fixed @d9d7d49 (PR #59)**
   — `AppShell` renders a focus-revealed skip link targeting the single `<main id="main-content">`.
@@ -918,19 +929,25 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **F46** · FitD · Fortune rolls lack structured types (engagement / gather-info / situation) and
   tiered readouts. `RollPanel.tsx:131–143` → a fortune-type selector + interpretation. **open**
 - **F47** · FitD · Faction projects/clocks and the war state (status −3) aren't surfaced; `Clock`
-  already supports `linked*`. `FactionsPanel.tsx` → link faction clocks; show "at war". **open**
+  already supports `linked*`. `FactionsPanel.tsx` → link faction clocks; show "at war". **fixed
+  (backlog round A, 2026-07-11)** — per-faction project clocks had already shipped
+  (`FactionsPanel` renders `linkedType==='faction'` `ClockTile`s + a GM add form); the missing
+  piece was the WAR callout: status ≤ −3 now shows an explicit red "At war — the crew loses its
+  downtime safety and every score runs hotter" line beside the badge.
 - **F48** · FitD · Contacts have no mechanical tie-in (bonds/leverage/"call on a contact").
   `domain-types.ts` contacts + `CharacterSheet.tsx:369–407` display only → optional contact-aid hook.
   **open**
 - **F49** · FitD · Indulge-vice (clear stress) has no affordance even though vice is captured.
-  `CharacterEditor.tsx:220–223` vice input only → an "Indulge" action (ties into F15 downtime).
-  **open**
-- **F50** · FitD · Ability tier-gating has no advancement path (creation gates tier ≥2; a TODO notes
-  crew-tier gating is unimplemented). `character-rules.ts:~154` → re-evaluate unlocks at play time.
-  **open**
-- **F51** · FitD · No score/heist entity grouping a job's rolls/clocks/downtime; rolls append to one
-  global game log. → an optional Heist/Score aggregate (planning → active → downtime). Larger future
-  work; noted so it isn't mistaken for "covered". **open**
+  **fixed (stale — closed on verification, backlog round A)**: the sheet has had "Indulge vice
+  (clear stress)" through engine `indulgeVice` since the F15 MVP; e2e-covered in
+  `gm-resistance-downtime.spec.ts`. The entry simply never got flipped.
+- **F50** · FitD · Ability tier-gating has no advancement path. **fixed (stale — closed on
+  verification, backlog round A)**: play-time unlocks exist via the veteran budget
+  (`isAbilityUnlocked` + `veteranPicksUsed`, F62) and crew-aware validation (F54 WS); the old
+  crew-tier TODO is gone from `character-rules.ts`.
+- **F51** · FitD · No score/heist entity grouping a job's rolls/clocks/downtime. **fixed (stale —
+  closed on verification, backlog round A)**: the Score entity shipped as BRD Phase 1
+  (`ScorePanel` lifecycle; `RollLog` groups the feed by `scoreId` with per-score headers).
 - **F52** · CX · No post-roll consequence scaffolding (a partial/bad result doesn't prompt the GM to
   tick a clock / add heat / harm). `RollPanel.tsx:149–155` → a "consequences" quick-action card
   linked to the roll. **open**
@@ -949,24 +966,28 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   → a `packages/ui` `<Select>` with a real associated `<label>` + shared token (see `CODE-QUALITY.md`
   PR3). **fixed @bebe87f** — `packages/ui/src/components/Select.tsx` (label/aria-label + token);
   all 9 raw selects migrated, the copy-pasted `sel` className removed.
-- **F60** · CX · Clarity/consistency cluster (each small, batch as a polish pass; 2026-07-05 audit
-  adds: raw `error.message` strings surfaced in destructive alerts by `CrewSheet`, `FactionsPanel`,
-  and `ScorePanel`): context-less
-  "Loading…" spinners; button loading inconsistent (spinner vs disable); generic vs specific errors
-  (join-code, panels); ruleset catalog doesn't flag "already in your rulesets"; ruleset picker lacks a
-  one-line blurb; standalone sheet has no "standalone — no campaign" banner; indulge-vice has no
-  confirm/preview; duplicate-character has no success toast; no in-app FitD glossary beyond
-  position/effect tooltips. **open**
+- **F60** · CX · Clarity/consistency cluster. **fixed (backlog round B, 2026-07-11)** — the
+  cluster's items, closed: panel errors now lead with a friendly line and carry the raw repo
+  message as detail (`CrewSheet`/`FactionsPanel`/`ScorePanel`); the built-in catalog flags copies
+  you already own ("In your rulesets" badge, CTA becomes "Refresh my copy" — `StarterCatalogInline`
+  checks the owned list); the `/characters/new` ruleset picker shows each ruleset's one-line
+  description; a standalone sheet opens with a "Standalone character — not in a campaign yet"
+  banner; indulge-vice is a two-click confirm ("Roll it? Click again"); duplicating a character
+  fires a success toast. Context-less "Loading…" spinners were fixed with F74's per-panel loading
+  copy. _Residue (tracked here, small):_ button loading-state consistency and an in-app FitD
+  glossary beyond the position/effect tooltips.
 
 ---
 
 ## S4 — polish
 
 - **F53** · CX · ActionRatingsStep badge repeats the attribute name ("Insight" header + "Insight 2"
-  badge). `ActionRatingsStep.tsx:51` → show just the number. **open**
+  badge). `ActionRatingsStep.tsx:51` → show just the number. **fixed (backlog round A,
+  2026-07-11)** — badge shows just the number (`data-testid="derived-<attr>"`;
+  `gm-action-ratings.spec.ts` re-targeted).
 - **F54** · CX · Wizard name/identity inputs use fixed pixel `maxWidth` (460/480) rather than a
   responsive max. `CharacterCreationWizard.tsx:80`, `IdentityStep.tsx:87` → `w-full max-w-[...]`.
-  **open**
+  **fixed (backlog round A, 2026-07-11)** — both swapped to `w-full max-w-md` / `max-w-lg`.
 
 ---
 

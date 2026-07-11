@@ -372,7 +372,13 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-11 (bot-parity round (F86/F43/F65/F67): harm quick actions + roll
+_Last verified:_ 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
+surfaces auth errors as a dismissible banner (F40); faction WAR callout at −3 (F47); zero-dice
+rolls annotated in the log (F7 closed); wizard playbook-switch + cancel are two-click with
+draft-saved reassurance (F27/F28); catalog flags owned copies, picker blurbs, standalone-sheet
+banner, vice two-click confirm, duplicate toast, friendly panel errors (F60); badge/width polish
+(F53/F54); stale F49/F50/F51 closed on verification. Same day, bot-parity round
+(F86/F43/F65/F67): harm quick actions + roll
 penalties on the sheet, the `/discord` guide page + landing link, and same day the XP round
 (F85): sheet XP marks feed-logged via engine markXp, shared
 gold `XpTrack` boxes on character + crew tracks, "Take advance" CTA → editor Advancement tab,

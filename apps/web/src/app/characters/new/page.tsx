@@ -89,11 +89,17 @@ export default function NewStandaloneCharacterPage() {
             {rulesets.data.map(rs => (
               <Card key={rs.id} variant='outline'>
                 <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-                  <div>
+                  <div className='min-w-0'>
                     <Heading level='h3'>{rs.name}</Heading>
                     <Text variant='muted' size='sm'>
                       {t('characters.rulesetVersion', { version: rs.version })}
                     </Text>
+                    {/* F60 — a one-line blurb so the pick is informed, not a bare name+version. */}
+                    {rs.description && (
+                      <Text variant='muted' size='sm' className='mt-1'>
+                        {rs.description}
+                      </Text>
+                    )}
                   </div>
                   <Button variant='ember' size='sm' onClick={() => setPicked(rs)}>
                     {t('characters.build')}

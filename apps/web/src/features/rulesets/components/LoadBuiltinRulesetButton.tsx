@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Ruleset } from '@heist-mind/core';
-import { Button, Stack, Text } from '@heist-mind/ui';
+import { Badge, Button, Stack, Text } from '@heist-mind/ui';
 import { BUILTIN_RULESETS, type BuiltinRuleset } from '@heist-mind/shared';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useLoadBuiltinRuleset } from '@/features/rulesets/data/mutations';
@@ -20,10 +20,13 @@ import { useTranslation } from '@/lib/i18n/hooks';
 export function LoadBuiltinRulesetButton({
   builtin,
   variant = 'ember',
+  alreadyAdded = false,
   onLoaded,
 }: {
   builtin: BuiltinRuleset;
   variant?: 'ember' | 'outline';
+  /** The user already owns a copy (F60) — the CTA becomes "refresh my copy" and says so. */
+  alreadyAdded?: boolean;
   /** Receives the OWNED copy, so inline flows can continue with it (wizard, campaign form). */
   onLoaded?: (ruleset: Ruleset) => void;
 }) {
@@ -53,14 +56,21 @@ export function LoadBuiltinRulesetButton({
 
   return (
     <Stack direction='column' gap='xs' align='start'>
-      <Button
-        variant={variant}
-        onClick={onClick}
-        loading={loadBuiltin.isPending}
-        title={t('components.builtinRuleset.addTitle', { name: content.metadata.name })}
-      >
-        {t('components.builtinRuleset.addCta', { name: content.metadata.name })}
-      </Button>
+      <Stack direction='row' gap='sm' align='center'>
+        <Button
+          variant={alreadyAdded ? 'outline' : variant}
+          onClick={onClick}
+          loading={loadBuiltin.isPending}
+          title={t('components.builtinRuleset.addTitle', { name: content.metadata.name })}
+        >
+          {alreadyAdded
+            ? t('components.builtinRuleset.refreshCta', { name: content.metadata.name })
+            : t('components.builtinRuleset.addCta', { name: content.metadata.name })}
+        </Button>
+        {alreadyAdded && (
+          <Badge variant='steel'>{t('components.builtinRuleset.alreadyAdded')}</Badge>
+        )}
+      </Stack>
       {message && (
         <Text variant='muted' size='sm'>
           {message}

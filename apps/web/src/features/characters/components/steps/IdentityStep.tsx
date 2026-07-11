@@ -87,7 +87,7 @@ function FreeTextIdentity() {
   );
 
   return (
-    <div className='flex flex-col gap-[18px]' style={{ maxWidth: 480 }}>
+    <div className='flex w-full max-w-lg flex-col gap-[18px]'>
       <Input
         label={t('components.steps.identity.heritageLabel')}
         placeholder={t('components.steps.identity.heritagePlaceholder')}

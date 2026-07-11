@@ -185,6 +185,7 @@
       "createCharacter": "Create character",
       "stepsLabel": "Creation steps",
       "cantContinue": "Can't continue yet —",
+      "cancelConfirm": "Leave? Draft saved — click again",
       "stepNumber": "STEP {{num}}",
       "summary": {
         "ariaLabel": "Character summary",
@@ -204,7 +205,8 @@
       },
       "playbook": {
         "empty": "This ruleset has no playbooks defined.",
-        "startsWith": "Starts with {{abilities}}"
+        "startsWith": "Starts with {{abilities}}",
+        "switchWarning": "Switch to {{playbook}}? Your assigned dots and ability picks reset — click it again to confirm."
       },
       "actionRatings": {
         "empty": "This ruleset has no actions defined.",
@@ -290,6 +292,7 @@
       "unmarkXpAria": "Unmark — back to {{count}} XP",
       "logXpMarkTrack": "Marked {{count}} XP — {{track}}",
       "logXpUnmarkTrack": "Removed {{count}} XP — {{track}}",
+      "standaloneBanner": "Standalone character — not in a campaign yet. Bring it to one from the card below.",
       "takeHarmLabel": "Take harm",
       "clearHarmAria": "Clear harm: {{name}}",
       "logHarmTaken": "Took {{level}} harm: {{description}}",
@@ -433,6 +436,7 @@
     },
     "rollLog": {
       "empty": "No rolls yet.",
+      "zeroDice": "0d — rolled 2, took the lowest",
       "justNow": "just now",
       "minutesAgo": "{{count}}m ago",
       "hoursAgo": "{{count}}h ago",
@@ -592,6 +596,7 @@
     },
     "factionsPanel": {
       "loading": "Loading factions…",
+      "atWarHint": "At war — the crew loses its downtime safety and every score runs hotter.",
       "loadFailed": "Failed to load factions",
       "addFailed": "Failed to add faction",
       "updateFailed": "Update failed",
@@ -624,6 +629,7 @@
     "downtime": {
       "indulgeVice": {
         "action": "Indulge vice (clear stress)",
+        "confirm": "Roll it? Click again to indulge",
         "viceLabel": "Vice: {{vice}}",
         "logLabel": "Indulged vice — cleared {{count}} stress",
         "overindulged": "Overindulged — you cleared more stress than you had. The GM picks a consequence: attract trouble, brag (+2 heat), go lost for a while, or get cut off by your purveyor.",
@@ -636,13 +642,19 @@
       "refreshFailed": "Failed to refresh the ruleset.",
       "addFailed": "Failed to add the ruleset.",
       "addTitle": "Creates an editable copy of {{name}} in your rulesets.",
-      "addCta": "Add {{name}} to my rulesets"
+      "addCta": "Add {{name}} to my rulesets",
+      "refreshCta": "Refresh my {{name}} copy",
+      "alreadyAdded": "In your rulesets"
     },
     "starterCatalog": {
       "footnote": "Each loads as an editable copy you own; loading one again refreshes it to the latest bundle."
     }
   },
   "auth": {
+    "banner": {
+      "authFailed": "Sign-in didn't complete — Discord reported an error. Use the Sign In button above to try again.",
+      "authTimeout": "Sign-in timed out before Discord answered. Use the Sign In button above to try again."
+    },
     "gate": {
       "heading": "Sign in to continue",
       "signInCta": "Sign In with Discord"
@@ -879,6 +891,7 @@
       "meta": "{{playbook}} · {{campaign}}",
       "open": "Open",
       "duplicate": "Duplicate",
+      "duplicated": "Duplicated — “{{name}}” is ready.",
       "copyName": "{{name}} (copy)",
       "newCharacter": "New character",
       "empty": "No characters yet. Build a standalone scoundrel and bring it to any table.",
@@ -959,6 +972,7 @@
       "factionsHeading": "Factions",
       "scoreHeading": "Score",
       "rollLogHeading": "Roll Log",
+      "stateLabel": "Campaign state",
       "fortuneRoll": "Fortune roll — anyone at the table (the GM's odds die, but players roll gather-info and the like too):",
       "recordResult": "Record a result settled in person or on Discord:",
       "backToCampaign": "← Back to campaign"

@@ -42,6 +42,13 @@ test.describe('GM: rulesets & games', () => {
     await createCampaign(gmPage, ruleset, uniqueName('The Silk Blades Score'));
     // The game-detail header attributes the campaign to its ruleset.
     await expect(gmPage.getByText(ruleset.name)).toBeVisible();
+
+    // F32 — the GM moves the campaign through its lifecycle from the hub; it persists.
+    const state = gmPage.getByLabel('Campaign state');
+    await expect(state).toHaveValue('draft');
+    await state.selectOption('active');
+    await gmPage.reload();
+    await expect(gmPage.getByLabel('Campaign state')).toHaveValue('active', { timeout: 15_000 });
   });
 
   test.fixme('GM generates and copies a player invite', async ({ gmPage }) => {

@@ -2,7 +2,7 @@
 
 // The games data-access seam (write side).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateGameData } from '@heist-mind/core';
+import type { CreateGameData, GameState } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { gameKeys } from './queries';
@@ -17,6 +17,19 @@ export function useCreateGame() {
   return useMutation({
     mutationFn: (vars: { userId: string; data: CreateGameData }) =>
       getRepositories().games.create(vars.userId, vars.data).then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: gameKeys.all }),
+  });
+}
+
+/**
+ * Move the campaign through its lifecycle (draft → recruiting → active → paused → completed).
+ * GM-only via RLS; the hub gates the control the same way (F32).
+ */
+export function useUpdateGameState(gameId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { userId: string; state: GameState }) =>
+      getRepositories().games.updateState(gameId, vars.userId, vars.state).then(unwrap),
     onSuccess: () => qc.invalidateQueries({ queryKey: gameKeys.all }),
   });
 }

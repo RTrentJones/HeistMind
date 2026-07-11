@@ -21,6 +21,7 @@ import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
 import { useCloneCharacter } from '@/features/characters/data/mutations';
 import { useGamesByPlayer } from '@/features/games/data/queries';
+import { useNotificationStore } from '@/shared/stores/notification-store';
 import { errorMessage } from '@/lib/query/result';
 
 /**
@@ -55,6 +56,8 @@ export default function MyCharactersPage() {
         userId,
         name: t('characters.copyName', { name: ch.name }),
       });
+      // F60 — say it worked; the route change alone doesn't announce the copy.
+      useNotificationStore.getState().success(t('characters.duplicated', { name: copy.name }));
       router.push(`/characters/${copy.id}`);
     } catch (err) {
       setCloneError(errorMessage(err) || t('characters.loadFailed'));

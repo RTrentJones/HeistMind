@@ -52,8 +52,9 @@ export function ActionRatingsStep() {
             <span className='font-display' style={{ fontSize: 19 }}>
               {attr.name}
             </span>
-            <Badge variant='ember' size='sm'>
-              {attr.name} {derived[attr.id] ?? 0}
+            {/* Just the number — the header beside it already names the attribute (F53). */}
+            <Badge variant='ember' size='sm' data-testid={`derived-${attr.id}`}>
+              {derived[attr.id] ?? 0}
             </Badge>
           </div>
           {attr.description && (

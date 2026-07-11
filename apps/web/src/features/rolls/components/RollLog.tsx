@@ -104,6 +104,10 @@ export function RollLog({ gameId }: { gameId: string }) {
               {' '}
               · {who}
               {r.results.length > 0 ? ` · [${r.results.join(', ')}]` : ''}
+              {/* F7 — a zero-pool roll shows why two dice appear: 2d, take the lowest. */}
+              {r.zeroDice || (r.dice === 0 && r.results.length > 0)
+                ? ` · ${t('components.rollLog.zeroDice')}`
+                : ''}
               {posEffect ? ` · ${posEffect}` : ''}
               {resisted ? ` · ${resisted}` : ''}
             </Text>

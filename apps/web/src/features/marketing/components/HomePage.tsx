@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Suspense } from 'react';
 import {
   Badge,
   Button,
@@ -16,6 +17,7 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
+import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
@@ -50,6 +52,12 @@ export function HomePage() {
   return (
     <Section variant='hero' padding='none' width='full' className='min-h-screen' as='div'>
       <AuthHeader />
+
+      {/* F40 — the OAuth callback bounces failures to /?error=…; show them (Suspense: the route
+          prerenders and useSearchParams must not block it). */}
+      <Suspense fallback={null}>
+        <AuthErrorBanner />
+      </Suspense>
 
       <Section as='main' variant='default' padding='xl' width='container'>
         <Container maxWidth='7xl'>

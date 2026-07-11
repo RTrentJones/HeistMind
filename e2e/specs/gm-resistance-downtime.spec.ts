@@ -40,7 +40,9 @@ test.describe('GM: resistance + downtime', () => {
     await expect(gmPage.getByText('0/9')).toBeVisible();
     await gmPage.getByRole('button', { name: 'Set stress to 3' }).click(); // pip a11y names — F84
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 10_000 });
+    // Two-click confirm (F60): the first click arms, the relabeled button commits.
     await gmPage.getByRole('button', { name: 'Indulge vice (clear stress)' }).click();
+    await gmPage.getByRole('button', { name: 'Roll it? Click again to indulge' }).click();
     // BitD vice roll clears a *rolled* amount (the lowest-attribute roll's highest die), so assert
     // the downtime entry lands in the feed rather than a fixed 0/9.
     await expect(gmPage.getByText(/Indulged vice — cleared/).first()).toBeVisible({

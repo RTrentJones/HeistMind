@@ -103,14 +103,14 @@ describe('CharacterSheet error split (F73)', () => {
     // on the sheet face. The fixture sits at stress 2, so pip 4 reads "Set stress to 4".
     await userEvent.click(screen.getByRole('button', { name: 'Set stress to 4' }));
 
-    // The failure surfaces in place; the sheet (name heading) is still there.
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('RLS says no');
+    // The failure surfaces in place (by content — the standalone banner is also an alert);
+    // the sheet (name heading) is still there.
+    expect(screen.getByText('RLS says no')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Silks' })).toBeInTheDocument();
 
     // Dismissing clears it without a reload.
     await userEvent.click(screen.getByRole('button', { name: /dismiss/i }));
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('RLS says no')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Silks' })).toBeInTheDocument();
   });
 
