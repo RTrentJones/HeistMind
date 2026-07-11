@@ -481,6 +481,18 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F84 — StressTracker pips are unlabeled buttons (no accessible name)
+
+- **severity:** S3 · **type:** CX-flaw (a11y, F76 family) · **(found 2026-07-11 writing the F73 test)**
+- **where:** `packages/ui/src/components/StressTracker.tsx` (~:116) — each stress pip is a
+  `motion.button` with no `aria-label`/text; the F73 regression test had to select them by
+  className. `ActionDots` (~:239) has the same shape.
+- **root cause:** the pips were built as visual affordances; screen-reader/AT users get a row of
+  anonymous buttons with no way to know which stress value each sets.
+- **fix:** per-pip `aria-label` ("Set stress to N" / "Clear stress") + `aria-pressed` or a
+  radiogroup pattern; then the F73 test can select by role+name. Fits the F76 axe-in-CI push.
+- **status:** open
+
 ### F83 — `hidden sm:block` never un-hides: the ui stylesheet's duplicate utilities shadow app responsive rules
 
 - **severity:** S3 · **type:** CX-flaw (styling footgun) · **(verified — caught by the footer/clickwrap e2e)**
@@ -524,7 +536,9 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Campaigns + Rulesets only; `/characters` (a Phase-5 primary surface and the Mode-1 home) is
   reachable only via the dashboard section or breadcrumbs.
 - **fix:** add a "My characters" link to the header nav (i18n key exists in `navigation.*` space).
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — the authenticated header nav is now Campaigns ·
+  Characters · Rulesets · Settings (`navigation.characters`); pinned by
+  `e2e/specs/signin-gates.spec.ts` (banner link → `/characters` → "My characters" heading).
 
 ### F80 — UI primitives with zero or story-less coverage
 
@@ -535,7 +549,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   play; 15 of 23 components are unit-untested overall (floor 40/62/44/40 reflects it).
 - **fix:** stories for Clock/HarmTracker/Select/Textarea first (smoke coverage is nearly free),
   then unit tests ratcheting the ui floor upward.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — CSF3 stories added for all four
+  (`Select|Textarea|Clock|HarmTracker.stories.tsx`, auto-picked-up by the Storybook test-runner
+  smoke) and unit tests for `Select` + `Textarea` (label association, aria-label fallback,
+  error/aria-invalid, help-text describedby, resizable). The Textarea test caught a real defect:
+  `helpText` leaked onto the DOM `<textarea>` via prop spread (React unknown-prop warning) — now
+  destructured out. The broader "15 of 23 components unit-untested" ratchet remains future work.
 
 ### F79 — Dashboard content is never asserted, and two sections load without affordances
 
@@ -546,7 +565,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   Campaigns gets a spinner), so they pop in.
 - **fix:** extend the spec to seed-and-assert real content on `/`; add loading affordances to the
   two sections.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — Characters + Recent-activity render a
+  `LoadingSpinner` while loading (matching Campaigns, no more pop-in), and `dashboard.spec.ts`
+  gained a local-stack test that seeds a campaign through the UI and asserts `/` really lists it,
+  every section's spinner resolves (`role='status'` count → 0), and the activity section shows
+  rows or its empty-state copy. (The `dashboard` feature still has no unit test — residue.)
 
 ### F78 — The deploy gate is blind to gameplay and the bot (all local-stack specs skip on deployed targets)
 
@@ -609,7 +632,9 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   loading pattern.
 - **root cause:** Empty-state branch keyed on `data.length === 0` before the first fetch resolves.
 - **fix:** Mirror CrewSheet: loading branch before the empty branch on the three panels.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — all three panels early-return a muted
+  "Loading clocks/factions/scores…" placeholder (new `components.*Panel.loading` keys) while their
+  query's `isLoading` is true, mirroring `CrewSheet`.
 
 ### F73 — A transient inline-edit error replaces the whole character sheet
 
@@ -622,7 +647,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   inline-save failures (where in-place feedback is right — the F58 principle).
 - **fix:** Split the states: load errors keep the page swap; mutation errors render a dismissible
   inline Alert (or the notification store) and leave the sheet interactive.
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — the shared `error` became `saveError`: every
+  inline mutation's `onError` now feeds a dismissible destructive `Alert` at the top of the sheet
+  (sheet stays mounted + interactive); only a thrown query / not-found swaps the page for
+  `ErrorDisplay`. Regression-tested in
+  `apps/web/src/features/characters/components/__tests__/CharacterSheet.test.tsx` (seam mocked,
+  real `DEFAULT_RULESET` content per the fixture-provenance rule).
 
 ### F72 — Six secondary routes still show bare "please sign in" text with no CTA (F39 residue)
 
@@ -635,7 +665,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** F39 was fixed for `/games`, `/rulesets`, `/characters`, `/games/[id]` and the
   fix never propagated to the secondary routes.
 - **fix:** Swap all six branches to `SignInGate` (mechanical; component already exists).
-- **status:** open
+- **status:** **fixed (CX round 2026-07-11)** — all six routes early-return `SignInGate`
+  (page-title headings passed where the page has one: create-campaign, new-character,
+  upload-ruleset). Pinned by the new `e2e/specs/signin-gates.spec.ts`: each route, anonymous,
+  must show the gate's Discord CTA + clickwrap (coming-soon-gate tolerant).
 
 ### F71 — Knip first-run triage backlog (advisory until clean)
 

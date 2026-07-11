@@ -470,6 +470,7 @@
       "failedDetach": "Couldn't remove the character from the campaign."
     },
     "scorePanel": {
+      "loading": "Loading scores…",
       "loadFailed": "Could not load scores.",
       "startFailed": "Could not start the score.",
       "endFailed": "Could not end the score.",
@@ -500,6 +501,7 @@
       "saveFailed": "Couldn't save the loadout ({{message}}) — your picks are kept, try again."
     },
     "clocksPanel": {
+      "loading": "Loading clocks…",
       "loadFailed": "Failed to load clocks",
       "createFailed": "Failed to create clock",
       "updateFailed": "Failed to update clock",
@@ -567,6 +569,7 @@
       "logIncarcerateNote": "Incarceration — heat cleared, wanted {{wanted}}"
     },
     "factionsPanel": {
+      "loading": "Loading factions…",
       "loadFailed": "Failed to load factions",
       "addFailed": "Failed to add faction",
       "updateFailed": "Update failed",

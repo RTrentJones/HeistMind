@@ -3,7 +3,8 @@
 import { Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { GameWithDetails } from '@heist-mind/core';
-import { Container, ErrorDisplay, LoadingSpinner, Text } from '@heist-mind/ui';
+import { Container, ErrorDisplay, LoadingSpinner } from '@heist-mind/ui';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useGameDetail } from '@/features/games/data/queries';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
@@ -22,11 +23,7 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
   const game = useGameDetail(gameId);
 
   if (!isAuthenticated) {
-    return (
-      <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('game.createCharAuthPrompt')}</Text>
-      </Container>
-    );
+    return <SignInGate prompt={t('game.createCharAuthPrompt')} />;
   }
 
   if (game.isLoading) {

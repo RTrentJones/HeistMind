@@ -26,8 +26,9 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 ## App shell
 
 Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
-mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand, Campaigns/Rulesets
-nav, `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
+mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand,
+Campaigns/Characters/Rulesets/Settings nav — the Characters link is the Mode-1 "My characters"
+home, F81 — `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
 focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
 **`Footer`** (`shared/components/Footer.tsx` — Terms/Privacy/DMCA/Acceptable-use/Licenses links +
 "© {year} HeistMind, operated by Trent Jones"). The header wraps (`flex-wrap`) instead of
@@ -35,6 +36,13 @@ overflowing on mobile; the signed-out header also carries the **clickwrap** line
 (`ClickwrapNotice`, `sm:`+ only — page-level notices cover phones). The shell steps aside on `/`
 (marketing hero owns its header) and `/auth/*` (transient callback), which render their own
 full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` themselves.
+
+**Signed-out gate (F39/F72, complete as of 2026-07-11):** every auth-required route — primary
+(`/games`, `/rulesets`, `/characters`, `/settings`, `/games/[id]`) **and** secondary (`/games/new`,
+`/games/[id]/characters/new`, `/games/[id]/characters/[id]`, `/characters/new`,
+`/characters/[id]`, `/rulesets/new`) — renders `SignInGate` (heading + prompt + a working Discord
+sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
+`e2e/specs/signin-gates.spec.ts`.
 
 ---
 
@@ -74,8 +82,9 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
   rulesets · upload ruleset); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
   state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
   · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
-  `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change. Copy in
-  `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
+  `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change.
+  All three sections show a `LoadingSpinner` while loading (F79 — Characters + Recent activity
+  used to collapse to nothing until the fetch resolved). Copy in `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
   `/characters` routes (Phase 5 — portable characters; see below). A **brand-new user** (no
   campaigns AND no characters) gets a guided **"Start here" 1-2-3** card (build a character ·
   create a campaign · join a game — each step a real link) instead of disconnected empty cards
@@ -141,6 +150,8 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
     threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
+    _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
+    F74; CrewSheet always did.)_
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
     status (−3..+3) and their project clocks. GM-editable.
   - `ScorePanel` (`apps/web/src/features/scores/components/ScorePanel.tsx`) — the **score / operation
@@ -213,7 +224,10 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
   `useCharacterAdvancement`); `CrewSheet` got the same card split (`crews/components/cards/`).
 - **CX intent:** the common in-play taps (stress, harm, XP, roll, resist, indulge vice) are one-tap on
   the sheet, not buried behind "Edit build"; edits persist across reload. Indulge vice is the
-  stress-release half of the FitD pressure loop (MVP downtime).
+  stress-release half of the FitD pressure loop (MVP downtime). **Error split (F73, 2026-07-11):**
+  a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
+  the sheet and leaves it interactive; only a load failure / not-found swaps the page for
+  `ErrorDisplay`.
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -329,7 +343,10 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-05 (IP-audit copy reskin (F82): sign-in "First time in the shadows?", scoundrel feature line, game/score name placeholders now Brackwater-flavored — no Duskwall setting names in product copy; same day: full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
+_Last verified:_ 2026-07-11 (CX round: F72 SignInGate on all six secondary routes; F73 sheet
+error split; F74 hub-panel loading guards; F79 dashboard loading affordances + seeded e2e; F81
+Characters nav link; F80 Select/Textarea/Clock/HarmTracker stories + tests; new spec
+`signin-gates.spec.ts`; previously 2026-07-05 IP-audit copy reskin (F82): sign-in "First time in the shadows?", scoundrel feature line, game/score name placeholders now Brackwater-flavored — no Duskwall setting names in product copy; same day: full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
 
 ---
 

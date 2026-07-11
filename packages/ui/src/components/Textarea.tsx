@@ -33,6 +33,7 @@ const Textarea = React.memo(
         error,
         success,
         warning,
+        helpText,
         resizable = true,
         disabled,
         ...props
@@ -57,7 +58,7 @@ const Textarea = React.memo(
         describedBy:
           [
             props['aria-describedby'],
-            props.helpText ? ids.help : null,
+            helpText ? ids.help : null,
             message ? ids.error : null,
             label ? ids.label : null,
           ]
@@ -86,9 +87,9 @@ const Textarea = React.memo(
             </label>
           )}
 
-          {props.helpText && (
+          {helpText && (
             <div id={ids.help} className='text-sm text-foreground-muted'>
-              {props.helpText}
+              {helpText}
             </div>
           )}
 

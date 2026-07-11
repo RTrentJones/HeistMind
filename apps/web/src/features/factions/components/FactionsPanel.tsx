@@ -65,6 +65,15 @@ export function FactionsPanel({
 
   const available = (suggestions ?? []).filter(s => !factions.some(f => f.name === s.name));
 
+  // F74 — guard the initial load so the empty state doesn't flash before the first fetch resolves.
+  if (factionsQuery.isLoading) {
+    return (
+      <Text variant='muted' size='sm'>
+        {t('components.factionsPanel.loading')}
+      </Text>
+    );
+  }
+
   return (
     <Stack direction='column' gap='md'>
       {shownError && (

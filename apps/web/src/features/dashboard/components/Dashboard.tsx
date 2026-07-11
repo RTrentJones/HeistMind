@@ -223,7 +223,9 @@ export function Dashboard() {
                 <Link href='/characters'>{t('pages.dashboard.manageCharacters')}</Link>
               </Button>
             </Stack>
-            {loading ? null : characters.length === 0 ? (
+            {loading ? (
+              <LoadingSpinner />
+            ) : characters.length === 0 ? (
               <Card variant='outline'>
                 <Stack direction='column' gap='sm' align='start'>
                   <Text variant='muted'>{t('pages.dashboard.noCharacters')}</Text>
@@ -242,7 +244,9 @@ export function Dashboard() {
             <Heading level='h2' variant='primary'>
               {t('pages.dashboard.recentActivity')}
             </Heading>
-            {loading ? null : activity.length === 0 ? (
+            {loading ? (
+              <LoadingSpinner />
+            ) : activity.length === 0 ? (
               <Text variant='muted'>{t('pages.dashboard.noActivity')}</Text>
             ) : (
               <Stack direction='column' gap='sm'>

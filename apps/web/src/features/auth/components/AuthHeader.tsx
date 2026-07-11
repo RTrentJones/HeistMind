@@ -56,6 +56,9 @@ export function AuthHeader() {
               <Link href='/games'>{t('navigation.campaigns')}</Link>
             </Button>
             <Button asChild variant='ghost' size='sm'>
+              <Link href='/characters'>{t('navigation.characters')}</Link>
+            </Button>
+            <Button asChild variant='ghost' size='sm'>
               <Link href='/rulesets'>{t('navigation.rulesets')}</Link>
             </Button>
             <Button asChild variant='ghost' size='sm'>

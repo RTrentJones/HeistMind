@@ -14,6 +14,7 @@ import {
   Stack,
   Text,
 } from '@heist-mind/ui';
+import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
@@ -35,11 +36,7 @@ export default function NewStandaloneCharacterPage() {
   const [picked, setPicked] = useState<Ruleset | null>(null);
 
   if (!isAuthenticated) {
-    return (
-      <Container maxWidth='md' padding='lg'>
-        <Text variant='muted'>{t('characters.authPrompt')}</Text>
-      </Container>
-    );
+    return <SignInGate heading={t('characters.newTitle')} prompt={t('characters.authPrompt')} />;
   }
 
   // Ruleset chosen → run the wizard standalone (no gameId); land on the new standalone sheet.

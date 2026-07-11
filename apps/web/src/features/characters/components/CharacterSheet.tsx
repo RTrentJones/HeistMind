@@ -61,7 +61,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const addXpMut = useAddExperience(characterId, character?.gameId ?? null);
   const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
 
-  const [error, setError] = useState<string | null>(null);
+  // F73 — inline-save failures stay on the sheet (dismissible alert below); only load failures
+  // swap the page for ErrorDisplay.
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [name, setName] = useState('');
@@ -80,7 +82,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       { userId, data: { name: name.trim() } },
       {
         onSuccess: () => setEditing(false),
-        onError: e => setError(e.message ?? t('components.characterSheet.saveNameFailed')),
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.saveNameFailed')),
       }
     );
   };
@@ -96,7 +98,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         logLabel: character.name,
         logNote: t('components.characterSheet.logXpMark'),
       },
-      { onError: e => setError(e.message ?? t('components.characterSheet.addXpFailed')) }
+      { onError: e => setSaveError(e.message ?? t('components.characterSheet.addXpFailed')) }
     );
   };
 
@@ -111,7 +113,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     updateCharData.mutate(
       { userId, data: { characterData } },
       {
-        onError: e => setError(e.message ?? t('components.characterSheet.saveStressFailed')),
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.saveStressFailed')),
       }
     );
   };
@@ -136,7 +138,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       // Overindulging (cleared more than was marked) is a real consequence the GM narrates.
       setViceNote(outcome.overindulged ? t('components.downtime.indulgeVice.overindulged') : null);
     } catch (e) {
-      setError((e as Error).message ?? t('components.downtime.indulgeVice.failed'));
+      setSaveError((e as Error).message ?? t('components.downtime.indulgeVice.failed'));
     }
   };
 
@@ -153,21 +155,19 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     updateCharData.mutate(
       { userId, data: { characterData: { ...character.characterData, xp } } },
       {
-        onError: e => setError(e.message ?? t('components.characterSheet.markXpFailed')),
+        onError: e => setSaveError(e.message ?? t('components.characterSheet.markXpFailed')),
       }
     );
   };
 
   if (characterQuery.isLoading) return <LoadingSpinner />;
-  // A save error blows the sheet back to the error state (unchanged from the pre-seam behavior);
-  // a thrown query is a load failure, and a resolved-but-null character is a genuine not-found.
-  if (error || characterQuery.isError || !character) {
-    const message =
-      error ??
-      (characterQuery.isError
-        ? ((characterQuery.error as Error | null)?.message ??
-          t('components.characterSheet.loadFailed'))
-        : t('components.characterSheet.notFound'));
+  // A thrown query is a load failure, and a resolved-but-null character is a genuine not-found —
+  // both swap the page. Inline-save failures render the dismissible alert inside the sheet instead.
+  if (characterQuery.isError || !character) {
+    const message = characterQuery.isError
+      ? ((characterQuery.error as Error | null)?.message ??
+        t('components.characterSheet.loadFailed'))
+      : t('components.characterSheet.notFound');
     return (
       <ErrorDisplay
         title={t('components.characterSheet.loadError')}
@@ -185,6 +185,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
   return (
     <Stack direction='column' gap='lg'>
+      {saveError && (
+        <Alert variant='destructive' dismissible onDismiss={() => setSaveError(null)}>
+          {saveError}
+        </Alert>
+      )}
       <Card variant='character'>
         <Stack direction='column' gap='md'>
           {editing ? (

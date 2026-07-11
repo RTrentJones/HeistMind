@@ -69,6 +69,16 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
     }
   };
 
+  // F74 — guard the initial load so the "no active score" state doesn't flash before the first
+  // fetch resolves.
+  if (scoresQuery.isLoading) {
+    return (
+      <Text variant='muted' size='sm'>
+        {t('components.scorePanel.loading')}
+      </Text>
+    );
+  }
+
   return (
     <Stack direction='column' gap='sm'>
       {shownError && (

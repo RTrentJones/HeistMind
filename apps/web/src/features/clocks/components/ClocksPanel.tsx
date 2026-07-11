@@ -45,6 +45,15 @@ export function ClocksPanel({ gameId, isGm }: { gameId: string; isGm: boolean })
     });
   };
 
+  // F74 — guard the initial load so the empty state doesn't flash before the first fetch resolves.
+  if (clocksQuery.isLoading) {
+    return (
+      <Text variant='muted' size='sm'>
+        {t('components.clocksPanel.loading')}
+      </Text>
+    );
+  }
+
   return (
     <Stack direction='column' gap='md'>
       {error && (
