@@ -156,7 +156,7 @@ broken placeholders). Nine CI-gated PRs:
     `exactOptionalPropertyTypes` attempted and deferred — the cascade reaches every optional React
     prop passed as a possibly-undefined expression (30+ fixes; revisit after R2-PR7/8 shrink the
     surface).
-  - **CI/infra**: `--frozen-lockfile` in all workflows; Node pinned to 20.18.0 in lockstep with
+  - **CI/infra**: `--frozen-lockfile` in all workflows; Node pinned to 20.19.0 in lockstep with
     `.nvmrc` (greenlight-verify stays 24 — the CLI's floor, commented); turbo `globalDependencies`
     now include the shared configs (no more stale caches on config edits) + a real `lint:fix`
     task; lint-staged runs `eslint --fix` before prettier; conservative `renovate.json` (weekly,

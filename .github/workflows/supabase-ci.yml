@@ -24,7 +24,7 @@ concurrency:
 env:
   # Pin versions for reproducibility
   PNPM_VERSION: '9.15.0'
-  NODE_VERSION: '20.18.0' # Use latest LTS version
+  NODE_VERSION: '20.19.0' # Use latest LTS version
   # `latest` to match ci.yml's working E2E job. The old 1.142.2 pin predates
   # config.toml's `db.major_version = 17` (and many modern config fields), so it died with
   # "Failed reading config: Invalid db.major_version: 17" on every `supabase start`.

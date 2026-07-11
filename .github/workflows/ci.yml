@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.18.0' # keep in lockstep with .nvmrc
+  NODE_VERSION: '20.19.0' # keep in lockstep with .nvmrc
   PNPM_VERSION: '9.15.0'
 
 jobs:
