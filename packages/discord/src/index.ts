@@ -6,6 +6,7 @@ export { handleInteraction } from './router';
 export { verifyDiscordRequest } from './verify';
 export { realizeD6, realizeDice } from './dice';
 export { makeFollowUpClient } from './respond';
+export { makeChannelParentFetcher } from './channel-fetch';
 export { COMMAND_MANIFEST } from './commands/manifest';
 export type { BotContext, CommandHandler, FollowUpClient, HandlerResult } from './types';
 // Re-exported so the transport (the web route) needs no discord-api-types dependency.

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render } from '../../lib/test-utils';
+import { render, screen } from '../../lib/test-utils';
 import { StressTracker } from '../StressTracker';
 import { TooltipProvider } from '../Tooltip';
 import { calculateStressLevel } from '../../lib/utils';
@@ -40,5 +40,18 @@ describe('StressTracker', () => {
     expect(() =>
       withProvider(<StressTracker current={2} max={4} interactive showNumbers />)
     ).not.toThrow();
+  });
+
+  it('pips carry their action as an accessible name (F84)', () => {
+    withProvider(<StressTracker current={3} max={9} interactive onChange={() => {}} />);
+    // Any non-top pip names the value it sets; the top filled pip names the step back down.
+    expect(screen.getByRole('button', { name: 'Set stress to 5' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: 'Clear stress to 2' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 });

@@ -11,6 +11,7 @@
 import { after } from 'next/server';
 import {
   handleInteraction,
+  makeChannelParentFetcher,
   makeFollowUpClient,
   realizeD6,
   verifyDiscordRequest,
@@ -28,6 +29,8 @@ function buildContext(): BotContext {
     deploySha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
     siteUrl: process.env.SITE_URL ?? 'http://localhost:3000',
     repos: createServiceRepositories(),
+    // F66 — enables the thread-under-a-category-link retry; null (retry skipped) without a token.
+    fetchChannelParent: makeChannelParentFetcher(process.env.DISCORD_BOT_TOKEN),
   };
 }
 

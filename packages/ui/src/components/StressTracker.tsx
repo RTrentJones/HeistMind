@@ -116,6 +116,14 @@ const StressTracker: React.FC<StressTrackerProps> = ({
             <motion.button
               key={index}
               type='button'
+              // F84 — pips are buttons; give each the action it performs (the top filled pip
+              // toggles back down, any other sets the track to itself).
+              aria-label={
+                index + 1 === current
+                  ? `Clear stress to ${current - 1}`
+                  : `Set stress to ${index + 1}`
+              }
+              aria-pressed={index < current}
               className={cn(
                 'rounded-full border-2 transition-all duration-200',
                 sizes[size],
@@ -239,6 +247,14 @@ const ActionDots: React.FC<ActionDotsProps> = ({
           <motion.button
             key={index}
             type='button'
+            // F84 — same naming scheme as the stress pips, scoped by the row's label so pages
+            // with many dot rows (the wizard, the editor) stay unambiguous.
+            aria-label={
+              index + 1 === current
+                ? `Clear ${label ?? 'rating'} to ${current - 1}`
+                : `Set ${label ?? 'rating'} to ${index + 1}`
+            }
+            aria-pressed={index < current}
             className={cn(
               'rounded-full border-2 transition-all duration-200',
               sizes[size],

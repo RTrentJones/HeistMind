@@ -36,7 +36,7 @@ test.describe('GM: harm + live stress', () => {
     // --- Live stress: the Condition card's tracker saves on click; persists across reload. ---
     await expect(gmPage.getByRole('heading', { name: 'Condition' })).toBeVisible();
     await expect(gmPage.getByText('0/9')).toBeVisible();
-    await gmPage.locator('button.rounded-full').nth(2).click(); // set stress = 3
+    await gmPage.getByRole('button', { name: 'Set stress to 3' }).click(); // pip a11y names — F84
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 10_000 });
     await gmPage.reload();
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 15_000 }); // persisted

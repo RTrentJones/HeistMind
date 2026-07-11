@@ -102,7 +102,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       // character belongs to THAT campaign. Anything else stays display-only with the reason.
       let footer: string;
       let pushNote: string | null = push ? copy.pushedReminder : null;
-      const game = await resolveLinkedGame(repos, interaction);
+      const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
       if (!game) {
         footer = copy.notLoggedNotLinked;
       } else if (!(await isMember(repos, character.createdBy, game.id))) {

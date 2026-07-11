@@ -41,7 +41,7 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
     const displayOnly = (footer: string) =>
       followUp.editOriginal({ embeds: [embed(copy.resistCost(stress), footer)] });
 
-    const game = await resolveLinkedGame(repos, interaction);
+    const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
     if (!game) return displayOnly(copy.notLoggedNotLinked);
     const character = await activeCharacter(ctx, interaction);
     if (!character) return displayOnly(copy.notLoggedNoCharacter);
@@ -64,7 +64,9 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
       return followUp.sendEphemeral(copy.somethingBroke);
     }
     return followUp.editOriginal({
-      embeds: [embed(copy.resistCharged(character.name, logged.data.stress), copy.loggedFooter(game.name))],
+      embeds: [
+        embed(copy.resistCharged(character.name, logged.data.stress), copy.loggedFooter(game.name)),
+      ],
     });
   });
 };

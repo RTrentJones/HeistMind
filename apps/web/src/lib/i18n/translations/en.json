@@ -959,7 +959,7 @@
       "factionsHeading": "Factions",
       "scoreHeading": "Score",
       "rollLogHeading": "Roll Log",
-      "fortuneRoll": "Fortune / GM roll",
+      "fortuneRoll": "Fortune roll — anyone at the table (the GM's odds die, but players roll gather-info and the like too):",
       "recordResult": "Record a result settled in person or on Discord:",
       "backToCampaign": "← Back to campaign"
     }

@@ -441,10 +441,13 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   through suggestions.
 
 Failure posture everywhere: public defers that fail authz become delete + ephemeral; non-members
-learn nothing (not even the campaign's name). Known gaps: F66 (threads under a category link) is
-the last bot gap — F65 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
+learn nothing (not even the campaign's name). **No bot known-gaps remain:** F66 (threads under a
+category link) closed via the app's first bot-token fetch — a thread whose parent channel is only
+CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
+(web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-07-11 (bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
+_Last verified:_ 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
+e2e (Act 3.7); same day bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
 help/README updated; previously 2026-07-05 go-live smoke fixed F68 discord_id trigger-link + F69
 rulesetActions resolution; residue tracked as F70/F71; phases 0–3 complete #121–#132)
 
@@ -475,7 +478,9 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
 1. GM **starts a score** (`ScorePanel`) and seeds clocks for obstacles. 2. Players **set their
    per-score loadout** on their sheets (`LoadoutCard`: level + items → Save). 3. Players roll actions
    from their sheets (`RollPanel`: action → rating → roll → logged, auto-tagged with the active score). 4. When a consequence lands, the player **resists** (`RollPanel` resistance mode → `6 − highest die`
-   stress applied live). 5. GM makes fortune/GM rolls from the hub `RollPanel`. 6. Anything settled **in
+   stress applied live). 5. **Anyone** rolls fortune from the hub `RollPanel` (deliberately
+   member-open — F77 decided for bot parity: `/fortune` is open to everyone while `/log` stays
+   member-gated; the section copy now says so). 6. Anything settled **in
    person or on Discord** gets recorded via `AddResultForm` so the log stays complete. 7. All events
    land in `RollLog`, grouped under the score, with who + when (every player sees on reload). 8. GM
    ticks clocks; adjusts crew heat/rep. 9. Players **indulge vice** (downtime) to clear stress. 10. GM

@@ -495,9 +495,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   feed-logged via the engine. `/heist help` + the README command table updated; `gm.test.ts`
   covers mark/clamp/refusal/reset. F43 + F65 fixed alongside (see their entries) — the two
   clients now agree on harm and crew advancement end-to-end.
-- **residue:** a signed e2e for `/crew xp` on the local stack (the GM-command signed-POST
-  harness covers the family; add when next touching `discord.spec.ts`), and F66 (thread under a
-  category link) remains the last bot known-gap.
+- **residue:** ~~a signed e2e for `/crew xp` on the local stack~~ **closed (rerun round,
+  2026-07-11)** — `discord.spec.ts` Act 3.7 drives `/crew xp amount:8` → resources hit 8/8 + a
+  'crew' feed event, then `/crew advance` → track resets to 0 + the advance feed event. F66 is
+  also fixed (see its entry) — no bot known-gaps remain.
 
 ### F85 — XP marking + crew XP: silent feeds, buried advance, two interaction models (XP-round cluster)
 
@@ -544,7 +545,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   anonymous buttons with no way to know which stress value each sets.
 - **fix:** per-pip `aria-label` ("Set stress to N" / "Clear stress") + `aria-pressed` or a
   radiogroup pattern; then the F73 test can select by role+name. Fits the F76 axe-in-CI push.
-- **status:** open
+- **status:** **fixed (rerun round, 2026-07-11)** — every pip in `StressTracker` AND `ActionDots`
+  carries its action as the accessible name ("Set stress to N", the top filled pip "Clear stress
+  to N−1"; dots scope by their row label — "Set Track to 1") plus `aria-pressed`. The F73 sheet
+  test and the stress e2e steps (`gm-harm-stress`, `gm-resistance-downtime`) now select by
+  role+name instead of className; unit-tested in `StressTracker.test.tsx`.
 
 ### F83 — `hidden sm:block` never un-hides: the ui stylesheet's duplicate utilities shadow app responsive rules
 
@@ -649,7 +654,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   wrong.
 - **fix:** Decide once: either gate the hub fortune panel to the GM, or (likelier, for bot parity)
   keep it member-open and reword the section label + J3 so a player rolling fortune isn't off-map.
-- **status:** open
+- **status:** **resolved (rerun round, 2026-07-11) — DECIDED: member-open, for bot parity.**
+  `/fortune` is open to everyone in Discord, so the web hub matches. The section copy now says so
+  ("Fortune roll — anyone at the table…", `game.fortuneRoll`) and J3 step 5 reads "Anyone rolls
+  fortune from the hub", with the decision recorded inline. No gating change.
 
 ### F76 — Accessibility is never enforced in CI (stories are render-only; no axe anywhere)
 
@@ -769,7 +777,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   channel's **category** is linked, the category id isn't in the payload and `/roll`/`/log` in the
   thread say "not linked". Needs one bot-token channel fetch (the first bot-token call in the app)
   or a cached channel→category map.
-- **status:** **open** (documented since the phase-2 plan; logged so the backlog owns it).
+- **status:** **fixed (rerun round, 2026-07-11)** — `resolveLinkedGame` gained an optional retry:
+  when the payload candidates miss AND the interaction channel is a THREAD (types 10/11/12), one
+  bot-token REST fetch (`makeChannelParentFetcher`, the app's FIRST bot-token call — wired in the
+  transport from `DISCORD_BOT_TOKEN`) resolves the parent channel's category and the lookup
+  retries with it. Best-effort by design: no token / failed fetch / no match degrades to the old
+  "not linked". All seven `resolveLinkedGame` call sites pass `ctx.fetchChannelParent`.
+  Unit-tested in the new `links.test.ts` (retry hits, payload-resolves-skips-fetch, non-thread
+  skips, degradation matrix).
 
 ### F65 — Web harm edits still bypass the campaign feed (R-E1 residue)
 

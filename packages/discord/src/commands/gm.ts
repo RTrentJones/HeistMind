@@ -53,7 +53,7 @@ async function gmContext(
   if (!userId) return failEphemeral(copy.unknownCommand);
   const actor = await resolveActor(ctx.repos, userId);
   if (!actor) return failEphemeral(copy.signInFirst(ctx.siteUrl));
-  const game = await resolveLinkedGame(ctx.repos, interaction);
+  const game = await resolveLinkedGame(ctx.repos, interaction, ctx.fetchChannelParent);
   if (!game) return failEphemeral(copy.notLinked);
   if (!(await isGM(ctx.repos, actor.id, game.id))) return failEphemeral(copy.gmOnly);
   return { repos: ctx.repos, actorId: actor.id, game };
@@ -275,7 +275,7 @@ async function gmGame(
   if (!ctx.repos || !userId) return null;
   const actor = await resolveActor(ctx.repos, userId);
   if (!actor) return null;
-  const game = await resolveLinkedGame(ctx.repos, interaction);
+  const game = await resolveLinkedGame(ctx.repos, interaction, ctx.fetchChannelParent);
   if (!game) return null;
   // Autocomplete must not leak campaign state to non-GMs — same gate as the handlers.
   if (!(await isGM(ctx.repos, actor.id, game.id))) return null;

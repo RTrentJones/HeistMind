@@ -38,7 +38,7 @@ test.describe('GM: resistance + downtime', () => {
     // it to 3 on the live Condition tracker first, then indulge. ---
     await expect(gmPage.getByRole('heading', { name: 'Condition' })).toBeVisible();
     await expect(gmPage.getByText('0/9')).toBeVisible();
-    await gmPage.locator('button.rounded-full').nth(2).click(); // set stress = 3
+    await gmPage.getByRole('button', { name: 'Set stress to 3' }).click(); // pip a11y names — F84
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 10_000 });
     await gmPage.getByRole('button', { name: 'Indulge vice (clear stress)' }).click();
     // BitD vice roll clears a *rolled* amount (the lowest-attribute roll's highest die), so assert

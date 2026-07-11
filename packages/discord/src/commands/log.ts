@@ -21,7 +21,7 @@ export const handleLog: CommandHandler = (ctx, interaction) => {
     const repos = ctx.repos;
     const actor = await resolveActor(repos, userId);
     if (!actor) return failEphemeral(followUp, copy.signInFirst(ctx.siteUrl));
-    const game = await resolveLinkedGame(repos, interaction);
+    const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
     if (!game) return failEphemeral(followUp, copy.notLinked);
     if (!(await isMember(repos, actor.id, game.id))) return failEphemeral(followUp, copy.notMember);
 

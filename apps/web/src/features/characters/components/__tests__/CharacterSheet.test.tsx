@@ -99,10 +99,9 @@ describe('CharacterSheet error split (F73)', () => {
     );
     renderSheet();
 
-    // Click a stress pip — the always-rendered inline mutation on the sheet face.
-    const pip = screen.getAllByRole('button').find(b => b.className.includes('rounded-full'));
-    expect(pip).toBeDefined();
-    await userEvent.click(pip!);
+    // Click a stress pip (by its accessible name — F84) — the always-rendered inline mutation
+    // on the sheet face. The fixture sits at stress 2, so pip 4 reads "Set stress to 4".
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 4' }));
 
     // The failure surfaces in place; the sheet (name heading) is still there.
     const alert = screen.getByRole('alert');
