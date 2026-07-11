@@ -34,6 +34,21 @@ describe('rollPool', () => {
     });
   });
 
+  it('action: an assist adds one die (F10); never applies off action mode', () => {
+    expect(rollPool({ mode: 'action', rating: 2, assist: true })).toEqual({
+      count: 3,
+      zeroDice: false,
+    });
+    // Assist + push stack; harm still costs its die.
+    expect(
+      rollPool({ mode: 'action', rating: 2, assist: true, push: true, harmPenalty: 1 })
+    ).toEqual({ count: 3, zeroDice: false });
+    expect(rollPool({ mode: 'resistance', rating: 2, assist: true })).toEqual({
+      count: 2,
+      zeroDice: false,
+    });
+  });
+
   it('action: moderate harm costs one die (F43); a floored pool falls back to zero-dice', () => {
     expect(rollPool({ mode: 'action', rating: 3, harmPenalty: 1 })).toEqual({
       count: 2,

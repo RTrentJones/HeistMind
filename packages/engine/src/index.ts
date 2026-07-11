@@ -31,8 +31,8 @@ export type {
 } from './characters';
 export { rollAction, rollResistance } from './rolls';
 export type { ActionRollInput, ResistanceRollInput } from './rolls';
-export { indulgeVice, viceDicePool } from './downtime';
-export type { IndulgeViceInput, IndulgeViceOutcome } from './downtime';
+export { flashback, indulgeVice, viceDicePool } from './downtime';
+export type { FlashbackInput, IndulgeViceInput, IndulgeViceOutcome } from './downtime';
 export { startScore, endScore } from './scores';
 export type { StartScoreInput, EndScoreInput } from './scores';
 export { saveLoadout } from './loadout';

@@ -29,7 +29,7 @@ import {
   markCrewXp,
   takeCrewAdvance,
 } from './crews';
-import { indulgeVice, viceDicePool } from './downtime';
+import { flashback, indulgeVice, viceDicePool } from './downtime';
 import { setFactionStatus } from './factions';
 import { saveLoadout } from './loadout';
 import { rollAction, rollResistance } from './rolls';
@@ -241,6 +241,113 @@ describe('rollResistance', () => {
     expect(update).toHaveBeenCalledWith('c1', 'u1', {
       characterData: expect.objectContaining({ stress: 9 }),
     });
+  });
+});
+
+describe('rollAction — assist (F10)', () => {
+  const baseInput = {
+    gameId: 'g1',
+    userId: 'u1',
+    characterId: 'c1',
+    kind: 'action' as const,
+    label: 'skirmish',
+    dice: 3,
+    results: [6, 4, 2],
+    zeroDice: false,
+  };
+
+  it('charges the assister 1 stress when the roller may write them (own alt / GM)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const helper = { ...CHARACTER, id: 'c2', createdBy: 'u1' } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: {
+        findWithDetails: vi.fn((id: string) =>
+          Promise.resolve(ok(id === 'c2' ? helper : CHARACTER))
+        ),
+      },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollAction(r, { ...baseInput, assist: { characterId: 'c2' } });
+    expect(out.success).toBe(true);
+    // helper sits at stress 6 → +1 = 7.
+    expect(update).toHaveBeenCalledWith('c2', 'u1', {
+      characterData: expect.objectContaining({ stress: 7 }),
+    });
+  });
+
+  it("another player's assister is NOT written — the roll stands, they self-mark", async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn();
+    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(foreign)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollAction(r, { ...baseInput, assist: { characterId: 'c9' } });
+    expect(out.success).toBe(true); // NOT_OWNER degrades to feed-attribution, never a failure
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('flashback (F16)', () => {
+  it('charges the priced stress (clamped) and logs the note to the feed', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await flashback(r, {
+      character: CHARACTER,
+      userId: 'u1',
+      stress: 2,
+      logLabel: 'Silks',
+      logNote: 'Flashback (2 stress): bribed the doorman yesterday',
+    });
+    expect(out.success).toBe(true);
+    // 6 + 2 = 8 on the default 9-track.
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 8 }),
+    });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        kind: 'note',
+        note: 'Flashback (2 stress): bribed the doorman yesterday',
+      })
+    );
+  });
+
+  it('a FREE flashback (0 stress) only logs; a stranger is refused', async () => {
+    const update = vi.fn();
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await flashback(r, {
+      character: CHARACTER,
+      userId: 'u1',
+      stress: 0,
+      logLabel: 'Silks',
+      logNote: 'Flashback: cased the vault',
+    });
+    expect(out.success).toBe(true);
+    expect(update).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalled();
+
+    const refused = await flashback(r, {
+      character: CHARACTER,
+      userId: 'someone-else',
+      stress: 0,
+      logLabel: 'l',
+      logNote: 'n',
+    });
+    expect(refused.success).toBe(false);
   });
 });
 

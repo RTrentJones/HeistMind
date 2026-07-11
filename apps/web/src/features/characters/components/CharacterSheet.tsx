@@ -21,15 +21,17 @@ import {
   Heading,
   Input,
   LoadingSpinner,
+  Select,
   Stack,
   StressTracker,
   Text,
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useCharacterDetail } from '@/features/characters/data/queries';
+import { useCharacterDetail, useCharactersByGame } from '@/features/characters/data/queries';
 import {
   useAddExperience,
   useClearHarm,
+  useFlashback,
   useIndulgeVice,
   useTakeHarm,
   useUpdateCharacter,
@@ -65,6 +67,12 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
   const takeHarmMut = useTakeHarm(characterId, character?.gameId ?? null);
   const clearHarmMut = useClearHarm(characterId, character?.gameId ?? null);
+  const flashbackMut = useFlashback(character?.gameId ?? null);
+  // Campaign roster for the ASSIST move (F10) — teammates are everyone else's active characters.
+  const rosterQuery = useCharactersByGame(character?.gameId ?? undefined);
+  const teammates = (rosterQuery.data ?? [])
+    .filter(c => c.id !== characterId && c.status === 'active')
+    .map(c => ({ id: c.id, name: c.name }));
 
   // F73 — inline-save failures stay on the sheet (dismissible alert below); only load failures
   // swap the page for ErrorDisplay.
@@ -82,6 +90,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const [viceNote, setViceNote] = useState<string | null>(null);
   const [viceArmed, setViceArmed] = useState(false);
   const [harmNote, setHarmNote] = useState<string | null>(null);
+  // Flashback (F16): what you retro-establish + the stress the GM prices it at.
+  const [flashText, setFlashText] = useState('');
+  const [flashStress, setFlashStress] = useState(1);
 
   const busy =
     updateChar.isPending ||
@@ -89,7 +100,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     addXpMut.isPending ||
     indulgeViceMut.isPending ||
     takeHarmMut.isPending ||
-    clearHarmMut.isPending;
+    clearHarmMut.isPending ||
+    flashbackMut.isPending;
 
   const saveName = () => {
     const userId = user?.id;
@@ -228,6 +240,26 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         logNote: t('components.characterSheet.logHarmCleared', { description }),
       },
       { onError: e => setSaveError(e.message ?? t('components.characterSheet.harmFailed')) }
+    );
+  };
+
+  // Flashback (F16) — pay the priced stress and put the retro-established beat in the feed.
+  const doFlashback = () => {
+    const userId = user?.id;
+    const text = flashText.trim();
+    if (!userId || !character || !text) return;
+    flashbackMut.mutate(
+      {
+        character,
+        userId,
+        stress: flashStress,
+        logLabel: character.name,
+        logNote: t('components.downtime.flashback.logNote', { count: flashStress, text }),
+      },
+      {
+        onSuccess: () => setFlashText(''),
+        onError: e => setSaveError(e.message ?? t('components.downtime.flashback.failed')),
+      }
     );
   };
 
@@ -499,9 +531,46 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   rating: character.characterData?.skills?.[name] ?? 0,
                 }))}
                 harm={character.characterData?.harm}
+                teammates={teammates}
               />
             ) : (
-              <RollPanel gameId={character.gameId} characterId={character.id} />
+              <RollPanel
+                gameId={character.gameId}
+                characterId={character.id}
+                teammates={teammates}
+              />
+            )}
+            {/* Flashback (F16) — spend stress to retro-establish; the feed carries the beat. */}
+            {canEdit && (
+              <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+                <Input
+                  size='sm'
+                  label={t('components.downtime.flashback.label')}
+                  placeholder={t('components.downtime.flashback.placeholder')}
+                  value={flashText}
+                  onChange={e => setFlashText(e.target.value)}
+                />
+                <Select
+                  aria-label={t('components.downtime.flashback.stressLabel')}
+                  selectSize='sm'
+                  value={flashStress}
+                  onChange={e => setFlashStress(Number(e.target.value))}
+                >
+                  {[0, 1, 2].map(n => (
+                    <option key={n} value={n}>
+                      {t('components.downtime.flashback.stressOption', { count: n })}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  disabled={!flashText.trim() || busy}
+                  onClick={doFlashback}
+                >
+                  {t('components.downtime.flashback.action')}
+                </Button>
+              </Stack>
             )}
             <RollLog gameId={character.gameId} />
           </Stack>

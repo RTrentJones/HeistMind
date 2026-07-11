@@ -20,6 +20,7 @@ const characterQuery = {
 };
 vi.mock('@/features/characters/data/queries', () => ({
   useCharacterDetail: () => characterQuery,
+  useCharactersByGame: () => ({ data: [] }),
 }));
 vi.mock('@/features/scores/data/queries', () => ({
   useScoresByGame: () => ({ data: [] }),
@@ -37,6 +38,7 @@ vi.mock('@/features/characters/data/mutations', () => ({
   useIndulgeVice: () => noopMutation,
   useTakeHarm: () => noopMutation,
   useClearHarm: () => noopMutation,
+  useFlashback: () => noopMutation,
 }));
 vi.mock('@/features/auth/stores/auth-store', () => ({
   useAuth: () => ({ user: { id: 'u1' } }),

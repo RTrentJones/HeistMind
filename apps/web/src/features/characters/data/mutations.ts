@@ -15,6 +15,7 @@ import {
   advanceCharacter,
   applyStress,
   clearHarm,
+  flashback,
   indulgeVice,
   markXp,
   retireCharacter,
@@ -130,6 +131,27 @@ export function useClearHarm(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await clearHarm(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * A BitD flashback (F16) via the ENGINE: pay the GM-priced stress (clamped) and land the
+ * retro-established action in the campaign feed.
+ */
+export function useFlashback(gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      character: CharacterWithDetails;
+      userId: string;
+      stress: number;
+      logLabel: string;
+      logNote: string;
+    }) => unwrap(await flashback(getRepositories(), vars)),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: characterKeys.all });
       if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });

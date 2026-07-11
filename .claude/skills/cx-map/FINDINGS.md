@@ -235,7 +235,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Group play — central to a crew game — has no scaffolding (assist = 1 stress, group
   action, etc.).
 - **fix:** Group-action mode linking a lead roll + assist rolls; assisters take stress; mark linked.
-- **status:** open
+- **status:** **fixed — ASSIST (the everyday teamwork move) shipped (backlog round C, 2026-07-11)**:
+  the sheet's action roll offers "Assist: <teammate> (+1d, they mark 1 stress)" over the campaign
+  roster; engine `rollAction` gained `assist` — the die rides the pool, the helper's stress is
+  charged when the roller may write them (own alt / GM) and otherwise the feed note tells the
+  helper to self-mark (ownership is a hard security boundary; NOT*OWNER never fails the roll).
+  Engine + roll-pool unit-tested. \_Residue (open, by design):* **lead group action / set up /
+  protect** are GM-arbitrated multi-roll orchestrations — better run in prose with individual
+  rolls; revisit if tables ask for linked-roll mechanics.
 
 ### F11 — Starting abilities can be unchecked
 
@@ -256,7 +263,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Close friend / rival is part of Blades character identity and is skipped at
   creation.
 - **fix:** A contacts step (or extend Identity) picking from the playbook's contacts.
-- **status:** open
+- **status:** **fixed (backlog round C, 2026-07-11)** — the Identity step's LAST field (vice, or
+  the combined fallback) carries a "Friends & rivals" picker over the playbook's contact list
+  (`setContact('friend'|'rival', …)` — at most one each, replace/clear semantics, store
+  unit-tested); hidden for playbooks without contacts. Optional per RAW — never blocks Next.
 
 ### F13 — Loadout is on the build, not per-score ~~(was: "wizard never sets loadout")~~
 
@@ -306,7 +316,11 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Spend-stress-to-retro-establish is a core player-agency move, especially valuable
   in async play where forward planning is hard.
 - **fix:** A flashback action: narrate + stress cost → logged roll linked to the triggering moment.
-- **status:** open
+- **status:** **fixed (backlog round C, 2026-07-11)** — new engine `flashback` use-case (pay the
+  GM-priced 0/1/2 stress through the clamped write, land the retro-established beat in the feed
+  as a note; ownership-gated; engine-tested) + a sheet Flashback row in the Dice card (what you
+  establish + stress select + button). E2E in `gm-resistance-downtime.spec.ts` (feed entry +
+  stress charge asserted).
 
 ### F17 — Crew rep hard-caps at 12 with no rep→tier advancement
 
@@ -927,7 +941,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   baked in → allow per-score load choice when a score/heist entity exists. **fixed/superseded**
   (verified 2026-07-05 audit): `LoadoutCard.tsx:130-144` offers light/normal/heavy per score.
 - **F46** · FitD · Fortune rolls lack structured types (engagement / gather-info / situation) and
-  tiered readouts. `RollPanel.tsx:131–143` → a fortune-type selector + interpretation. **open**
+  tiered readouts. `RollPanel.tsx:131–143` → a fortune-type selector + interpretation. **fixed
+  (backlog round C, 2026-07-11)** — fortune mode gained a type selector (Fortune / Engagement /
+  Gather information; the type becomes the feed label) and a tiered SRD-phrased reading under the
+  result (crit exceptional · 6 good · 4–5 mixed · 1–3 poor).
 - **F47** · FitD · Faction projects/clocks and the war state (status −3) aren't surfaced; `Clock`
   already supports `linked*`. `FactionsPanel.tsx` → link faction clocks; show "at war". **fixed
   (backlog round A, 2026-07-11)** — per-faction project clocks had already shipped
@@ -950,7 +967,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   (`ScorePanel` lifecycle; `RollLog` groups the feed by `scoreId` with per-score headers).
 - **F52** · CX · No post-roll consequence scaffolding (a partial/bad result doesn't prompt the GM to
   tick a clock / add heat / harm). `RollPanel.tsx:149–155` → a "consequences" quick-action card
-  linked to the roll. **open**
+  linked to the roll. **fixed (backlog round C, 2026-07-11)** — a partial/bad ACTION result now
+  raises a consequences hint naming the GM levers (tick a clock, add heat, deal harm — the sheet's
+  one-tap harm is right below) with a "Resist a consequence" button that flips the panel straight
+  into resistance mode.
 - **F55** · scope · Popular FitD games not yet offered as built-ins because the engine can't model
   their distinctive mechanics. The built-in catalog (`packages/shared/src/builtin-rulesets/`) ships
   Brackwater + Blades in the Dark (drop-in) + Wicked Ones (dungeon-as-crew + `crew.resourcePools`).

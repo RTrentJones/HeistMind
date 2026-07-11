@@ -13,6 +13,8 @@ export function rollPool(input: {
   rating: number;
   push?: boolean;
   bargain?: boolean;
+  /** Teamwork assist (F10): a teammate takes 1 stress to add one die. */
+  assist?: boolean;
   harmPenalty?: number;
   fortune?: number;
 }): { count: number; zeroDice: boolean } {
@@ -21,7 +23,10 @@ export function rollPool(input: {
   }
   const extraDice =
     input.mode === 'action'
-      ? (input.push ? 1 : 0) + (input.bargain ? 1 : 0) - (input.harmPenalty ?? 0)
+      ? (input.push ? 1 : 0) +
+        (input.bargain ? 1 : 0) +
+        (input.assist ? 1 : 0) -
+        (input.harmPenalty ?? 0)
       : 0;
   return diceForRating(input.rating + extraDice);
 }

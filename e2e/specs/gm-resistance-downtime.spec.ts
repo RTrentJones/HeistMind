@@ -64,5 +64,23 @@ test.describe('GM: resistance + downtime', () => {
     // Zero-dice takes the LOWEST and never crits — two 6s resist for 0 (F64).
     const lowest = Math.min(Number(facesMatch![1]), Number(facesMatch![2]));
     expect(lineText).toContain(`resisted — ${6 - lowest} stress`);
+
+    // --- Flashback (F16): retro-establish a beat for a priced stress cost; the feed carries it
+    // and the Condition tracker shows the charge. Stress was cleared by the vice roll above and
+    // then raised by the resist — read the CURRENT value, then assert the +2 (clamped at 9). ---
+    const stressText = await gmPage
+      .getByText(/^\d\/9$/)
+      .first()
+      .textContent();
+    const before = Number((stressText ?? '0/9').split('/')[0]);
+    await gmPage.getByLabel('Flashback').fill('Bribed the harbormaster to look away last night');
+    await gmPage.getByLabel('Flashback stress cost').selectOption('2');
+    await gmPage.getByRole('button', { name: 'Flash back' }).click();
+    await expect(
+      gmPage.getByText(/Flashback \(2 stress\): Bribed the harbormaster/).first()
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.getByText(`${Math.min(before + 2, 9)}/9`).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });

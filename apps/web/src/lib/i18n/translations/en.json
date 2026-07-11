@@ -241,7 +241,12 @@
         "backgroundHelp": "The life they led before the crew found them.",
         "viceLabel": "Vice",
         "vicePlaceholder": "e.g. how they unwind between jobs",
-        "viceHelp": "How they blow off stress when the score is done."
+        "viceHelp": "How they blow off stress when the score is done.",
+        "contactsHeading": "Friends & rivals",
+        "contactsHelp": "Pick a close friend and a rival from your playbook's circle — part of who your scoundrel is.",
+        "contactNone": "— none yet —",
+        "friendLabel": "Close friend",
+        "rivalLabel": "Rival"
       },
       "choice": {
         "empty": "Nothing to choose for this step.",
@@ -428,6 +433,24 @@
       "bargainNote": "Devil's bargain: {{note}}",
       "bargainNoteEmpty": "Devil's bargain (+1d)",
       "waiveHarm": "Waive harm penalty",
+      "assistLabel": "Assist",
+      "assistNone": "No assist",
+      "assistOption": "Assist: {{name}} (+1d, they mark 1 stress)",
+      "assistNote": "Assisted by {{name}} (+1d — they mark 1 stress)",
+      "fortuneTypeLabel": "Fortune roll type",
+      "fortuneType": {
+        "fortune": "Fortune",
+        "engagement": "Engagement",
+        "gatherInfo": "Gather information"
+      },
+      "fortuneReading": {
+        "crit": "Critical — exceptional: the best possible start, detail, or luck.",
+        "success": "6 — good: it goes well / you get solid, reliable information.",
+        "partial": "4–5 — mixed: it works with a complication / the picture is incomplete.",
+        "bad": "1–3 — poor: a bad break / vague or troubling information."
+      },
+      "consequenceHint": "Consequences land on a partial or worse — the GM can tick a clock, add heat, or deal harm (take it on your sheet); you can resist:",
+      "consequenceResist": "Resist a consequence",
       "harmPenaltyNote": "−1d (moderate harm)",
       "harmModerateHint": "Moderate harm — this roll loses 1 die.",
       "harmWaivedHint": "Harm penalty waived — the GM ruled the wound doesn't hinder this action.",
@@ -627,6 +650,15 @@
       "addClock": "Add clock"
     },
     "downtime": {
+      "flashback": {
+        "label": "Flashback",
+        "placeholder": "What did you set up in advance?",
+        "stressLabel": "Flashback stress cost",
+        "stressOption": "{{count}} stress",
+        "action": "Flash back",
+        "logNote": "Flashback ({{count}} stress): {{text}}",
+        "failed": "Couldn't record the flashback"
+      },
       "indulgeVice": {
         "action": "Indulge vice (clear stress)",
         "confirm": "Roll it? Click again to indulge",

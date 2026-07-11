@@ -8,6 +8,7 @@ import {
   usesActionRatings,
   actionDotsSpent,
   deriveAttributes,
+  type ContactDefinition,
   type Ruleset,
   type RulesetContent,
   type CharacterData,
@@ -78,6 +79,11 @@ interface CharacterCreationState extends LoadingState {
   setActionRating: (actionId: string, value: number) => void;
   toggleAbility: (abilityId: string) => void;
   setIdentityField: (field: 'heritage' | 'background' | 'vice', value: string) => void;
+  /**
+   * Pick the close friend / rival from the playbook's contact list (F12 — BitD identity). At most
+   * one contact per relationship; null clears the pick.
+   */
+  setContact: (relationship: 'friend' | 'rival', contact: ContactDefinition | null) => void;
   setCustom: (key: string, value: unknown) => void;
 
   // Navigation
@@ -244,6 +250,22 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
 
         setIdentityField: (field, value) =>
           set(state => ({ draft: { ...state.draft, [field]: value } })),
+
+        setContact: (relationship, contact) =>
+          set(state => {
+            const others = state.draft.contacts.filter(c => c.relationship !== relationship);
+            return {
+              draft: {
+                ...state.draft,
+                contacts: contact
+                  ? [
+                      ...others,
+                      { name: contact.name, description: contact.description, relationship },
+                    ]
+                  : others,
+              },
+            };
+          }),
 
         setCustom: (key, value) =>
           set(state => ({
