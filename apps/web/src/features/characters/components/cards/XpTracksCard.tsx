@@ -9,14 +9,16 @@ import {
   type CharacterData,
   type RulesetContent,
 } from '@heist-mind/core';
-import { Badge, Button, Card, Heading, Stack, StressTracker, Text } from '@heist-mind/ui';
+import { Button, Card, Heading, Stack, Text, XpTrack } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
  * The Experience card (track rulesets): the playbook + attribute XP tracks with the ruleset's
  * trigger shortcuts. One concept surface — the sheet renders it live; pass `canEdit: false` to show
- * a read-only view (other players see the marks but can't change them — F42). Renders nothing for
- * point-buy rulesets (they use the flat XP badge instead).
+ * a read-only view (other players see the marks but can't change them — F42). A FULL track grows a
+ * "Take advance" CTA (via `onAdvance`) that jumps straight to the editor's Advancement tab — the
+ * spend used to be discoverable only through prose. Renders nothing for point-buy rulesets (they
+ * use the flat XP badge instead).
  */
 export function XpTracksCard({
   content,
@@ -24,17 +26,44 @@ export function XpTracksCard({
   busy,
   canEdit,
   onMarkXp,
+  onAdvance,
 }: {
   content: RulesetContent;
   data: CharacterData;
   busy: boolean;
   canEdit: boolean;
   onMarkXp: (track: string, value: number) => void;
+  onAdvance?: () => void;
 }) {
   const { t } = useTranslation();
   if (!usesXpTracks(content)) return null;
   const triggers = content.advancement?.xpTriggers ?? [];
   const pbFull = xpTrackFull(content, data, PLAYBOOK_TRACK);
+
+  const advanceCta =
+    canEdit && onAdvance ? (
+      <Button variant='ember' size='sm' disabled={busy} onClick={onAdvance}>
+        {t('components.characterSheet.takeAdvance')}
+      </Button>
+    ) : undefined;
+
+  const track = (id: string, label: string) => (
+    <XpTrack
+      key={id}
+      data-testid={`xp-track-${id === PLAYBOOK_TRACK ? 'playbook' : id}`}
+      label={label}
+      current={xpMarks(data, id)}
+      size={xpTrackSize(content, id)}
+      interactive={canEdit}
+      disabled={busy}
+      readyLabel={t('components.characterSheet.fullReadyToAdvance')}
+      action={advanceCta}
+      markLabel={v => t('components.characterSheet.markXpAria', { count: v })}
+      unmarkLabel={v => t('components.characterSheet.unmarkXpAria', { count: v })}
+      onChange={v => void onMarkXp(id, v)}
+    />
+  );
+
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='md'>
@@ -45,22 +74,7 @@ export function XpTracksCard({
           {t('components.characterSheet.markXpPost')}
         </Text>
 
-        <div data-testid='xp-track-playbook'>
-          <Stack direction='row' gap='sm' align='center'>
-            <Text as='strong'>{t('components.characterSheet.playbook')}</Text>
-            {pbFull && (
-              <Badge variant='gold'>{t('components.characterSheet.fullReadyToAdvance')}</Badge>
-            )}
-          </Stack>
-          <StressTracker
-            current={xpMarks(data, PLAYBOOK_TRACK)}
-            max={xpTrackSize(content, PLAYBOOK_TRACK)}
-            interactive={canEdit}
-            showNumbers
-            showLabel={false}
-            onChange={v => void onMarkXp(PLAYBOOK_TRACK, v)}
-          />
-        </div>
+        {track(PLAYBOOK_TRACK, t('components.characterSheet.playbook'))}
 
         {triggers.length > 0 && (
           <Stack direction='column' gap='xs'>
@@ -86,24 +100,7 @@ export function XpTracksCard({
           </Stack>
         )}
 
-        {content.attributes.map(attr => (
-          <div key={attr.id} data-testid={`xp-track-${attr.id}`}>
-            <Stack direction='row' gap='sm' align='center'>
-              <Text as='strong'>{attr.name}</Text>
-              {xpTrackFull(content, data, attr.id) && (
-                <Badge variant='gold'>{t('components.characterSheet.fullReadyToAdvance')}</Badge>
-              )}
-            </Stack>
-            <StressTracker
-              current={xpMarks(data, attr.id)}
-              max={xpTrackSize(content, attr.id)}
-              interactive={canEdit}
-              showNumbers
-              showLabel={false}
-              onChange={v => void onMarkXp(attr.id, v)}
-            />
-          </div>
-        ))}
+        {content.attributes.map(attr => track(attr.id, attr.name))}
       </Stack>
     </Card>
   );

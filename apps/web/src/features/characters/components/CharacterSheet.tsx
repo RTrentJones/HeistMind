@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   clampStress,
   stressBounds,
@@ -10,7 +10,7 @@ import {
   usesXpTracks,
   xpTrackSize,
   xpMarks,
-  markXpTrack,
+  PLAYBOOK_TRACK,
 } from '@heist-mind/core';
 import {
   Alert,
@@ -65,7 +65,14 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   // swap the page for ErrorDisplay.
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
+  // The build editor: null = closed; a section = open on that tab. The sheet's "Take advance" CTA
+  // opens it straight on Advancement (the spend used to hide behind Edit build → tab).
+  const [editorSection, setEditorSection] = useState<'build' | 'advancement' | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const showEditor = editorSection !== null;
+  useEffect(() => {
+    if (editorSection) editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [editorSection]);
   const [name, setName] = useState('');
   const [viceNote, setViceNote] = useState<string | null>(null);
 
@@ -142,21 +149,36 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     }
   };
 
-  // Mark XP into a track (playbook or an attribute id). Sets the track to `value`, clamped, and
-  // saves through the same validated path — every player sees the marks on load (the async loop).
+  // Mark XP into a track (playbook or an attribute id) via the ENGINE `markXp` use-case — the
+  // same path the Discord bot's `/xp mark` drives — so the mark lands through the validated write
+  // AND logs an 'xp' event to the campaign feed (BRD R-C3; this was the one silent XP write, F70c).
   const setXp = (track: string, value: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
     const content = character.ruleset.content;
     const current = xpMarks(character.characterData, track);
     const target = Math.max(0, Math.min(value, xpTrackSize(content, track)));
-    if (target === current) return;
-    const xp = markXpTrack(content, character.characterData, track, target - current);
-    updateCharData.mutate(
-      { userId, data: { characterData: { ...character.characterData, xp } } },
+    const delta = target - current;
+    if (delta === 0) return;
+    const trackName =
+      track === PLAYBOOK_TRACK
+        ? t('components.characterSheet.playbook')
+        : (content.attributes.find(a => a.id === track)?.name ?? track);
+    addXpMut.mutate(
       {
-        onError: e => setSaveError(e.message ?? t('components.characterSheet.markXpFailed')),
-      }
+        userId,
+        amount: delta,
+        reason: 'Track mark',
+        track,
+        logLabel: character.name,
+        logNote: t(
+          delta > 0
+            ? 'components.characterSheet.logXpMarkTrack'
+            : 'components.characterSheet.logXpUnmarkTrack',
+          { count: Math.abs(delta), track: trackName }
+        ),
+      },
+      { onError: e => setSaveError(e.message ?? t('components.characterSheet.markXpFailed')) }
     );
   };
 
@@ -239,7 +261,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   >
                     {t('common.actions.edit')}
                   </Button>
-                  <Button variant='outline' size='sm' onClick={() => setShowEditor(s => !s)}>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setEditorSection(s => (s ? null : 'build'))}
+                  >
                     {showEditor
                       ? t('components.characterSheet.closeEditor')
                       : t('components.characterSheet.editBuild')}
@@ -371,6 +397,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         busy={busy}
         canEdit={canEdit}
         onMarkXp={setXp}
+        onAdvance={() => setEditorSection('advancement')}
       />
 
       {/* Per-score loadout (BitD: chosen per operation, as you go) — lives on the sheet, not the
@@ -402,7 +429,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Card>
       )}
 
-      {showEditor && canEdit && <CharacterEditor character={character} />}
+      {editorSection && canEdit && (
+        <div ref={editorRef}>
+          <CharacterEditor character={character} initialSection={editorSection} />
+        </div>
+      )}
     </Stack>
   );
 }

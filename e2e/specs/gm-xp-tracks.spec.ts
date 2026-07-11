@@ -62,10 +62,21 @@ test.describe('GM: XP tracks + advancement (Brackwater)', () => {
     ).toBeVisible();
 
     // --- Mark the playbook track to full on the sheet (click its 8th box). ---
-    await gmPage.getByTestId('xp-track-playbook').locator('button.rounded-full').nth(7).click();
+    await gmPage
+      .getByTestId('xp-track-playbook')
+      .getByRole('button', { name: 'Mark 8 XP' })
+      .click();
     await expect(gmPage.getByText('Full — ready to advance').first()).toBeVisible({
       timeout: 10_000,
     });
+    // XP round: the mark reaches the shared campaign log (engine markXp — was a silent write),
+    // and the full track grows a "Take advance" CTA right where the XP was earned.
+    await expect(gmPage.getByText('Marked 8 XP — Playbook').first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(
+      gmPage.getByRole('button', { name: 'Take advance', exact: true }).first()
+    ).toBeVisible();
 
     // The gate lifts: take the first buyable ability (Duelist) — it clears the playbook track.
     await expect(gmPage.getByText('Fill the playbook XP track')).toHaveCount(0);
@@ -77,9 +88,11 @@ test.describe('GM: XP tracks + advancement (Brackwater)', () => {
     await expect(gmPage.getByText('Playbook 0/8')).toBeVisible();
 
     // --- Attribute track: filling Force unlocks its action-dot picker. ---
-    await gmPage.getByTestId('xp-track-force').locator('button.rounded-full').nth(5).click();
+    await gmPage.getByTestId('xp-track-force').getByRole('button', { name: 'Mark 6 XP' }).click();
     await expect(gmPage.getByText(/Force — pick an action to raise/)).toBeVisible({
       timeout: 10_000,
     });
+    // The attribute mark is feed-logged too, named by its track.
+    await expect(gmPage.getByText('Marked 6 XP — Force').first()).toBeVisible({ timeout: 10_000 });
   });
 });

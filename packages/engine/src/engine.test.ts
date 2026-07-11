@@ -22,7 +22,13 @@ import {
   takeHarm,
 } from './characters';
 import { tickClock } from './clocks';
-import { advanceCrewTier, applyCrewHeat, incarcerateCrew } from './crews';
+import {
+  advanceCrewTier,
+  applyCrewHeat,
+  incarcerateCrew,
+  markCrewXp,
+  takeCrewAdvance,
+} from './crews';
 import { indulgeVice, viceDicePool } from './downtime';
 import { setFactionStatus } from './factions';
 import { saveLoadout } from './loadout';
@@ -443,6 +449,52 @@ describe('crew progression', () => {
     expect((failing as unknown as { rolls: { create: unknown } }).rolls.create).not
       .toHaveBeenCalled;
   });
+
+  it('markCrewXp sets the advancement track (clamped) and logs a crew event', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    const out = await markCrewXp(r, {
+      crew: { ...CREW, resources: { 'crew-xp': 3 } } as unknown as Crew,
+      userId: 'u1',
+      xp: 5,
+      logLabel: 'Crew',
+      logNote: 'xp 5/8',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 5 } });
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ gameId: 'g1', kind: 'crew', note: 'xp 5/8' })
+    );
+  });
+
+  it('takeCrewAdvance resets a FULL track to 0 and logs; refuses a non-full track', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({ crews: { update }, rolls: { create } });
+    const full = { ...CREW, resources: { 'crew-xp': 8 } } as unknown as Crew;
+    const out = await takeCrewAdvance(r, { crew: full, userId: 'u1', logLabel: 'l', logNote: 'n' });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 0 } });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'crew' }));
+
+    // The rule lives in the write path, not the button: a non-full track is refused, no write.
+    const guarded = repos({
+      crews: { update: vi.fn() },
+      rolls: { create: vi.fn() },
+    });
+    const refused = await takeCrewAdvance(guarded, {
+      crew: { ...CREW, resources: { 'crew-xp': 7 } } as unknown as Crew,
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: 'n',
+    });
+    expect(refused.success).toBe(false);
+    expect(
+      (guarded as unknown as { crews: { update: ReturnType<typeof vi.fn> } }).crews.update
+    ).not.toHaveBeenCalled();
+  });
 });
 
 describe('setFactionStatus', () => {
@@ -571,9 +623,11 @@ describe('XP economy', () => {
     const attribute = DEFAULT_RULESET.attributes[0]!;
 
     const trackRepos = (character: CharacterWithDetails) => {
-      const update = vi.fn().mockImplementation((_id, _uid, data: { characterData: unknown }) =>
-        Promise.resolve(ok({ ...character, characterData: data.characterData } as Character))
-      );
+      const update = vi
+        .fn()
+        .mockImplementation((_id, _uid, data: { characterData: unknown }) =>
+          Promise.resolve(ok({ ...character, characterData: data.characterData } as Character))
+        );
       const addExperience = vi.fn();
       const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
       const r = repos({

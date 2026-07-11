@@ -5,7 +5,13 @@
 // use-case — the same implementation the Discord bot will drive) and also refresh the feed.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateCrewData, Crew, UpdateCrewData } from '@heist-mind/core';
-import { advanceCrewTier, applyCrewHeat, incarcerateCrew } from '@heist-mind/engine';
+import {
+  advanceCrewTier,
+  applyCrewHeat,
+  incarcerateCrew,
+  markCrewXp,
+  takeCrewAdvance,
+} from '@heist-mind/engine';
 import { rollKeys } from '@/features/rolls/data/queries';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
@@ -69,6 +75,25 @@ export function useIncarcerateCrew(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
   return useMutation({
     mutationFn: async (vars: CrewOpVars) => unwrap(await incarcerateCrew(getRepositories(), vars)),
+    onSuccess: invalidate,
+  });
+}
+
+/** Set the crew's advancement-XP track via the ENGINE (+ feed event — the marks are table state). */
+export function useMarkCrewXp(gameId: string) {
+  const invalidate = useCrewFeedInvalidation(gameId);
+  return useMutation({
+    mutationFn: async (vars: CrewOpVars & { xp: number }) =>
+      unwrap(await markCrewXp(getRepositories(), vars)),
+    onSuccess: invalidate,
+  });
+}
+
+/** Spend a FULL crew advancement track via the ENGINE (reset + feed event; refuses a non-full track). */
+export function useTakeCrewAdvance(gameId: string) {
+  const invalidate = useCrewFeedInvalidation(gameId);
+  return useMutation({
+    mutationFn: async (vars: CrewOpVars) => unwrap(await takeCrewAdvance(getRepositories(), vars)),
     onSuccess: invalidate,
   });
 }

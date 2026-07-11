@@ -37,8 +37,14 @@ export { startScore, endScore } from './scores';
 export type { StartScoreInput, EndScoreInput } from './scores';
 export { saveLoadout } from './loadout';
 export type { SaveLoadoutInput } from './loadout';
-export { advanceCrewTier, applyCrewHeat, incarcerateCrew } from './crews';
-export type { ApplyCrewHeatInput } from './crews';
+export {
+  advanceCrewTier,
+  applyCrewHeat,
+  incarcerateCrew,
+  markCrewXp,
+  takeCrewAdvance,
+} from './crews';
+export type { ApplyCrewHeatInput, MarkCrewXpInput } from './crews';
 export { setFactionStatus } from './factions';
 export type { SetFactionStatusInput } from './factions';
 export { tickClock } from './clocks';

@@ -71,7 +71,11 @@ export function useAdvanceCharacter(characterId: string, gameId: string | null) 
   });
 }
 
-/** Award XP via the ENGINE (records the reason + logs an 'xp' feed event when in a campaign). */
+/**
+ * Award XP via the ENGINE (records the reason + logs an 'xp' feed event when in a campaign).
+ * On a track-mode ruleset pass `track` ('playbook' or an attribute id) and a signed `amount` —
+ * the engine marks that track through the validated write; flat-pool rulesets bank the amount.
+ */
 export function useAddExperience(characterId: string, gameId: string | null) {
   const qc = useQueryClient();
   return useMutation({
@@ -79,6 +83,7 @@ export function useAddExperience(characterId: string, gameId: string | null) {
       userId: string;
       amount: number;
       reason: string;
+      track?: string;
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await markXp(getRepositories(), { characterId, ...vars })),

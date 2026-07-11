@@ -481,6 +481,41 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F85 — XP marking + crew XP: silent feeds, buried advance, two interaction models (XP-round cluster)
+
+- **severity:** S2 · **type:** CX-flaw + FitD-consistency · **(2026-07-11 XP-experience pass)**
+- **where / what (five sub-flaws, all verified):**
+  (1) `CharacterSheet.setXp` wrote track XP directly (`useUpdateCharacterData`) with **no feed
+  event**, while flat-mode "Add XP" and the bot's `/xp mark` logged one — the primary BitD path
+  was the silent one (= F70c). (2) Crew XP had **no engine use-case at all**: `CrewAdvanceTrack`
+  marks and the "Take advance" reset were raw `crews.update` writes — never reached the campaign
+  log, unlike heat/tier/incarcerate. (3) "Take advance (reset XP)" was a **bare reset** — no link
+  to actually picking a crew ability, no post-advance feedback. (4) A full character track showed
+  a passive badge but **no way to act on it** — the spend hid behind Edit build → Advancement,
+  explained only in prose. (5) Character XP used clickable boxes while crew XP used ± steppers —
+  **two interaction models for one concept** — and both reused `StressTracker`, whose danger
+  palette (red/pulse near full) reads as _bad news_ on an XP track that's actually filling with
+  good news.
+- **fix / status:** **fixed (XP round, 2026-07-11)** —
+  • engine: `markCrewXp` + `takeCrewAdvance` use-cases (feed-logged; advance REFUSES a non-full
+  track server-path-side), `updateAndLog` extended to `resources`; unit-tested in `engine.test.ts`.
+  • web: sheet `setXp` → engine `markXp` (signed delta + track name in the log note); crew
+  mark/advance → the new hooks (`useMarkCrewXp`/`useTakeCrewAdvance`); post-advance info notice
+  ("pick a new crew ability below").
+  • ui: new **`XpTrack`** component (packages/ui) — gold-on-earn square boxes (deliberately not
+  the stress palette), per-box accessible names ("Mark N XP" / "Unmark — back to N"; the F84
+  lesson applied), ready badge + CTA slot; story + unit tests. Used by BOTH `XpTracksCard` and
+  `CrewAdvanceTrack`, so marking XP looks and works the same everywhere.
+  • sheet: full track grows a **"Take advance"** CTA that opens the editor directly on the
+  Advancement tab (editor accepts `initialSection`, scrolls into view); the card prose now names
+  the CTA.
+  • coverage: `XpTracksCard.test.tsx` + `CrewAdvanceTrack.test.tsx` (web), `XpTrack.test.tsx` +
+  story (ui), `gm-xp-tracks.spec.ts` extended (feed events asserted for playbook + attribute
+  marks, CTA presence), `gm-crew.spec.ts` gains a full crew mark→ready→advance→feed journey.
+- **residue (open, small):** trigger shortcuts still cover only the playbook track (attribute
+  triggers have no shortcut — RAW marks them via desperate rolls, a future roll-integration);
+  no undo for a _logged_ mark beyond re-clicking the track.
+
 ### F84 — StressTracker pips are unlabeled buttons (no accessible name)
 
 - **severity:** S3 · **type:** CX-flaw (a11y, F76 family) · **(found 2026-07-11 writing the F73 test)**
@@ -687,11 +722,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **where:** (a) `characters.adaptations` + `characters.is_template` are read by the adapter but
   have no write path — Phase-5c placeholders; revisit when 5c lands or delete then.
   (b) `CharacterData.items` is seeded `[]` at creation (`creation-steps.ts`) and never read —
-  superseded by `loadout.items`. (c) web `setXp` (CharacterSheet) writes XP tracks WITHOUT an
-  'xp' feed event, while the bot's `/xp mark` (engine `markXp`, track-aware since the P1 fix)
-  logs one — R-C3 residue: converge the web sheet onto engine `markXp`.
+  superseded by `loadout.items`. (c) ~~web `setXp` (CharacterSheet) writes XP tracks WITHOUT an
+  'xp' feed event~~ — **(c) fixed in the XP round (2026-07-11, see F85):** the sheet's track
+  marking now goes through engine `markXp` (signed delta + track), so every web XP mark logs the
+  same 'xp' feed event the bot's `/xp mark` does. (a) and (b) remain the intentional leftovers.
 - **status:** **open (logged by design)** — the P1–P4/P7/P8 siblings were fixed in the audit
-  round (#136–#141+); these three are the intentional leftovers.
+  round (#136–#141+); (c) closed by the XP round.
 
 ### F67 — No player-facing web page documents the Discord bot
 

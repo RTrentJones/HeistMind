@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import type { CrewRules, UpdateCrewData } from '@heist-mind/core';
-import { applyHeat, advanceTier, incarcerate, REP_PER_TIER, CREW_LIMITS } from '@heist-mind/core';
+import {
+  applyHeat,
+  advanceTier,
+  incarcerate,
+  CREW_XP_TRACK,
+  REP_PER_TIER,
+  CREW_LIMITS,
+} from '@heist-mind/core';
 import { Alert, Badge, Button, Heading, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCrewByGame } from '@/features/crews/data/queries';
@@ -11,6 +18,8 @@ import {
   useApplyCrewHeat,
   useCreateCrew,
   useIncarcerateCrew,
+  useMarkCrewXp,
+  useTakeCrewAdvance,
   useUpdateCrew,
 } from '@/features/crews/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -46,7 +55,10 @@ export function CrewSheet({
   const applyHeatMut = useApplyCrewHeat(gameId);
   const advanceTierMut = useAdvanceCrewTier(gameId);
   const incarcerateMut = useIncarcerateCrew(gameId);
+  const markCrewXpMut = useMarkCrewXp(gameId);
+  const takeAdvanceMut = useTakeCrewAdvance(gameId);
   const [crewType, setCrewType] = useState('');
+  const [advanceNotice, setAdvanceNotice] = useState<string | null>(null);
 
   const crew = crewQuery.data ?? null;
   const busy =
@@ -54,7 +66,9 @@ export function CrewSheet({
     updateCrewMut.isPending ||
     applyHeatMut.isPending ||
     advanceTierMut.isPending ||
-    incarcerateMut.isPending;
+    incarcerateMut.isPending ||
+    markCrewXpMut.isPending ||
+    takeAdvanceMut.isPending;
   const error =
     crewQuery.error?.message ??
     createCrewMut.error?.message ??
@@ -62,12 +76,42 @@ export function CrewSheet({
     applyHeatMut.error?.message ??
     advanceTierMut.error?.message ??
     incarcerateMut.error?.message ??
+    markCrewXpMut.error?.message ??
+    takeAdvanceMut.error?.message ??
     null;
 
   const createCrew = () => {
     const userId = user?.id;
     if (!userId) return;
     createCrewMut.mutate({ userId, data: { gameId, crewType: crewType || undefined } });
+  };
+
+  // Crew advancement XP runs through the ENGINE: the marks and the advance are shared table
+  // state, so both land in the campaign feed (they used to be silent direct writes).
+  const markCrewXp = (xp: number) => {
+    const userId = user?.id;
+    if (!crew || !userId) return;
+    setAdvanceNotice(null);
+    markCrewXpMut.mutate({
+      crew,
+      userId,
+      xp,
+      logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
+      logNote: t('components.crewSheet.logCrewXpNote', { xp, total: CREW_XP_TRACK }),
+    });
+  };
+  const takeCrewAdvanceAction = () => {
+    const userId = user?.id;
+    if (!crew || !userId) return;
+    takeAdvanceMut.mutate(
+      {
+        crew,
+        userId,
+        logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
+        logNote: t('components.crewSheet.logCrewAdvanceNote'),
+      },
+      { onSuccess: () => setAdvanceNotice(t('components.crewSheet.advanceTakenNotice')) }
+    );
   };
 
   // Patch helper used by every card; the mutation invalidates the crew query on success.
@@ -266,7 +310,14 @@ export function CrewSheet({
         </Stack>
       )}
 
-      <CrewAdvanceTrack crew={crew} isGm={isGm} busy={busy} onSave={save} />
+      <CrewAdvanceTrack
+        crew={crew}
+        isGm={isGm}
+        busy={busy}
+        advanceNotice={advanceNotice}
+        onMarkXp={markCrewXp}
+        onTakeAdvance={takeCrewAdvanceAction}
+      />
       <CrewResourcePools
         crew={crew}
         pools={crewRules?.resourcePools ?? []}

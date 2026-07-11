@@ -148,6 +148,11 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
     heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. Also renders any
     **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
     threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
+    **Crew advancement (XP round, F85):** the 8-box track is the same clickable `XpTrack` a
+    character sheet uses (GM marks; players see it read-only); marks and the "Take advance
+    (reset XP)" spend run through engine `markCrewXp`/`takeCrewAdvance` so both land in the
+    campaign log, the advance refuses a non-full track, and a post-advance notice points the GM
+    at the crew-ability list.
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
     _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
@@ -172,9 +177,10 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
       **xp** / **harm** / note) with a neutral kind badge. **Every mechanical change reaches the
       feed** (round-3 PR-3 + bot phase-3, via engine use-cases): crew heat/tier/incarceration,
       faction status shifts, a clock **filling** (routine ticks stay panel-only), XP marks/advances,
-      and harm taken/cleared — alongside rolls, downtime, loadout, and score lifecycle. _One web
-      exception (F70): the sheet's track-XP marking (`setXp`) writes tracks without an `xp` feed
-      event — only the flat-pool button and the bot's `/xp mark` log one._
+      and harm taken/cleared — alongside rolls, downtime, loadout, and score lifecycle. _The old
+      web exception (F70c — silent track-XP marks) closed in the XP round (F85): every sheet XP
+      mark now logs an `xp` event ("Marked N XP — <track>"), and crew XP marks/advances log
+      `crew` events._
       Entries are **grouped by score** (newest operation first, under its name); with no scores in
       play it falls back to a flat feed.
 - **Role:** GM edits campaign objects; players read them.
@@ -216,6 +222,10 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 - **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; **set the per-score loadout**
   (level + items, Save); roll an action **or resist** (stress applies live to the `StressTracker`);
   **Indulge vice** (downtime) to clear stress to 0, logged to the feed; edit build.
+  **XP (XP round, F85):** the Experience card's tracks are gold `XpTrack` boxes with accessible
+  per-box names; every mark goes through engine `markXp` (feed-logged, "Marked N XP — <track>"),
+  and a FULL track grows a **"Take advance"** CTA that opens the editor directly on its
+  Advancement tab (scrolled into view) — the spend is one click from where the XP was earned.
 - **Role-gating (F42, 2026-07-01):** write affordances mirror the RLS policy — the **owner or the
   campaign's GM** sees the edit controls (rename, edit build, stress tracker, indulge vice, XP
   marking, loadout save); any other member gets a **read-only sheet** (values + trackers visible,
@@ -343,7 +353,10 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`).
 
-_Last verified:_ 2026-07-11 (CX round: F72 SignInGate on all six secondary routes; F73 sheet
+_Last verified:_ 2026-07-11 (XP round (F85): sheet XP marks feed-logged via engine markXp, shared
+gold `XpTrack` boxes on character + crew tracks, "Take advance" CTA → editor Advancement tab,
+crew XP mark/advance through new engine `markCrewXp`/`takeCrewAdvance` (feed-logged, guarded) +
+post-advance notice; same day, CX round: F72 SignInGate on all six secondary routes; F73 sheet
 error split; F74 hub-panel loading guards; F79 dashboard loading affordances + seeded e2e; F81
 Characters nav link; F80 Select/Textarea/Clock/HarmTracker stories + tests; new spec
 `signin-gates.spec.ts`; previously 2026-07-05 IP-audit copy reskin (F82): sign-in "First time in the shadows?", scoundrel feature line, game/score name placeholders now Brackwater-flavored — no Duskwall setting names in product copy; same day: full CX audit: RollLog gains the `harm` kind badge + persisted zero-dice resist display, audit P2/P3; web setXp feed exception noted (F70); previously 2026-07-04 landing pbp copy)
