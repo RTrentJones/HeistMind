@@ -50,13 +50,16 @@ test.describe('dashboard (authenticated /)', () => {
     await expect(gmPage.getByRole('link', { name: /new character|view/i }).first()).toBeVisible();
 
     // Every section's spinner resolves (spinners render role='status'); the recent-activity
-    // section then shows either rows or its empty-state copy — not nothing.
+    // section then shows either rows or its empty-state copy — not nothing. Scope to <main>
+    // and match rows by their relative-time stamp ("just now" / "3m ago"): the old loose
+    // /in .+$/ regex latched the page's hidden <title> and could never pass.
     await expect(gmPage.getByRole('heading', { name: /recent activity/i })).toBeVisible();
     await expect(gmPage.getByRole('main').getByRole('status')).toHaveCount(0, { timeout: 15_000 });
+    const mainEl = gmPage.getByRole('main');
     await expect(
-      gmPage
+      mainEl
         .getByText(/no recent activity/i)
-        .or(gmPage.getByText(/in .+ ·|in .+$/).first())
+        .or(mainEl.getByText(/just now|\d+[mhd] ago/).first())
         .first()
     ).toBeVisible();
   });
