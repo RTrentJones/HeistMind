@@ -248,14 +248,17 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   (F23, backlog round E):** on action-rating rulesets the header card's attributes are DERIVED
   live from action dots (all shown, 0 included, with a "derived from action ratings" note), the
   editor shows them locked (raise via Advancement), and **resistance rolls the attribute** (RAW)
-  — the roll panel's resist select lists the attributes, not actions. **Phone-first order (F57
-  increment):** below `sm` the sheet reorders (flex `order-*`) to name → Condition → Dice/log →
-  XP/loadout/gear → abilities → campaign controls, editor pinned last. **Error split (F73,
+  — the roll panel's resist select lists the attributes, not actions. **Phone-first (F57):**
+  below `sm` the sheet reorders (flex `order-*`) to name → Condition → Dice/log →
+  XP/loadout/gear → abilities → campaign controls (editor pinned last), a fixed **thumb bar**
+  (nav "Sheet sections": Condition · Dice · XP & gear) jumps to the section anchors, and the
+  stress pips / action dots grow to thumb size (32px / 24px). Covered by
+  `e2e/specs/mobile-sheet.spec.ts` at 390×844. **Error split (F73,
   2026-07-11):**
   a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
   the sheet and leaves it interactive; only a load failure / not-found swaps the page for
   `ErrorDisplay`.
-- _Last verified:_ 2026-07-11 (backlog round E: F44 armor, F23 derived attributes, F57 mobile order)
+- _Last verified:_ 2026-07-11 (backlog rounds E+F: F44 armor, F23 derived attributes, F57 phone-first sheet)
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`

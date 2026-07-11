@@ -255,6 +255,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     );
   };
 
+  // F57 — the phone thumb bar jumps to a sheet section by id.
+  const jumpTo = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   // Flashback (F16) — pay the priced stress and put the retro-established beat in the feed.
   const doFlashback = () => {
     const userId = user?.id;
@@ -307,7 +311,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     user?.id != null && (user.id === character.createdBy || user.id === character.game?.createdBy);
 
   return (
-    <Stack direction='column' gap='lg'>
+    // max-sm:pb-16 clears the fixed thumb bar (below) so the last card is never hidden under it.
+    <Stack direction='column' gap='lg' className='max-sm:pb-16'>
       {saveError && (
         <Alert variant='destructive' dismissible onDismiss={() => setSaveError(null)}>
           {saveError}
@@ -481,7 +486,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         </Stack>
       </Card>
 
-      <Card variant='outline'>
+      <Card variant='outline' id='sheet-condition' className='scroll-mt-4'>
         <Stack direction='column' gap='md'>
           <Heading level='h3'>{t('components.characterSheet.condition')}</Heading>
           <StressTracker
@@ -557,7 +562,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       </Card>
 
       {/* F57 — between-beat sections: on a phone these sit below Condition + Dice (order-1). */}
-      <Stack direction='column' gap='lg' className='max-sm:order-1'>
+      <Stack direction='column' gap='lg' className='max-sm:order-1 scroll-mt-4' id='sheet-xp'>
         <XpTracksCard
           content={character.ruleset.content}
           data={character.characterData}
@@ -577,7 +582,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       {/* Dice + shared campaign log: only in a campaign. A standalone character (Phase 5) has no
           shared feed — its sheet is the rules-valid build, brought to a table when you attach it. */}
       {character.gameId && (
-        <Card variant='outline'>
+        <Card variant='outline' id='sheet-dice' className='scroll-mt-4'>
           <Stack direction='column' gap='md'>
             <Heading level='h3'>{t('components.characterSheet.dice')}</Heading>
             {/* F23 — resistance rolls the ATTRIBUTE (derived on action-rating rulesets, stored on
@@ -651,6 +656,25 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           <CharacterEditor character={character} initialSection={editorSection} />
         </div>
       )}
+
+      {/* F57 — the phone THUMB BAR: fixed quick jumps to the in-play sections, one thumb-reach
+          away no matter how far the sheet has scrolled. Hidden from `sm` up. */}
+      <nav
+        aria-label={t('components.characterSheet.quickNav')}
+        className='sm:hidden fixed inset-x-0 bottom-0 z-20 flex justify-around gap-1 border-t border-border-primary bg-background-primary/95 px-2 py-1.5 backdrop-blur'
+      >
+        <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-condition')}>
+          {t('components.characterSheet.quickCondition')}
+        </Button>
+        {character.gameId && (
+          <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-dice')}>
+            {t('components.characterSheet.quickDice')}
+          </Button>
+        )}
+        <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-xp')}>
+          {t('components.characterSheet.quickXp')}
+        </Button>
+      </nav>
     </Stack>
   );
 }

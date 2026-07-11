@@ -239,7 +239,7 @@ const ThemeShowcase = () => {
                 </div>
 
                 <div className='p-3 bg-background-elevated rounded-lg border border-border-primary'>
-                  <Moon className='w-6 h-6 mx-auto mb-2 text-brand-primary' />
+                  <Moon className='w-6 h-6 mx-auto mb-2 text-brand-fg' />
                   <div className='text-sm font-medium'>Dark Theme</div>
                   <div className='text-xs text-foreground-muted'>Atmospheric & immersive</div>
                 </div>

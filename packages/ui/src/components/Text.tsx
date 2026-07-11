@@ -8,15 +8,15 @@ const textVariants = cva(['transition-colors duration-200'], {
   variants: {
     variant: {
       default: 'text-foreground-primary',
-      primary: 'text-brand-primary',
+      primary: 'text-brand-fg',
       secondary: 'text-foreground-secondary',
       muted: 'text-foreground-muted',
       accent: 'text-brand-accent',
-      success: 'text-semantic-success',
-      warning: 'text-semantic-warning',
-      error: 'text-semantic-error',
-      info: 'text-semantic-info',
-      game: 'text-game-ember',
+      success: 'text-semantic-success-fg',
+      warning: 'text-semantic-warning-fg',
+      error: 'text-semantic-error-fg',
+      info: 'text-semantic-info-fg',
+      game: 'text-game-ember-fg',
       subtle: 'text-foreground-tertiary',
     },
     size: {

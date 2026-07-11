@@ -186,7 +186,7 @@ const CardTitle = React.forwardRef<
       'text-gradient': variant === 'gradient',
       'text-gradient-ember': variant === 'ember',
       'text-game-steel': variant === 'steel',
-      'text-semantic-error': variant === 'crimson',
+      'text-semantic-error-fg': variant === 'crimson',
     },
     className
   );

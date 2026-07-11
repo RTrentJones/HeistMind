@@ -69,22 +69,26 @@ export const StressLevels: Story = {
 
         <div className='space-y-3'>
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-semantic-success mb-2'>Low Stress (0-2)</h4>
+            <h4 className='text-sm font-medium text-semantic-success-fg mb-2'>Low Stress (0-2)</h4>
             <StressTracker current={1} max={9} />
           </div>
 
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-semantic-warning mb-2'>Medium Stress (3-5)</h4>
+            <h4 className='text-sm font-medium text-semantic-warning-fg mb-2'>
+              Medium Stress (3-5)
+            </h4>
             <StressTracker current={4} max={9} />
           </div>
 
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-semantic-warning mb-2'>High Stress (6-7)</h4>
+            <h4 className='text-sm font-medium text-semantic-warning-fg mb-2'>High Stress (6-7)</h4>
             <StressTracker current={7} max={9} />
           </div>
 
           <div className='p-3 bg-background-secondary rounded-lg'>
-            <h4 className='text-sm font-medium text-semantic-error mb-2'>Critical Stress (8+)</h4>
+            <h4 className='text-sm font-medium text-semantic-error-fg mb-2'>
+              Critical Stress (8+)
+            </h4>
             <StressTracker current={8} max={9} />
           </div>
         </div>

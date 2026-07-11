@@ -86,7 +86,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toHaveClass('bg-semantic-success/20');
-      expect(badge).toHaveClass('text-semantic-success');
+      expect(badge).toHaveClass('text-semantic-success-fg');
     });
 
     it('applies warning variant styling', () => {
@@ -98,7 +98,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toHaveClass('bg-semantic-warning/20');
-      expect(badge).toHaveClass('text-semantic-warning');
+      expect(badge).toHaveClass('text-semantic-warning-fg');
     });
 
     it('applies info variant styling', () => {
@@ -110,7 +110,7 @@ describe('Badge Component', () => {
 
       const badge = screen.getByTestId('badge');
       expect(badge).toHaveClass('bg-semantic-info/20');
-      expect(badge).toHaveClass('text-semantic-info');
+      expect(badge).toHaveClass('text-semantic-info-fg');
     });
   });
 

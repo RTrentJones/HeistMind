@@ -50,7 +50,7 @@ export const Default: Story = {
       <>
         <HeaderBrand>
           <h1 className='text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -78,7 +78,7 @@ export const WithLogo: Story = {
           }
         >
           <h1 className='text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -107,7 +107,7 @@ export const UserAuthenticated: Story = {
           }
         >
           <h1 className='text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -269,7 +269,7 @@ export const ClickableBrand: Story = {
           }
         >
           <h1 className='text-xl font-bold'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>
@@ -305,7 +305,7 @@ export const ComplexNavigation: Story = {
         >
           <div>
             <h1 className='text-lg font-bold text-foreground-primary'>
-              <span className='text-brand-primary'>Heist</span>Mind
+              <span className='text-brand-fg'>Heist</span>Mind
             </h1>
             <p className='text-xs text-foreground-muted'>Character Manager</p>
           </div>
@@ -365,7 +365,7 @@ export const ResponsiveExample: Story = {
           }
         >
           <h1 className='text-lg md:text-xl font-bold text-foreground-primary'>
-            <span className='text-brand-primary'>Heist</span>Mind
+            <span className='text-brand-fg'>Heist</span>Mind
           </h1>
         </HeaderBrand>
         <HeaderActions>

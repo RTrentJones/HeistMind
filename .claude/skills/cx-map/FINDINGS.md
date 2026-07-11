@@ -425,12 +425,17 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   common in-play taps (stress / harm / XP / roll / resist / loadout) aren't laid out phone-first.
 - **fix:** a mobile pass on the sheet — prioritize the in-play controls, collapse build detail,
   thumb-reachable primary actions. Design/responsive effort (no schema change).
-- **status:** **open — first increment landed (backlog round E, 2026-07-11):** below `sm` the
-  sheet reorders via flex `order-*` so the IN-PLAY sections come first (name card → Condition
-  [stress/harm/vice/flashback] → Dice + campaign log → XP/loadout/gear → abilities → campaign
-  controls; an opened editor stays last). Build detail was already collapse-friendly (abilities
-  are `<details>`). Remaining for the full pass: thumb-reachable primary actions (sticky
-  quick-bar), larger touch targets on the pips/dots, and a real device walkthrough.
+- **status:** **fixed (backlog rounds E+F, 2026-07-11).** The full pass, in three moves:
+  **(1) in-play first** — below `sm` the sheet reorders via flex `order-*` (name card →
+  Condition [stress/harm/vice/flashback] → Dice + campaign log → XP/loadout/gear → abilities →
+  campaign controls; an opened editor stays last); build detail was already collapse-friendly
+  (abilities are `<details>`). **(2) thumb-reachable actions** — a fixed phone-only THUMB BAR
+  (`nav "Sheet sections"`: Condition · Dice · XP & gear) jumps to the section ids from anywhere
+  on the sheet, and the sheet reserves bottom padding for it. **(3) touch targets** — stress
+  pips grow 24→32px and action dots 16→24px below `sm` (nine pips still fit a 390px viewport).
+  Walked through at a real phone viewport by the new `e2e/specs/mobile-sheet.spec.ts` (390×844:
+  order asserted by bounding-box Y, bar hidden on desktop, both jumps land in-viewport).
+  Residue worth a hallway test on physical devices someday, but the finding's scope is built.
 
 ### F58 — Full-reload flicker after every mutation; no optimism, no success toast
 
@@ -669,13 +674,18 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix (incremental):** a small deployed-safe smoke tier — read-only gameplay assertions against
   seeded beta data + the existing posture check; longer term, a beta-scoped persona pool enabling
   one thin write-path spec on the deploy gate.
-- **status:** **open (updated, backlog round 2026-07-11)** — the public deployed tier has grown
-  this session without needing the stack: `signin-gates.spec.ts` (six gated routes),
-  `discord-page.spec.ts`, `auth-callback.spec.ts`, and `dashboard.spec.ts`'s anonymous
-  assertions all run against a deployed URL. The remaining residue is unchanged and real:
-  nothing on the deploy gate exercises an authenticated write path (needs the beta-scoped
-  persona pool) and the live `/api/discord` is still posture-check-only. Kept open at S3 for
-  that residue, not for the (now covered) read-only surface.
+- **status:** **fixed (backlog round F, 2026-07-11).** Two tiers now cover the deploy gate:
+  **(1) read-only** — `signin-gates` / `discord-page` / `auth-callback` / `dashboard`'s
+  anonymous assertions all run against any deployed URL. **(2) write-path** — the new
+  `e2e/specs/deployed-write-smoke.spec.ts` gates on what a deployed write ACTUALLY needs
+  instead of `isLocalStack()`: an injected admin session (greenlight-verify already provides
+  `SUPABASE_SERVICE_ROLE_KEY` on non-Production deploys) plus a live PostgREST probe that the
+  per-env schema is exposed on the target's Supabase. Where both hold it drives the thinnest
+  real chain — builtin-ruleset INSERT through RLS → campaign create (membership trigger) →
+  reload-and-read-back; where they don't it self-skips with the exact missing precondition in
+  the skip reason (so the gap is named on every run, not silent). The live `/api/discord`
+  stays posture-check-only by design — the bot can't be signed for real Discord apps from CI
+  (documented in F86's close).
 
 ### F77 — Hub fortune roll + record-result affordance contradicts the journey text (decide: gate or relabel)
 
@@ -910,7 +920,23 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   button + badge text colors) against their real backgrounds to ≥4.5:1 (AA), then delete the
   `color-contrast` exclusion in `packages/ui/.storybook/test-runner.ts` so the axe gate holds the
   line. Token-level change — every consumer inherits the fix.
-- **status:** open (the exclusion in the test-runner config points here)
+- **status:** **fixed (backlog round F, 2026-07-11) — 223 nodes → 0, and the exclusion is
+  deleted (color-contrast now GATES in CI).** Three root causes, worst first: **(1)**
+  `ThemeProvider` was injecting a STALE JS token map as inline styles on `<html>`, outranking
+  every stylesheet — the earlier CSS-side muted-contrast fix (63.9% L) never actually applied
+  anywhere the provider ran, Storybook **and production web**. The injection is gone; the
+  `.light`/`.dark` classes in `theme.css` are the single token source (~75 nodes). **(2)**
+  Accent colors (brand/semantic/game) are tuned as FILLS (white text on top) and sit below AA
+  as small TEXT on the dark surfaces — new `--color-*-fg` TEXT-variant tokens (lighter in dark,
+  darker in light; `text-brand-fg`, `text-semantic-error-fg`, …) now back every text usage
+  across Alert, Badge (status/skill/stress tints), Button (outline/ghost/link), ErrorDisplay
+  (plus dropping its /80·/70 text opacities), Heading, Input, Select, Textarea, Text, Paragraph,
+  StressTracker, and the stories; `--color-brand-accent` nudged 65.1%→71% L (~130 nodes).
+  **(3)** two opacity animations dimmed text below AA mid-frame: the Badge `pulse` prop's
+  blanket `repeat: Infinity` also looped the mount fade (opacity cycling 0→1 forever — scoped
+  to scale only), and `stress-critical`'s `animate-pulse` became a box-shadow `pulse-glow`
+  keyframe that never touches opacity. Verified: 0 contrast violations across all 190 stories,
+  full `test-storybook:ci` green with the rule ENABLED, `pnpm validate` 15/15.
 
 - **F23** · CX · Sheet attributes are a creation-time snapshot, not re-derived from current action
   ratings; the editor still exposes them as directly editable (dead data, since the validator skips

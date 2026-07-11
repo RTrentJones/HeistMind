@@ -317,7 +317,11 @@
       "friendsRivals": "Friends & Rivals",
       "friend": "Friend: {{name}}",
       "rival": "Rival: {{name}}",
-      "dice": "Dice"
+      "dice": "Dice",
+      "quickNav": "Sheet sections",
+      "quickCondition": "Condition",
+      "quickDice": "Dice",
+      "quickXp": "XP & gear"
     },
     "characterEditor": {
       "tabBuild": "Build",

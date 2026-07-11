@@ -220,7 +220,7 @@ export const GameSpecific: Story = {
         </div>
 
         <div className='space-y-4'>
-          <h3 className='text-lg font-semibold text-semantic-error'>Action Tooltips</h3>
+          <h3 className='text-lg font-semibold text-semantic-error-fg'>Action Tooltips</h3>
 
           <div className='flex flex-wrap gap-3'>
             <ActionTooltip

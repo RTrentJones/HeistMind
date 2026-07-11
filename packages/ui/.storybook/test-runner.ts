@@ -21,10 +21,8 @@ const config: TestRunnerConfig = {
           'landmark-one-main': { enabled: false },
           'page-has-heading-one': { enabled: false },
           bypass: { enabled: false },
-          // KNOWN DEBT, not noise: the ember/noir palette fails WCAG AA on ~80 stories
-          // (muted-on-dark text, ghost buttons). That's a design-token workstream tracked in
-          // cx-map FINDINGS (F87) — re-enable when the palette lands. Everything else gates.
-          'color-contrast': { enabled: false },
+          // color-contrast GATES (F87 fixed it): fg-variant tokens for accents-as-text, the
+          // stale ThemeProvider inline-style injection removed, and the opacity pulses tamed.
         },
       },
     });

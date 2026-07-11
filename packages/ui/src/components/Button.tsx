@@ -4,16 +4,9 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { MotionButton } from '../lib/motion-safe';
-import {
-  useComponentIds,
-  useLoadingState,
-  useInteractiveMotion,
-} from '../lib/accessibility';
+import { useComponentIds, useLoadingState, useInteractiveMotion } from '../lib/accessibility';
 import { componentDefaults } from '../lib/design-tokens';
-import {
-  useComponentValidation,
-  validateButtonProps,
-} from '../lib/validation';
+import { useComponentValidation, validateButtonProps } from '../lib/validation';
 
 const buttonVariants = cva(
   [
@@ -46,8 +39,9 @@ const buttonVariants = cva(
           'hover:from-semantic-error/80 hover:via-semantic-error/60 hover:to-semantic-error/80',
           'border border-semantic-error/20',
         ],
+        // text-brand-fg, not -primary: the fill color is below AA as small TEXT on dark (F87).
         outline: [
-          'border-2 border-brand-primary/50 bg-transparent text-brand-primary',
+          'border-2 border-brand-primary/50 bg-transparent text-brand-fg',
           'hover:bg-brand-primary/10 hover:border-brand-primary',
           'hover:text-brand-accent hover:shadow-lg hover:shadow-brand-primary/20',
           'backdrop-blur-sm',
@@ -59,10 +53,10 @@ const buttonVariants = cva(
           'hover:shadow-lg hover:shadow-black/20',
         ],
         ghost: [
-          'bg-transparent text-brand-primary hover:bg-brand-primary/10',
+          'bg-transparent text-brand-fg hover:bg-brand-primary/10',
           'hover:text-brand-accent hover:shadow-md',
         ],
-        link: ['text-brand-primary underline-offset-4 hover:underline', 'hover:text-brand-accent'],
+        link: ['text-brand-fg underline-offset-4 hover:underline', 'hover:text-brand-accent'],
         // Game-specific variants
         ember: [
           'bg-gradient-to-r from-game-ember via-game-ember/80 to-game-crimson',
@@ -182,8 +176,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isDisabled = disabled || loading;
     const { ids } = useComponentIds('btn');
     const { loadingContent } = useLoadingState(loading, loadingText, announceStateChanges);
-    const { motionProps, getInitialAnimation, getTransitionDuration } =
-      useInteractiveMotion(isDisabled, loading);
+    const { motionProps, getInitialAnimation, getTransitionDuration } = useInteractiveMotion(
+      isDisabled,
+      loading
+    );
 
     // Validate button props in development
     useComponentValidation('Button', { variant, size, loading, disabled, asChild, ...rest }, [

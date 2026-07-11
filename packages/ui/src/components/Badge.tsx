@@ -61,17 +61,18 @@ const badgeVariants = cva(
           'bg-gradient-to-r from-game-gold to-semantic-warning text-black border-transparent',
           'hover:from-game-gold/80 hover:to-semantic-warning/80 shadow-lg',
         ],
-        // Status variants
+        // Status variants — tinted fills take the `-fg` TEXT tokens (F87: the fill colors are
+        // below AA as small text on the tinted dark backgrounds).
         success: [
-          'bg-semantic-success/20 text-semantic-success border-semantic-success/30',
+          'bg-semantic-success/20 text-semantic-success-fg border-semantic-success/30',
           'hover:bg-semantic-success/30',
         ],
         warning: [
-          'bg-semantic-warning/20 text-semantic-warning border-semantic-warning/30',
+          'bg-semantic-warning/20 text-semantic-warning-fg border-semantic-warning/30',
           'hover:bg-semantic-warning/30',
         ],
         info: [
-          'bg-semantic-info/20 text-semantic-info border-semantic-info/30',
+          'bg-semantic-info/20 text-semantic-info-fg border-semantic-info/30',
           'hover:bg-semantic-info/30',
         ],
         // Skill level variants
@@ -80,11 +81,11 @@ const badgeVariants = cva(
           'hover:bg-foreground-muted/30',
         ],
         trained: [
-          'bg-semantic-info/20 text-semantic-info border-semantic-info/30',
+          'bg-semantic-info/20 text-semantic-info-fg border-semantic-info/30',
           'hover:bg-semantic-info/30',
         ],
         expert: [
-          'bg-brand-primary/20 text-brand-primary border-brand-primary/30',
+          'bg-brand-primary/20 text-brand-fg border-brand-primary/30',
           'hover:bg-brand-primary/30',
         ],
         master: [
@@ -93,20 +94,22 @@ const badgeVariants = cva(
         ],
         // Stress level variants
         'stress-low': [
-          'bg-semantic-success/20 text-semantic-success border-semantic-success/40',
+          'bg-semantic-success/20 text-semantic-success-fg border-semantic-success/40',
           'hover:bg-semantic-success/30',
         ],
         'stress-medium': [
-          'bg-semantic-warning/20 text-semantic-warning border-semantic-warning/40',
+          'bg-semantic-warning/20 text-semantic-warning-fg border-semantic-warning/40',
           'hover:bg-semantic-warning/30',
         ],
         'stress-high': [
-          'bg-game-ember/20 text-game-ember border-game-ember/40',
+          'bg-game-ember/20 text-game-ember-fg border-game-ember/40',
           'hover:bg-game-ember/30',
         ],
         'stress-critical': [
-          'bg-semantic-error/20 text-semantic-error border-semantic-error/40',
-          'hover:bg-semantic-error/30 animate-pulse',
+          // pulse-glow, not animate-pulse: the opacity pulse dimmed the text through the
+          // background mid-frame and failed AA (F87) — the glow keeps text contrast constant.
+          'bg-semantic-error/20 text-semantic-error-fg border-semantic-error/40',
+          'hover:bg-semantic-error/30 animate-pulse-glow motion-reduce:animate-none',
         ],
       },
       size: {
@@ -197,7 +200,12 @@ const Badge = React.memo(
               ? {
                   opacity: 1,
                   scale: [1, 1.05, 1],
-                  transition: { repeat: Infinity, duration: 2 },
+                  // Repeat SCALE only — a blanket repeat also looped the mount fade, cycling
+                  // opacity 0→1 forever and dimming the text below AA mid-frame (F87).
+                  transition: {
+                    opacity: { duration: 0.2, ease: 'easeOut' },
+                    scale: { repeat: Infinity, duration: 2 },
+                  },
                 }
               : {
                   opacity: 1,

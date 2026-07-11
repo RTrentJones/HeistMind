@@ -77,10 +77,10 @@ const Textarea = React.memo(
               htmlFor={resolvedId}
               className={cn(
                 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground-primary',
-                resolvedState === 'error' && 'text-semantic-error',
-                resolvedState === 'success' && 'text-semantic-success',
-                resolvedState === 'warning' && 'text-semantic-warning',
-                props.required && 'after:content-["*"] after:ml-1 after:text-semantic-error'
+                resolvedState === 'error' && 'text-semantic-error-fg',
+                resolvedState === 'success' && 'text-semantic-success-fg',
+                resolvedState === 'warning' && 'text-semantic-warning-fg',
+                props.required && 'after:content-["*"] after:ml-1 after:text-semantic-error-fg'
               )}
             >
               {label}
@@ -125,9 +125,9 @@ const Textarea = React.memo(
               id={ids.error}
               className={cn(
                 'text-sm',
-                resolvedState === 'error' && 'text-semantic-error',
-                resolvedState === 'success' && 'text-semantic-success',
-                resolvedState === 'warning' && 'text-semantic-warning'
+                resolvedState === 'error' && 'text-semantic-error-fg',
+                resolvedState === 'success' && 'text-semantic-success-fg',
+                resolvedState === 'warning' && 'text-semantic-warning-fg'
               )}
               initial={getInitialAnimation({ opacity: 0, height: 0 })}
               animate={{ opacity: 1, height: 'auto' }}
