@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // (lib/coming-soon.ts) is consistent across the server, middleware, and client bundles. Vercel
   // sets VERCEL_ENV at build (production/preview/development); undefined locally → the gate is off.
   env: { NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? '' },
+  // Greenlight's verify gate reads the deployed commit at /__version (see app/api/version).
+  async rewrites() {
+    return [{ source: '/__version', destination: '/api/version' }];
+  },
 };
 
 export default nextConfig;
