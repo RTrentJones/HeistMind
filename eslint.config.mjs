@@ -7,6 +7,6 @@ import { baseConfig, baseIgnores } from './configs/eslint.base.mjs';
 
 export default [
   baseIgnores,
-  { ignores: ['apps/**', 'e2e/**', 'design-sync/**', 'infra/**', 'supabase/**'] },
+  { ignores: ['apps/**', 'e2e/**', 'design-sync/**', 'infra/**', 'supabase/**', 'verify/**'] },
   ...baseConfig(import.meta.dirname),
 ];

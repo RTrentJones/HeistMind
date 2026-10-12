@@ -24,6 +24,11 @@ describe('isComingSoonAllowed', () => {
     }
   });
 
+  it('lets the verify gate read the deploy identity', () => {
+    expect(isComingSoonAllowed('/__version')).toBe(true);
+    expect(isComingSoonAllowed('/__version/x')).toBe(false);
+  });
+
   it('does not treat a lookalike prefix as legal', () => {
     expect(isComingSoonAllowed('/legalese')).toBe(false);
   });

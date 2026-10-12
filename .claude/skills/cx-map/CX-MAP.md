@@ -47,7 +47,8 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
   `main`**, never on `development` — so beta, Vercel previews, and local are always un-gated (their
   e2e suites run the real app), and only the prod deployment is gated. No env var to set. When
   gated: `page.tsx` renders `<ComingSoon/>` at `/`, `middleware.ts` redirects every route except
-  `/` and `/legal/*` back to `/`, and `AuthHeader` omits its signed-out sign-in buttons — so there
+  `/`, `/legal/*` and `/__version` (the deploy-identity JSON the Greenlight verify gate reads,
+  rewritten to `app/api/version`) back to `/`, and `AuthHeader` omits its signed-out sign-in buttons — so there
   is no login anywhere on prod. Discord/API routes are excluded from the matcher and keep working;
   legal pages stay live (registered DMCA agent page). `NEXT_PUBLIC_VERCEL_ENV` is mapped from
   `VERCEL_ENV` in `next.config.ts` so the client bundle agrees with the server/edge. The public

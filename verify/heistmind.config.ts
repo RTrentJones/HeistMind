@@ -14,11 +14,26 @@ const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 // live HTTP response (status/headers). Best-effort — never fails the gate.
 const logsOnFailure =
   '{ vercel logs "$GREENLIGHT_VERIFY_URL" --token "$VERCEL_API_TOKEN" 2>&1 | head -30; echo "--- response ---"; curl -sS -i "$GREENLIGHT_VERIFY_URL" 2>&1 | head -20; } || true';
+// Artifact identity: the deployment_status workflow exports the deployment's commit as
+// GREENLIGHT_EXPECTED_SHA. The harness's own --expect-sha probe sends no bypass header, so on this
+// protected URL it only ever sees a 401 and reads as "unverified"; this check fetches /__version
+// WITH the bypass and requires the exact commit, so a deployment serving another build fails.
+const expectedSha = process.env.GREENLIGHT_EXPECTED_SHA;
 const api = bypass
   ? {
       mode: 'api',
       checks: [
         { path: '/', status: 200, requestHeaders: { 'x-vercel-protection-bypass': bypass } },
+        ...(expectedSha
+          ? [
+              {
+                path: '/__version',
+                status: 200,
+                requestHeaders: { 'x-vercel-protection-bypass': bypass },
+                json: [{ path: 'sha', equals: expectedSha }],
+              },
+            ]
+          : []),
       ],
       logsOnFailure,
     }
