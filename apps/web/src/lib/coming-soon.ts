@@ -12,11 +12,18 @@ export const COMING_SOON: boolean =
   (process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV) === 'production';
 
 /**
- * While the gate is on, only the holding page and the public legal pages stay reachable; every
- * other route redirects to `/`. Pure (pathname → allowed?) so the middleware stays trivial and
+ * While the gate is on, only the holding page, the public legal pages and /__version stay
+ * reachable; every other route redirects to `/`. Pure (pathname → allowed?) so the middleware stays trivial and
  * this stays unit-testable. Legal pages remain live so the registered DMCA agent page and the
  * privacy policy are always reachable.
  */
 export function isComingSoonAllowed(pathname: string): boolean {
-  return pathname === '/' || pathname === '/legal' || pathname.startsWith('/legal/');
+  return (
+    pathname === '/' ||
+    pathname === '/legal' ||
+    pathname.startsWith('/legal/') ||
+    // The deploy-identity endpoint (rewritten to /api/version): the verify gate must be able to
+    // read prod's commit while the holding page is up. It serves only the public commit sha.
+    pathname === '/__version'
+  );
 }

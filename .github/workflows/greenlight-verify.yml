@@ -62,7 +62,10 @@ jobs:
           # and global-teardown deletes them afterwards. `!= 'Production' && … || ''` avoids the
           # empty-string falsy trap of the usual `&& '' || …` ternary.
           SUPABASE_SERVICE_ROLE_KEY: ${{ github.event.deployment_status.environment != 'Production' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
-        run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts
+          # Artifact identity: the commit Vercel built. The spec asserts /__version serves exactly
+          # this (through the protection bypass); --expect-sha arms the harness's own probe too.
+          GREENLIGHT_EXPECTED_SHA: ${{ github.event.deployment.sha }}
+        run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts --expect-sha "$GREENLIGHT_EXPECTED_SHA"
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
