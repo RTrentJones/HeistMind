@@ -21,7 +21,11 @@ import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useCharactersByGame } from '@/features/characters/data/queries';
 import { useGameDetail } from '@/features/games/data/queries';
 import { useUpdateGameState } from '@/features/games/data/mutations';
-import { usePageTranslation } from '@/lib/i18n/hooks';
+import { usePageTranslation, useTranslation } from '@/lib/i18n/hooks';
+import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
+import { gameStateLabel } from '@/features/rolls/lib/labels';
+import { errorMessage } from '@/lib/query/result';
+import { useNotificationStore } from '@/shared/stores/notification-store';
 import { InviteCodeSection } from '@/features/games/components/InviteCodeSection';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
@@ -39,6 +43,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   const { gameId } = use(params);
   const { isAuthenticated, user } = useAuth();
   const { t } = usePageTranslation();
+  const { t: tAll } = useTranslation();
 
   const gameQuery = useGameDetail(gameId);
   const updateState = useUpdateGameState(gameId);
@@ -61,9 +66,23 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
     const message = gameQuery.isError
       ? ((gameQuery.error as Error | null)?.message ?? t('game.loadFailed'))
       : t('game.notFound');
+    // A real load error gets a retry; either way there's a way back to the campaign list.
     return (
       <Container maxWidth='md' padding='lg'>
-        <ErrorDisplay title={t('game.hubLoadError')} message={message} />
+        <ErrorDisplay
+          title={t('game.hubLoadError')}
+          message={message}
+          {...(gameQuery.isError
+            ? {
+                onRetry: () => void gameQuery.refetch(),
+                retryText: tAll('components.asyncState.retry'),
+              }
+            : {})}
+        >
+          <Link href='/games' className='underline'>
+            {tAll('components.asyncState.backToCampaigns')}
+          </Link>
+        </ErrorDisplay>
       </Container>
     );
   }
@@ -89,12 +108,24 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
                     onChange={e => {
                       const userId = user?.id;
                       if (!userId) return;
-                      updateState.mutate({ userId, state: e.target.value as GameState });
+                      updateState.mutate(
+                        { userId, state: e.target.value as GameState },
+                        {
+                          // The select snapped back silently on failure (review item 6).
+                          onError: err =>
+                            useNotificationStore
+                              .getState()
+                              .error(
+                                tAll('components.asyncState.stateChangeFailed'),
+                                errorMessage(err) || undefined
+                              ),
+                        }
+                      );
                     }}
                   >
                     {GAME_STATES.map(s => (
                       <option key={s} value={s}>
-                        {s}
+                        {gameStateLabel(s, tAll)}
                       </option>
                     ))}
                   </Select>
@@ -102,7 +133,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
               </Tooltip>
             ) : (
               <Tooltip variant='dark' content={t('gamesList.stateLegend')}>
-                <Badge variant='outline'>{game.state}</Badge>
+                <Badge variant='outline'>{gameStateLabel(game.state, tAll)}</Badge>
               </Tooltip>
             )}
           </Stack>
@@ -111,7 +142,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
 
         {game.createdBy === user?.id && <InviteCodeSection gameId={gameId} />}
 
-        <Stack direction='row' justify='between' align='center'>
+        <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
           <Heading level='h2' variant='primary'>
             {t('game.charactersHeading')}
           </Heading>
@@ -120,7 +151,16 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           </Button>
         </Stack>
 
-        {characters.length === 0 ? (
+        {/* Loading / error / empty stay distinct — no "No characters yet" flash (review item 7). */}
+        {charactersQuery.isPending ? (
+          <QueryLoading testId='roster-loading' />
+        ) : charactersQuery.isError ? (
+          <QueryError
+            title={tAll('components.asyncState.rosterLoadFailed')}
+            message={charactersQuery.error.message}
+            onRetry={() => void charactersQuery.refetch()}
+          />
+        ) : characters.length === 0 ? (
           <Text variant='muted'>{t('game.noCharacters')}</Text>
         ) : (
           <CharacterRoster

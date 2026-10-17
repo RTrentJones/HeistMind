@@ -63,4 +63,46 @@ test.describe('dashboard (authenticated /)', () => {
         .first()
     ).toBeVisible();
   });
+
+  // F79 / F91: Recent activity must go straight from loading to the rows — the empty copy must
+  // NEVER render in between (the per-campaign fan-out only starts once campaigns resolve, which
+  // used to flash "No recent activity"). A MutationObserver installed before any page script
+  // records whether the empty state was ever attached, so the assertion can't pass on a flash.
+  test('recent activity shows the logged event without ever flashing the empty state', async ({
+    gmPage,
+  }) => {
+    test.skip(!isLocalStack(), 'Requires the local Supabase stack.');
+    test.setTimeout(120_000);
+    await gmPage.goto('/rulesets');
+    await gmPage
+      .getByRole('button', { name: /Add Brackwater to my rulesets/i })
+      .first()
+      .click();
+    await expect(gmPage.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
+      timeout: 30_000,
+    });
+    const ruleset = { name: 'Brackwater', version: '1.0.0', optionLabel: 'Brackwater (v1.0.0)' };
+    await createCampaign(gmPage, ruleset, uniqueName('Activity Job'));
+    const note = `Dashboard activity ${Date.now()}`;
+    await gmPage.getByLabel('What happened').fill(note);
+    await gmPage.getByRole('button', { name: 'Add to log' }).click();
+    await expect(gmPage.getByText(note)).toBeVisible({ timeout: 10_000 });
+
+    await gmPage.addInitScript(() => {
+      const w = window as unknown as { emptyActivitySeen?: boolean };
+      w.emptyActivitySeen = false;
+      new MutationObserver(() => {
+        if (document.querySelector('[data-testid="dashboard-activity-empty"]')) {
+          w.emptyActivitySeen = true;
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await gmPage.goto('/');
+    const list = gmPage.getByTestId('dashboard-activity-list');
+    await expect(list.getByText(note)).toBeVisible({ timeout: 20_000 });
+    const flashed = await gmPage.evaluate(
+      () => (window as unknown as { emptyActivitySeen?: boolean }).emptyActivitySeen
+    );
+    expect(flashed).toBe(false);
+  });
 });

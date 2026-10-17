@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useInvitesByGame } from '@/features/invitations/data/queries';
 import { useCreateInviteCode } from '@/features/invitations/data/mutations';
 import { useComponentTranslation } from '@/lib/i18n/hooks';
+import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
 
 /** GM-only: generate + share public join codes for a campaign. Players redeem them on /games. */
 const COPY_FLASH_MS = 1500;
@@ -36,7 +37,9 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
       setCopied(code);
       setTimeout(() => setCopied(null), COPY_FLASH_MS);
     } catch {
-      // Clipboard may be unavailable (e.g. insecure context) — the code is still shown to copy by hand.
+      // Clipboard may be unavailable (e.g. insecure context) — say so; the code is still shown to
+      // copy by hand.
+      setError(t('asyncState.clipboardFailed'));
     }
   };
 
@@ -50,7 +53,15 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
           {t('inviteSection.description')}
         </Text>
 
-        {codes.length === 0 ? (
+        {invites.isPending ? (
+          <QueryLoading />
+        ) : invites.isError ? (
+          <QueryError
+            title={t('asyncState.invitesLoadFailed')}
+            message={invites.error.message}
+            onRetry={() => void invites.refetch()}
+          />
+        ) : codes.length === 0 ? (
           <Text variant='muted' size='sm'>
             {t('inviteSection.noCodes')}
           </Text>
@@ -63,7 +74,7 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
                   <code className='rounded bg-background-tertiary px-2 py-1 font-mono tracking-widest'>
                     {codeValue}
                   </code>
-                  <Button variant='ghost' size='sm' onClick={() => copy(codeValue)}>
+                  <Button variant='ghost' size='sm' onClick={() => void copy(codeValue)}>
                     {copied === codeValue ? t('inviteSection.copied') : t('inviteSection.copy')}
                   </Button>
                 </Stack>
@@ -82,7 +93,7 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
           {t('inviteSection.generate')}
         </Button>
         {error && (
-          <Text variant='muted' size='sm' className='text-semantic-error'>
+          <Text variant='muted' size='sm' className='text-semantic-error' role='alert'>
             {error}
           </Text>
         )}

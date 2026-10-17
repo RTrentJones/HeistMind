@@ -703,6 +703,51 @@
       "endScore": "Confirm end score",
       "clearHarm": "Clear?",
       "clearHarmAria": "Confirm clearing {{name}}"
+    },
+    "asyncState": {
+      "retry": "Try again",
+      "loading": "Loading…",
+      "backToCampaigns": "Back to your campaigns",
+      "campaignsLoadFailed": "Couldn't load your campaigns.",
+      "charactersLoadFailed": "Couldn't load characters.",
+      "activityLoadFailed": "Couldn't load recent activity.",
+      "rosterLoadFailed": "Couldn't load the roster.",
+      "invitesLoadFailed": "Couldn't load invite codes.",
+      "rollLogLoadFailed": "Couldn't load the campaign log.",
+      "rulesetsLoadFailed": "Couldn't load rulesets.",
+      "retireFailed": "Couldn't retire {{name}}.",
+      "clipboardFailed": "Couldn't copy — select the code and copy it manually.",
+      "stateChangeFailed": "Couldn't change the campaign state."
+    },
+    "enumLabels": {
+      "rollKind": {
+        "action": "Action roll",
+        "resistance": "Resistance roll",
+        "fortune": "Fortune roll",
+        "downtime": "Downtime",
+        "loadout": "Loadout",
+        "score": "Score",
+        "crew": "Crew",
+        "faction": "Faction",
+        "clock": "Clock",
+        "xp": "XP",
+        "harm": "Harm",
+        "note": "Note"
+      },
+      "gameState": {
+        "draft": "Draft",
+        "recruiting": "Recruiting",
+        "active": "Active",
+        "paused": "Paused",
+        "completed": "Completed"
+      },
+      "characterStatus": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "retired": "Retired",
+        "dead": "Dead"
+      },
+      "rollAnnouncement": "{{label}}: {{outcome}}"
     }
   },
   "auth": {

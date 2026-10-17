@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
 import { rollPool } from '@/features/rolls/lib/roll-pool';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { OUTCOME_KEY, OUTCOME_VARIANT } from '@/features/rolls/lib/labels';
 
 interface ActionOption {
   name: string;
@@ -14,20 +15,6 @@ interface ActionOption {
 }
 
 type RollMode = 'action' | 'fortune' | 'resistance';
-
-const OUTCOME_VARIANT = {
-  crit: 'gold',
-  success: 'success',
-  partial: 'warning',
-  bad: 'stress-critical',
-} as const;
-// Static (non-template) keys so they stay in the typed TranslationKey union.
-const OUTCOME_KEY = {
-  crit: 'components.rollPanel.outcome.crit',
-  success: 'components.rollPanel.outcome.success',
-  partial: 'components.rollPanel.outcome.partial',
-  bad: 'components.rollPanel.outcome.bad',
-} as const;
 
 // BitD fallback attributes for resistance when a ruleset has no action ratings to draw on. Without
 // per-attribute ratings here they roll at 0 (2d take-lowest) — the harshest, most desperate resist.
@@ -409,6 +396,9 @@ export function RollPanel({
           {t('components.rollPanel.harmLesserHint')}
         </Text>
       )}
+      {/* Always-mounted polite live region: the newest result is ANNOUNCED to screen-reader users
+          (the app's core action had no feedback for them — review item 8). */}
+      <div role='status' aria-live='polite' aria-atomic='true' data-testid='roll-result'>
       {last && (
         <Stack direction='row' gap='sm' align='center'>
           {last.stress != null ? (
@@ -428,6 +418,7 @@ export function RollPanel({
           </Text>
         </Stack>
       )}
+      </div>
       {/* F46 — the tiered fortune reading, phrased the way the SRD grades fortune results. */}
       {last?.kind === 'fortune' && (
         <Text variant='muted' size='sm'>

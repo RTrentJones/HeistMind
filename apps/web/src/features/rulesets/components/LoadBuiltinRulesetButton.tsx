@@ -56,9 +56,11 @@ export function LoadBuiltinRulesetButton({
 
   return (
     <Stack direction='column' gap='xs' align='start'>
-      <Stack direction='row' gap='sm' align='center'>
+      {/* Long names ("Add Blades in the Dark to my rulesets") wrap instead of overflowing 360px. */}
+      <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
         <Button
           variant={alreadyAdded ? 'outline' : variant}
+          className='h-auto min-h-10 whitespace-normal text-left'
           onClick={onClick}
           loading={loadBuiltin.isPending}
           title={t('components.builtinRuleset.addTitle', { name: content.metadata.name })}

@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, LoadingSpinner, Stack, Text } from '@heist-mind/ui';
+import { LoadingSpinner, Stack, Text } from '@heist-mind/ui';
+import { QueryError } from './QueryStates';
 
 /**
  * The list-state scaffold every resource page hand-rolled before (round-1 C11): spinner while
@@ -14,6 +15,7 @@ export function ResourceList({
   errorText,
   isEmpty,
   emptyContent,
+  onRetry,
   children,
 }: {
   isLoading: boolean;
@@ -22,16 +24,13 @@ export function ResourceList({
   errorText?: string | null;
   isEmpty: boolean;
   emptyContent: React.ReactNode;
+  /** Refetch the failed query(ies) — rendered as the error state's retry action. */
+  onRetry?: () => void;
   children: React.ReactNode;
 }) {
   if (isLoading) return <LoadingSpinner />;
   if (isError) {
-    return (
-      <Alert variant='destructive' size='sm'>
-        {errorTitle ? `${errorTitle} ` : ''}
-        {errorText ?? ''}
-      </Alert>
-    );
+    return <QueryError title={errorTitle ?? ''} message={errorText} onRetry={onRetry} />;
   }
   if (isEmpty) {
     return typeof emptyContent === 'string' ? (

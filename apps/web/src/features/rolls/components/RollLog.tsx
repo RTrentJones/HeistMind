@@ -7,13 +7,14 @@ import { useCharactersByGame } from '@/features/characters/data/queries';
 import { useRollsByGame } from '@/features/rolls/data/queries';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
-
-const OUTCOME_VARIANT = {
-  crit: 'gold',
-  success: 'success',
-  partial: 'warning',
-  bad: 'stress-critical',
-} as const;
+import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
+import {
+  OUTCOME_VARIANT,
+  effectLabel,
+  outcomeLabel,
+  positionLabel,
+  rollKindLabel,
+} from '@/features/rolls/lib/labels';
 
 // Non-dice campaign events — shown with a neutral kind badge instead of a dice outcome.
 const EVENT_KIND_KEY = {
@@ -58,8 +59,22 @@ export function RollLog({ gameId }: { gameId: string }) {
     [scoresQuery.data]
   );
 
-  const rolls = rollsQuery.data ?? null;
-  if (rolls === null) return null;
+  // Loading, error (with retry), and empty are DISTINCT states — the campaign log is the product's
+  // core surface, so it never just vanishes on a slow or failed load (review items 6/7).
+  if (rollsQuery.isPending) {
+    return <QueryLoading testId='roll-log-loading' />;
+  }
+  if (rollsQuery.isError) {
+    return (
+      <QueryError
+        testId='roll-log-error'
+        title={t('components.asyncState.rollLogLoadFailed')}
+        message={rollsQuery.error.message}
+        onRetry={() => void rollsQuery.refetch()}
+      />
+    );
+  }
+  const rolls = rollsQuery.data;
   if (rolls.length === 0) {
     return (
       <Text variant='muted' size='sm'>
@@ -77,8 +92,9 @@ export function RollLog({ gameId }: { gameId: string }) {
         ? t('components.rollLog.fortune')
         : t('components.rollLog.gm');
     // Only join position/effect with a slash when both are present (no trailing "position/").
-    const posEffect =
-      r.position && r.effect ? `${r.position}/${r.effect}` : (r.position ?? r.effect ?? '');
+    const pos = positionLabel(r.position, t);
+    const eff = effectLabel(r.effect, t);
+    const posEffect = pos && eff ? `${pos}/${eff}` : pos || eff;
     // A critical resistance CLEARS 1 stress (resistanceStress returns −1) — phrase it, don't
     // render "-1 stress". Zero-dice (rating 0 → 2d take-LOWEST, F64) rides the persisted flag
     // since 00020 (audit P2: `dice` stores the dice actually ROLLED — 2 on a zero pool — so the
@@ -99,7 +115,7 @@ export function RollLog({ gameId }: { gameId: string }) {
       <Card key={r.id} variant='outline'>
         <Stack direction='row' justify='between' align='center' className='flex-wrap'>
           <div>
-            <Text as='strong'>{r.label ?? r.kind}</Text>
+            <Text as='strong'>{r.label ?? rollKindLabel(r.kind, t)}</Text>
             <Text variant='muted' size='sm'>
               {' '}
               · {who}
@@ -132,7 +148,7 @@ export function RollLog({ gameId }: { gameId: string }) {
                 {t(EVENT_KIND_KEY[r.kind as keyof typeof EVENT_KIND_KEY])}
               </Badge>
             ) : (
-              <Badge variant={OUTCOME_VARIANT[r.outcome]}>{r.outcome}</Badge>
+              <Badge variant={OUTCOME_VARIANT[r.outcome]}>{outcomeLabel(r.outcome, t)}</Badge>
             )}
           </Stack>
         </Stack>

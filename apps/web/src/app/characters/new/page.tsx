@@ -18,7 +18,7 @@ import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
-import { usePageTranslation } from '@/lib/i18n/hooks';
+import { usePageTranslation, useTranslation } from '@/lib/i18n/hooks';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
 
 /**
@@ -31,6 +31,7 @@ import { CharacterCreationWizard } from '@/features/characters/components/Charac
 export default function NewStandaloneCharacterPage() {
   const { user, isAuthenticated } = useAuth();
   const { t } = usePageTranslation();
+  const { t: tAll } = useTranslation();
   const router = useRouter();
   const rulesets = useRulesetsByCreator(user?.id);
   const [picked, setPicked] = useState<Ruleset | null>(null);
@@ -66,12 +67,14 @@ export default function NewStandaloneCharacterPage() {
           <ErrorDisplay
             title={t('characters.loadError')}
             message={rulesets.error?.message ?? t('characters.loadFailed')}
+            onRetry={() => void rulesets.refetch()}
+            retryText={tAll('components.asyncState.retry')}
           />
         )}
 
         {rulesets.isLoading ? (
           <LoadingSpinner />
-        ) : !rulesets.data || rulesets.data.length === 0 ? (
+        ) : rulesets.isError ? null : !rulesets.data || rulesets.data.length === 0 ? (
           // No rulesets yet — the flagship first-run path: one click on a built-in continues
           // STRAIGHT into the wizard (no /rulesets detour).
           <Stack direction='column' gap='sm'>
