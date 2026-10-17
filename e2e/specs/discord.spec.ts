@@ -404,6 +404,71 @@ test.describe('Discord interactions endpoint', () => {
       })
       .toBe(true);
 
+    // Act 3.8 (F92): /crew tier develops RAW — a full Rep tracker on STRONG hold pays new
+    // Tier × 8 coin (Tier 1 → 8) for +1 Tier, Rep → 0, hold → weak; feed-logged.
+    await dev
+      .from('crews')
+      .update({ rep: 12, hold: 'strong', coin: 8, vault: 0, tier: 0 })
+      .eq('id', crew.data!.id);
+    const crewTier = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: { name: 'crew', type: 1, options: [{ name: 'tier', type: 1, options: [] }] },
+      })
+    );
+    expect(crewTier.status()).toBe(200);
+    await expect
+      .poll(async () => {
+        const row = await dev
+          .from('crews')
+          .select('tier, rep, hold, coin')
+          .eq('id', crew.data!.id)
+          .single();
+        return row.data;
+      })
+      .toEqual({ tier: 1, rep: 0, hold: 'weak', coin: 0 });
+    await expect
+      .poll(async () => {
+        const rows = await dev
+          .from('rolls')
+          .select('note, kind')
+          .eq('game_id', game.data!.id)
+          .eq('kind', 'crew');
+        return rows.data?.some(r => r.note === 'Advanced to Tier 1 — paid 8 coin; hold now weak');
+      })
+      .toBe(true);
+
+    // Act 3.9 (F92 / review #6): a persisted /resist rolls the SHEET's attribute rating — the
+    // fixture rates one of the first attribute's actions, so it's 1 die, whatever `dice:` says.
+    const resist = await request.post(
+      '/api/discord',
+      signed({
+        type: 2,
+        ...guildSurface,
+        data: {
+          name: 'resist',
+          type: 1,
+          options: [
+            { name: 'dice', type: 4, value: 10 },
+            { name: 'attribute', type: 3, value: DEFAULT_RULESET.attributes[0]!.name },
+          ],
+        },
+      })
+    );
+    expect(resist.status()).toBe(200);
+    await expect
+      .poll(async () => {
+        const rows = await dev
+          .from('rolls')
+          .select('dice, label')
+          .eq('game_id', game.data!.id)
+          .eq('kind', 'resistance');
+        return rows.data?.map(r => [r.dice, r.label]) ?? [];
+      })
+      .toEqual([[1, DEFAULT_RULESET.attributes[0]!.name]]);
+
     // Act 4: a NON-member Discord user is walled off (no roll row appears for them).
     const strangerId = 'e2e-discord-stranger';
     const before = await dev.from('rolls').select('id').eq('game_id', game.data!.id);

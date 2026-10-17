@@ -39,13 +39,13 @@ test.describe('GM: factions + status', () => {
     });
     await expect(gmPage.getByText('Neutral')).toBeVisible();
 
-    // Shift status one step toward allied → Friendly. The badge is the status of record; the
-    // shift ALSO lands in the campaign feed (round-3 PR-3), so bare getByText('Friendly') would
+    // Shift status one step toward allies → Helpful (SRD +1). The badge is the status of record; the
+    // shift ALSO lands in the campaign feed (round-3 PR-3), so bare getByText("Helpful") would
     // be ambiguous with the feed note.
     const statusBadge = gmPage.locator('[data-testid^="faction-status-"]');
     await gmPage.getByRole('button', { name: 'Raise The Tidewatch status' }).click();
     await expect(statusBadge).toHaveText('+1', { timeout: 10_000 });
-    await expect(gmPage.getByText('Status shifted to +1 (Friendly)')).toBeVisible({
+    await expect(gmPage.getByText('Status shifted to +1 (Helpful)')).toBeVisible({
       timeout: 10_000,
     });
 
@@ -62,6 +62,6 @@ test.describe('GM: factions + status', () => {
       timeout: 15_000,
     });
     await expect(gmPage.getByText('Hunt the crew 1/4')).toBeVisible();
-    await expect(gmPage.getByText('Status shifted to +1 (Friendly)')).toBeVisible();
+    await expect(gmPage.getByText('Status shifted to +1 (Helpful)')).toBeVisible();
   });
 });
