@@ -87,7 +87,10 @@
   
   --color-foreground-primary: hsl(240 10% 3.9%);
   --color-foreground-secondary: hsl(240 5.9% 10%);
-  --color-foreground-muted: hsl(240 3.8% 46.1%);
+  /* 46.1% L (#71717a) measured 4.39:1 on the secondary card surface (#f4f4f5) — under AA for
+     the 12–14px help text it carries (F93). 40% clears AA on every light surface (≈6.4:1 on
+     white, ≈5.7:1 on secondary, ≈5.0:1 on tertiary) and stays visibly below secondary. */
+  --color-foreground-muted: hsl(240 4% 40%);
   --color-foreground-disabled: hsl(240 5% 64.9%);
   
   --color-game-shadow: hsl(215.4 16.3% 46.9%);
@@ -140,6 +143,18 @@
 /* Base styles */
 * {
   border-color: var(--color-border-primary);
+}
+
+/* The canvas itself takes the theme background (F93): with only <body> painted, short pages and
+   overscroll showed the UA default (#000/#fff) under the footer as a seam. `color-scheme` keeps
+   native controls + scrollbars on-theme. */
+html {
+  background-color: var(--color-background-primary);
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
 
 body {

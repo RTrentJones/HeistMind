@@ -41,7 +41,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     await expect(gmPage).toHaveURL(/\/characters\/new$/);
 
     // 3. The stepper reflects the ruleset's CUSTOM, reordered steps (not the defaults).
-    const stepper = gmPage.getByRole('tablist', { name: 'Creation steps' });
+    const stepper = gmPage.getByRole('navigation', { name: 'Creation steps' });
     for (const label of [
       'Choose Crew Role',
       'Assign Action Ratings',
@@ -113,7 +113,7 @@ test.describe('GM full journey: upload → campaign → character → modify', (
     await expect(gmPage).toHaveURL(/\/characters\/new$/);
 
     // No custom steps in the fixture → the wizard falls back to DEFAULT_STEPS.
-    const stepper = gmPage.getByRole('tablist', { name: 'Creation steps' });
+    const stepper = gmPage.getByRole('navigation', { name: 'Creation steps' });
     for (const label of ['Playbook', 'Attributes', 'Special Abilities', 'Identity', 'Review']) {
       await expect(stepper.getByText(label, { exact: true })).toBeVisible();
     }

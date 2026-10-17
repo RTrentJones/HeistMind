@@ -31,9 +31,16 @@ Campaigns/Characters/Rulesets/Settings nav — the Characters link is the Mode-1
 home, F81 — `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
 focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
 **`Footer`** (`shared/components/Footer.tsx` — Terms/Privacy/DMCA/Acceptable-use/Licenses links +
-"© {year} HeistMind, operated by Trent Jones"). The header wraps (`flex-wrap`) instead of
-overflowing on mobile; the signed-out header also carries the **clickwrap** line
-(`ClickwrapNotice`, `sm:`+ only — page-level notices cover phones). The shell steps aside on `/`
+"© {year} HeistMind, operated by Trent Jones"). **The header is one compact row at every width
+(F93, ≈60px):** the brand is a link home (not an h1 — each page owns its h1); signed in, the nav
+(`<nav aria-label="Main">`) shows from `lg`, and below `lg` a **menu button** (disclosure:
+`aria-expanded`, focus into the panel, Escape / outside click / navigation close) opens a panel
+with Campaigns/Characters/Rulesets/Settings, the welcome line, language and Sign out. Signed out,
+phones get one short "Sign In" button; the **clickwrap** line (`ClickwrapNotice`, `sm:`+ only —
+page-level notices cover phones) sits just under the header, outside the sticky row. The shell is
+a full-height column (`min-h-dvh`): `main` grows so the footer sits at the bottom of short pages,
+with a consistent `pt-6 sm:pt-10` under the header; breadcrumbs align to each route's own column.
+The theme class is set on `<html>` by an inline pre-paint script (no dark flash for light users). The shell steps aside on `/`
 (marketing hero owns its header) and `/auth/*` (transient callback), which render their own
 full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` themselves.
 
@@ -256,7 +263,12 @@ bootstrap).
   (`apps/web/src/features/characters/components/CharacterCreationWizard.tsx`) → `WizardStep`
   dispatcher → step components (see **Wizard** below). Layouts: `?layout=single` (default) or
   `?layout=rail` (step rail + live summary).
-- **Actions:** name; step through Back/Next or step badges; Create on the final step. A disabled
+- **Actions:** name; step through Back/Next or step badges; Create on the final step. **Stepper
+  (F93):** an ordered list (`<nav aria-label="Creation steps"><ol>`, `aria-current="step"`) of
+  pills — current (brand), complete (green ✓, only steps already passed that validate), needs
+  attention (amber !, passed but invalid), not started (outline); each carries an sr-only status.
+  The step title is the page h1. Back is disabled (visibly — 50% + not-allowed) on step 1; a
+  blocked Next/Create is visibly disabled too. A disabled
   Next/Create now shows the blocking reason in the footer (`stepError` → e.g. "Can't continue yet —
   Assigned 8 of 7 action dots.").
 - **State:** `useCharacterCreationStore`
@@ -447,8 +459,10 @@ bootstrap).
   works →"). On gated prod the route redirects home (only `/` + `/legal/*` stay reachable).
 - **Metadata (F90):** "The Discord play-by-post bot · HeistMind", own canonical + OG/Twitter text;
   the guide is in the server-rendered HTML (link unfurls and crawlers see it).
-- _Last verified:_ 2026-10-17 (F90 SSR + metadata; previously 2026-07-11 feature introduction —
-  bot-parity round, F67)
+- **Layout (F93):** the command reference is a single `<dl>` — stacked cards (command, then
+  labelled Needs / Does) below `md`, a 3-column table-like grid from `md`; nothing scrolls sideways.
+- _Last verified:_ 2026-10-17 (F90 SSR + metadata; F93 responsive command reference; previously
+  2026-07-11 feature introduction — bot-parity round, F67)
 
 ### `/settings` — Account settings (self-service deletion)
 
@@ -509,7 +523,8 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
 `DEFAULT_STEPS`; a `review` step is always appended. Derivation: `deriveSteps`
 (`apps/web/src/features/characters/lib/creation-steps.ts`). Each step is dispatched by `WizardStep`.
 
-1. **Playbook** — `steps/PlaybookStep.tsx`. Card grid of playbooks; selecting one seeds skills,
+1. **Playbook** — `steps/PlaybookStep.tsx`. Card grid of playbooks (the selected card gets a brand
+   ring + a green "✓ Selected" badge, F93); selecting one seeds skills,
    starting abilities, and attributes (or derives them in action-rating mode). _Valid when a
    playbook is chosen._
 2. **Attributes** _(point-buy rulesets)_ — `steps/AttributesStep.tsx` — allocate dots per attribute
@@ -538,7 +553,8 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    `getRepositories().characterManagement.createCharacterWithValidation`.
 
 _Last verified:_ 2026-10-17 (rules-accuracy round F92: Veteran-gated other-playbook abilities,
-pre-placed dot floor; previously 2026-06-27 @ 2535b31)
+pre-placed dot floor; F93 stepper statuses + selected-playbook / derived-attribute badges; previously
+2026-06-27 @ 2535b31)
 
 ---
 

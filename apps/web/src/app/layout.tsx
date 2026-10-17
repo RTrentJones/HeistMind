@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Cinzel, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { themeInitScript } from '@/lib/theme-script';
 import { AppShell } from '@/shared/components/AppShell';
 import { INDEXABLE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 
@@ -67,7 +68,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='en'>
+    // suppressHydrationWarning: the theme script sets the theme class on <html> before hydration (F93).
+    <html lang='en' suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${playfairDisplay.variable} antialiased`}
       >

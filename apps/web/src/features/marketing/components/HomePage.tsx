@@ -65,7 +65,9 @@ export function HomePage() {
             {/* Hero */}
             <Stack gap='lg' align='center'>
               <Text variant='secondary' size='lg' className='font-display tracking-wide'>
-                <span className='text-brand-primary'>Heist</span>Mind
+                {/* brand-fg, not brand-primary: the fill colour was 3.49:1 as 18px text on the
+                    dark canvas (F93). */}
+                <span className='text-brand-fg'>Heist</span>Mind
               </Text>
               <Heading level='h1' variant='hero' animate className='text-center'>
                 {t('landing.hero.title')}
@@ -97,7 +99,10 @@ export function HomePage() {
                   <CardContent>
                     <Stack gap='sm' align='start'>
                       <Text variant='secondary'>{t('landing.tracks.pbp.body')}</Text>
-                      <Badge variant='gold'>{t('landing.tracks.pbp.tag')}</Badge>
+                      {/* wrap: the tag was clipped mid-word inside the card at 360px (F93). */}
+                      <Badge variant='gold' wrap>
+                        {t('landing.tracks.pbp.tag')}
+                      </Badge>
                       {/* F67 — the player-facing bot guide a GM can send their table. */}
                       <Link href='/discord' className='text-sm underline'>
                         {t('landing.tracks.pbp.guideLink')}

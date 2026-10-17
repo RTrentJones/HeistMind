@@ -6,6 +6,9 @@ import { Alert, Badge, Card, Grid, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 
+// Decorative glyph (aria-hidden) beside the translated "Selected" label.
+const CHECK_MARK = '\u2713 ';
+
 /** Playbook picker — Card grid driven by `ruleset.content.playbooks`. */
 export function PlaybookStep() {
   const { t } = useTranslation();
@@ -63,14 +66,20 @@ export function PlaybookStep() {
                   pick(pb.id);
                 }
               }}
-              className='cursor-pointer transition-transform duration-150 hover:-translate-y-[3px]'
+              className={
+                isSelected
+                  ? 'cursor-pointer ring-2 ring-brand-primary ring-offset-2 ring-offset-background-primary transition-transform duration-150 hover:-translate-y-[3px]'
+                  : 'cursor-pointer transition-transform duration-150 hover:-translate-y-[3px]'
+              }
             >
               <div className='flex items-start justify-between gap-2.5' style={{ minHeight: 24 }}>
                 <span className='font-display' style={{ fontSize: 20, lineHeight: 1.1 }}>
                   {pb.name}
                 </span>
+                {/* F93 — a positive badge (red read as an error) + a brand ring on the card. */}
                 {isSelected && (
-                  <Badge variant='ember' size='sm'>
+                  <Badge variant='success' size='sm'>
+                    <span aria-hidden='true'>{CHECK_MARK}</span>
                     {t('components.steps.common.selected')}
                   </Badge>
                 )}
