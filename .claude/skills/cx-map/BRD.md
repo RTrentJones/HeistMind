@@ -157,7 +157,8 @@ records why.
 
 - **US-G1** As a GM, I maintain the crew sheet (type, tier, rep, heat, wanted, abilities, claims,
   cohorts, coin/vault) and progression runs by the rules (rep→tier, heat→wanted cascade,
-  incarceration). [R-A1..A3, CV] ✅
+  incarceration). [R-A1..A3, CV] ✅ _(rep→tier was non-RAW until F92 — now weak hold → strong,
+  strong hold pays new Tier × 8 coin, Rep max 12 − turf. Crew upgrades remain open — F92 deferred.)_
 - **US-G2** As a GM, I run progress clocks (4/6/8/10/12) and filling one is announced as the
   table-visible milestone. [R-G1] ✅
 - **US-G3** As a GM, I track factions (tier, status −3..+3) against the crew. [R-G2] 🟡 _(war

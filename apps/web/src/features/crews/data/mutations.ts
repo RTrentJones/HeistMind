@@ -11,6 +11,7 @@ import {
   incarcerateCrew,
   markCrewXp,
   takeCrewAdvance,
+  type AdvanceCrewTierInput,
 } from '@heist-mind/engine';
 import { rollKeys } from '@/features/rolls/data/queries';
 import { getRepositories } from '@/lib/auth';
@@ -61,11 +62,15 @@ export function useApplyCrewHeat(gameId: string) {
   });
 }
 
-/** Spend a full Rep track to advance Tier via the ENGINE (+ feed event). */
+/**
+ * Develop the crew from a full Rep tracker via the ENGINE (RAW: weak hold → strong; strong hold →
+ * pay new Tier × 8 coin for +1 Tier, hold weak) + feed event. Refusals surface as errors.
+ */
 export function useAdvanceCrewTier(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
   return useMutation({
-    mutationFn: async (vars: CrewOpVars) => unwrap(await advanceCrewTier(getRepositories(), vars)),
+    mutationFn: async (vars: AdvanceCrewTierInput) =>
+      unwrap(await advanceCrewTier(getRepositories(), vars)),
     onSuccess: invalidate,
   });
 }

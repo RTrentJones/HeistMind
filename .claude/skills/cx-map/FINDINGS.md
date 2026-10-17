@@ -72,6 +72,61 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## S1 — blockers
 
+### F92 — Rules-accuracy launch blockers: illegal abilities, non-RAW crew Tier, no stress→trauma, wrong BitD ability text (rules review 2026-10-17)
+
+- **severity:** S1 · **type:** FitD-accuracy · **(verified vs the SRD — pages under
+  bladesinthedark.com; book-only mechanics marked)**
+- **where:** `packages/core/src/rules/{character-rules,crews,factions}.ts`,
+  `packages/engine/src/{characters,crews,rolls,downtime}.ts`, the character-management + crew
+  repositories, `packages/shared/src/builtin-rulesets/blades-in-the-dark.ts`, the bot
+  (`roll`/`resist`/`sheet`/`gm`/`manifest`), and the web wizard / editor / sheet / crew sheet /
+  roll panel / factions legend.
+- **root cause / evidence (review-rules #1–#6, #8, #9, #11, #13, faction labels):**
+  1. Any playbook's tier-1 abilities were legal at creation and by advance; the veteran budget only
+     ran at creation (where it's moot), `advanceCharacter` skipped the roster gate, the bot's
+     `/xp advance` autocomplete offered every ability, and the wizard copy promised a crew gate that
+     didn't exist.
+  2. `advanceTier` was "+1 Tier per 12 Rep, carry the remainder" — no coin, no hold, no turf cap.
+  3. Stress silently clamped at max; nothing ever triggered trauma or retirement.
+  4. ~20 of 49 BitD ability texts gave the wrong mechanic (Vigorous, Focused, Shadow, Rook's Gambit,
+     Foresight, Calculating, …), the Hound's Sharpshooter/Scout names were swapped, special armor
+     was written out, Patron/No Traces were invented, and no Veteran existed.
+  5. Push + devil's bargain stacked (+2d); the bot allowed `extra` 0–3 on top (+4d).
+  6. `/resist` wrote stress from a typed dice count, not the sheet's attribute.
+  8. A playbook's 3 pre-placed action dots could be moved away at creation.
+  9. Deadly was "+1 dot anywhere" and couldn't lift the creation cap.
+  11. Bot `/crew heat` couldn't lower heat.
+  13. Flat-XP advances trusted the client cost (a negative cost ADDED XP) and the client `value`.
+  - Faction labels: −1/+1 read Hostile/Friendly (SRD: Interfering/Helpful; +3 is Allies); the hold
+    tooltip claimed weak hold "can break up entirely"; the harm SRD link 404'd.
+- **fix / status:** **fixed on `fix/rules-accuracy`** —
+  1. `consumesVeteranSlot` = outside the playbook roster, any tier (rosterless playbooks stay
+     lenient); the budget runs in live mode and in `advanceCharacter` (`ABILITY_LOCKED`, definite
+     crew context); own Veteran (`effects.veteran`) + crew grants (F62) sum; legacy over-budget
+     sheets are grandfathered for writes that add no ability. Wizard: other playbooks' abilities are
+     non-selectable until Veteran is picked, which opens exactly one; the editor and bot autocomplete
+     list only legal picks.
+  2. RAW development (see F17's correction): weak → strong free; strong pays new Tier × 8 coin
+     (Patron halves; coin then vault); Rep max 12 − turf, capped in the repository.
+  3. `applyStressChange`: marking the last box → stress 0 + `characterData.traumaPending` (JSONB, no
+     migration); engine `applyStress` logs the overflow (and a retirement note at the limit) with
+     client copy; engine `chooseTrauma` resolves it. Web: sheet prompt to pick from the ruleset's
+     conditions + must-retire banner; tracker marks go through the engine. Bot: trauma reply with a
+     link to the web sheet.
+  4. BitD builtin rewritten to SRD wording (CC BY 3.0) or setting-free paraphrase; all 7 playbook
+     rosters per the book + Veteran ×3; Hound names fixed with ids stable; Survivor = +1 stress box
+     (`effects.stressBoxes`); crew abilities per SRD (Deadly restricted, Patron `halfTierCost`).
+  5/6/9/11/13 + labels: as described in F9/F19 corrections, `/resist` sheet rating,
+     `bonusActionDotsIn`/`bonusDotsExceedCreationCap`, `advancementCost` → ruleset-only and
+     `NO_ADVANCEMENT_OPTION`, upload validation rejects negative costs, `FACTION_STATUS_LABELS`.
+- **deferred (open):** desperate-roll XP track + playbook XP triggers (review #7); healing clock /
+  recovery step-down (#10); heavy/special armor as items + "push via special armor" (#12 — the
+  ability texts now say special armor, the mechanic is GM-adjudicated); crew upgrades / Mastery as
+  an upgrade / Tier+2 stash payout (#13 crew side); starting crew coin 2 (#15); coin/stash limits
+  (#16); crew-aware Deadly in the creation WIZARD (the validator/repository honour it; the wizard
+  has no crew context — F54 residue); a bot-side trauma picker (players pick on the web sheet);
+  automatic reduce-heat downtime roll.
+
 ### F2 — No way for a player to discover or join a campaign
 
 - **severity:** S1 · **type:** CX-flaw · **(verified)**
@@ -224,9 +279,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix:** Toggles "Push yourself (+1d, 2 stress)" / "Devil's Bargain (+1d)"; add dice, deduct/record
   stress on save.
 - **status:** fixed — the action-roll panel has **Push** (+1d, applies 2 stress win-or-lose) and
-  **Devil's bargain** (+1d, with an optional complication field) toggles; both grow the dice pool (a
-  0-pool still rolls 2 take-lowest), and the move + complication persist to the roll's `note` (shown in
-  the feed). No schema change — `note` already existed. https://bladesinthedark.com/index.php/the-roll
+  **Devil's bargain** (+1d, with an optional complication field) toggles, and the move + complication
+  persist to the roll's `note` (shown in the feed). No schema change — `note` already existed.
+  **Correction (F92):** they originally _stacked_ (+2d) — a RAW violation ("you can either push
+  yourself or accept a Devil's Bargain — you can't get dice for both"; bladesinthedark.com/action-roll).
+  They are now one-or-the-other on the web (ticking one clears the other; `rollPool` grants +1d for
+  either) and on the bot (`push`/`bargain` booleans refuse together; the old 0–3 `extra` is gone —
+  an `assist` boolean is the separate +1d, so +2d max).
 
 ### F10 — Teamwork absent (assist / lead group action / set up / protect)
 
@@ -331,9 +390,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   is no conversion path, so crews can't advance tier through play.
 - **fix:** Uncap rep; add rep→tier conversion (auto at ≥12 or a GM "Advance tier" button); show the
   rule.
-- **status:** fixed — `advanceTier` (`crews.ts`, SRD-grounded: fill the 12-Rep track → +1 Tier,
-  clear Rep carrying the remainder, capped at Tier 4) + a GM "Advance to Tier N (spend 12 Rep)" button
-  on the crew sheet, shown once Rep ≥ 12. The Rep stat is now uncapped so it can accrue past 12.
+- **status:** fixed — **corrected in F92 (2026-10-17).** _The original fix ("uncap Rep, +1 Tier per
+  12 Rep, carry the remainder", labelled SRD-grounded) was itself a RAW deviation._ RAW
+  (bladesinthedark.com/faction-game → Development/Turf): Rep needs 12 less held turf and **12 is
+  the max** (no carry); with a full tracker a **weak** hold becomes strong (Rep → 0, no coin), a
+  **strong** hold pays **new Tier × 8 coin** (Patron: half) for +1 Tier, then Rep → 0 and hold →
+  weak. `advanceTier` / engine `advanceCrewTier` / the crew-sheet button ("Strengthen hold" /
+  "Advance to Tier N (pay X coin)") / bot `/crew tier` now do exactly that; the repository caps Rep.
 
 ### F18 — Crew XP / advancement absent
 
@@ -355,9 +418,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Heat filling → +1 wanted, and cooling off, are core consequences with no engine.
 - **fix:** Heat-threshold + wanted helpers in `crews.ts`; a cool-off action.
 - **status:** fixed — `applyHeat` cascades heat 9 → +1 Wanted (clear, carry remainder; SRD-verified)
-  and is wired into the crew sheet's heat control. **SRD correction:** core BitD has no "lay low /
-  reduce heat" activity — the direct release valve is **incarceration** (a convicted member/ally/framed
-  enemy → −1 Wanted and clears Heat). Modelled as `incarcerate` + a GM "Incarcerated" button.
+  and is wired into the crew sheet's heat control. Incarceration (a convicted member/ally/framed
+  enemy → −1 Wanted and clears Heat) is modelled as `incarcerate` + a GM "Incarcerated" button.
+  **Correction (F92, 2026-10-17):** an earlier note here claimed "core BitD has no reduce-heat
+  activity" — **false**: the SRD's downtime list has **Reduce Heat** (an action roll: 1-3 → −1, 4/5
+  → −2, 6 → −3, crit → −5; bladesinthedark.com/downtime-activities). The GM can now apply it on
+  both clients — the web heat stepper and bot `/crew heat amount:` accept a negative delta (−9..+9,
+  floored at 0, Wanted untouched). _Residue (open):_ a dedicated reduce-heat downtime use-case that
+  rolls and maps the result automatically.
 
 ### F20 — Theme system not wired; app is effectively dark-only
 
@@ -473,7 +541,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **status:** **fixed (round-3 PR-4)** — veteran grants are a **budget**: held cross-playbook picks
   (tier ≥ 2, outside the playbook roster, no held prerequisite) must fit within the summed grants;
   `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
-  over-budget set (`veteranPicksUsed` in character-rules).
+  over-budget set (`veteranPicksUsed` in character-rules). **Extended by F92:** the "tier ≥ 2"
+  exemption is gone (ANY ability outside the roster needs a slot), the budget is enforced in live
+  validation and on advance, and the BitD builtin models Veteran as the RAW **playbook** ability
+  (`effects.veteran`). The crew-granted budget mechanism stays (Brackwater's crew Veteran uses it);
+  the BitD builtin's crew Veteran is now the RAW crew ability (another crew type's ability), not a
+  PC slot.
 
 ### F69 — Bot action resolution read the WRONG field — no ruleset using the canonical shape worked
 
