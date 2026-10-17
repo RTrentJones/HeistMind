@@ -241,4 +241,8 @@ export class SupabaseCharacterRepository
       });
     });
   }
+
+  async delete(id: string): Promise<Result<void>> {
+    return this.deleteById('characters', id);
+  }
 }

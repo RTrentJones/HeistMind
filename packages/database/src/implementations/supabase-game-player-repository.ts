@@ -94,4 +94,32 @@ export class SupabaseGamePlayerRepository
       return { success: true, data: fromSupabaseGamePlayer(row) };
     });
   }
+
+  /** GM-only kick via the 00023 SECURITY DEFINER RPC (it re-checks GM authority server-side). */
+  async removePlayer(gameId: string, playerId: string, note?: string): Promise<Result<GamePlayer>> {
+    return this.run(async () => {
+      const { data: row, error } = await this.rpcUntyped('remove_game_player', {
+        p_game_id: gameId,
+        p_player_id: playerId,
+        p_note: note ?? null,
+      });
+      if (error) return failFromError(error);
+      return {
+        success: true,
+        data: fromSupabaseGamePlayer(row as Parameters<typeof fromSupabaseGamePlayer>[0]),
+      };
+    });
+  }
+
+  /** The caller leaves the campaign (00023 RPC; the GM can't leave their own campaign). */
+  async leave(gameId: string, note?: string): Promise<Result<void>> {
+    return this.run(async () => {
+      const { error } = await this.rpcUntyped('leave_game', {
+        p_game_id: gameId,
+        p_note: note ?? null,
+      });
+      if (error) return failFromError(error);
+      return { success: true, data: undefined };
+    });
+  }
 }
