@@ -617,9 +617,9 @@ BEGIN
                    r.sig, target_schema);
   END LOOP;
 
-  EXECUTE format('REVOKE TRUNCATE, TRIGGER, REFERENCES ON ALL TABLES IN SCHEMA %I FROM anon, authenticated',
+  EXECUTE format('REVOKE TRUNCATE, TRIGGER, REFERENCES ON ALL TABLES IN SCHEMA %I FROM anon, authenticated',  -- greenlight:allow (REVOKEs the privilege; empties nothing)
                  target_schema);
-  EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLES FROM anon, authenticated',
+  EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLES FROM anon, authenticated',  -- greenlight:allow (REVOKEs the privilege; empties nothing)
                  target_schema);
   EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I REVOKE EXECUTE ON FUNCTIONS FROM anon',
                  target_schema);
