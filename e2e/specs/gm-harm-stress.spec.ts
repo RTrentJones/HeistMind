@@ -41,6 +41,17 @@ test.describe('GM: harm + live stress', () => {
     await gmPage.reload();
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 15_000 }); // persisted
 
+    // --- F92 (RAW): marking the LAST stress box is trauma, not a clamp — stress resets to 0, the
+    // sheet asks for the condition (cinders names none → free text), and the feed logs both. ---
+    await gmPage.getByRole('button', { name: 'Set stress to 9' }).click();
+    await expect(gmPage.getByTestId('trauma-pending')).toBeVisible({ timeout: 10_000 });
+    await expect(gmPage.getByText('0/9')).toBeVisible();
+    await gmPage.getByLabel('Trauma condition').fill('Haunted');
+    await gmPage.getByRole('button', { name: 'Mark trauma' }).click();
+    await expect(gmPage.getByTestId('trauma-pending')).toBeHidden({ timeout: 10_000 });
+    await expect(gmPage.getByText(/marked their last stress box — trauma!/).first()).toBeVisible();
+    await expect(gmPage.getByText(/takes the trauma: Haunted/).first()).toBeVisible();
+
     // --- Harm: added in the editor's Stress tab; appears on the sheet's harm track. ---
     await gmPage.getByRole('button', { name: 'Edit build' }).click();
     await gmPage.getByRole('button', { name: 'Stress & Trauma' }).click();

@@ -99,9 +99,9 @@ export function DiscordGuideContent() {
                     does='Pick which of your characters the bot acts as'
                   />
                   <Row
-                    command='/roll action: [extra] [push]'
+                    command='/roll action: [push|bargain] [assist]'
                     needs='active character'
-                    does='Action roll from your sheet rating; harm −1d applies; persists in a linked channel'
+                    does='Action roll from your sheet rating; push OR a devil’s bargain (+1d), plus an assist; harm −1d applies; persists in a linked channel'
                   />
                   <Row
                     command='/resist dice: [attribute]'
@@ -141,7 +141,7 @@ export function DiscordGuideContent() {
                   <Row
                     command='/crew heat|tier|incarcerate'
                     needs='GM, linked channel'
-                    does='Heat→wanted cascade · spend a full Rep track · Wanted −1 + Heat cleared'
+                    does='Add/reduce heat (→ wanted cascade) · full Rep: hold weak→strong, or pay new Tier × 8 coin · Wanted −1 + Heat cleared'
                   />
                   <Row
                     command='/crew xp|advance'
@@ -156,7 +156,7 @@ export function DiscordGuideContent() {
                   <Row
                     command='/faction status'
                     needs='GM, linked channel'
-                    does='Set a faction’s standing toward the crew (−3 war … +3 allied)'
+                    does='Set a faction’s standing toward the crew (−3 war … +3 allies)'
                   />
                 </tbody>
               </table>

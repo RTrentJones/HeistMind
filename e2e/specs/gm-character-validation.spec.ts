@@ -18,9 +18,7 @@ test.describe('GM: character validity', () => {
     );
   });
 
-  test('wizard enforces the ability choice limit and tier/prerequisite gating', async ({
-    gmPage,
-  }) => {
+  test('wizard enforces the ability choice limit and Veteran gating', async ({ gmPage }) => {
     const ruleset = await uploadRuleset(gmPage, 'cinders.json', uniqueName('Cinders & Coin'));
     await createCampaign(gmPage, ruleset, uniqueName('Gating'));
 
@@ -39,21 +37,19 @@ test.describe('GM: character validity', () => {
     // Ghost Step / Sharpshot aren't in the Razor's roster — reveal the other roles' abilities.
     await gmPage.getByRole('button', { name: /Show \d+ more abilities/ }).click();
 
-    // Ghost Step is Tier 2 and not in the Razor's roster → locked at creation.
-    await expect(gmPage.getByRole('button', { name: /Ghost Step/ })).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    // F92 (RAW): ANY other playbook's ability needs a free Veteran slot — tier is irrelevant, so
+    // tier-2 Ghost Step and tier-1 Sharpshot are both locked for the Razor (cinders has no Veteran).
+    for (const other of [/Ghost Step/, /Sharpshot/]) {
+      await expect(gmPage.getByRole('button', { name: other })).toHaveAttribute(
+        'aria-disabled',
+        'true'
+      );
+    }
+    await expect(gmPage.getByText('Needs a free Veteran slot').first()).toBeVisible();
 
-    // Pick a second ability → at the limit.
-    await gmPage.getByRole('button', { name: /Sharpshot/ }).click();
+    // Pick the second roster ability → at the limit.
+    await gmPage.getByRole('button', { name: /Menace/ }).click();
     await expect(gmPage.getByText('2 of 2 chosen')).toBeVisible();
-
-    // A third ability is now blocked by the choice limit.
-    await expect(gmPage.getByRole('button', { name: /Menace/ })).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
   });
 
   test('editor gates advancement on XP and persists trauma', async ({ gmPage }) => {
@@ -90,11 +86,16 @@ test.describe('GM: character validity', () => {
     await gmPage.getByRole('button', { name: 'Add XP' }).click();
     await expect(gmPage.getByText('2 XP available')).toBeVisible();
 
-    // Buy the first available ability → XP spent, ability learned.
+    // F92: only LEGAL advances are offered — the Razor's own roster (Menace); the other
+    // playbooks' abilities wait behind a Veteran slot the cinders ruleset doesn't have.
+    await expect(gmPage.getByTestId('veteran-locked-count')).toBeVisible();
+    await expect(gmPage.getByRole('button', { name: 'Buy (2 XP)' })).toHaveCount(1);
+
+    // Buy it → XP spent, ability learned.
     await gmPage.getByRole('button', { name: 'Buy (2 XP)' }).first().click();
     await expect(gmPage.getByText('0 XP available')).toBeVisible();
     // Shown on the sheet's ability list by name (not id).
-    await expect(gmPage.getByText('Ghost Step', { exact: true })).toBeVisible();
+    await expect(gmPage.getByText('Menace', { exact: true }).first()).toBeVisible();
 
     // --- Stress: trauma is bounded and persists. ---
     await gmPage.getByRole('button', { name: 'Stress & Trauma' }).click();

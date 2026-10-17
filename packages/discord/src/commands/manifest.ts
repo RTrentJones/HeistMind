@@ -44,7 +44,7 @@ const FACTION_STATUSES = [
   { name: '0 (neutral)', value: 0 },
   { name: '+1 (helpful)', value: 1 },
   { name: '+2 (friendly)', value: 2 },
-  { name: '+3 (allied)', value: 3 },
+  { name: '+3 (allies)', value: 3 },
 ];
 
 // Chat-input commands only (the narrower type keeps `description` required and typo-checked).
@@ -69,16 +69,19 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
         max_length: 100,
       },
       {
-        type: ApplicationCommandOptionType.Integer,
-        name: 'extra',
-        description: 'Bonus dice (assists, devil’s bargains)',
-        min_value: 0,
-        max_value: 3,
+        type: ApplicationCommandOptionType.Boolean,
+        name: 'push',
+        description: 'Push yourself: +1d for 2 stress (not with a devil’s bargain)',
       },
       {
         type: ApplicationCommandOptionType.Boolean,
-        name: 'push',
-        description: 'Push yourself: +1d for 2 stress',
+        name: 'bargain',
+        description: 'Accept a devil’s bargain: +1d, the GM names the cost (not with push)',
+      },
+      {
+        type: ApplicationCommandOptionType.Boolean,
+        name: 'assist',
+        description: 'A teammate assists: +1d (they mark 1 stress)',
       },
       {
         type: ApplicationCommandOptionType.String,
@@ -108,15 +111,14 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       {
         type: ApplicationCommandOptionType.Integer,
         name: 'dice',
-        description: 'Your attribute rating',
-        required: true,
+        description: 'Dice to roll when not using your sheet (a linked campaign uses your rating)',
         min_value: 0,
         max_value: 10,
       },
       {
         type: ApplicationCommandOptionType.String,
         name: 'attribute',
-        description: 'Which attribute resists (e.g. Prowess)',
+        description: 'Which attribute resists (e.g. Prowess) — your sheet’s rating sets the dice',
         max_length: 40,
       },
     ],
@@ -439,14 +441,14 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       {
         type: ApplicationCommandOptionType.Subcommand,
         name: 'heat',
-        description: 'Add heat (a full track marks a Wanted level)',
+        description: 'Add or reduce heat (a full track marks a Wanted level)',
         options: [
           {
             type: ApplicationCommandOptionType.Integer,
             name: 'amount',
-            description: 'Heat to add',
+            description: 'Heat to add — negative reduces it (e.g. -2 after reducing heat)',
             required: true,
-            min_value: 1,
+            min_value: -9,
             max_value: 9,
           },
         ],
@@ -454,7 +456,7 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       {
         type: ApplicationCommandOptionType.Subcommand,
         name: 'tier',
-        description: 'Spend a full Rep track to advance the crew a tier',
+        description: 'Full Rep: weak hold → strong, or pay new Tier × 8 coin to raise the Tier',
       },
       {
         type: ApplicationCommandOptionType.Subcommand,
@@ -519,7 +521,7 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       {
         type: ApplicationCommandOptionType.Subcommand,
         name: 'status',
-        description: 'Set the standing (−3 war … +3 allied)',
+        description: 'Set the standing (−3 war … +3 allies)',
         options: [
           {
             type: ApplicationCommandOptionType.String,

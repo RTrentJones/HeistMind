@@ -3,8 +3,18 @@
 // Uses the system's recognizable structure and names (attributes, the twelve actions, the seven
 // playbooks, the crew types) from the Forged in the Dark SRD, which John Harper / One Seven Design
 // licensed under CC BY 3.0. The attribution notice is recorded on the catalog entry in `index.ts`.
-// All ability *rules text* below is original, concise mechanical wording written for HeistMind — it
-// is not transcribed from the book's prose. Game mechanics aren't copyrightable; only expression is.
+//
+// Ability rules text — provenance (rules-accuracy round, review #4):
+// - Where the SRD (bladesinthedark.com/character-playbook, /crew-playbook) prints an ability, its
+//   rules text below is the SRD's own wording (CC BY 3.0, covered by the attribution above). The
+//   SRD's setting-neutral names are used for its variants (Arcane Fighter, Supernatural Ward,
+//   Arcane Mind) instead of the book's ghost-specific ones.
+// - Abilities the book's playbooks carry but the SRD doesn't print (Veteran, Ghost Hunter, Survivor,
+//   Physicker, Venomous, Ghost Veil, Cloak & Dagger, Ghost Voice, Functioning Vice, Ghost Contract,
+//   Jail Bird, Compel, Occultist, Tempest, The Good Stuff) are faithful ORIGINAL paraphrases of the
+//   mechanic — game mechanics aren't copyrightable; only expression is — with no setting terms.
+// - Ability `tier` is deliberately absent: the SRD has no ability tiers. Cross-playbook picks need a
+//   Veteran slot (the playbook "Veteran" ability, `effects.veteran`), whatever the ability.
 //
 // The CC BY grant covers the SRD *system* only — it excludes the Duskwall setting, its NPCs and
 // factions, artwork, and maps. This builtin therefore ships no setting content: no city or faction
@@ -13,12 +23,58 @@
 // Shape mirrors `default-ruleset.ts` / `e2e/fixtures/rulesets/cinders.json` so the creation wizard
 // and the character-rules engine accept it unchanged: action-rating creation, BitD stress 9 / trauma
 // 4, harm 2/2/1, XP tracks (playbook 8 / attribute 6).
-import type { RulesetContent } from '@heist-mind/core';
+import type { AbilityDefinition, RulesetContent } from '@heist-mind/core';
+
+// The SRD's shared special-armor clause (every "expend your special armor" ability carries it).
+const SPECIAL_ARMOR =
+  'When you use this ability, tick the special armor box on your playbook sheet. If you use this ' +
+  'ability to push yourself, you get one of the benefits (+1d, +1 effect, act despite severe harm) ' +
+  'but you don’t take 2 stress. Your special armor is restored at the beginning of downtime.';
+
+// The SRD's shared "push yourself to do one of the following" clause.
+const PUSH_FEAT =
+  'When you push yourself to activate this ability, you still get one of the normal benefits of ' +
+  'pushing yourself (+1d, +1 effect, etc.) in addition to the special ability.';
+
+// Veteran — on every playbook, takeable up to three times (each take opens ONE cross-playbook pick).
+const VETERAN_IDS = ['veteran', 'veteran-2', 'veteran-3'] as const;
+const VETERAN: AbilityDefinition[] = [
+  {
+    id: 'veteran',
+    name: 'Veteran',
+    description: 'Learn a trick from another walk of life.',
+    rules:
+      'Choose a special ability from another playbook and add it to your sheet. You may take ' +
+      'Veteran up to three times; each take opens one ability from outside your playbook.',
+    category: 'veteran',
+    effects: { veteran: 1 },
+  },
+  {
+    id: 'veteran-2',
+    name: 'Veteran (second)',
+    description: 'A second borrowed trick.',
+    rules: 'Take Veteran again: choose another special ability from another playbook.',
+    prerequisite: 'veteran',
+    category: 'veteran',
+    effects: { veteran: 1 },
+  },
+  {
+    id: 'veteran-3',
+    name: 'Veteran (third)',
+    description: 'A third borrowed trick.',
+    rules: 'Take Veteran a third time: choose another special ability from another playbook.',
+    prerequisite: 'veteran-2',
+    category: 'veteran',
+    effects: { veteran: 1 },
+  },
+];
+
+const roster = (...ids: string[]): string[] => [...ids, ...VETERAN_IDS];
 
 export const BLADES_IN_THE_DARK: RulesetContent = {
   metadata: {
     name: 'Blades in the Dark',
-    version: '1.0.0',
+    version: '1.1.0',
     author: 'John Harper / One Seven Design (CC BY 3.0)',
     description:
       'A daring crew of scoundrels seeking their fortunes in a haunted, industrial-fantasy city. ' +
@@ -64,15 +120,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       name: 'The Cutter',
       description: 'A dangerous and intimidating fighter who holds the line and breaks the rest.',
       startingAbilities: ['cutter-battleborn'],
-      specialAbilities: [
+      specialAbilities: roster(
         'cutter-battleborn',
         'cutter-bodyguard',
         'cutter-ghostfighter',
         'cutter-leadfighter',
         'cutter-mule',
+        'cutter-nottobetrifled',
         'cutter-savage',
-        'cutter-vigorous',
-      ],
+        'cutter-vigorous'
+      ),
       contacts: [
         { name: 'A crime boss', description: 'Pays well, forgets nothing.' },
         { name: 'A bare-knuckle champion', description: 'Owes you a fight, or a favor.' },
@@ -85,16 +142,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       id: 'hound',
       name: 'The Hound',
       description: 'A deadly marksman and tracker who never loses the trail.',
-      startingAbilities: ['hound-deadeye'],
-      specialAbilities: [
-        'hound-deadeye',
+      startingAbilities: ['hound-sharpshooter'],
+      specialAbilities: roster(
+        'hound-sharpshooter',
         'hound-focused',
         'hound-ghosthunter',
+        'hound-deadeye',
         'hound-survivor',
-        'hound-sharpshooter',
-        'hound-tracker',
-        'hound-vigorous',
-      ],
+        'hound-toughasnails',
+        'hound-vengeful'
+      ),
       contacts: [
         { name: 'A bounty hunter', description: 'Shares leads — for a cut.' },
         { name: 'A pet hound or hawk', description: 'Loyal, and a useful set of senses.' },
@@ -108,15 +165,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       name: 'The Leech',
       description: 'A saboteur, alchemist, and tinkerer who solves problems with the right tool.',
       startingAbilities: ['leech-alchemist'],
-      specialAbilities: [
+      specialAbilities: roster(
         'leech-alchemist',
-        'leech-saboteur',
-        'leech-physicker',
-        'leech-venomous',
-        'leech-fortitude',
         'leech-analyst',
+        'leech-artificer',
+        'leech-fortitude',
         'leech-ghostward',
-      ],
+        'leech-physicker',
+        'leech-saboteur',
+        'leech-venomous'
+      ),
       contacts: [
         { name: 'An apothecary', description: 'Stocks rare reagents, asks no questions.' },
         { name: 'A surgeon', description: 'Patches the crew up after a bad score.' },
@@ -130,15 +188,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       name: 'The Lurk',
       description: 'A stealthy infiltrator and burglar who is gone before anyone notices.',
       startingAbilities: ['lurk-infiltrator'],
-      specialAbilities: [
+      specialAbilities: roster(
         'lurk-infiltrator',
         'lurk-ambush',
-        'lurk-ghost',
-        'lurk-shadow',
         'lurk-daredevil',
-        'lurk-reflexes',
+        'lurk-devilsfootsteps',
         'lurk-expertise',
-      ],
+        'lurk-ghost',
+        'lurk-reflexes',
+        'lurk-shadow'
+      ),
       contacts: [
         { name: 'A fence', description: 'Moves stolen goods, quietly.' },
         { name: 'A roof-runner', description: 'Knows every way over the city.' },
@@ -152,15 +211,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       name: 'The Slide',
       description: 'A subtle manipulator and spy who gets in close and turns people to their ends.',
       startingAbilities: ['slide-rooktwist'],
-      specialAbilities: [
+      specialAbilities: roster(
         'slide-rooktwist',
+        'slide-cloakdagger',
+        'slide-ghostvoice',
+        'slide-likelooks',
+        'slide-somethingontheside',
         'slide-mesmerism',
         'slide-cloakspider',
-        'slide-likelooks',
-        'slide-ghostvoice',
-        'slide-coverid',
-        'slide-acalculating',
-      ],
+        'slide-trustinme'
+      ),
       contacts: [
         { name: 'A double agent', description: 'Sells secrets in both directions.' },
         { name: 'A drug dealer', description: 'A useful in to the right rooms.' },
@@ -174,15 +234,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       name: 'The Spider',
       description: 'A calculating mastermind who plans the score and pulls every string.',
       startingAbilities: ['spider-foresight'],
-      specialAbilities: [
+      specialAbilities: roster(
         'spider-foresight',
         'spider-calculating',
         'spider-connected',
-        'spider-jailbird',
         'spider-functioningvice',
+        'spider-ghostcontract',
+        'spider-jailbird',
         'spider-mastermind',
-        'spider-weavingwebs',
-      ],
+        'spider-weavingwebs'
+      ),
       contacts: [
         { name: 'A city official', description: 'Looks the other way, for a price.' },
         { name: 'A spirit trafficker', description: 'Deals in things best left buried.' },
@@ -196,15 +257,16 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       name: 'The Whisper',
       description: 'An arcane adept who bargains with ghosts and channels the spectral dark.',
       startingAbilities: ['whisper-compel'],
-      specialAbilities: [
+      specialAbilities: roster(
         'whisper-compel',
-        'whisper-tempest',
         'whisper-ghostmind',
-        'whisper-warded',
-        'whisper-ritual',
+        'whisper-ironwill',
         'whisper-occultist',
+        'whisper-ritual',
         'whisper-strange',
-      ],
+        'whisper-tempest',
+        'whisper-warded'
+      ),
       contacts: [
         {
           name: 'A ghost hunter',
@@ -218,134 +280,155 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     },
   ],
 
-  // Concise, original mechanical wording — not the book's prose. Veteran-style picks are tier 2.
+  // Ids are stable across revisions (a renamed ability keeps its id), so they don't always read
+  // like the display name — e.g. `hound-deadeye` is Scout, `slide-cloakspider` is Subterfuge.
   specialAbilities: [
     // Cutter
     {
       id: 'cutter-battleborn',
       name: 'Battleborn',
-      description: 'Trade armor for harm or for a push in a fight.',
-      rules: 'You may expend your armor to reduce harm taken or to push yourself during a fight.',
-      tier: 1,
+      description: 'Spend special armor to blunt a blow or push in a fight.',
+      rules:
+        'You may expend your special armor to reduce harm from an attack in combat or to push ' +
+        'yourself during a fight. If you “reduce harm” that means the level of harm you’re facing ' +
+        `right now is reduced by one. ${SPECIAL_ARMOR}`,
       category: 'cutter',
     },
     {
       id: 'cutter-bodyguard',
       name: 'Bodyguard',
-      description: 'Protect an ally with a hit of your own.',
+      description: 'Shield a teammate and read the room for threats.',
       rules:
-        'When you protect a teammate, take +1d to your resistance roll. You may expend armor to protect them instead of yourself.',
-      tier: 1,
+        'When you protect a teammate, take +1d to your resistance roll. When you gather info to ' +
+        'anticipate possible threats in the current situation, you get +1 effect.',
       category: 'cutter',
     },
     {
       id: 'cutter-ghostfighter',
-      name: 'Ghost Fighter',
-      description: 'Your strikes can wound the dead.',
+      name: 'Arcane Fighter',
+      description: 'Your strikes carry spirit energy.',
       rules:
-        'You can touch and grapple ghosts and your weapons harm spirits. You gain potency against the supernatural in close combat.',
-      tier: 2,
+        'You may imbue your hands, melee weapons, or tools with spirit energy. You gain potency in ' +
+        'combat vs. the supernatural.',
       category: 'cutter',
     },
     {
       id: 'cutter-leadfighter',
       name: 'Leader',
-      description: 'A cohort you lead in a group fight hits harder.',
-      rules: 'When you lead a group action in combat, the cohorts you command gain +1 effect.',
-      tier: 1,
+      description: 'Cohorts you command fight on.',
+      rules:
+        'When you Command a cohort in combat, they continue to fight when they would otherwise ' +
+        'break (they’re not taken out when they suffer level 3 harm). They gain +1 effect and 1 armor.',
       category: 'cutter',
     },
     {
       id: 'cutter-mule',
       name: 'Mule',
       description: 'Carry more without slowing down.',
-      rules:
-        'Your load limits are increased by 2. The maximum you can carry is raised accordingly.',
-      tier: 1,
+      rules: 'Your load limits are higher. Light: 5. Normal: 7. Heavy: 8.',
       category: 'cutter',
       effects: { loadCapacity: { light: 5, normal: 7, heavy: 8 } },
     },
     {
+      id: 'cutter-nottobetrifled',
+      name: 'Not to Be Trifled With',
+      description: 'Feats of force; take on a gang alone.',
+      rules:
+        'You can push yourself to do one of the following: perform a feat of physical force that ' +
+        'verges on the superhuman — engage a small gang on equal footing in close combat. ' +
+        PUSH_FEAT,
+      category: 'cutter',
+    },
+    {
       id: 'cutter-savage',
       name: 'Savage',
-      description: 'Terrify with sudden violence.',
+      description: 'Your violence frightens.',
       rules:
-        'When you unleash brutal force, you gain +1d to intimidate. Frightened foes will believe you mean exactly what you threaten.',
-      tier: 1,
+        'When you unleash physical violence, it’s especially frightening. When you Command a ' +
+        'frightened target, take +1d.',
       category: 'cutter',
     },
     {
       id: 'cutter-vigorous',
       name: 'Vigorous',
-      description: 'Heal faster and shrug off the worst.',
+      description: 'You recover from harm faster.',
       rules:
-        'Your healing clock has fewer segments and you take reduced harm penalties at the moderate level. Recovery comes quickly to you.',
-      tier: 2,
+        'You recover from harm faster. Permanently fill in one of your healing clock segments ' +
+        '(your healing clock becomes a 3-clock). Take +1d to healing treatment rolls.',
       category: 'cutter',
     },
 
     // Hound
     {
-      id: 'hound-deadeye',
+      id: 'hound-sharpshooter',
       name: 'Sharpshooter',
-      description: 'Range and cover mean nothing to your aim.',
+      description: 'Impossible shots and suppressing fire.',
       rules:
-        'You may take a ranged shot at extreme distance and ignore cover when you fire with care. Targeting at range counts as standard effect.',
-      tier: 1,
+        'You can push yourself to do one of the following: make a ranged attack at extreme distance ' +
+        'beyond what’s normal for the weapon — unleash a barrage of rapid fire to suppress the ' +
+        `enemy. ${PUSH_FEAT}`,
       category: 'hound',
     },
     {
       id: 'hound-focused',
       name: 'Focused',
-      description: 'Steady your nerves to act with precision.',
+      description: 'Spend special armor to keep your head or your aim.',
       rules:
-        'Spend 1 stress to act with calm precision; you ignore distraction and chaos around you for that action.',
-      tier: 1,
+        'You may expend your special armor to resist a consequence of surprise or mental harm ' +
+        '(fear, confusion, losing track of someone) or to push yourself for ranged combat or ' +
+        'tracking. If you “resist a consequence” of the appropriate type, you avoid it completely. ' +
+        SPECIAL_ARMOR,
       category: 'hound',
     },
     {
       id: 'hound-ghosthunter',
       name: 'Ghost Hunter',
-      description: 'Your prey includes the restless dead.',
+      description: 'Your hunting animal is touched by spirit energy.',
       rules:
-        'You have a trained animal or arcane tool that helps you track and harm spirits. Gain potency when hunting the supernatural.',
-      tier: 2,
+        'Your hunting pet is imbued with spirit energy: it gains potency when tracking or fighting ' +
+        'the supernatural, and gains one arcane ability — it can become insubstantial for a moment, ' +
+        'share its senses with you over a distance, or move with uncanny speed. Take this ability ' +
+        'again to give your pet an additional arcane ability.',
+      category: 'hound',
+    },
+    {
+      // Id kept from an earlier revision (was mis-named); this is the SRD's Scout.
+      id: 'hound-deadeye',
+      name: 'Scout',
+      description: 'Find the target; stay unseen while you watch.',
+      rules:
+        'When you gather information to discover the location of a target, you get +1 effect. ' +
+        'When you hide in a prepared position or use camouflage you get +1d to rolls to avoid ' +
+        'detection.',
       category: 'hound',
     },
     {
       id: 'hound-survivor',
       name: 'Survivor',
-      description: 'You weather hardship that breaks others.',
+      description: 'Hard-won toughness: one more stress box.',
       rules:
-        'Reduce stress costs to resist consequences of exposure, exhaustion, and the wilds. You recover stress more readily on the road.',
-      tier: 1,
+        'Hard experience has toughened you against poisonous air and meagre rations — you can ' +
+        'endure harsh, deprived conditions others can’t. You get +1 stress box.',
+      category: 'hound',
+      effects: { stressBoxes: 1 },
+    },
+    {
+      id: 'hound-toughasnails',
+      name: 'Tough as Nails',
+      description: 'Harm hits you one level softer.',
+      rules:
+        'Penalties from harm are one level less severe (though level 4 harm is still fatal). ' +
+        'Record the harm at its original level — for healing purposes, the original harm level ' +
+        'applies.',
       category: 'hound',
     },
     {
-      id: 'hound-sharpshooter',
-      name: 'Scout',
-      description: 'A keen eye for the lay of a place.',
+      id: 'hound-vengeful',
+      name: 'Vengeful',
+      description: 'Payback earns you XP.',
       rules:
-        'When you gather information by observing from a vantage, you also learn the best approach and any obvious dangers.',
-      tier: 1,
-      category: 'hound',
-    },
-    {
-      id: 'hound-tracker',
-      name: 'Tracker',
-      description: 'No trail goes cold for you.',
-      rules:
-        'When you follow a target, take +1d to track and to anticipate where they will go next.',
-      tier: 1,
-      category: 'hound',
-    },
-    {
-      id: 'hound-vigorous',
-      name: 'Vigorous',
-      description: 'Heal faster and shrug off the worst.',
-      rules:
-        'Your healing clock has fewer segments and you take reduced harm penalties at the moderate level.',
-      tier: 2,
+        'You gain an additional xp trigger: You got payback against someone who harmed you or ' +
+        'someone you care about. If your crew helped you get payback, also mark crew xp.',
       category: 'hound',
     },
 
@@ -353,64 +436,76 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'leech-alchemist',
       name: 'Alchemist',
-      description: 'Brew potent formulas between scores.',
+      description: 'Better alchemical creations; one formula known.',
       rules:
-        'You begin with a unique alchemical formula and can craft more during downtime. Your concoctions gain increased effect.',
-      tier: 1,
-      category: 'leech',
-    },
-    {
-      id: 'leech-saboteur',
-      name: 'Saboteur',
-      description: 'Your wrecking is quiet and thorough.',
-      rules:
-        'When you destroy or disable a device, structure, or mechanism, the work is unobtrusive — nothing seems amiss until it fails.',
-      tier: 1,
-      category: 'leech',
-    },
-    {
-      id: 'leech-physicker',
-      name: 'Physicker',
-      description: 'Tend the crew’s wounds skillfully.',
-      rules:
-        'You can treat harm. When you help someone heal, their recovery clock fills faster. Gain +1d to Tinker for medical work.',
-      tier: 1,
-      category: 'leech',
-    },
-    {
-      id: 'leech-venomous',
-      name: 'Venomous',
-      description: 'You have built a tolerance — and a supply.',
-      rules:
-        'You are immune to a chosen toxin and carry a dose. You may apply it in the moment without preparation.',
-      tier: 2,
-      category: 'leech',
-    },
-    {
-      id: 'leech-fortitude',
-      name: 'Fortitude',
-      description: 'Chemicals keep you on your feet.',
-      rules:
-        'Spend 1 stress to ignore the effects of fatigue, intoxication, or one tick of harm penalty for the rest of the scene.',
-      tier: 1,
+        'When you invent or craft a creation with alchemical features, you get +1 result level to ' +
+        'your roll (a 1-3 becomes a 4/5, etc.). You begin with one special formula already known.',
       category: 'leech',
     },
     {
       id: 'leech-analyst',
       name: 'Analyst',
-      description: 'Read a device or a body for its secrets.',
+      description: 'Extra progress on research projects.',
       rules:
-        'When you study a mechanism or examine the aftermath of an event, you gain an extra useful detail beyond your questions.',
-      tier: 1,
+        'During downtime, you get two ticks to distribute among any long term project clocks that ' +
+        'involve investigation or learning a new formula or design plan.',
+      category: 'leech',
+    },
+    {
+      id: 'leech-artificer',
+      name: 'Artificer',
+      description: 'Better spark-craft creations; one design known.',
+      rules:
+        'When you invent or craft a creation with spark-craft features, you get +1 result level ' +
+        'to your roll (a 1-3 becomes a 4/5, etc.). You begin with one special design already known.',
+      category: 'leech',
+    },
+    {
+      id: 'leech-fortitude',
+      name: 'Fortitude',
+      description: 'Spend special armor against fatigue and chemicals.',
+      rules:
+        'You may expend your special armor to resist a consequence of fatigue, weakness, or ' +
+        'chemical effects, or to push yourself when working with technical skill or handling ' +
+        'alchemicals. If you “resist a consequence” of the appropriate type, you avoid it ' +
+        `completely. ${SPECIAL_ARMOR}`,
       category: 'leech',
     },
     {
       id: 'leech-ghostward',
-      name: 'Ghost Ward',
-      description: 'Your craft holds spirits at bay.',
+      name: 'Supernatural Ward',
+      description: 'Make a place anathema — or enticing — to the supernatural.',
       rules:
-        'You can build wards and traps that repel or contain ghosts. Spirits suffer reduced effect against your prepared defenses.',
-      tier: 2,
+        'When you Wreck an area with arcane substances, ruining it for any other use, it becomes ' +
+        'anathema or enticing to the supernatural (your choice).',
+      category: 'leech',
+    },
+    {
+      id: 'leech-physicker',
+      name: 'Physicker',
+      description: 'Treat wounds; the whole crew heals better.',
+      rules:
+        'You can Tinker with bones, blood, and bodily fluids to treat wounds or stabilize the ' +
+        'dying, and you may Study a malady or a corpse. Everyone in your crew (including you) gets ' +
+        '+1d to their healing treatment rolls.',
+      category: 'leech',
+    },
+    {
+      id: 'leech-saboteur',
+      name: 'Saboteur',
+      description: 'Quiet, well-hidden wrecking.',
+      rules:
+        'When you Wreck, your work is much quieter than it should be and the damage is very ' +
+        'well-hidden from casual inspection.',
+      category: 'leech',
+    },
+    {
+      id: 'leech-venomous',
+      name: 'Venomous',
+      description: 'Immune to one toxin — and able to deliver it.',
+      rules:
+        'Choose a drug or poison (from your stock of alchemicals) to which you have become immune. ' +
+        'You can push yourself to secrete it through your skin or saliva, or exhale it as a vapor.',
       category: 'leech',
     },
 
@@ -418,62 +513,71 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'lurk-infiltrator',
       name: 'Infiltrator',
-      description: 'Locks and alarms barely slow you.',
-      rules:
-        'You are never short of tools. When you bypass security obstacles, treat your effect as one level higher.',
-      tier: 1,
+      description: 'Security quality and Tier don’t slow you.',
+      rules: 'You are not affected by quality or Tier when you bypass security measures.',
       category: 'lurk',
     },
     {
       id: 'lurk-ambush',
       name: 'Ambush',
-      description: 'Strike first, strike hard, from hiding.',
-      rules: 'When you attack from concealment or surprise, you gain +1d and increased effect.',
-      tier: 1,
-      category: 'lurk',
-    },
-    {
-      id: 'lurk-ghost',
-      name: 'Ghost Veil',
-      description: 'Slip briefly into the shadow realm.',
-      rules:
-        'Spend stress to become shadowy and insubstantial for a few moments — passing through bars and unseen, harder to harm.',
-      tier: 2,
-      category: 'lurk',
-    },
-    {
-      id: 'lurk-shadow',
-      name: 'Shadow',
-      description: 'Move unseen and unheard.',
-      rules:
-        'When you move in stealth, you gain +1d to prowl. Pursuers lose your trail unless they are exceptionally keen.',
-      tier: 1,
+      description: 'Strike from hiding.',
+      rules: 'When you attack from hiding or spring a trap, you get +1d to your roll.',
       category: 'lurk',
     },
     {
       id: 'lurk-daredevil',
       name: 'Daredevil',
-      description: 'Recklessness pays off for you.',
-      rules: 'When you take a desperate action without reducing its risk, gain +1d to the roll.',
-      tier: 1,
+      description: 'A gamble on desperate rolls.',
+      rules:
+        'When you roll a desperate action, you get +1d to your roll if you also take -1d to any ' +
+        'resistance rolls against consequences from your action.',
       category: 'lurk',
     },
     {
-      id: 'lurk-reflexes',
-      name: 'Reflexes',
-      description: 'You act first when it counts.',
+      id: 'lurk-devilsfootsteps',
+      name: 'The Devil’s Footsteps',
+      description: 'Superhuman athletics; turn enemies on each other.',
       rules:
-        'When there is a question of who acts first, you do. You react with uncanny speed to sudden danger.',
-      tier: 1,
+        'You can push yourself to do one of the following: perform a feat of athletics that ' +
+        'verges on the superhuman — maneuver to confuse your enemies so they mistakenly attack ' +
+        `each other. ${PUSH_FEAT}`,
       category: 'lurk',
     },
     {
       id: 'lurk-expertise',
       name: 'Expertise',
-      description: 'A signature method you have honed.',
+      description: 'Cover your team in a group action.',
       rules:
-        'Choose one action; once per score, when you make a roll with it, you may roll a single extra die and keep the best result.',
-      tier: 2,
+        'Choose one of your action ratings. When you lead a group action using that action, you ' +
+        'can suffer only 1 stress at most, regardless of the number of failed rolls.',
+      category: 'lurk',
+    },
+    {
+      id: 'lurk-ghost',
+      name: 'Ghost Veil',
+      description: 'Become shadowy and insubstantial for a moment.',
+      rules:
+        'You may shift partially into the spirit world, becoming shadowy and insubstantial for a ' +
+        'few moments. Take 2 stress when you shift, plus 1 stress for each extra feature: it lasts ' +
+        'for a few minutes rather than moments — you are invisible rather than shadowy — you may ' +
+        'float through the air.',
+      category: 'lurk',
+    },
+    {
+      id: 'lurk-reflexes',
+      name: 'Reflexes',
+      description: 'You act first.',
+      rules: 'When there’s a question about who acts first, the answer is you.',
+      category: 'lurk',
+    },
+    {
+      id: 'lurk-shadow',
+      name: 'Shadow',
+      description: 'Spend special armor against detection.',
+      rules:
+        'You may expend your special armor to resist a consequence from detection or security ' +
+        'measures, or to push yourself for a feat of athletics or stealth. If you “resist a ' +
+        `consequence” of the appropriate type, you avoid it completely. ${SPECIAL_ARMOR}`,
       category: 'lurk',
     },
 
@@ -481,64 +585,73 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'slide-rooktwist',
       name: 'Rook’s Gambit',
-      description: 'Turn a misstep into a lure.',
+      description: 'Roll your best action in place of another.',
       rules:
-        'When you suffer a consequence, you may take 1 stress to turn it into an opportunity that misleads your mark.',
-      tier: 1,
+        'Take 2 stress to roll your best action rating while performing a different action. Say ' +
+        'how you adapt your skill to this use.',
       category: 'slide',
     },
     {
-      id: 'slide-mesmerism',
-      name: 'Mesmerism',
-      description: 'Smooth over what someone just saw.',
+      id: 'slide-cloakdagger',
+      name: 'Cloak & Dagger',
+      description: 'Disguises deflect suspicion; unmasking seizes the moment.',
       rules:
-        'When you spin a quick falsehood to an onlooker, you may cloud a recent memory or suspicion with stress instead of a roll.',
-      tier: 2,
-      category: 'slide',
-    },
-    {
-      id: 'slide-cloakspider',
-      name: 'Subterfuge',
-      description: 'Hide in plain sight behind a role.',
-      rules:
-        'When you maintain a cover identity, suspicious onlookers suffer reduced effect to see through it.',
-      tier: 1,
-      category: 'slide',
-    },
-    {
-      id: 'slide-likelooks',
-      name: 'Like Looks',
-      description: 'Win quick trust from a stranger.',
-      rules:
-        'When you first meet someone, you may have already cultivated a useful rapport or shared acquaintance. Gain +1d to consort them.',
-      tier: 1,
+        'When you use a disguise or other form of covert misdirection, you get +1d to rolls to ' +
+        'confuse or deflect suspicion. When you throw off your disguise, the resulting surprise ' +
+        'gives you the initiative in the situation.',
       category: 'slide',
     },
     {
       id: 'slide-ghostvoice',
       name: 'Ghost Voice',
-      description: 'Spirits answer when you speak.',
+      description: 'Speak with spirits as with the living.',
       rules:
-        'You can speak with and sway ghosts as you would the living. Gain +1d to consort the dead.',
-      tier: 2,
+        'You know the secret method to interact with a ghost or other spirit as if it were a ' +
+        'normal person, however wild or feral it appears. You gain potency when communicating ' +
+        'with the supernatural.',
       category: 'slide',
     },
     {
-      id: 'slide-coverid',
-      name: 'Connected Cover',
-      description: 'Your false self has real backing.',
-      rules:
-        'Establish a standing cover identity with its own contacts and standing. It holds up to casual scrutiny without effort.',
-      tier: 1,
+      id: 'slide-likelooks',
+      name: 'Like Looking into a Mirror',
+      description: 'You always know a lie.',
+      rules: 'You can always tell when someone is lying to you.',
       category: 'slide',
     },
     {
-      id: 'slide-acalculating',
-      name: 'Cold Read',
-      description: 'You see what a person wants.',
+      id: 'slide-somethingontheside',
+      name: 'A Little Something on the Side',
+      description: '+2 stash each downtime.',
       rules:
-        'When you study someone in conversation, you learn their desire, their fear, or how to best appeal to them.',
-      tier: 1,
+        'At the end of each downtime phase, you earn +2 stash. (It arrives after all downtime ' +
+        'actions resolve, so it can’t fund extra activities until your next downtime phase.)',
+      category: 'slide',
+    },
+    {
+      id: 'slide-mesmerism',
+      name: 'Mesmerism',
+      description: 'Make them forget you swayed them.',
+      rules:
+        'When you Sway someone, you may cause them to forget that it’s happened until they next ' +
+        'interact with you.',
+      category: 'slide',
+    },
+    {
+      // Id kept from an earlier revision; this is the SRD's Subterfuge.
+      id: 'slide-cloakspider',
+      name: 'Subterfuge',
+      description: 'Spend special armor against suspicion.',
+      rules:
+        'You may expend your special armor to resist a consequence from suspicion or persuasion, ' +
+        'or to push yourself for subterfuge. If you “resist a consequence” of the appropriate ' +
+        `type, you avoid it completely. ${SPECIAL_ARMOR}`,
+      category: 'slide',
+    },
+    {
+      id: 'slide-trustinme',
+      name: 'Trust in Me',
+      description: '+1d against someone close to you.',
+      rules: 'You get +1d vs. a target with whom you have an intimate relationship.',
       category: 'slide',
     },
 
@@ -546,63 +659,75 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'spider-foresight',
       name: 'Foresight',
-      description: 'You planned for this.',
+      description: 'Assist for free, twice per score.',
       rules:
-        'Once per score, declare a small preparation you made in advance, no flashback roll required, to smooth the way.',
-      tier: 1,
+        'Two times per score you can assist a teammate without paying stress. Describe how you ' +
+        'prepared for this.',
       category: 'spider',
     },
     {
       id: 'spider-calculating',
       name: 'Calculating',
-      description: 'Cheaper flashbacks, sharper plans.',
+      description: 'An extra downtime activity.',
       rules:
-        'Reduce the stress cost of your flashbacks by 1 (minimum 0). Your forethought is hard to catch out.',
-      tier: 1,
+        'Due to your careful planning, during downtime, you may give yourself or another crew ' +
+        'member +1 downtime activity.',
       category: 'spider',
     },
     {
       id: 'spider-connected',
       name: 'Connected',
-      description: 'You always know someone useful.',
-      rules:
-        'During downtime, your reduce-heat and acquire-asset efforts gain +1 result level thanks to your web of contacts.',
-      tier: 1,
-      category: 'spider',
-    },
-    {
-      id: 'spider-jailbird',
-      name: 'Jailbird',
-      description: 'Prison holds no fear for you.',
-      rules:
-        'When you serve time, reduce the level of any incarceration penalty. You keep your contacts and standing inside.',
-      tier: 1,
+      description: 'Better acquire-asset and reduce-heat results.',
+      rules: 'During downtime, you get +1 result level when you acquire an asset or reduce heat.',
       category: 'spider',
     },
     {
       id: 'spider-functioningvice',
       name: 'Functioning Vice',
-      description: 'Your indulgence never gets the better of you.',
-      rules: 'When you indulge your vice, you may resist any overindulgence consequence for free.',
-      tier: 1,
+      description: 'Tune your vice roll.',
+      rules:
+        'When you indulge your vice, you may adjust the dice outcome by 1 or 2 (up or down). An ' +
+        'ally who joins in your vice may do the same.',
+      category: 'spider',
+    },
+    {
+      id: 'spider-ghostcontract',
+      name: 'Ghost Contract',
+      description: 'Oaths you seal are binding — on both parties.',
+      rules:
+        'When you shake on a deal, you and your partner — human or otherwise — both bear a mark ' +
+        'of your oath. If either party breaks the contract, they take level 3 harm, "Cursed".',
+      category: 'spider',
+    },
+    {
+      id: 'spider-jailbird',
+      name: 'Jail Bird',
+      description: 'Prison is home turf.',
+      rules:
+        'When incarcerated, your wanted level counts as 1 less, your Tier as 1 more, and you gain ' +
+        '+1 faction status with a faction you help on the inside (in addition to your ' +
+        'incarceration roll).',
       category: 'spider',
     },
     {
       id: 'spider-mastermind',
       name: 'Mastermind',
-      description: 'Spend your own nerve to steady an ally.',
+      description: 'Spend special armor to protect a teammate from afar.',
       rules:
-        'You may take 1 stress to help a teammate without being present, having anticipated their need.',
-      tier: 2,
+        'You may expend your special armor to protect a teammate, or to push yourself when you ' +
+        'gather information or work on a long-term project. If you protect a teammate, this ' +
+        'ability negates or reduces the severity of a consequence or harm that your teammate is ' +
+        'facing — you don’t have to be present; say how you prepared. ' +
+        SPECIAL_ARMOR,
       category: 'spider',
     },
     {
       id: 'spider-weavingwebs',
-      name: 'Weaving Webs',
-      description: 'Set rivals against one another.',
+      name: 'Weaving the Web',
+      description: 'Your network feeds the plan.',
       rules:
-        'When you scheme against a faction during downtime, your project clock fills faster and your involvement stays hidden.',
-      tier: 2,
+        'You gain +1d to Consort when you gather information on a target for a score. You get +1d ' +
+        'to the engagement roll for that operation.',
       category: 'spider',
     },
 
@@ -610,66 +735,82 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     {
       id: 'whisper-compel',
       name: 'Compel',
-      description: 'Summon and bind a nearby ghost.',
+      description: 'Summon a nearby ghost and command it.',
       rules:
-        'You can call a lingering spirit and command a single task of it. Hostile ghosts may resist with their own will.',
-      tier: 1,
-      category: 'whisper',
-    },
-    {
-      id: 'whisper-tempest',
-      name: 'Tempest',
-      description: 'Unleash the raw spectral storm.',
-      rules:
-        'Channel destructive energy as a ranged or area attack. Spend stress to increase its effect; bystanders may be caught in it.',
-      tier: 2,
+        'You can Attune to the spirit world to force a nearby ghost to appear and obey a command ' +
+        'you give it. You are not supernaturally terrified by a ghost you summon or compel (though ' +
+        'your allies may be).',
       category: 'whisper',
     },
     {
       id: 'whisper-ghostmind',
-      name: 'Ghost Mind',
-      description: 'Your senses reach into the spectral.',
+      name: 'Arcane Mind',
+      description: 'Always aware of the supernatural.',
       rules:
-        'You perceive ghosts, ghost-doors, and lingering arcane energy. Gain +1d to attune when navigating the spirit world.',
-      tier: 1,
+        'You’re always aware of supernatural entities in your presence. Take +1d whenever you ' +
+        'gather information about the supernatural by any means.',
       category: 'whisper',
     },
     {
-      id: 'whisper-warded',
-      name: 'Warded',
-      description: 'Spirits struggle to touch you.',
+      id: 'whisper-ironwill',
+      name: 'Iron Will',
+      description: 'Immune to supernatural terror.',
       rules:
-        'Ghosts and possessing entities suffer reduced effect against you, and you gain +1d to resist their influence.',
-      tier: 1,
-      category: 'whisper',
-    },
-    {
-      id: 'whisper-ritual',
-      name: 'Ritual',
-      description: 'Work greater magic with time and preparation.',
-      rules:
-        'You know how to perform rituals. During downtime you may research and enact a ritual to achieve a significant arcane effect.',
-      tier: 1,
+        'You are immune to the terror that some supernatural entities inflict on sight. When you ' +
+        'make a resistance roll with Resolve, take +1d.',
       category: 'whisper',
     },
     {
       id: 'whisper-occultist',
       name: 'Occultist',
-      description: 'You know the city’s hidden powers.',
+      description: 'Deal with ancient powers — and command their worshippers.',
       rules:
-        'When you gather information about the supernatural or the powerful entities of the world, ask one extra question.',
-      tier: 1,
+        'You know the secret ways to Consort with ancient powers, forgotten gods, or demons. Once ' +
+        'you’ve consorted with one, you get +1d to command cultists who worship it.',
+      category: 'whisper',
+    },
+    {
+      id: 'whisper-ritual',
+      name: 'Ritual',
+      description: 'Perform ritual sorcery; one ritual known.',
+      rules:
+        'You know the arcane methods to perform ritual sorcery. You can Study an occult ritual (or ' +
+        'create a new one) to summon a supernatural effect or being. You begin with one ritual ' +
+        'already learned.',
       category: 'whisper',
     },
     {
       id: 'whisper-strange',
       name: 'Strange Methods',
-      description: 'Trade flesh for arcane potency.',
+      description: 'Better arcane creations; one design known.',
       rules:
-        'When you push yourself for an arcane action, you may take harm instead of stress to fuel the power.',
-      tier: 2,
+        'When you invent or craft a creation with arcane features, get +1 result level to your ' +
+        'roll (a 1-3 becomes a 4/5, etc.). You begin with one arcane design already known.',
       category: 'whisper',
     },
+    {
+      id: 'whisper-tempest',
+      name: 'Tempest',
+      description: 'Call lightning or a storm.',
+      rules:
+        'You can push yourself to do one of the following: unleash a stroke of lightning as a ' +
+        'weapon — summon a storm in your immediate vicinity (torrential rain, roaring winds, heavy ' +
+        `fog, chilling frost or snow, etc.). ${PUSH_FEAT}`,
+      category: 'whisper',
+    },
+    {
+      id: 'whisper-warded',
+      name: 'Warded',
+      description: 'Spend special armor against the supernatural.',
+      rules:
+        'You may expend your special armor to resist a supernatural consequence, or to push ' +
+        'yourself when you contend with or employ arcane forces. If you resist a consequence, ' +
+        `this ability negates or reduces its severity. ${SPECIAL_ARMOR}`,
+      category: 'whisper',
+    },
+
+    // Every playbook
+    ...VETERAN,
   ],
 
   equipment: {
@@ -820,7 +961,9 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       {
         id: 'buy-ability',
         name: 'New Special Ability',
-        description: 'When your playbook track fills, take a new special ability.',
+        description:
+          'When your playbook track fills, take a new special ability from your playbook (or, ' +
+          'with a free Veteran slot, from another playbook).',
         cost: 0,
         category: 'ability',
       },
@@ -836,9 +979,10 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
   },
 
   characterCreation: {
-    // BitD creation: the playbook pre-places 3 action dots (seeded per playbook above), and the
-    // player assigns 4 more (max 2 in any action at creation) — 7 total. Action ratings cap at 3
-    // (4 only via the crew's "Mastery" upgrade — see crew abilities). https://bladesinthedark.com/character-creation
+    // BitD creation: the playbook pre-places 3 action dots (seeded per playbook above — a floor the
+    // player can't move), and the player assigns 4 more (max 2 in any action at creation) — 7 total.
+    // Action ratings cap at 3 (4 only via the crew's "Mastery" upgrade — see crew abilities).
+    // https://bladesinthedark.com/character-creation
     actionRatings: { points: 4, maxAtCreation: 2, max: 3 },
     abilityChoices: 1,
     steps: [
@@ -907,55 +1051,163 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         description: 'Runners who move contraband past the law.',
       },
     ],
+    // SRD wording (bladesinthedark.com/crew-playbook) where printed; Mastery, Veteran and The Good
+    // Stuff are book mechanics in original words.
     abilities: [
       {
         id: 'crew-deadly',
         name: 'Deadly',
-        description: 'Each crew member gains an action dot in a chosen action.',
-        effects: { bonusActionDots: 1 },
+        crewType: 'assassins',
+        description:
+          'Each PC may add +1 action rating to Hunt, Prowl, or Skirmish (up to a max rating of 3). ' +
+          'If you take this ability during initial character and crew creation, it supersedes the ' +
+          'normal starting limit for action ratings.',
+        effects: {
+          bonusActionDots: 1,
+          bonusActionDotsIn: ['Hunt', 'Prowl', 'Skirmish'],
+          bonusDotsExceedCreationCap: true,
+        },
+      },
+      {
+        id: 'crew-death-veil',
+        name: 'Death Veil',
+        crewType: 'assassins',
+        description:
+          'Due to hard-won experience or occult ritual, you don’t take extra heat when killing is ' +
+          'involved on a score.',
+      },
+      {
+        id: 'crew-no-traces',
+        name: 'No Traces',
+        crewType: 'assassins',
+        description:
+          'When you keep an operation quiet or make it look like an accident, you get half the rep ' +
+          'value of the target (round up) instead of zero. When you end downtime with zero heat, ' +
+          'take +1 rep.',
+      },
+      {
+        id: 'crew-predators',
+        name: 'Predators',
+        crewType: 'assassins',
+        description:
+          'When you use a stealth or deception plan to commit murder, take +1d to the engagement ' +
+          'roll.',
+      },
+      {
+        id: 'crew-fiends',
+        name: 'Fiends',
+        crewType: 'bravos',
+        description:
+          'Fear is as good as respect. You may count each wanted level as if it were turf. ' +
+          '(Regardless of turf, the minimum rep cost to advance your Tier is always 6.)',
+      },
+      {
+        id: 'crew-forged-in-the-fire',
+        name: 'Forged in the Fire',
+        crewType: 'bravos',
+        description:
+          'Each PC has been toughened by cruel experience. You get +1d to resistance rolls.',
+      },
+      {
+        id: 'crew-war-dogs',
+        name: 'War Dogs',
+        crewType: 'bravos',
+        description:
+          'When you’re at war (-3 faction status), your crew does not suffer -1 hold and PCs still ' +
+          'get two downtime activities, instead of just one.',
+      },
+      {
+        id: 'crew-anointed',
+        name: 'Anointed',
+        crewType: 'cult',
+        description:
+          'You gain +1d to resistance rolls against supernatural threats. You get +1d to healing ' +
+          'rolls when you have supernatural harm.',
+      },
+      {
+        id: 'crew-accord',
+        name: 'Accord',
+        crewType: 'hawkers',
+        description:
+          'Sometimes friends are as good as territory. You may treat up to three +3 faction ' +
+          'statuses you hold as if they are turf. (Regardless of turf, the minimum rep cost to ' +
+          'advance your Tier is always 6.)',
+      },
+      {
+        id: 'crew-high-society',
+        name: 'High Society',
+        crewType: 'hawkers',
+        description:
+          'It’s all about who you know. Take -1 heat during downtime and +1d to gather information ' +
+          'about the city’s elite.',
+      },
+      {
+        id: 'crew-the-good-stuff',
+        name: 'The Good Stuff',
+        crewType: 'hawkers',
+        description:
+          'Your merchandise is exquisite: its quality is equal to your Tier +2. When you deal with ' +
+          'a crew or faction, the GM tells you who among them is hooked on your product (one, a ' +
+          'few, many, or all).',
+      },
+      {
+        id: 'crew-network',
+        name: 'Pack Rats',
+        crewType: 'shadows',
+        description:
+          'Your lair is a jumble of stolen items. When you roll to acquire an asset, take +1d.',
+      },
+      {
+        id: 'crew-second-story',
+        name: 'Second Story',
+        crewType: 'shadows',
+        description:
+          'When you execute a clandestine infiltration, you get +1d to the engagement roll.',
+      },
+      {
+        id: 'crew-synchronized',
+        name: 'Synchronized',
+        crewType: 'shadows',
+        description:
+          'When you perform a group action, you may count multiple 6s from different rolls as a ' +
+          'critical success.',
+      },
+      {
+        id: 'crew-all-hands',
+        name: 'All Hands',
+        crewType: 'smugglers',
+        description:
+          'During downtime, one of your cohorts may perform a downtime activity for the crew to ' +
+          'acquire an asset, reduce heat, or work on a long-term project.',
+      },
+      {
+        id: 'crew-just-passing-through',
+        name: 'Just Passing Through',
+        crewType: 'smugglers',
+        description:
+          'During downtime, take -1 heat. When your heat is 4 or less, you get +1d to deceive ' +
+          'people when you pass yourselves off as ordinary citizens.',
+      },
+      {
+        id: 'crew-patron',
+        name: 'Patron',
+        description: 'When you advance your Tier, it costs half the coin it normally would.',
+        effects: { halfTierCost: true },
+      },
+      {
+        id: 'crew-veteran',
+        name: 'Veteran',
+        description:
+          'Choose a special ability from another crew type. (This opens a CREW ability — it does ' +
+          'not let members take other playbooks’ abilities; that is the playbook Veteran.)',
       },
       {
         id: 'crew-mastery',
         name: 'Mastery',
         description:
-          'Crew members may advance an action rating to 4 (instead of the usual cap of 3).',
+          'A crew upgrade (four upgrade boxes in the book): PCs may advance their action ratings ' +
+          'to 4 (instead of the usual cap of 3).',
         effects: { actionMax: 4 },
-      },
-      {
-        id: 'crew-veteran',
-        name: 'Veteran',
-        description: 'A crew member may take a special ability from a different playbook.',
-        effects: { veteran: 1 },
-      },
-      {
-        id: 'crew-no-traces',
-        name: 'No Traces',
-        description: 'When you reduce heat after a score, reduce it by an extra amount.',
-      },
-      {
-        id: 'crew-the-good-stuff',
-        name: 'The Good Stuff',
-        description: 'Your product is potent — coin from sales rolls with +1d.',
-      },
-      {
-        id: 'crew-network',
-        name: 'The Connections',
-        description: 'Take +1d to acquire assets during downtime.',
-      },
-      {
-        id: 'crew-deadly-friends',
-        name: 'Deadly Friends',
-        description: 'Your cohorts are elite — they roll with increased effect.',
-      },
-      {
-        id: 'crew-patron',
-        name: 'Patron',
-        description: 'A powerful backer provides coin or cover when you call on them.',
-      },
-      {
-        id: 'crew-fortified',
-        name: 'Fortified',
-        description: 'Your lair is hardened — gain +1d to resist intrusion and raids.',
       },
     ],
     claims: [

@@ -13,6 +13,8 @@ import type {
 } from '@heist-mind/core';
 import {
   advanceCharacter,
+  applyStress,
+  chooseTrauma,
   clearHarm,
   flashback,
   indulgeVice,
@@ -21,6 +23,7 @@ import {
   saveLoadout,
   takeHarm,
   type IndulgeViceOutcome,
+  type TraumaLogCopy,
 } from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
@@ -152,7 +155,42 @@ export function useFlashback(gameId: string | null) {
       stress: number;
       logLabel: string;
       logNote: string;
+      traumaLog?: TraumaLogCopy;
     }) => unwrap(await flashback(getRepositories(), vars)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * Mark stress via the ENGINE (RAW: marking the LAST box is trauma — stress resets to 0 and a
+ * condition is owed; the overflow is logged to the campaign feed). Used for the sheet tracker's
+ * increases; clears stay a plain validated write.
+ */
+export function useApplyStress(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { userId: string; stress: number; traumaLog: TraumaLogCopy }) =>
+      unwrap(await applyStress(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/** Resolve an owed trauma by marking the chosen condition (ENGINE chooseTrauma + feed note). */
+export function useChooseTrauma(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      userId: string;
+      condition: string;
+      logNote: string;
+      retireNote: string;
+    }) => unwrap(await chooseTrauma(getRepositories(), { characterId, ...vars })),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: characterKeys.all });
       if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });

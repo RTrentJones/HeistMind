@@ -5,7 +5,7 @@ import {
   availableArmor,
   clampStress,
   deriveAttributes,
-  stressBounds,
+  effectiveStressMax,
   usesActionRatings,
   rulesetActions,
   viceStressCleared,
@@ -32,6 +32,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useCharacterDetail, useCharactersByGame } from '@/features/characters/data/queries';
 import {
   useAddExperience,
+  useApplyStress,
   useClearHarm,
   useFlashback,
   useIndulgeVice,
@@ -50,6 +51,7 @@ import { LoadoutCard } from './LoadoutCard';
 import { AttachToCampaign } from './AttachToCampaign';
 import { GearCard } from './cards/GearCard';
 import { HarmCard } from './cards/HarmCard';
+import { TraumaPrompt } from './cards/TraumaPrompt';
 import { XpTracksCard } from './cards/XpTracksCard';
 
 /** View a character and modify it (rename, award XP, and edit the validated build). */
@@ -70,6 +72,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const takeHarmMut = useTakeHarm(characterId, character?.gameId ?? null);
   const clearHarmMut = useClearHarm(characterId, character?.gameId ?? null);
   const flashbackMut = useFlashback(character?.gameId ?? null);
+  const applyStressMut = useApplyStress(characterId, character?.gameId ?? null);
   // Campaign roster for the ASSIST move (F10) — teammates are everyone else's active characters.
   const rosterQuery = useCharactersByGame(character?.gameId ?? undefined);
   const teammates = (rosterQuery.data ?? [])
@@ -105,7 +108,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     indulgeViceMut.isPending ||
     takeHarmMut.isPending ||
     clearHarmMut.isPending ||
-    flashbackMut.isPending;
+    flashbackMut.isPending ||
+    applyStressMut.isPending;
 
   const saveName = () => {
     const userId = user?.id;
@@ -134,10 +138,28 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
     );
   };
 
+  // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
+  const traumaLog = {
+    note: (n: string) => t('components.characterSheet.traumaLogNote', { name: n }),
+    retireNote: (n: string) => t('components.characterSheet.traumaRetireLogNote', { name: n }),
+  };
+
   // Live stress: clicking the tracker on the sheet face saves immediately (no "Edit build" needed).
+  // A MARK goes through the engine — marking the last box is trauma (stress → 0, a condition owed,
+  // feed-logged), never a silent clamp; a clear is a plain validated write.
   const setStress = (v: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
+    const current = character.characterData.stress ?? 0;
+    if (v > current) {
+      applyStressMut.mutate(
+        { userId, stress: v - current, traumaLog },
+        {
+          onError: e => setSaveError(e.message ?? t('components.characterSheet.saveStressFailed')),
+        }
+      );
+      return;
+    }
     const characterData = {
       ...character.characterData,
       stress: clampStress(character.ruleset.content, v),
@@ -269,6 +291,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         character,
         userId,
         stress: flashStress,
+        traumaLog,
         logLabel: character.name,
         logNote: t('components.downtime.flashback.logNote', { count: flashStress, text }),
       },
@@ -318,6 +341,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           {saveError}
         </Alert>
       )}
+      {/* RAW stress overflow: an owed trauma to pick, and the retire-at-the-limit banner. */}
+      <TraumaPrompt character={character} canEdit={canEdit} />
       {/* F60 — a standalone sheet says so, instead of just silently missing the campaign sections. */}
       {!character.gameId && (
         <Alert variant='info' size='sm'>
@@ -491,7 +516,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           <Heading level='h3'>{t('components.characterSheet.condition')}</Heading>
           <StressTracker
             current={character.characterData?.stress ?? 0}
-            max={stressBounds(character.ruleset.content).max}
+            max={effectiveStressMax(character.ruleset.content, character.characterData)}
             interactive={canEdit}
             showNumbers
             size='lg'

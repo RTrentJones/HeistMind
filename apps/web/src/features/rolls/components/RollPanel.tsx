@@ -107,8 +107,8 @@ export function RollPanel({
   const [assistId, setAssistId] = useState('');
   const [position, setPosition] = useState('risky');
   const [effect, setEffect] = useState('standard');
-  // BitD pre-roll dice moves (action rolls only): push yourself (+1d for 2 stress) and a devil's
-  // bargain (+1d for a complication). They stack — both just grow the dice pool.
+  // BitD pre-roll dice moves (action rolls only): push yourself (+1d for 2 stress) OR a devil's
+  // bargain (+1d for a complication) — one or the other, never both (RAW, action roll step 5).
   const [push, setPush] = useState(false);
   const [bargain, setBargain] = useState(false);
   const [bargainNote, setBargainNote] = useState('');
@@ -127,6 +127,12 @@ export function RollPanel({
     kind?: RollMode;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
+  const traumaLog = {
+    note: (name: string) => t('components.characterSheet.traumaLogNote', { name }),
+    retireNote: (name: string) => t('components.characterSheet.traumaRetireLogNote', { name }),
+  };
 
   const realize = (count: number) =>
     Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
@@ -151,6 +157,7 @@ export function RollPanel({
           dice: count,
           results,
           zeroDice,
+          traumaLog,
         });
         setLast({ outcome: created.outcome, results: created.results, stress });
         return;
@@ -198,6 +205,7 @@ export function RollPanel({
         // Assist (F10): the engine charges the helper's 1 stress when the roller may write them;
         // otherwise the note above tells the helper to self-mark.
         ...(assistant ? { assist: { characterId: assistant.id } } : {}),
+        traumaLog,
       });
       setLast({ outcome: created.outcome, results: created.results, kind: mode });
     } catch (e) {
@@ -289,15 +297,27 @@ export function RollPanel({
                 ⓘ
               </span>
             </Tooltip>
+            {/* RAW: the bonus die comes from pushing OR a devil's bargain — "you can't get dice
+                for both" — so ticking one clears the other. */}
             <label className='flex cursor-pointer items-center gap-1.5 text-sm'>
-              <input type='checkbox' checked={push} onChange={e => setPush(e.target.checked)} />
+              <input
+                type='checkbox'
+                checked={push}
+                onChange={e => {
+                  setPush(e.target.checked);
+                  if (e.target.checked) setBargain(false);
+                }}
+              />
               {t('components.rollPanel.push')}
             </label>
             <label className='flex cursor-pointer items-center gap-1.5 text-sm'>
               <input
                 type='checkbox'
                 checked={bargain}
-                onChange={e => setBargain(e.target.checked)}
+                onChange={e => {
+                  setBargain(e.target.checked);
+                  if (e.target.checked) setPush(false);
+                }}
               />
               {t('components.rollPanel.bargain')}
             </label>

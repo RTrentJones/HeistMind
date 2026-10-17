@@ -1,7 +1,9 @@
 // Supabase CrewRepository — the one shared crew sheet per game. Stats are clamped server-side
 // through the pure crew bounds (in the adapter); the DB CHECK constraints are the backstop. RLS
 // restricts writes to the game's GM.
+import { clampRep } from '@heist-mind/core';
 import type { Crew, CreateCrewData, UpdateCrewData, Result } from '@heist-mind/core';
+import { parseSupabaseJson } from '../adapters/profile-adapter';
 import type { CrewRepository } from '../repositories';
 import {
   fromSupabaseCrew,
@@ -39,9 +41,25 @@ export class SupabaseCrewRepository extends SupabaseRepositoryBase implements Cr
 
   async update(id: string, data: UpdateCrewData): Promise<Result<Crew>> {
     return this.run(async () => {
+      // Rep is capped at the tracker length — 12 less held turf (RAW: "12 is the max", no carry).
+      // The cap depends on the claims, so a rep write reads them unless the same patch sets them.
+      let patch = data;
+      if (data.rep !== undefined) {
+        let claims = data.claims;
+        if (claims === undefined) {
+          const { data: cur, error: readErr } = await this.db
+            .from('crews')
+            .select('claims')
+            .eq('id', id)
+            .single();
+          if (readErr) return failFromError(readErr);
+          claims = parseSupabaseJson<string[]>(cur.claims, []);
+        }
+        patch = { ...data, rep: clampRep(data.rep, claims) };
+      }
       const { data: row, error } = await this.db
         .from('crews')
-        .update(toSupabaseCrewUpdate(data, new Date().toISOString()))
+        .update(toSupabaseCrewUpdate(patch, new Date().toISOString()))
         .eq('id', id)
         .select()
         .single();

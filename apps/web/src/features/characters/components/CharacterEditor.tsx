@@ -268,7 +268,12 @@ export function CharacterEditor({
                 ))}
               </Stack>
               <Heading level='h3'>{t('components.characterEditor.specialAbilities')}</Heading>
-              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <AdvancementOptions
+                character={character}
+                crew={crew}
+                onBuy={buyAbility}
+                saving={saving}
+              />
               <Heading level='h3'>{t('components.characterEditor.actionDots')}</Heading>
               <ActionDotOptions
                 character={character}
@@ -284,7 +289,12 @@ export function CharacterEditor({
                   {t('components.characterEditor.xpAvailable', { xp: character.experiencePoints })}
                 </Badge>
               </Stack>
-              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <AdvancementOptions
+                character={character}
+                crew={crew}
+                onBuy={buyAbility}
+                saving={saving}
+              />
             </Stack>
           ))}
       </Stack>

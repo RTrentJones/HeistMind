@@ -39,7 +39,11 @@ vi.mock('@/features/characters/data/mutations', () => ({
   useTakeHarm: () => noopMutation,
   useClearHarm: () => noopMutation,
   useFlashback: () => noopMutation,
+  useApplyStress: () => applyStress,
+  useChooseTrauma: () => chooseTrauma,
 }));
+const applyStress = { mutate: vi.fn(), isPending: false };
+const chooseTrauma = { mutate: vi.fn(), isPending: false };
 vi.mock('@/features/auth/stores/auth-store', () => ({
   useAuth: () => ({ user: { id: 'u1' } }),
 }));
@@ -102,8 +106,9 @@ describe('CharacterSheet error split (F73)', () => {
     renderSheet();
 
     // Click a stress pip (by its accessible name — F84) — the always-rendered inline mutation
-    // on the sheet face. The fixture sits at stress 2, so pip 4 reads "Set stress to 4".
-    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 4' }));
+    // on the sheet face. The fixture sits at stress 2; a CLEAR (pip 1) is the plain validated write
+    // (a mark goes through the engine's stress→trauma path, covered below).
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 1' }));
 
     // The failure surfaces in place (by content — the standalone banner is also an alert);
     // the sheet (name heading) is still there.
@@ -114,6 +119,46 @@ describe('CharacterSheet error split (F73)', () => {
     await userEvent.click(screen.getByRole('button', { name: /dismiss/i }));
     expect(screen.queryByText('RLS says no')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Silks' })).toBeInTheDocument();
+  });
+
+  it('marking stress goes through the engine (RAW last box → trauma), with feed copy', async () => {
+    applyStress.mutate.mockReset();
+    renderSheet();
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 9' }));
+    expect(applyStress.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', stress: 7, traumaLog: expect.any(Object) }),
+      expect.any(Object)
+    );
+    expect(updateCharData.mutate).not.toHaveBeenCalled();
+  });
+
+  it('an owed trauma prompts a pick from the ruleset’s conditions', async () => {
+    chooseTrauma.mutate.mockReset();
+    characterQuery.data = {
+      ...character,
+      characterData: { ...character.characterData, stress: 0, traumaPending: 1 },
+    } as CharacterWithDetails;
+    renderSheet();
+    expect(screen.getByTestId('trauma-pending')).toBeInTheDocument();
+    const condition = DEFAULT_RULESET.traumaConditions![0]!;
+    await userEvent.selectOptions(screen.getByLabelText('Trauma condition'), condition);
+    await userEvent.click(screen.getByRole('button', { name: 'Mark trauma' }));
+    expect(chooseTrauma.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', condition }),
+      expect.any(Object)
+    );
+  });
+
+  it('a full trauma track shows the must-retire banner', () => {
+    characterQuery.data = {
+      ...character,
+      characterData: {
+        ...character.characterData,
+        trauma: DEFAULT_RULESET.traumaConditions!.slice(0, 4),
+      },
+    } as CharacterWithDetails;
+    renderSheet();
+    expect(screen.getByTestId('trauma-retire')).toBeInTheDocument();
   });
 
   it('a load failure still swaps the page for the error display', () => {

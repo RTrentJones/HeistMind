@@ -164,20 +164,25 @@ function prerequisiteSatisfied(
   return data.specialAbilities.includes(ability.prerequisite);
 }
 
-/** Whether the ability would consume a veteran slot: tier ≥ 2, outside the playbook's own roster,
- * and not unlocked by a held prerequisite. */
-function consumesVeteranSlot(
+/**
+ * Whether the ability would consume a VETERAN slot: it sits outside the character's playbook roster
+ * and isn't unlocked by a held prerequisite. RAW (BitD): at creation and on every playbook advance
+ * you choose from YOUR playbook's abilities; a cross-playbook pick needs a Veteran slot whatever the
+ * ability's tier (tier is display-only — the SRD has no ability tiers). A playbook with no roster
+ * (or an unknown playbook) has nothing to be "outside of", so nothing consumes a slot there —
+ * custom rulesets that don't partition abilities by playbook stay lenient.
+ */
+export function consumesVeteranSlot(
   ruleset: RulesetContent,
   data: CharacterData,
   abilityId: string
 ): boolean {
   const ability = findAbility(ruleset, abilityId);
-  if (!ability || (ability.tier ?? 1) < 2) return false;
-  const inPlaybookRoster = !!findPlaybook(ruleset, data.playbook)?.specialAbilities?.includes(
-    abilityId
-  );
+  if (!ability) return false;
+  const roster = findPlaybook(ruleset, data.playbook)?.specialAbilities ?? [];
+  if (roster.length === 0) return false;
   const prereqHeld = !!ability.prerequisite && data.specialAbilities.includes(ability.prerequisite);
-  return !inPlaybookRoster && !prereqHeld;
+  return !roster.includes(abilityId) && !prereqHeld;
 }
 
 /** How many veteran slots the HELD abilities consume, optionally excluding one (the candidate
@@ -193,12 +198,35 @@ export function veteranPicksUsed(
 }
 
 /**
- * Whether an ability is selectable AT CREATION (prerequisite + creation-tier gating).
- * Creation-tier is 1, so tier ≥ 2 requires a satisfied prerequisite, membership in the chosen
- * playbook's own ability roster, OR a free "veteran" slot granted by the crew (BitD: EACH veteran
- * advance lets a member take ONE ability from another playbook — grants are a budget, not a
- * boolean, so a single grant can't unlock unlimited cross-playbook picks). Pass the campaign's
- * crew for that last case.
+ * Veteran slots granted by the character's OWN abilities (BitD: the playbook "Veteran" ability —
+ * each take opens one ability from another playbook). Crew-granted slots are added on top by
+ * {@link collectAbilityEffects} when crew context is supplied.
+ */
+export function ownVeteranGrants(ruleset: RulesetContent, data: CharacterData): number {
+  return collectAbilityEffects(ruleset, data, null).veteran;
+}
+
+/**
+ * The creation ability budget for THIS build: the ruleset's choice limit, plus one per veteran slot
+ * the character's own abilities grant (RAW: taking Veteran at creation lets you write in the
+ * cross-playbook ability it grants). Only cross-playbook picks may fill those extra slots —
+ * {@link validateCharacter} enforces that roster picks still fit the base limit.
+ */
+export function creationAbilityLimit(ruleset: RulesetContent, data: CharacterData): number {
+  return abilityChoiceLimit(ruleset, data.playbook) + ownVeteranGrants(ruleset, data);
+}
+
+/** Whether any crew ability in the ruleset can grant veteran slots (else crew context can't matter). */
+function crewCanGrantVeteran(ruleset: RulesetContent): boolean {
+  return (ruleset.crew?.abilities ?? []).some(a => (a.effects?.veteran ?? 0) > 0);
+}
+
+/**
+ * Whether an ability may be TAKEN (or legally held) by this build — at creation, on an advance, or
+ * when re-validating a played sheet: its prerequisite is satisfied, and when it comes from outside
+ * the playbook's roster a veteran slot is free. Slots come from the character's own Veteran ability
+ * and from the crew (pass the campaign's crew for that case). Grants are a budget, not a boolean:
+ * each slot opens exactly ONE cross-playbook pick (F62).
  */
 export function isAbilityUnlocked(
   ruleset: RulesetContent,
@@ -228,6 +256,96 @@ export function stressBounds(ruleset: RulesetContent): StressRules {
   return ruleset.stress ?? DEFAULT_STRESS;
 }
 
+/** A character's stress-track size: the ruleset max plus any ability stress boxes (BitD Survivor). */
+export function effectiveStressMax(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  crew?: CrewContext | null
+): number {
+  return stressBounds(ruleset).max + collectAbilityEffects(ruleset, data, crew).stressBoxes;
+}
+
+/** Trauma conditions still to be chosen after a stress overflow (0 when none are owed). */
+export function pendingTrauma(data: Pick<CharacterData, 'traumaPending'>): number {
+  const n = data.traumaPending ?? 0;
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/**
+ * Whether the character has reached the trauma limit (marked, plus any still owed) — RAW: "When you
+ * mark your fourth trauma condition… you must retire them." Surfaces the retirement prompt; it never
+ * changes status on its own (the player chooses retire vs. taking the fall).
+ */
+export function mustRetireFromTrauma(ruleset: RulesetContent, data: CharacterData): boolean {
+  return (data.trauma ?? []).length + pendingTrauma(data) >= stressBounds(ruleset).traumaMax;
+}
+
+export interface StressChange {
+  /** The new stress value. */
+  stress: number;
+  /** The new owed-trauma count (`characterData.traumaPending`). */
+  traumaPending: number;
+  /** True when this change marked the last stress box (→ trauma, stress reset to 0). */
+  trauma: boolean;
+  /** True when the change leaves the character at the trauma limit (retirement territory). */
+  mustRetire: boolean;
+}
+
+/**
+ * Apply a stress delta the RAW way ([SRD, Stress & Trauma](https://bladesinthedark.com/stress-trauma)):
+ * "When a PC marks their last stress box, they suffer a level of trauma… When you return, you have
+ * zero stress." A cost that fills (or would overfill) the track therefore resets stress to 0 and
+ * owes one trauma condition (`traumaPending`, the PLAYER picks which). A clear never goes below 0.
+ * Owed trauma never exceeds the trauma limit — at the limit the character must retire.
+ */
+export function applyStressChange(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  delta: number,
+  crew?: CrewContext | null
+): StressChange {
+  const max = effectiveStressMax(ruleset, data, crew);
+  const current = data.stress ?? 0;
+  const owed = pendingTrauma(data);
+  const traumaMax = stressBounds(ruleset).traumaMax;
+  if (delta > 0 && current + delta >= max) {
+    const marked = (data.trauma ?? []).length;
+    const traumaPending = Math.min(owed + 1, Math.max(0, traumaMax - marked));
+    const next = { ...data, traumaPending };
+    return {
+      stress: 0,
+      traumaPending,
+      trauma: true,
+      mustRetire: mustRetireFromTrauma(ruleset, next),
+    };
+  }
+  const stress = Math.max(0, Math.min(current + delta, max));
+  return {
+    stress,
+    traumaPending: owed,
+    trauma: false,
+    mustRetire: mustRetireFromTrauma(ruleset, data),
+  };
+}
+
+/**
+ * Resolve one OWED trauma by marking the chosen condition: returns the next build, or `null` when
+ * nothing is owed, the condition isn't one of the ruleset's named conditions (when it defines
+ * them), or it's already marked.
+ */
+export function chooseTraumaCondition(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  condition: string
+): CharacterData | null {
+  const owed = pendingTrauma(data);
+  if (owed === 0) return null;
+  const named = ruleset.traumaConditions ?? [];
+  if (named.length > 0 && !named.includes(condition)) return null;
+  if (!condition.trim() || data.trauma.includes(condition)) return null;
+  return { ...data, trauma: [...data.trauma, condition], traumaPending: owed - 1 };
+}
+
 /** BitD harm-track box counts, used when a ruleset omits `harm`. */
 export const DEFAULT_HARM: HarmRules = { lesser: 2, moderate: 2, severe: 1 };
 
@@ -239,7 +357,7 @@ export function harmBounds(ruleset: RulesetContent): HarmRules {
 /**
  * The most serious harm level with a recorded entry ('severe' > 'moderate' > 'lesser'), or null
  * when unharmed. Drives the RAW penalties a roll surface must show
- * ([SRD, Harm](https://bladesinthedark.com/harm-healing)): lesser → reduced effect, moderate →
+ * ([SRD, Harm](https://bladesinthedark.com/consequences-harm)): lesser → reduced effect, moderate →
  * −1d, severe → incapacitated (needs help or push).
  */
 export function worstHarmLevel(data: Pick<CharacterData, 'harm'>): HarmLevel | null {
@@ -303,15 +421,23 @@ export function collectAbilityEffects(
   ruleset: RulesetContent,
   data: CharacterData,
   crew?: CrewContext | null
-): Required<Pick<AbilityEffects, 'actionMax' | 'bonusActionDots' | 'veteran'>> & {
+): Required<Pick<AbilityEffects, 'actionMax' | 'bonusActionDots' | 'veteran' | 'stressBoxes'>> & {
   loadCapacity: Partial<Record<LoadLevel, number>>;
+  /** Union of the actions bonus dots are restricted to (empty = any action). */
+  bonusActionDotsIn: string[];
+  /** Whether a bonus dot may lift an action past the creation cap (BitD Deadly). */
+  bonusDotsExceedCreationCap: boolean;
 } {
   const out = {
     loadCapacity: {} as Partial<Record<LoadLevel, number>>,
     actionMax: 0,
     bonusActionDots: 0,
+    bonusActionDotsIn: [] as string[],
+    bonusDotsExceedCreationCap: false,
     veteran: 0,
+    stressBoxes: 0,
   };
+  let unrestrictedBonus = false;
   const apply = (e?: AbilityEffects) => {
     if (!e) return;
     for (const [lvl, v] of Object.entries(e.loadCapacity ?? {})) {
@@ -319,12 +445,21 @@ export function collectAbilityEffects(
       out.loadCapacity[level] = Math.max(out.loadCapacity[level] ?? 0, v ?? 0);
     }
     if (e.actionMax) out.actionMax = Math.max(out.actionMax, e.actionMax);
-    if (e.bonusActionDots) out.bonusActionDots += e.bonusActionDots;
+    if (e.bonusActionDots) {
+      out.bonusActionDots += e.bonusActionDots;
+      if (!e.bonusActionDotsIn?.length) unrestrictedBonus = true;
+      for (const a of e.bonusActionDotsIn ?? [])
+        if (!out.bonusActionDotsIn.includes(a)) out.bonusActionDotsIn.push(a);
+      if (e.bonusDotsExceedCreationCap) out.bonusDotsExceedCreationCap = true;
+    }
     if (e.veteran) out.veteran += e.veteran;
+    if (e.stressBoxes) out.stressBoxes += e.stressBoxes;
   };
-  for (const id of data.specialAbilities) apply(findAbility(ruleset, id)?.effects);
+  for (const id of data.specialAbilities ?? []) apply(findAbility(ruleset, id)?.effects);
   for (const id of crew?.crewAbilities ?? [])
     apply(ruleset.crew?.abilities?.find(a => a.id === id)?.effects);
+  // Any unrestricted bonus dot may go anywhere, so the restriction list no longer narrows it.
+  if (unrestrictedBonus) out.bonusActionDotsIn = [];
   return out;
 }
 
@@ -340,14 +475,19 @@ export function effectiveLoadLimit(
 }
 
 /**
- * The XP cost of an advancement, resolved from the ruleset (trusted over a client-supplied cost).
- * Matches an advancement option by id (`adv.target`) or, failing that, by category (`adv.type`).
+ * The XP cost of an advancement, resolved from the RULESET ONLY — a client-supplied `adv.cost` is
+ * never trusted (a negative cost would otherwise ADD XP). Matches an advancement option by id
+ * (`adv.target`) or, failing that, by category (`adv.type`). Returns `null` when the ruleset offers
+ * no matching option, or its cost is not a finite, non-negative number (an invalid uploaded
+ * ruleset) — the caller refuses the advance (`NO_ADVANCEMENT_OPTION`).
  */
-export function advancementCost(ruleset: RulesetContent, adv: CharacterAdvancement): number {
+export function advancementCost(ruleset: RulesetContent, adv: CharacterAdvancement): number | null {
   const options = ruleset.advancement?.advancementOptions ?? [];
-  const byId = options.find(o => o.id === adv.target);
-  const byCategory = options.find(o => o.category === adv.type);
-  return byId?.cost ?? byCategory?.cost ?? adv.cost;
+  const option =
+    options.find(o => o.id === adv.target) ?? options.find(o => o.category === adv.type);
+  const cost = option?.cost;
+  if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0) return null;
+  return Math.floor(cost);
 }
 
 // ----- XP tracks (BitD-style advancement; opt-in via `advancement.xpTracks`) -----------------
@@ -447,6 +587,22 @@ function isNonEmpty(value: unknown): boolean {
 
 // ----- the validator -------------------------------------------------------------------------
 
+type CollectedEffects = ReturnType<typeof collectAbilityEffects>;
+
+/** Whether a bonus action dot may be placed in `action` (no restriction = any action). */
+function bonusDotAllowedIn(effects: CollectedEffects, action: string): boolean {
+  return effects.bonusActionDotsIn.length === 0 || effects.bonusActionDotsIn.includes(action);
+}
+
+/** Whether a bonus dot may lift `action` past the creation cap (BitD Deadly at creation). */
+function bonusDotMayExceedCap(effects: CollectedEffects, action: string): boolean {
+  return (
+    effects.bonusActionDots > 0 &&
+    effects.bonusDotsExceedCreationCap &&
+    bonusDotAllowedIn(effects, action)
+  );
+}
+
 const err = (field: string, code: string, message: string): ValidationError => ({
   field,
   code,
@@ -481,13 +637,28 @@ export function validateCharacter(
     // BitD actions cap at 3, raised to 4 when the crew holds the "Mastery" upgrade.
     const max = Math.max(ar?.max ?? DEFAULT_ATTR_MAX - 1, effects.actionMax);
     const creationMax = ar?.maxAtCreation ?? 2;
+    const seeds = findPlaybook(ruleset, data.playbook)?.skills ?? {};
     for (const action of rulesetActions(ruleset)) {
       const value = data.skills?.[action] ?? 0;
       if (value < 0)
         errors.push(err(`skills.${action}`, 'ACTION_NEGATIVE', `${action} cannot be negative.`));
       if (value > max)
         errors.push(err(`skills.${action}`, 'ACTION_OVER_CAP', `${action} cannot exceed ${max}.`));
-      if (mode === 'creation' && value > creationMax)
+      if (mode !== 'creation') continue;
+      // RAW: "Your playbook begins with three action dots already placed. You get to add four
+      // more." The pre-placed dots are a floor, not part of the movable budget.
+      const seed = Math.max(0, seeds[action] ?? 0);
+      if (value < seed)
+        errors.push(
+          err(
+            `skills.${action}`,
+            'ACTION_BELOW_PLAYBOOK',
+            `${action} starts at ${seed} for this playbook — its pre-placed dots can't be removed.`
+          )
+        );
+      // A bonus dot that "supersedes the normal starting limit" (BitD Deadly) may lift one of its
+      // allowed actions one past the creation cap; the budget check below bounds how many.
+      if (value > creationMax && !bonusDotMayExceedCap(effects, action))
         errors.push(
           err(
             `skills.${action}`,
@@ -512,7 +683,8 @@ export function validateCharacter(
     }
   }
 
-  // Prerequisites (both modes) + tier/lock (creation only).
+  // Prerequisites + the veteran budget (both modes — a played character reaches beyond its playbook
+  // only through Veteran slots, exactly like a new one).
   for (const abilityId of data.specialAbilities) {
     const ability = findAbility(ruleset, abilityId);
     if (!ability) continue;
@@ -524,16 +696,17 @@ export function validateCharacter(
           `${ability.name} requires ${ability.prerequisite}.`
         )
       );
-    } else if (mode === 'creation' && !isAbilityUnlocked(ruleset, data, abilityId, opts.crew)) {
-      // A tier-2 cross-playbook ability needs a crew veteran grant. With crew context we can say it's
-      // illegal (error); without it (template / standalone load) we can't verify the grant, so we
-      // only warn — the character may be perfectly legal inside its campaign.
-      if (opts.crew)
+    } else if (!isAbilityUnlocked(ruleset, data, abilityId, opts.crew)) {
+      // A cross-playbook ability needs a free veteran slot (the character's own Veteran ability, or
+      // a crew grant). With crew context — or when no crew ability in the ruleset could grant one —
+      // that's decidable, so it's an error. Without crew context in a ruleset whose crew CAN grant
+      // slots (template / standalone load) we can't verify the grant, so we only warn.
+      if (opts.crew || !crewCanGrantVeteran(ruleset))
         errors.push(
           err(
             `specialAbilities.${abilityId}`,
             'ABILITY_LOCKED',
-            `${ability.name} is not available at character creation.`
+            `${ability.name} comes from another playbook — it needs a free Veteran slot.`
           )
         );
       else
@@ -546,14 +719,30 @@ export function validateCharacter(
     }
   }
 
-  // Stress / trauma bounds (both modes).
+  // Stress / trauma bounds (both modes). The stress track may be lengthened by abilities (Survivor).
   const bounds = stressBounds(ruleset);
-  if (data.stress < 0 || data.stress > bounds.max)
-    errors.push(err('stress', 'STRESS_BOUNDS', `Stress must be between 0 and ${bounds.max}.`));
+  const stressMax = effectiveStressMax(ruleset, data, opts.crew);
+  if (data.stress < 0 || data.stress > stressMax)
+    errors.push(err('stress', 'STRESS_BOUNDS', `Stress must be between 0 and ${stressMax}.`));
   if (data.trauma.length > bounds.traumaMax)
     errors.push(
       err('trauma', 'TRAUMA_OVER', `A character can hold at most ${bounds.traumaMax} trauma.`)
     );
+  // Owed trauma (a stress overflow the player hasn't resolved yet) must be a sane count that still
+  // fits the trauma track alongside the conditions already marked.
+  if (data.traumaPending !== undefined) {
+    const owed = data.traumaPending;
+    if (!Number.isInteger(owed) || owed < 0)
+      errors.push(err('traumaPending', 'TRAUMA_PENDING_INVALID', 'Owed trauma must be 0 or more.'));
+    else if (data.trauma.length + owed > bounds.traumaMax)
+      errors.push(
+        err(
+          'traumaPending',
+          'TRAUMA_OVER',
+          `A character can hold at most ${bounds.traumaMax} trauma (including trauma still to choose).`
+        )
+      );
+  }
   // Trauma must be drawn from the ruleset's named conditions when it defines them (BitD's fixed set),
   // and be distinct. Lenient (count-only) when a ruleset omits `traumaConditions`.
   if (ruleset.traumaConditions && ruleset.traumaConditions.length > 0) {
@@ -600,15 +789,40 @@ export function validateCharacter(
     if (actionMode) {
       // Action-dot budget: the playbook's seeded dots + the ruleset's creation `points` + any crew
       // bonus dots (BitD "Deadly" grants each member an extra dot).
-      const budget =
-        seededActionDots(ruleset, data.playbook) + (ar?.points ?? 0) + effects.bonusActionDots;
+      const base = seededActionDots(ruleset, data.playbook) + (ar?.points ?? 0);
+      const bonus = effects.bonusActionDots;
+      const budget = base + bonus;
       const spent = actionDotsSpent(ruleset, data);
       if (spent > budget)
         errors.push(
           err('skills', 'ACTION_POINTS_OVER', `Assigned ${spent} of ${budget} action dots.`)
         );
-      else if (spent < budget)
-        warnings.push(warn('skills', `${budget - spent} action dot(s) unspent.`));
+      else {
+        // Where the bonus dots may go (BitD Deadly: Hunt, Prowl, or Skirmish). Dots past the base
+        // budget, and dots past the creation cap, can only be bonus dots — so they must be
+        // removable from an allowed action without dipping below its playbook seed.
+        const creationMax = ar?.maxAtCreation ?? 2;
+        const seeds = findPlaybook(ruleset, data.playbook)?.skills ?? {};
+        let overCap = 0;
+        let removable = 0;
+        for (const action of rulesetActions(ruleset)) {
+          const value = Math.max(0, data.skills?.[action] ?? 0);
+          if (bonusDotMayExceedCap(effects, action)) overCap += Math.max(0, value - creationMax);
+          if (bonusDotAllowedIn(effects, action))
+            removable += Math.max(0, value - Math.max(0, seeds[action] ?? 0));
+        }
+        const fromBonus = Math.max(overCap, spent - base);
+        if (overCap > bonus || fromBonus > removable)
+          errors.push(
+            err(
+              'skills',
+              'ACTION_BONUS_RESTRICTED',
+              `Bonus action dots can only go in ${effects.bonusActionDotsIn.join(', ')}.`
+            )
+          );
+        else if (spent < budget)
+          warnings.push(warn('skills', `${budget - spent} action dot(s) unspent.`));
+      }
     } else {
       // Point-buy budget.
       const pointBuy = ruleset.characterCreation?.pointBuy;
@@ -632,7 +846,13 @@ export function validateCharacter(
       errors.push(
         err('specialAbilities', 'ABILITY_REQUIRED', 'Choose a special ability to start with.')
       );
-    if (data.specialAbilities.length > limit)
+    // Veteran taken at creation adds a slot, but only a cross-playbook pick may fill it: roster
+    // picks (Veteran itself included) still fit the base limit.
+    const rosterPicks = data.specialAbilities.filter(
+      id => !consumesVeteranSlot(ruleset, data, id)
+    ).length;
+    const totalLimit = creationAbilityLimit(ruleset, data);
+    if (rosterPicks > limit || data.specialAbilities.length > totalLimit)
       errors.push(
         err('specialAbilities', 'ABILITY_LIMIT', `Choose at most ${limit} special abilities.`)
       );

@@ -183,7 +183,12 @@ bootstrap).
     fallen" section (kept for history, not deleted). Retiring banks carried coin into stash and logs a
     `note` event. Plus a "Create character" button.
   - `CrewSheet` (`apps/web/src/features/crews/components/CrewSheet.tsx`) — crew type, tier, rep,
-    heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. Also renders any
+    heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. **Development is
+    RAW (F92, correcting F17):** Rep caps at the tracker length (12 − held turf, no carry); with a
+    full tracker the GM button reads **"Strengthen hold (spend full Rep)"** on weak hold (→ strong,
+    free) or **"Advance to Tier N (pay X coin)"** on strong hold (new Tier × 8 coin, halved by a
+    Patron-style crew ability, paid from coin then vault; → Tier +1, Rep 0, hold weak) — disabled
+    with a "needs X coin" hint when the crew can't pay. The hold tooltip states the RAW. Also renders any
     **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
     threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
     **Crew advancement (XP round, F85):** the 8-box track is the same clickable `XpTrack` a
@@ -196,7 +201,8 @@ bootstrap).
     _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
     F74; CrewSheet always did.)_
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
-    status (−3..+3) and their project clocks. GM-editable.
+    status (−3..+3, labelled per the SRD: War · Hostile · Interfering · Neutral · Helpful · Friendly
+    · Allies — F92) and their project clocks. GM-editable.
   - `ScorePanel` (`apps/web/src/features/scores/components/ScorePanel.tsx`) — the **score / operation
     lifecycle**. A campaign runs as a series of scores (the per-operation unit per-score loadout hangs
     off); the GM **starts** one (at most one active at a time) and **ends** it, with the most recent
@@ -204,7 +210,9 @@ bootstrap).
     real-life and not modelled. Players see the active score read-only.
   - `RollPanel` + `AddResultForm` + `RollLog` (`apps/web/src/features/rolls/components/`). `RollPanel`:
     action / fortune / GM **and resistance** rolls — resistance mode picks the resisted attribute,
-    rolls, and deducts `6 − highest die` stress from the character. **`AddResultForm`**: record a
+    rolls, and deducts `6 − highest die` stress from the character. The action roll's **Push** and
+    **Devil's bargain** boxes are one-or-the-other (ticking one clears the other — RAW "you can't get
+    dice for both"); an assist is a separate +1d, so the pool tops out at +2d (F92). **`AddResultForm`**: record a
     result that was **settled elsewhere — in person or on Discord** (writes a `note` event,
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
@@ -296,7 +304,18 @@ bootstrap).
   a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
   the sheet and leaves it interactive; only a load failure / not-found swaps the page for
   `ErrorDisplay`.
-- _Last verified:_ 2026-07-11 (backlog rounds E+F: F44 armor, F23 derived attributes, F57 phone-first sheet)
+  **Stress → trauma (F92, RAW):** marking the LAST stress box — from the tracker, a push, an
+  assist, a resist, or a flashback — resets stress to 0 and owes a trauma condition (never a
+  silent clamp); the feed logs "<name> marked their last stress box — trauma!". The sheet shows a
+  **"choose the trauma condition"** prompt (`cards/TraumaPrompt.tsx`: a select over the ruleset's
+  unmarked conditions + "Mark trauma", feed-logged). At the trauma limit a **must-retire banner**
+  shows (retire, or take the fall) and the feed logs it; status is never changed automatically.
+  The tracker lengthens with ability stress boxes (BitD Survivor). **Advancement (F92):** the
+  editor's ability list offers your playbook's roster plus other playbooks' abilities only while a
+  Veteran slot is free (own Veteran, or a crew grant — F62); the rest are summarised as "N more
+  need a free Veteran slot". The repository refuses the same picks server-side.
+- _Last verified:_ 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire banner,
+  Veteran-gated advances; previously 2026-07-11 backlog rounds E+F)
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -465,15 +484,21 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
 2. **Attributes** _(point-buy rulesets)_ — `steps/AttributesStep.tsx` — allocate dots per attribute
    within a budget. **or** **Action ratings** _(action-rating rulesets, e.g. Brackwater)_ —
    `steps/ActionRatingsStep.tsx` — allocate dots per action; the attribute rating is **derived**
-   (count of actions ≥1) and shown live; per-action + total-dot caps enforced. _Valid when the
-   allocation respects caps/budget._
+   (count of actions ≥1) and shown live; per-action + total-dot caps enforced, and **the playbook's
+   pre-placed dots are a floor** (RAW: "three action dots already placed" — they can't be clicked
+   below their seed; the validator refuses `ACTION_BELOW_PLAYBOOK`). _Valid when the allocation
+   respects caps/budget._
 3. **Special abilities** — `steps/AbilitiesStep.tsx`. Cards leading with the chosen playbook's
    roster, hiding other playbooks' behind a "show more" toggle; abilities can be locked (prerequisite
-   / not-at-creation / limit reached); shows name + tier + rules text. When the choice **limit is 1**
-   (BitD canon — the playbook seeds the suggested pick) the picker is **radio-style**: clicking a
-   different unlocked ability _swaps_ to it, the current pick can't be unclicked to zero, and other
-   roster abilities stay selectable. With limit > 1 it's a multi-select that disables the rest once
-   full. _Valid at or under the choice limit (limit can be 0)._
+   / limit reached / **"Needs a free Veteran slot"**); shows name + rules text (+ tier where a
+   custom ruleset defines one — the BitD builtin has none). **Other playbooks' abilities are
+   non-selectable unless a Veteran slot is free (rules-accuracy round, F92):** pick the playbook's
+   own **Veteran** ability and exactly ONE other-playbook ability opens beside it (swapping Veteran
+   back out drops it). When the choice **limit is 1** (BitD canon — the playbook seeds the suggested
+   pick) the roster picker is **radio-style**: clicking a different unlocked roster ability _swaps_
+   to it, the current pick can't be unclicked to zero. With limit > 1 it's a multi-select that
+   disables the rest once full. _Valid at or under the choice limit (+1 per Veteran, cross-playbook
+   only)._
 4. **Identity** — `steps/IdentityStep.tsx`. Either a card picker (if the step defines options for
    heritage/background/vice) or free-text inputs. _Always valid (optional)._
 5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`. _Valid
@@ -481,7 +506,8 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    passes._ "Create character" submits via
    `getRepositories().characterManagement.createCharacterWithValidation`.
 
-_Last verified:_ 2026-06-27 @ 2535b31
+_Last verified:_ 2026-10-17 (rules-accuracy round F92: Veteran-gated other-playbook abilities,
+pre-placed dot floor; previously 2026-06-27 @ 2535b31)
 
 ---
 
@@ -495,12 +521,16 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   · `/dice` · `/heist about|help`. Pure compute, nothing stored.
 - **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
-  the character's own ruleset, `extra`/`push`; **moderate harm auto-applies −1d** — the title shows
+  the character's own ruleset, `push` **or** `bargain` (never both — RAW) plus `assist`, so at most
+  +2d (F92, replacing the old 0–3 `extra`); **moderate harm auto-applies −1d** — the title shows
   the malus, the note names it, severe adds a needs-help warning — F43), `/stress add|clear`,
   `/harm take|clear` (RAW escalation; `armor:true` spends a carried armor box so the harm lands
   one level lighter — lesser is absorbed outright, no armor phrases the refusal — F44),
-  `/vice indulge`, `/xp mark|advance` — the sheet commands
-  feed-log via the same engine use-cases the web calls.
+  `/vice indulge`, `/xp mark|advance` (the `advance` autocomplete offers only LEGAL picks —
+  roster, or other playbooks' while a Veteran slot is free — F92) — the sheet commands
+  feed-log via the same engine use-cases the web calls. A stress cost that marks the last box
+  (`/stress add`, a pushed `/roll`, a persisted `/resist`) replies with the trauma prompt and a
+  link to the web sheet to pick the condition (+ "must retire" at the limit).
 - **Linking (F89):** `/heist link` needs the campaign's GM (creator) AND the Discord member's own
   **Manage Channels** (channel/category scope) or **Manage Server** (server scope) — otherwise an
   ephemeral "needs the … permission" refusal. `/heist unlink` needs the same permission for the
@@ -508,9 +538,13 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   server. Link columns are bot-only (not writable from the web/REST).
 - **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
-  that campaign (embed footer says "Logged to …" or exactly why not); `/log` (attributed,
+  that campaign (embed footer says "Logged to …" or exactly why not); a persisted `/resist` rolls
+  the named attribute's rating **from the sheet** (`attribute:` required there; a typed `dice:` only
+  drives the display-only form — F92); `/log` (attributed,
   score-tagged); `/heist status` (member snapshot).
 - **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
+  (`heat` takes −9..+9 — negative reduces heat; `tier` develops RAW: weak hold → strong, or pay
+  new Tier × 8 coin with refusals phrased — F92)
   (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, `advance` spends a FULL
   track and refuses otherwise, both feed-logged; F86) · `/clock tick` (filling announces "It comes
   to a head!") · `/faction status`. GM-gated INCLUDING autocompletes — campaign state never leaks
@@ -523,7 +557,9 @@ CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "n
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
 _Last verified:_ 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
-creator; previously 2026-07-11 rerun round: F66 thread-category link retry + signed `/crew xp|advance`
+creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only
+`/xp advance`, RAW `/crew tier`, negative `/crew heat`, trauma replies);
+previously 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
 e2e (Act 3.7); same day bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
 help/README updated; previously 2026-07-05 go-live smoke fixed F68 discord_id trigger-link + F69
 rulesetActions resolution; residue tracked as F70/F71; phases 0–3 complete #121–#132)
