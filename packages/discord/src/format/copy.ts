@@ -61,6 +61,10 @@ export const copy = {
   noCategoryHere:
     'This channel isn’t inside a category — link the channel or the whole server instead.',
   alreadyLinked: 'That Discord surface is already linked to a campaign — unlink it first.',
+  linkNeedsPermission: (scope: string) =>
+    scope === 'server'
+      ? 'Linking or unlinking the whole server needs the **Manage Server** permission.'
+      : 'Linking or unlinking a channel or category needs the **Manage Channels** permission.',
   linked: (campaign: string, scope: string) =>
     `**${campaign}** is now linked to this ${scope}. Rolls and \`/log\` entries here land in its campaign log.`,
   unlinked: (campaign: string) => `**${campaign}** is no longer linked here.`,
@@ -181,7 +185,7 @@ export const copy = {
       '**Your sheet** — sign in with Discord on the site once, then `/character use`',
       '`/roll action:Skirmish` (+`extra`, `push`) · `/character show` · `/stress add|clear` · `/harm take|clear` (+`armor` to soak a level) · `/vice indulge` · `/xp mark|advance`',
       '',
-      '**Linked campaigns** — the GM runs `/heist link` in a channel',
+      '**Linked campaigns** — the GM runs `/heist link` in a channel (needs Manage Channels; Manage Server for a server-wide link)',
       'Sheet rolls and `/resist` there land in the campaign log. `/log` records a settled result · `/heist status` shows score/crew/clocks.',
       '',
       '**GM controls — in the linked channel**',

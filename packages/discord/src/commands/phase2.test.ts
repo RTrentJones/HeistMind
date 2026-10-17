@@ -14,16 +14,22 @@ import { handleLog } from './log';
 afterEach(() => clearActorCache());
 
 type Option = { name: string; type: number; value?: unknown; options?: Option[] };
+// Discord permission bitfields (member.permissions is a decimal string in the signed payload).
+const MANAGE_CHANNELS = '16';
+const MANAGE_GUILD = '32';
+const ADMINISTRATOR = '8';
+
 const guildCmd = (
   name: string,
   sub: string | null,
-  options: Option[] = []
+  options: Option[] = [],
+  permissions: string | null = MANAGE_CHANNELS
 ): APIApplicationCommandInteraction =>
   ({
     type: 2,
     guild_id: 'guild-1',
     channel: { id: 'chan-1', parent_id: 'cat-1' },
-    member: { user: { id: 'discord-1' } },
+    member: { user: { id: 'discord-1' }, ...(permissions !== null ? { permissions } : {}) },
     data: {
       name,
       type: 1,
@@ -66,10 +72,15 @@ describe('/heist link', () => {
     await run(
       await handleHeist(
         ctx(r),
-        guildCmd('heist', 'link', [
-          { name: 'campaign', type: 3, value: 'The Docks Job' },
-          { name: 'scope', type: 3, value: 'server' },
-        ])
+        guildCmd(
+          'heist',
+          'link',
+          [
+            { name: 'campaign', type: 3, value: 'The Docks Job' },
+            { name: 'scope', type: 3, value: 'server' },
+          ],
+          MANAGE_GUILD
+        )
       )
     );
     expect(r.games.setDiscordLink).toHaveBeenLastCalledWith('g1', {
@@ -103,6 +114,53 @@ describe('/heist link', () => {
     expect(String(dupCalls[1]?.payload)).toContain('already linked');
   });
 
+  it('requires the member’s Manage Channels (channel/category) — no permission, no link', async () => {
+    const r = repos();
+    const calls = await run(
+      await handleHeist(
+        ctx(r),
+        guildCmd('heist', 'link', [{ name: 'campaign', type: 3, value: 'The Docks Job' }], '0')
+      )
+    );
+    expect(r.games.setDiscordLink).not.toHaveBeenCalled();
+    expect(calls.map(c => c.method)).toEqual(['delete', 'ephemeral']);
+    expect(String(calls[1]?.payload)).toContain('Manage Channels');
+
+    // A payload with no permissions field at all fails closed too.
+    const r2 = repos();
+    await run(
+      await handleHeist(
+        ctx(r2),
+        guildCmd('heist', 'link', [{ name: 'campaign', type: 3, value: 'The Docks Job' }], null)
+      )
+    );
+    expect(r2.games.setDiscordLink).not.toHaveBeenCalled();
+  });
+
+  it('scope:server requires Manage Server; Administrator implies every permission', async () => {
+    const serverLink = (perms: string) =>
+      guildCmd(
+        'heist',
+        'link',
+        [
+          { name: 'campaign', type: 3, value: 'The Docks Job' },
+          { name: 'scope', type: 3, value: 'server' },
+        ],
+        perms
+      );
+    const r = repos();
+    const calls = await run(await handleHeist(ctx(r), serverLink(MANAGE_CHANNELS)));
+    expect(r.games.setDiscordLink).not.toHaveBeenCalled();
+    expect(String(calls[1]?.payload)).toContain('Manage Server');
+
+    const admin = repos();
+    await run(await handleHeist(ctx(admin), serverLink(ADMINISTRATOR)));
+    expect(admin.games.setDiscordLink).toHaveBeenCalledWith('g1', {
+      guildId: 'guild-1',
+      channelId: null,
+    });
+  });
+
   it('outside a guild, link commands answer the guild-only hint inline', async () => {
     const dm = {
       type: 2,
@@ -124,6 +182,30 @@ describe('/heist unlink', () => {
     expect(String((calls[0]?.payload as { content: string }).content)).toContain(
       'no longer linked'
     );
+  });
+
+  it('needs Manage Channels; a non-GM is refused unless they hold Manage Server', async () => {
+    const noPerm = repos();
+    const refused = await run(await handleHeist(ctx(noPerm), guildCmd('heist', 'unlink', [], '0')));
+    expect(noPerm.games.setDiscordLink).not.toHaveBeenCalled();
+    expect(String(refused[1]?.payload)).toContain('Manage Channels');
+
+    const notGm = () =>
+      repos({
+        gamePlayers: {
+          isGameMaster: vi.fn().mockResolvedValue(ok(false)),
+          findByGame: vi.fn().mockResolvedValue(ok([])),
+        },
+      });
+    const channelMod = notGm();
+    const gmOnly = await run(await handleHeist(ctx(channelMod), guildCmd('heist', 'unlink')));
+    expect(channelMod.games.setDiscordLink).not.toHaveBeenCalled();
+    expect(String(gmOnly[1]?.payload)).toContain('GM');
+
+    // A server admin can clear a squatted link from their own server without owning the campaign.
+    const serverAdmin = notGm();
+    await run(await handleHeist(ctx(serverAdmin), guildCmd('heist', 'unlink', [], MANAGE_GUILD)));
+    expect(serverAdmin.games.setDiscordLink).toHaveBeenCalledWith('g1', null);
   });
 
   it('nothing linked → the not-linked hint', async () => {

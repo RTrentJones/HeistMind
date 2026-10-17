@@ -109,42 +109,37 @@ export class SupabaseInvitationRepository
     });
   }
 
-  /** Accept a targeted invite: add the caller to the game, then mark the invite accepted. */
-  async accept(invitationId: string, userId: string): Promise<Result<GamePlayer>> {
+  /**
+   * Accept a targeted invite via the SECURITY DEFINER RPC (00022): it checks the caller IS the
+   * invitee and the invite is pending, then adds the membership + marks the invite accepted. A
+   * client can no longer insert its own game_players row (that was the GM-takeover hole, F89).
+   */
+  async accept(invitationId: string, _userId: string): Promise<Result<GamePlayer>> {
     return this.run(async () => {
-      const inv = await this.findById(invitationId);
-      if (!inv.success) return inv;
-      if (!inv.data)
-        return { success: false, error: { message: 'Invitation not found', code: 'NOT_FOUND' } };
-
-      const { data: gpRow, error: gpError } = await this.db
-        .from('game_players')
-        .insert({ game_id: inv.data.gameId, player_id: userId, role: 'player', status: 'active' })
-        .select()
-        .single();
-      if (gpError) return failFromError(gpError);
-
-      await this.db
-        .from('invitations')
-        .update({ status: 'accepted', responded_at: new Date().toISOString() })
-        .eq('id', invitationId);
-
-      return { success: true, data: fromSupabaseGamePlayer(gpRow) };
+      const { data: row, error } = await this.db.rpc('accept_invitation', {
+        p_invitation_id: invitationId,
+      });
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseGamePlayer(row) };
     });
   }
 
+  /** Decline a targeted invite (invitee-only RPC; invitations UPDATE is GM-only under RLS). */
   async decline(invitationId: string, _userId: string): Promise<Result<Invitation>> {
-    return this.setStatus(invitationId, 'declined');
+    return this.run(async () => {
+      const { data: row, error } = await this.db.rpc('decline_invitation', {
+        p_invitation_id: invitationId,
+      });
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseInvitation(row) };
+    });
   }
 
   async revoke(invitationId: string, _userId: string): Promise<Result<Invitation>> {
     return this.setStatus(invitationId, 'revoked');
   }
 
-  private async setStatus(
-    invitationId: string,
-    status: 'declined' | 'revoked'
-  ): Promise<Result<Invitation>> {
+  private async setStatus(invitationId: string, status: 'revoked'): Promise<Result<Invitation>> {
     return this.run(async () => {
       const { data: row, error } = await this.db
         .from('invitations')

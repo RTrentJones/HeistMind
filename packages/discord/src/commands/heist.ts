@@ -1,8 +1,11 @@
 // /heist — the admin/meta group: `about` (deploy probe), `account` (link status), and the
 // Phase-2 campaign-link surface: `link` (GM, channel/category/server scope), `unlink` (GM), and
-// `status` (member snapshot). Link state is table-visible, so successes post publicly; every
+// `status` (member snapshot). Linking also needs the Discord member's own server permission —
+// Manage Channels for a channel/category link, Manage Server for the server-wide default — so a
+// campaign creator can't squat a server they don't administer (F89); a Manage Server member may
+// unlink any campaign from their own server. Link state is table-visible, so successes post publicly; every
 // failure is ephemeral and leaks nothing to non-members.
-import { isGM, isMember, resolveActor } from '../authz';
+import { DiscordPermission, isGM, isMember, memberHasPermission, resolveActor } from '../authz';
 import { copy } from '../format/copy';
 import { campaignStatusEmbed } from '../format/embeds';
 import { linkCandidates, resolveLinkedGame } from '../links';
@@ -16,6 +19,15 @@ import type { BotContext, CommandHandler } from '../types';
 import { discordUserId } from './character';
 
 type LinkScope = 'channel' | 'category' | 'server';
+
+/**
+ * Whether the invoking member may change a link at `scope`: the server-wide default is a server
+ * setting (Manage Server); a channel/category link needs Manage Channels (Manage Server covers it).
+ */
+function canManageLink(interaction: unknown, scope: LinkScope): boolean {
+  if (memberHasPermission(interaction, DiscordPermission.ManageGuild)) return true;
+  return scope !== 'server' && memberHasPermission(interaction, DiscordPermission.ManageChannels);
+}
 
 export const handleHeist: CommandHandler = (ctx, interaction) => {
   const sub = subcommandName(interaction);
@@ -78,6 +90,9 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
     if (sub === 'link') {
       const campaignName = stringOption(interaction, 'campaign')?.trim() ?? '';
       const scope = (stringOption(interaction, 'scope') ?? 'channel') as LinkScope;
+      if (!canManageLink(interaction, scope)) {
+        return failEphemeral(followUp, copy.linkNeedsPermission(scope));
+      }
       const mine = await repos.games.findByCreator(actor.id);
       if (!mine.success) return failEphemeral(followUp, copy.somethingBroke);
       const game = mine.data.find(g => g.name.toLowerCase() === campaignName.toLowerCase());
@@ -117,7 +132,14 @@ export const handleHeist: CommandHandler = (ctx, interaction) => {
     if (sub === 'unlink') {
       const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
       if (!game) return failEphemeral(followUp, copy.notLinked);
-      if (!(await isGM(repos, actor.id, game.id))) return failEphemeral(followUp, copy.gmOnly);
+      const scope: LinkScope = game.discordChannelId ? 'channel' : 'server';
+      if (!canManageLink(interaction, scope)) {
+        return failEphemeral(followUp, copy.linkNeedsPermission(scope));
+      }
+      const serverAdmin = memberHasPermission(interaction, DiscordPermission.ManageGuild);
+      if (!serverAdmin && !(await isGM(repos, actor.id, game.id))) {
+        return failEphemeral(followUp, copy.gmOnly);
+      }
       const cleared = await repos.games.setDiscordLink(game.id, null);
       if (!cleared.success) return failEphemeral(followUp, copy.somethingBroke);
       await repos.rolls.create(actor.id, {

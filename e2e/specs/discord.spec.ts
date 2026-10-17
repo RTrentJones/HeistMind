@@ -179,7 +179,8 @@ test.describe('Discord interactions endpoint', () => {
     const guildSurface = {
       guild_id: 'e2e-guild-1',
       channel: { id: 'e2e-chan-1', parent_id: null },
-      member: { user: { id: discordId } },
+      // Manage Channels (bit 4) — /heist link|unlink require it of the invoking member (F89).
+      member: { user: { id: discordId }, permissions: '16' },
     };
 
     // Act 1: the GM links the channel.

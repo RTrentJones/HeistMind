@@ -454,6 +454,11 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   one level lighter — lesser is absorbed outright, no armor phrases the refusal — F44),
   `/vice indulge`, `/xp mark|advance` — the sheet commands
   feed-log via the same engine use-cases the web calls.
+- **Linking (F89):** `/heist link` needs the campaign's GM (creator) AND the Discord member's own
+  **Manage Channels** (channel/category scope) or **Manage Server** (server scope) — otherwise an
+  ephemeral "needs the … permission" refusal. `/heist unlink` needs the same permission for the
+  link's scope, plus GM — or Manage Server, so a server admin can clear a campaign squatting their
+  server. Link columns are bot-only (not writable from the web/REST).
 - **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
   that campaign (embed footer says "Logged to …" or exactly why not); `/log` (attributed,
@@ -470,7 +475,8 @@ category link) closed via the app's first bot-token fetch — a thread whose par
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
+_Last verified:_ 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
+creator; previously 2026-07-11 rerun round: F66 thread-category link retry + signed `/crew xp|advance`
 e2e (Act 3.7); same day bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
 help/README updated; previously 2026-07-05 go-live smoke fixed F68 discord_id trigger-link + F69
 rulesetActions resolution; residue tracked as F70/F71; phases 0–3 complete #121–#132)

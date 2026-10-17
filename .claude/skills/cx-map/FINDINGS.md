@@ -72,6 +72,88 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## S1 — blockers
 
+### F89 — RLS holes: self-made GMs, world-readable emails, forgeable rolls, link squatting (launch security review)
+
+- **severity:** S1 · **type:** security / data integrity · **(verified — every case reproduced through
+  PostgREST with the public anon key + real user JWTs on the local stack, 2026-10-17)**
+- **where / what:** the browser holds the anon key and its own JWT, so only RLS, SECURITY DEFINER
+  RPCs and the bot's authz prelude are security boundaries — and several were open:
+  1. `game_players` INSERT/UPDATE let a user write their OWN row with any `role`/`status`
+     (`00002` `… OR player_id = auth.uid()`, no WITH CHECK). Any signed-in user could insert
+     themselves as `game_master` of any campaign id, read every sheet, kick the real GM, steal
+     characters (`created_by`), mint join codes; a kicked player could PATCH back to `active`.
+     `is_game_master()` and the bot's `isGM` (service role!) trusted that row, so the forged GM
+     also passed `/clock` `/score` `/crew` `/faction` `/heist unlink`.
+  2. `handle_new_user` stored `COALESCE(meta.username, email)` as `profiles.username` — Discord sends
+     no `username`, so every real signup's email became its public name — and profiles were
+     `SELECT USING (true)` granted to **anon**: email + Discord snowflake for every user, no sign-in.
+     Profiles UPDATE had no column limit, so a user could squat someone's `discord_id`/`username`
+     (UNIQUE) and make their signup fail (23505) or hijack their bot identity.
+  3. `games` INSERT accepted any `ruleset_id` → a campaign on someone else's PRIVATE ruleset leaked
+     its content and (FK `RESTRICT`) blocked the owner's account deletion (F88-class 500).
+     `characters` UPDATE had no WITH CHECK → `game_id` re-homing bypassed the attach RPC;
+     `invitations` UPDATE had no WITH CHECK.
+  4. Every env function was `GRANT ALL … TO anon` (`00003`): `get_user_game_role`/`is_game_gm` were
+     anonymous role oracles; several definer helpers had no pinned `search_path`; TRUNCATE granted.
+  5. `rolls` INSERT trusted `results`/`outcome`/`character_id` (a crit on a single 1; a roll on
+     another player's character).
+  6. `games.discord_guild_id/channel_id` were creator-writable over REST (squat any server's
+     default link; the real admins couldn't unlink), and `/heist link|unlink` never checked the
+     invoker's Discord permissions.
+- **fix:** migration `00022_launch_security_hardening.sql` (authoritative final state; idempotent
+  under CI's every-deploy re-apply) + source edits so earlier files never re-create the insecure
+  versions mid-deploy (`00001`/`00019` trigger, `00002` policies + `is_game_master`, `00003` grants):
+  (1) `game_players` writes are GM-only (GM = `games.created_by`, via `is_game_gm`), with WITH
+  CHECK; a player may only DELETE their own non-`removed` row; joins go through
+  `redeem_invite_code` (now refuses a kicked member) / new `accept_invitation` + `decline_invitation`
+  RPCs; `is_game_master`/`get_user_game_role` and the repo's `isGameMaster` (bot `isGM`) derive from
+  `created_by`. (2) `handle_new_user` derives the name from `custom_claims.global_name` →
+  `full_name` → `name` (sans `#0`) → `user_name` → `username`, never the email, collision-safe
+  (suffix; a held `discord_id` is left NULL instead of failing signup); '@' usernames backfilled +
+  `profiles_username_not_email` CHECK; anon has no profile access; authenticated updates only
+  `username, avatar_url, preferences` on its own row (column grants) and still reads profiles at
+  table level for now (see the TODO below; the new repos already select only `PROFILE_COLUMNS`).
+  A non-PII
+  `public.keepalive_probe` table replaces profiles as the anon keepalive target. (3) games INSERT
+  WITH CHECK + a `games_guard_write` trigger: ruleset must be owned or public (also on change);
+  `created_by`, `current_players` and the Discord link columns are service-role-only. A
+  `characters_guard_update` trigger pins `game_id`/`created_by`/`original_ruleset_id` to the
+  attach/detach RPCs. Invitations UPDATE is GM-only both sides. (4) anon/PUBLIC lose EXECUTE on
+  every env function; membership helpers only answer about the caller; `get_user_game_role` is
+  service-only; every function gets a pinned `search_path`; TRUNCATE/TRIGGER/REFERENCES revoked.
+  (5) `rolls_guard_insert`: faces must be 1–6; dice kinds (action/resistance/fortune/downtime) must
+  carry the outcome `rollOutcome` gives (SQL port); a client may roll only for their own character
+  (or any character in a campaign they GM). Note/score/clock/… "record a result" events unchanged.
+  (6) `/heist link` requires Manage Channels (channel/category) or Manage Server (server scope) from
+  `member.permissions`; `/heist unlink` requires the same, and a Manage Server member may unlink a
+  squatter's campaign. Also fixed: `00012`/`00013`/`00015` narrowed the `rolls.kind` CHECK on every
+  re-run and would fail the deploy once any newer-kind row existed — they now use the final list.
+- **TODO (ships with the first `development → main` promotion) — column-level SELECT tightening
+  (hide `discord_id`/`preferences` from other users).** `public.profiles` is shared with prod, and
+  prod runs `main`, whose repositories still `select('*')` on profiles as `authenticated` — a
+  column-level grant before that code is replaced would 42501 every prod profile read. Once `main`
+  carries the `PROFILE_COLUMNS` selects, add a forward migration (and change 00022's/00003's
+  `GRANT SELECT ON public.profiles TO authenticated` to match, since CI re-applies every file):
+
+  ```sql
+  -- public schema (shared): narrow profile reads to the display columns.
+  REVOKE SELECT ON public.profiles FROM authenticated;
+  GRANT SELECT (id, username, avatar_url, created_at, updated_at) ON public.profiles TO authenticated;
+  -- (UPDATE stays column-level: username, avatar_url, preferences; service_role keeps ALL.)
+  ```
+
+  and re-add the `rls-api.spec.ts` assertions that `select('discord_id')`, `select('preferences')`
+  and `select('*')` on another user's profile return `42501`.
+
+- **status:** **fixed (this branch)** — regression guard `e2e/specs/rls-api.spec.ts` (11 tests,
+  local-stack): self-promotion refused, kicked player can't reactivate/delete/re-redeem, anon can't
+  read profiles (keepalive probe still readable), no email in username + collision-safe signup,
+  campaign on another's private ruleset refused, forged roll + someone else's character refused,
+  direct `game_id` UPDATE refused, `get_user_game_role`/`is_game_gm` refused to anon (and no
+  cross-user oracle when signed in), link columns + player count not client-writable, campaign
+  deletion still works. Still open from the same review (not in this round): server-side ruleset
+  validation/size cap, security headers/CSP, Discord timestamp-replay window, the Next.js bump.
+
 ### F2 — No way for a player to discover or join a campaign
 
 - **severity:** S1 · **type:** CX-flaw · **(verified)**
@@ -775,7 +857,10 @@ is its regression guard.)_
   not found" — RLS can't even distinguish not-yours from not-there); (2) a bogus join code is
   refused; (3) a joined member gets the hub but NONE of the GM-gated controls (state select,
   join-code management, clock creation), with a same-page GM-side control assertion guarding
-  against label drift.
+  against label drift. **F89 note (2026-10-17):** those UI specs could never catch an RLS hole (the
+  browser holds the anon key + its own JWT and can call PostgREST directly) — tenant isolation is
+  now ALSO probed at the API level by `e2e/specs/rls-api.spec.ts` (two real users + anon, direct
+  REST), which caught the self-made-GM / profile-leak / forged-roll class this spec missed.
 
 ### F74 — Hub panels flash their empty state during the initial load
 

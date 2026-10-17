@@ -5,7 +5,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
 import type { Profile, UpdateProfileData, Result } from '@heist-mind/core';
 import type { ProfileRepository } from '../repositories';
-import { fromSupabaseProfile, toSupabaseProfileUpdate } from '../adapters/profile-adapter';
+import {
+  fromSupabaseProfile,
+  PROFILE_COLUMNS,
+  toSupabaseProfileUpdate,
+} from '../adapters/profile-adapter';
 import { failFromError, NO_ROWS, tryResult } from './result-helpers';
 
 export class SupabaseProfileRepository implements ProfileRepository {
@@ -15,7 +19,7 @@ export class SupabaseProfileRepository implements ProfileRepository {
     return tryResult(async () => {
       const { data: row, error } = await this.client
         .from('profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('id', id)
         .single();
       if (error) {
@@ -30,7 +34,7 @@ export class SupabaseProfileRepository implements ProfileRepository {
     return tryResult(async () => {
       const { data: row, error } = await this.client
         .from('profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('username', username)
         .single();
       if (error) {
@@ -45,7 +49,7 @@ export class SupabaseProfileRepository implements ProfileRepository {
     return tryResult(async () => {
       const { data: row, error } = await this.client
         .from('profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('discord_id', discordId)
         .single();
       if (error) {
@@ -62,7 +66,7 @@ export class SupabaseProfileRepository implements ProfileRepository {
         .from('profiles')
         .update(toSupabaseProfileUpdate(data))
         .eq('id', id)
-        .select()
+        .select(PROFILE_COLUMNS)
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseProfile(row) };

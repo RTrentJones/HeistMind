@@ -71,8 +71,9 @@ class SupabaseDatabaseProvider implements DatabaseProvider {
 
   async isHealthy(): Promise<boolean> {
     try {
-      // Simple health check - try to query the profiles table
-      const { error } = await this.client.from('profiles').select('id').limit(1);
+      // Simple health check — the non-PII keepalive probe (00022) is readable by every role,
+      // unlike profiles (no anon access).
+      const { error } = await this.client.from('keepalive_probe').select('id').limit(1);
 
       return !error;
     } catch {

@@ -624,6 +624,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          game_id: string
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          left_at: string | null
+          permissions: Json | null
+          player_id: string
+          role: string | null
+          status: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "game_players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       attach_character_to_game: {
         Args: { p_character_id: string; p_game_id: string }
         Returns: {
@@ -678,6 +698,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decline_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          created_at: string | null
+          expires_at: string | null
+          game_id: string
+          id: string
+          invite_code: string | null
+          invited_by: string
+          invited_player: string | null
+          max_uses: number | null
+          responded_at: string | null
+          status: string | null
+          used_count: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invitations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_game_role: {
         Args: { game_id: string; user_id: string }
         Returns: string
@@ -713,6 +755,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rolls_expected_outcome: {
+        Args: { p_results: number[]; p_zero_dice: boolean }
+        Returns: string
       }
       user_can_access_ruleset: {
         Args: { p_ruleset_id: string; p_user_id: string }
@@ -1338,6 +1384,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          game_id: string
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          left_at: string | null
+          permissions: Json | null
+          player_id: string
+          role: string | null
+          status: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "game_players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       attach_character_to_game: {
         Args: { p_character_id: string; p_game_id: string }
         Returns: {
@@ -1392,6 +1458,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decline_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          created_at: string | null
+          expires_at: string | null
+          game_id: string
+          id: string
+          invite_code: string | null
+          invited_by: string
+          invited_player: string | null
+          max_uses: number | null
+          responded_at: string | null
+          status: string | null
+          used_count: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invitations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_game_role: {
         Args: { game_id: string; user_id: string }
         Returns: string
@@ -1428,6 +1516,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rolls_expected_outcome: {
+        Args: { p_results: number[]; p_zero_dice: boolean }
+        Returns: string
+      }
       user_can_access_ruleset: {
         Args: { p_ruleset_id: string; p_user_id: string }
         Returns: boolean
@@ -1442,6 +1534,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      keepalive_probe: {
+        Row: {
+          id: number
+        }
+        Insert: {
+          id: number
+        }
+        Update: {
+          id?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

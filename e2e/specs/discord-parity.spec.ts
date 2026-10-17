@@ -166,7 +166,8 @@ test.describe('Cross-client parity: web wizard → bot gameplay → web feed', (
     const guildSurface = {
       guild_id: GUILD_ID,
       channel: { id: CHANNEL_ID, parent_id: null },
-      member: { user: { id: discordId } },
+      // Manage Channels (bit 4) — /heist link|unlink require it of the invoking member (F89).
+      member: { user: { id: discordId }, permissions: '16' },
     };
     const link = await request.post(
       '/api/discord',

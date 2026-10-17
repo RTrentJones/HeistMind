@@ -5,8 +5,21 @@ import type { Tables, TablesUpdate, Json } from '../supabase-types';
 import type { Profile, UpdateProfileData } from '@heist-mind/core';
 
 // Supabase type aliases for cleaner code
-type ProfileRow = Tables<'profiles'>;
 type ProfileUpdate = TablesUpdate<'profiles'>;
+
+/**
+ * The profile columns the app reads. `discord_id` and `preferences` are bot/self concerns, so no
+ * client read pulls them: every profile read selects exactly this list (never `select('*')`).
+ * Migration 00022 keeps a table-level SELECT for now (prod still runs code that selects `*`);
+ * the F89 follow-up narrows the grant to this list, after which `*` would fail with 42501.
+ */
+export const PROFILE_COLUMNS = 'id, username, avatar_url, created_at, updated_at' as const;
+
+/** The readable slice of a profile row (see PROFILE_COLUMNS). */
+export type ProfileRow = Pick<
+  Tables<'profiles'>,
+  'id' | 'username' | 'avatar_url' | 'created_at' | 'updated_at'
+>;
 
 /**
  * Transform Supabase profile row to domain Profile entity

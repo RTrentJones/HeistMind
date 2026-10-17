@@ -47,7 +47,10 @@ export async function isMember(
   return members.success && members.data.some(m => m.playerId === actorId && m.status === 'active');
 }
 
-/** Whether the actor runs the campaign — the GM-only command gate. */
+/**
+ * Whether the actor runs the campaign — the GM-only command gate. Backed by `games.created_by`
+ * (GamePlayerRepository.isGameMaster), never the game_players `role` column (F89).
+ */
 export async function isGM(
   repos: DatabaseRepositories,
   actorId: string,
@@ -55,4 +58,24 @@ export async function isGM(
 ): Promise<boolean> {
   const gm = await repos.gamePlayers.isGameMaster(actorId, gameId);
   return gm.success && gm.data;
+}
+
+/** Discord permission bits used by the link gates (https://discord.com/developers/docs/topics/permissions). */
+export const DiscordPermission = {
+  Administrator: BigInt(1) << BigInt(3),
+  ManageChannels: BigInt(1) << BigInt(4),
+  ManageGuild: BigInt(1) << BigInt(5),
+} as const;
+
+/**
+ * Whether the INVOKING guild member holds `permission` (or Administrator) in this channel. Reads
+ * `member.permissions` — the member's resolved permission bitfield, part of the signed payload,
+ * so it can't be forged. Fails closed: no member (DMs) or an unparsable bitfield → false.
+ */
+export function memberHasPermission(interaction: unknown, permission: bigint): boolean {
+  const raw = (interaction as { member?: { permissions?: unknown } } | null)?.member?.permissions;
+  if (typeof raw !== 'string' || !/^\d+$/.test(raw)) return false;
+  const perms = BigInt(raw);
+  const none = BigInt(0);
+  return (perms & DiscordPermission.Administrator) !== none || (perms & permission) !== none;
 }
