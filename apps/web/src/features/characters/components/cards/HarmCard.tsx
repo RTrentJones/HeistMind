@@ -10,6 +10,7 @@ import {
 } from '@heist-mind/core';
 import { Badge, Button, HarmTracker, Heading, Input, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 
@@ -228,14 +229,17 @@ export function HarmCard({
             {harm[level].map(h => (
               <Badge key={h} variant='stress-critical'>
                 {h}
-                <button
-                  type='button'
+                <ConfirmButton
+                  variant='ghost'
+                  size='icon-sm'
+                  className='ml-1 h-6 w-auto min-w-6 px-1'
                   aria-label={t('components.characterEditor.remove', { name: h })}
-                  className='ml-1.5 cursor-pointer'
-                  onClick={() => removeHarm(level, h)}
+                  confirmAriaLabel={t('components.confirmAction.clearHarmAria', { name: h })}
+                  confirmLabel={t('components.confirmAction.clearHarm')}
+                  onConfirm={() => removeHarm(level, h)}
                 >
                   ×
-                </button>
+                </ConfirmButton>
               </Badge>
             ))}
           </Stack>

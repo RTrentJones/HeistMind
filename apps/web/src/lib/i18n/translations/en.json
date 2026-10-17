@@ -693,6 +693,16 @@
     },
     "characterConflict": {
       "message": "This character changed elsewhere while you were editing, and the same fields were touched. Your draft was reloaded with the latest values — re-apply your change and save again."
+    },
+    "confirmAction": {
+      "removeClock": "Confirm remove",
+      "removeClockAria": "Confirm removing {{name}}",
+      "short": "Sure?",
+      "deleteFaction": "Confirm delete",
+      "deleteFactionAria": "Confirm deleting {{name}}",
+      "endScore": "Confirm end score",
+      "clearHarm": "Clear?",
+      "clearHarmAria": "Confirm clearing {{name}}"
     }
   },
   "auth": {

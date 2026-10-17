@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useEndScore, useStartScore } from '@/features/scores/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 
 /**
  * Score / operation lifecycle (campaign). A game runs as a series of scores — the per-operation unit
@@ -104,9 +105,15 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
           <Badge variant='ember'>{t('components.scorePanel.inProgress')}</Badge>
           <Text as='strong'>{active.name ?? t('components.scorePanel.unnamed')}</Text>
           {isGm && (
-            <Button variant='outline' size='sm' disabled={busy} onClick={() => void endScore()}>
+            // Ending a score is final (per-score loadouts reset) — two-click armed confirm.
+            <ConfirmButton
+              confirmLabel={t('components.confirmAction.endScore')}
+              disabled={busy}
+              loading={endScoreMut.isPending}
+              onConfirm={() => void endScore()}
+            >
               {t('components.scorePanel.endScore')}
-            </Button>
+            </ConfirmButton>
           )}
         </Stack>
       ) : (

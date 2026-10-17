@@ -29,9 +29,9 @@ export function useStartScore(gameId: string) {
           logNote: vars.logNote,
         })
       ),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) });
-      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) });
+      await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -54,9 +54,9 @@ export function useEndScore(gameId: string) {
           logNote: vars.logNote,
         })
       ),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) });
-      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: scoreKeys.byGame(gameId) });
+      await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }

@@ -9,6 +9,7 @@ import type { Clock, CreateClockData } from '@heist-mind/core';
 import { tickClock } from '@heist-mind/engine';
 import { rollKeys } from '@/features/rolls/data/queries';
 import { getRepositories } from '@/lib/auth';
+import { removeFromList, replaceInList } from '@/lib/query/cache';
 import { unwrap } from '@/lib/query/result';
 import { clockKeys } from './queries';
 
@@ -25,7 +26,10 @@ export function useDeleteClock(gameId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => getRepositories().clocks.delete(id).then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: clockKeys.byGame(gameId) }),
+    onSuccess: async (_d, id) => {
+      removeFromList<Clock>(qc, clockKeys.byGame(gameId), id);
+      await qc.invalidateQueries({ queryKey: clockKeys.byGame(gameId) });
+    },
   });
 }
 
@@ -39,12 +43,22 @@ export function useTickClock(gameId: string) {
       delta: number;
       logLabel: string;
       logNote: string;
-    }) => unwrap(await tickClock(getRepositories(), vars)),
-    onSuccess: outcome => {
-      void qc.invalidateQueries({ queryKey: clockKeys.byGame(gameId) });
-      if (outcome.completed) {
-        void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
-      }
+    }) => {
+      // Tick from the FRESHEST cached fill (the row the last tick wrote back), not the render's.
+      const cached = qc
+        .getQueryData<Clock[]>(clockKeys.byGame(gameId))
+        ?.find(c => c.id === vars.clock.id);
+      return unwrap(await tickClock(getRepositories(), { ...vars, clock: cached ?? vars.clock }));
+    },
+    // Write the returned row into the cache FIRST, then await the confirming refetch: the +/−
+    // buttons stay disabled (isPending) until both land, so the next tick computes from the
+    // fresh fill instead of the pre-write value (review item 3: double-clicks swallowed ticks).
+    onSuccess: async outcome => {
+      replaceInList(qc, clockKeys.byGame(gameId), outcome.clock);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: clockKeys.byGame(gameId) }),
+        outcome.completed ? qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) }) : null,
+      ]);
     },
   });
 }

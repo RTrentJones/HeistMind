@@ -1,12 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  clampFactionStatus,
-  factionStatusLabel,
-  type Faction,
-  type FactionDefinition,
-} from '@heist-mind/core';
+import { factionStatusLabel, type Faction, type FactionDefinition } from '@heist-mind/core';
 import { type Clock as ClockType } from '@heist-mind/core';
 import { Alert, Badge, Button, Card, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
@@ -19,9 +14,10 @@ import {
   useCreateFaction,
   useDeleteFaction,
   useSetFactionStatus,
-  useUpdateFaction,
+  useShiftFactionTier,
 } from '@/features/factions/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 
 /**
  * Factions + status for a campaign. The city's powers, with a tier and a status toward the crew
@@ -155,7 +151,7 @@ function FactionCard({
   onError: (m: string) => void;
 }) {
   const { t } = useTranslation();
-  const updateFaction = useUpdateFaction(faction.gameId);
+  const shiftTier = useShiftFactionTier(faction.gameId);
   const setStatusMut = useSetFactionStatus(faction.gameId);
   const deleteFaction = useDeleteFaction(faction.gameId);
   const createClock = useCreateClock(faction.gameId);
@@ -163,7 +159,7 @@ function FactionCard({
   const deleteClock = useDeleteClock(faction.gameId);
 
   const busy =
-    updateFaction.isPending ||
+    shiftTier.isPending ||
     setStatusMut.isPending ||
     deleteFaction.isPending ||
     createClock.isPending ||
@@ -179,26 +175,25 @@ function FactionCard({
   };
 
   // Status is table-visible mechanical state (war … allied) — through the ENGINE so the shift
-  // also lands in the campaign feed.
+  // also lands in the campaign feed. The mutation applies the delta to the freshest cached value.
   const setStatus = (delta: number) => {
     if (!userId) return;
-    const next = clampFactionStatus(faction.status + delta);
     setStatusMut.mutate(
       {
         faction,
         userId,
-        status: next,
+        delta,
         logLabel: faction.name,
-        logNote: t('components.factionsPanel.logStatusNote', {
-          status: next > 0 ? `+${next}` : `${next}`,
-          label: factionStatusLabel(next),
-        }),
+        logNote: next =>
+          t('components.factionsPanel.logStatusNote', {
+            status: next > 0 ? `+${next}` : `${next}`,
+            label: factionStatusLabel(next),
+          }),
       },
       onErr
     );
   };
-  const setTier = (delta: number) =>
-    updateFaction.mutate({ id: faction.id, patch: { tier: faction.tier + delta } }, onErr);
+  const setTier = (delta: number) => shiftTier.mutate({ faction, delta }, onErr);
 
   return (
     <Card variant='default'>
@@ -207,15 +202,18 @@ function FactionCard({
           <Text as='strong'>{faction.name}</Text>
           {faction.factionType && <Badge variant='steel'>{faction.factionType}</Badge>}
           {isGm && (
-            <Button
+            <ConfirmButton
               variant='ghost'
-              size='sm'
               aria-label={t('components.factionsPanel.removeAria', { name: faction.name })}
+              confirmAriaLabel={t('components.confirmAction.deleteFactionAria', {
+                name: faction.name,
+              })}
+              confirmLabel={t('components.confirmAction.deleteFaction')}
               disabled={busy}
-              onClick={() => deleteFaction.mutate(faction.id, onErr)}
+              onConfirm={() => deleteFaction.mutate(faction.id, onErr)}
             >
               {t('components.factionsPanel.remove')}
-            </Button>
+            </ConfirmButton>
           )}
         </Stack>
 

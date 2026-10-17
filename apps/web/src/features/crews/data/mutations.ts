@@ -31,7 +31,12 @@ export function useUpdateCrew(gameId: string) {
   return useMutation({
     mutationFn: (vars: { id: string; patch: UpdateCrewData }) =>
       getRepositories().crews.update(vars.id, vars.patch).then(unwrap),
-    onSuccess: () => qc.invalidateQueries({ queryKey: crewKeys.byGame(gameId) }),
+    // Returned row into the cache, then an awaited refetch — steppers re-enable on the fresh
+    // value instead of the pre-write one (review item 3).
+    onSuccess: async (crew: Crew) => {
+      qc.setQueryData(crewKeys.byGame(gameId), crew);
+      await qc.invalidateQueries({ queryKey: crewKeys.byGame(gameId) });
+    },
   });
 }
 
@@ -43,20 +48,30 @@ interface CrewOpVars {
   logNote: string;
 }
 
+/** The freshest cached crew (the row the last op wrote back) — ops compute from it, not the render's. */
+function useFreshCrew(gameId: string) {
+  const qc = useQueryClient();
+  return (crew: Crew): Crew => qc.getQueryData<Crew | null>(crewKeys.byGame(gameId)) ?? crew;
+}
+
 function useCrewFeedInvalidation(gameId: string) {
   const qc = useQueryClient();
-  return () => {
-    void qc.invalidateQueries({ queryKey: crewKeys.byGame(gameId) });
-    void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+  return async (crew: Crew) => {
+    qc.setQueryData(crewKeys.byGame(gameId), crew);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: crewKeys.byGame(gameId) }),
+      qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) }),
+    ]);
   };
 }
 
 /** Add heat via the ENGINE (BitD heat→wanted cascade + feed event). */
 export function useApplyCrewHeat(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
+  const fresh = useFreshCrew(gameId);
   return useMutation({
     mutationFn: async (vars: CrewOpVars & { amount: number }) =>
-      unwrap(await applyCrewHeat(getRepositories(), vars)),
+      unwrap(await applyCrewHeat(getRepositories(), { ...vars, crew: fresh(vars.crew) })),
     onSuccess: invalidate,
   });
 }
@@ -64,8 +79,10 @@ export function useApplyCrewHeat(gameId: string) {
 /** Spend a full Rep track to advance Tier via the ENGINE (+ feed event). */
 export function useAdvanceCrewTier(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
+  const fresh = useFreshCrew(gameId);
   return useMutation({
-    mutationFn: async (vars: CrewOpVars) => unwrap(await advanceCrewTier(getRepositories(), vars)),
+    mutationFn: async (vars: CrewOpVars) =>
+      unwrap(await advanceCrewTier(getRepositories(), { ...vars, crew: fresh(vars.crew) })),
     onSuccess: invalidate,
   });
 }
@@ -73,8 +90,10 @@ export function useAdvanceCrewTier(gameId: string) {
 /** Apply an incarceration via the ENGINE (−1 Wanted, clear Heat + feed event). */
 export function useIncarcerateCrew(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
+  const fresh = useFreshCrew(gameId);
   return useMutation({
-    mutationFn: async (vars: CrewOpVars) => unwrap(await incarcerateCrew(getRepositories(), vars)),
+    mutationFn: async (vars: CrewOpVars) =>
+      unwrap(await incarcerateCrew(getRepositories(), { ...vars, crew: fresh(vars.crew) })),
     onSuccess: invalidate,
   });
 }

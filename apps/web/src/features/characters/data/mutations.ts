@@ -97,9 +97,9 @@ export function useAdvanceCharacter(characterId: string, gameId: string | null) 
       logNote: string;
     }): Promise<Character> =>
       unwrap(await advanceCharacter(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -120,9 +120,9 @@ export function useAddExperience(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await markXp(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -205,9 +205,9 @@ export function useIndulgeVice(gameId: string | null) {
       zeroDice: boolean;
       logLabel: string;
     }): Promise<IndulgeViceOutcome> => unwrap(await indulgeVice(getRepositories(), vars)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -224,9 +224,9 @@ export function useSaveLoadout(gameId: string | null) {
       loadout: CharacterLoadout;
       logNote: string;
     }): Promise<Character> => unwrap(await saveLoadout(getRepositories(), vars)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -247,10 +247,10 @@ export function useRetireCharacter(gameId: string) {
           logNote: vars.note,
         })
       ),
-    onSuccess: () => {
+    onSuccess: async () => {
       // Retiring changes roster, My-Characters, and the sheet — invalidate the whole concept.
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
