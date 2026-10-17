@@ -6,6 +6,7 @@
 // RATED_ACTION at 2 and ATTRIBUTE as the resistance label.
 import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_RULESET } from '@heist-mind/shared';
 import { clearActorCache } from '../authz';
 import {
   ATTRIBUTE,
@@ -131,17 +132,24 @@ describe('/roll action — persisted (Phase 2)', () => {
 });
 
 describe('/resist — persisted (Phase 2)', () => {
-  it('linked + member + in-campaign → engine rollResistance marks the stress on the sheet', async () => {
+  // ATTRIBUTE's rating is DERIVED from the sheet: the fixture rates one of its actions (RATED_ACTION)
+  // so the rating is 1; rating a second of its actions makes it 2.
+  const secondAction = DEFAULT_RULESET.attributes[0]!.skills[1]!;
+  const ratedTwo = () =>
+    characterOnDefaultRuleset({ characterData: { skills: { [RATED_ACTION]: 2, [secondAction]: 1 } } });
+
+  it('linked + member + in-campaign → rolls the SHEET rating (typed dice ignored) and marks stress', async () => {
     const r = repos();
     const calls = await run(
       await handleResist(
-        ctx(r, [4, 2]),
+        ctx(r, [4, 2, 6, 6, 6, 6, 6, 6, 6, 6]),
         guildCmd('resist', [
-          { name: 'dice', type: 4, value: 2 },
+          { name: 'dice', type: 4, value: 10 },
           { name: 'attribute', type: 3, value: ATTRIBUTE },
         ])
       )
     );
+    // Review #6: a rating-1 resist rolls 1 die, not the typed 10.
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',
       expect.objectContaining({
@@ -149,7 +157,8 @@ describe('/resist — persisted (Phase 2)', () => {
         characterId: 'c1',
         kind: 'resistance',
         label: ATTRIBUTE,
-        results: [4, 2],
+        dice: 1,
+        results: [4],
       })
     );
     expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
@@ -162,10 +171,44 @@ describe('/resist — persisted (Phase 2)', () => {
     expect(embed.footer?.text).toBe('Logged to The Docks Job');
   });
 
-  it('a critical phrases the 1-stress clear (already at 0 → sheet untouched)', async () => {
+  it('persisting needs a ruleset attribute — refuses ephemerally, nothing logged', async () => {
     const r = repos();
     const calls = await run(
-      await handleResist(ctx(r, [6, 6]), guildCmd('resist', [{ name: 'dice', type: 4, value: 2 }]))
+      await handleResist(ctx(r, [4, 2]), guildCmd('resist', [{ name: 'dice', type: 4, value: 2 }]))
+    );
+    expect(r.rolls.create).not.toHaveBeenCalled();
+    expect(calls.map(c => c.method)).toEqual(['delete', 'ephemeral']);
+    expect(String(calls[1]?.payload)).toContain(ATTRIBUTE);
+  });
+
+  it('a resist cost that marks the last box → trauma reply pointing at the sheet', async () => {
+    const r = repos({}, characterOnDefaultRuleset({ characterData: { stress: 8 } }));
+    const calls = await run(
+      await handleResist(
+        ctx(r, [3]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({
+        characterData: expect.objectContaining({ stress: 0, traumaPending: 1 }),
+      })
+    );
+    const payload = calls[0]?.payload as { content?: string };
+    expect(payload.content).toContain('trauma');
+    expect(payload.content).toContain('https://heistmind.example/characters/c1');
+    expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'note' }));
+  });
+
+  it('a critical phrases the 1-stress clear (already at 0 → sheet untouched)', async () => {
+    const r = repos({}, ratedTwo());
+    const calls = await run(
+      await handleResist(
+        ctx(r, [6, 6]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
     );
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',

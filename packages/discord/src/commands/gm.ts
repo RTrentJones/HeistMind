@@ -2,7 +2,15 @@
 // against the LINKED campaign (guild-context only) behind the GM gate. Thin wrappers over the
 // engine use-cases (which persist AND feed-log each change); successes post publicly, failures
 // are ephemeral and leak nothing to non-GMs.
-import { advanceTier, crewAdvanceReady, crewXp, CREW_XP_TRACK, type Game } from '@heist-mind/core';
+import {
+  advanceTier,
+  crewAdvanceReady,
+  crewHalvesTierCost,
+  crewXp,
+  CREW_XP_TRACK,
+  repToDevelop,
+  type Game,
+} from '@heist-mind/core';
 import {
   advanceCrewTier,
   applyCrewHeat,
@@ -133,18 +141,45 @@ export const handleCrew: CommandHandler = (ctx, interaction) => {
     }
 
     if (sub === 'tier') {
-      // The rule no-ops on an unfilled Rep track — refuse HERE so no misleading feed event lands.
-      if (advanceTier({ tier: crew.tier, rep: crew.rep }).tier === crew.tier) {
-        return failEphemeral(followUp, copy.crewTierNotReady(crew.rep));
-      }
+      // RAW development (core advanceTier): weak hold → strong for free; strong hold → pay new
+      // Tier × 8 coin (Patron halves it). The engine refuses without writing or logging; phrase it.
+      const ruleset = await gm.repos.rulesets.findById(gm.game.rulesetId);
+      const content = ruleset.success ? (ruleset.data?.content ?? null) : null;
       const out = await advanceCrewTier(gm.repos, {
         crew,
+        content,
         userId: gm.actorId,
         logLabel: crewName,
-        logNote: copy.crewLogTier,
+        logNote: o =>
+          o.kind === 'hold' ? copy.crewLogHold : copy.crewLogTierPaid(o.tier, o.cost),
       });
-      if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
-      return done(out.data);
+      if (!out.success) {
+        const code = out.error.code;
+        if (code === 'REP_NOT_FULL')
+          return failEphemeral(followUp, copy.crewTierNotReady(crew.rep, repToDevelop(crew.claims)));
+        if (code === 'TIER_MAX') return failEphemeral(followUp, copy.crewTierMax);
+        if (code === 'INSUFFICIENT_COIN') {
+          const preview = advanceTier({
+            tier: crew.tier,
+            rep: crew.rep,
+            hold: crew.hold,
+            coin: crew.coin,
+            vault: crew.vault,
+            claims: crew.claims,
+            halfCost: crewHalvesTierCost(content, crew.crewAbilities),
+          });
+          const needed = preview.ok ? preview.cost : preview.needed;
+          return failEphemeral(followUp, copy.crewTierCoinShort(needed, crew.coin + crew.vault));
+        }
+        return failEphemeral(followUp, copy.somethingBroke);
+      }
+      const what =
+        out.data.hold === 'strong' && out.data.tier === crew.tier
+          ? copy.crewHoldStrengthened
+          : copy.crewTierRaised(out.data.tier, crew.coin + crew.vault - out.data.coin - out.data.vault);
+      return followUp.editOriginal({
+        content: `**${crewName}** — ${what} ${copy.statusCrewLine(out.data.tier, out.data.heat, out.data.wanted)}.`,
+      });
     }
 
     if (sub === 'incarcerate') {

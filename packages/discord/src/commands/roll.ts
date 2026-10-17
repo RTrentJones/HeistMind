@@ -7,6 +7,7 @@
 //             anti-forge — and push charges its real 2 stress). Otherwise display-only with a
 //             footer saying why.
 import {
+  applyStressChange,
   diceForRating,
   harmDicePenalty,
   rollOutcome,
@@ -28,6 +29,7 @@ import { basicOptions, booleanOption, integerOption, stringOption } from '../opt
 import { deferred, failEphemeral, inline, reply, replyEmbed } from '../respond';
 import type { BotContext, CommandHandler } from '../types';
 import { discordUserId } from './character';
+import { TRAUMA_LOG, traumaReply } from './trauma';
 
 /**
  * Match a typed action name against the ruleset's CANONICAL action list — `rulesetActions`
@@ -65,8 +67,17 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
   const position = stringOption(interaction, 'position');
   const effect = stringOption(interaction, 'effect');
   const note = stringOption(interaction, 'note');
-  const extra = integerOption(interaction, 'extra') ?? 0;
+  // RAW bonus dice (action-roll step 5): +1d from an ASSIST, and +1d from EITHER pushing yourself
+  // OR a devil's bargain — "you can't get dice for both". So at most +2d, never push + bargain.
   const push = booleanOption(interaction, 'push') === true;
+  const bargain = booleanOption(interaction, 'bargain') === true;
+  const assist = booleanOption(interaction, 'assist') === true;
+  if (push && bargain) return inline(reply(copy.rollPushAndBargain, { ephemeral: true }));
+  const extra = (push || bargain ? 1 : 0) + (assist ? 1 : 0);
+  const moveNotes = [
+    ...(bargain ? [copy.bargainNote] : []),
+    ...(assist ? [copy.assistNote] : []),
+  ];
 
   const finish = (title: string, pool: number, rollNote?: string) => {
     const { count, zeroDice } = diceForRating(pool);
@@ -94,7 +105,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       // F43 — moderate harm costs a die, RAW; the sheet is the source of truth in both clients
       // (the web panel applies the same penalty). `extra` remains the GM's lever to waive it.
       const harmPenalty = harmDicePenalty(character.characterData);
-      const pool = rating + extra + (push ? 1 : 0) - harmPenalty;
+      const pool = rating + extra - harmPenalty;
       const { count, zeroDice } = diceForRating(pool);
       const results = ctx.realize(count);
 
@@ -102,6 +113,8 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       // character belongs to THAT campaign. Anything else stays display-only with the reason.
       let footer: string;
       let pushNote: string | null = push ? copy.pushedReminder : null;
+      let traumaLine: string | null = null;
+      const persistedNote = [...moveNotes, ...(note ? [note] : [])].join(' · ');
       const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
       if (!game) {
         footer = copy.notLoggedNotLinked;
@@ -121,40 +134,54 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
           zeroDice,
           ...(position ? { position } : {}),
           ...(effect ? { effect } : {}),
-          ...(note ? { note } : {}),
+          ...(persistedNote ? { note: persistedNote } : {}),
           pushed: push,
+          traumaLog: TRAUMA_LOG,
         });
         if (!logged.success) return failEphemeral(followUp, copy.somethingBroke);
         footer = copy.loggedFooter(game.name);
-        if (push) pushNote = copy.pushedCharged; // the engine really charged the 2 stress
+        if (push) {
+          pushNote = copy.pushedCharged; // the engine really charged the 2 stress
+          // The push cost follows the RAW track; predict from the sheet we just read (the engine
+          // applied exactly this change) so the reply can say "trauma — pick it on the sheet".
+          const change = applyStressChange(character.ruleset.content, character.characterData, 2);
+          if (change.trauma) traumaLine = traumaReply(ctx, character, change.mustRetire);
+        }
       }
 
       const harmNotes = [
         ...(harmPenalty > 0 ? [copy.harmPenaltyNote] : []),
         ...(worstHarmLevel(character.characterData) === 'severe' ? [copy.severeHarmNote] : []),
       ];
-      const noteParts = [...harmNotes, ...(pushNote ? [pushNote] : []), ...(note ? [note] : [])];
+      const noteParts = [
+        ...harmNotes,
+        ...(pushNote ? [pushNote] : []),
+        ...moveNotes,
+        ...(note ? [note] : []),
+      ];
       const embed = rollEmbed({
-        title: copy.sheetRollTitle(
-          character.name,
-          resolved,
-          rating,
-          extra + (push ? 1 : 0) - harmPenalty
-        ),
+        title: copy.sheetRollTitle(character.name, resolved, rating, extra - harmPenalty),
         results,
         outcome: rollOutcome(results, { zeroDice }),
         detail: copy.positionEffect(position, effect),
         ...(noteParts.length > 0 ? { note: noteParts.join(' · ') } : {}),
         footer,
       });
-      return followUp.editOriginal({ embeds: [embed] });
+      return followUp.editOriginal({
+        embeds: [embed],
+        ...(traumaLine ? { content: traumaLine } : {}),
+      });
     });
   }
 
-  // Manual form: pure compute, inline. The title shows the TOTAL pool (dice + extra + push).
+  // Manual form: pure compute, inline. The title shows the TOTAL pool (dice + bonus dice).
   if (dice === null) return inline(reply(copy.rollNeedsDiceOrAction, { ephemeral: true }));
-  const pool = dice + extra + (push ? 1 : 0);
-  const manualNotes = [...(push ? [copy.pushedReminder] : []), ...(note ? [note] : [])];
+  const pool = dice + extra;
+  const manualNotes = [
+    ...(push ? [copy.pushedReminder] : []),
+    ...moveNotes,
+    ...(note ? [note] : []),
+  ];
   return inline(
     replyEmbed(
       finish(
