@@ -11,7 +11,7 @@ vi.mock('@/features/characters/data/api', () => ({
 
 import { useCharacterCreationStore } from '../character-creation-store';
 
-const BRACKWATER = getBuiltinById('brackwater')!.content as RulesetContent;
+const BRACKWATER: RulesetContent = getBuiltinById('brackwater')!.content;
 const ruleset = { id: 'rs-bw', name: 'Brackwater', version: '1', content: BRACKWATER } as Ruleset;
 
 describe('submit()', () => {

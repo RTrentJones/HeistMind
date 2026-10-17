@@ -33,7 +33,27 @@ describe('SignInGate', () => {
     expect(screen.getByText('Sign in to view your characters.')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /Sign In with Discord/i }));
-    expect(signInWithOAuth).toHaveBeenCalledWith({ provider: 'discord' });
+    // F94 — the gate returns to the gated page (usePathname is '/' in the test shim).
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'discord',
+      options: { redirectTo: expect.stringContaining('/auth/callback?provider=discord&next=%2F') },
+    });
+  });
+
+  it('carries an explicit return path through sign-in', async () => {
+    const signInWithOAuth = vi.fn().mockResolvedValue({ data: {}, error: null });
+    vi.mocked(getAuthService).mockReturnValue({
+      signInWithOAuth,
+      onAuthStateChange: vi.fn(),
+      getCurrentSession: vi.fn().mockResolvedValue(null),
+      signOut: vi.fn(),
+    } as unknown as ReturnType<typeof getAuthService>);
+
+    render(<SignInGate prompt='Join the campaign.' next='/join/AB12CD34' />);
+    await userEvent.click(screen.getByRole('button', { name: /Sign In with Discord/i }));
+    const redirectTo = new URL(signInWithOAuth.mock.calls[0]?.[0].options.redirectTo);
+    expect(redirectTo.searchParams.get('next')).toBe('/join/AB12CD34');
+    expect(sessionStorage.getItem('heistmind.auth.next')).toBe('/join/AB12CD34');
   });
 
   it('uses a page-specific heading when given one', () => {
