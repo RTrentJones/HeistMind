@@ -175,11 +175,13 @@ describe('CharacterSheet error split (F73)', () => {
 });
 
 describe('CharacterSheet writes + read-only gating', () => {
-  it('a stress click sends ONLY the clicked value (the engine patches the live row)', async () => {
+  it('a stress clear sends ONLY the clicked value (the engine patches the live row)', async () => {
     renderSheet();
-    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 4' }));
+    // The fixture sits at stress 2: a clear is the engine's live-row setStress; a mark goes through
+    // the stress→trauma path (covered above).
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 1' }));
     expect(updateCharData.mutate).toHaveBeenCalledWith(
-      { userId: 'u1', stress: 4 },
+      { userId: 'u1', stress: 1 },
       expect.anything()
     );
   });
