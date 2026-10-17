@@ -10,6 +10,7 @@ import { DEFAULT_RULESET } from '@heist-mind/shared';
 import { clearActorCache } from '../authz';
 import {
   ATTRIBUTE,
+  characterOn,
   characterOnDefaultRuleset,
   ctx,
   fail,
@@ -171,6 +172,25 @@ describe('/resist — persisted (Phase 2)', () => {
     const embed = firstEmbed(calls);
     expect(embed.description).toContain('stress** marked on Silks');
     expect(embed.footer?.text).toBe('Logged to The Docks Job');
+  });
+
+  it('a point-buy ruleset rolls the STORED attribute rating (nothing to derive from)', async () => {
+    // The shipped ruleset with action ratings switched off = the legacy point-buy shape: attributes
+    // are bought directly, so the sheet (and the bot) read them as stored.
+    const pointBuy = structuredClone(DEFAULT_RULESET);
+    delete pointBuy.characterCreation.actionRatings;
+    const attrId = DEFAULT_RULESET.attributes[0]!.id;
+    const r = repos({}, characterOn(pointBuy, { characterData: { attributes: { [attrId]: 3 } } }));
+    await run(
+      await handleResist(
+        ctx(r, [4, 2, 1, 6, 6]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance', dice: 3, results: [4, 2, 1] })
+    );
   });
 
   it('persisting needs a ruleset attribute — refuses ephemerally, nothing logged', async () => {

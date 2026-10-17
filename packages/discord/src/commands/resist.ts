@@ -7,6 +7,7 @@
 // from dice the sheet actually grants. Anything less rolls display-only with a footer saying why.
 import {
   deriveAttributes,
+  usesActionRatings,
   diceForRating,
   resistanceStress,
   rollOutcome,
@@ -96,8 +97,13 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
       const names = (character.ruleset.content.attributes ?? []).map(a => a.name);
       return failEphemeral(followUp, copy.resistNeedsAttribute(names));
     }
+    // Same rating the sheet shows: derived from action dots in an action-ratings ruleset, the stored
+    // attribute in a point-buy one (where no rated actions exist to derive from).
+    const content = character.ruleset.content;
     const rating =
-      deriveAttributes(character.ruleset.content, character.characterData)[attr.id] ?? 0;
+      (usesActionRatings(content)
+        ? deriveAttributes(content, character.characterData)[attr.id]
+        : character.characterData.attributes[attr.id]) ?? 0;
     const roll = rollPool(ctx, rating);
 
     const logged = await rollResistance(repos, {
