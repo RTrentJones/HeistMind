@@ -748,6 +748,16 @@
         "dead": "Dead"
       },
       "rollAnnouncement": "{{label}}: {{outcome}}"
+    },
+    "a11yLabels": {
+      "siteNav": "Main",
+      "home": "HeistMind home",
+      "clockAria": "{{name}}: {{filled}} of {{segments}} segments filled",
+      "harmLevel": {
+        "severe": "Severe",
+        "moderate": "Moderate",
+        "lesser": "Lesser"
+      }
     }
   },
   "auth": {

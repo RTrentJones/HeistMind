@@ -30,7 +30,17 @@ export function ClockTile({
   const { t } = useTranslation();
   return (
     <Stack direction='column' gap='xs' align='center'>
-      <Clock segments={clock.segments} filled={clock.filled} label={clock.name} size={size} />
+      <Clock
+        segments={clock.segments}
+        filled={clock.filled}
+        label={clock.name}
+        size={size}
+        ariaLabel={t('components.a11yLabels.clockAria', {
+          name: clock.name,
+          filled: Math.max(0, Math.min(clock.filled, clock.segments)),
+          segments: clock.segments,
+        })}
+      />
       {isGm && (
         <Stack direction='row' gap='xs' align='center'>
           <Button

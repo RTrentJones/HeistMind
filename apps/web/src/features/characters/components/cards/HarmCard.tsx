@@ -54,6 +54,11 @@ export function HarmCard({
   const bounds = harmBounds(content);
   const harm = data.harm ?? EMPTY_HARM;
   const trauma = data.trauma ?? [];
+  const harmLabels = {
+    severe: t('components.a11yLabels.harmLevel.severe'),
+    moderate: t('components.a11yLabels.harmLevel.moderate'),
+    lesser: t('components.a11yLabels.harmLevel.lesser'),
+  };
 
   if (!edit) {
     const takeQuick = (level: keyof CharacterHarm) => {
@@ -69,11 +74,16 @@ export function HarmCard({
           <HarmTracker
             harm={harm}
             bounds={bounds}
+            labels={harmLabels}
             {...(quick
               ? {
                   onClearEntry: quick.onClear,
                   clearLabel: (text: string) =>
                     t('components.characterSheet.clearHarmAria', { name: text }),
+                  // Clearing a wound takes two clicks (review item 5).
+                  confirmClearLabel: t('components.confirmAction.clearHarm'),
+                  confirmClearAriaLabel: (text: string) =>
+                    t('components.confirmAction.clearHarmAria', { name: text }),
                   disabled: quick.busy,
                 }
               : {})}
@@ -219,12 +229,12 @@ export function HarmCard({
       )}
 
       <Heading level='h3'>{t('components.characterEditor.harm')}</Heading>
-      <HarmTracker harm={harm} bounds={bounds} />
+      <HarmTracker harm={harm} bounds={bounds} labels={harmLabels} />
       {(['severe', 'moderate', 'lesser'] as const).map(level =>
         harm[level].length > 0 ? (
           <Stack key={level} direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Text size='sm' className='w-20 capitalize'>
-              {level}
+            <Text size='sm' className='w-20'>
+              {harmLabels[level]}
             </Text>
             {harm[level].map(h => (
               <Badge key={h} variant='stress-critical'>

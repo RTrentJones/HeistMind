@@ -87,7 +87,9 @@ test.describe('GM: harm + live stress', () => {
     // and cinders is a point-buy ruleset whose sheet panel has no action rolls to penalize.)
 
     // Recovery: clicking the wound box clears it, feed-logged.
+    // Two-click confirm (F91): the first click arms the box, the second clears it.
     await gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' }).click();
+    await gmPage.getByRole('button', { name: 'Confirm clearing Cracked ribs' }).click();
     await expect(gmPage.getByText('Cleared harm: Cracked ribs')).toBeVisible({ timeout: 10_000 });
     await expect(gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' })).toHaveCount(0);
   });
