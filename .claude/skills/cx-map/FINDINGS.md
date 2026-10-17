@@ -32,6 +32,65 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F93 — Launch pixel pass: phone header, look-enabled disabled buttons, wizard stepper, contrast tokens, mobile clipping
+
+- **severity:** S2 · **type:** CX-flaw (visual / a11y) — from the 2026-10 launch pixel audit
+  (246 screenshots × axe, `scratchpad/review-pixel.md` items #1, #2, #4-theme, #5, #6, #8–#11, #20)
+- **where / root causes:**
+  - **Header (#1):** `AuthHeader` wrapped four nav links + welcome + sign-out + toggle around a
+    56px `<h1>` brand inside a `flex-wrap` sticky header → **266px pinned at 360×740** (36% of the
+    screen). The brand was the page's `<h1>` on every route.
+  - **Disabled buttons (#2):** `Button` animated `opacity: 1` via framer-motion, which lands as
+    an INLINE style and outranks `disabled:opacity-50` — "Delete my account", "Upload ruleset" and
+    blocked wizard Next/Create looked live. `Textarea` had the same pattern.
+  - **Theme flash (#4, theme part):** no class on `<html>` until `ThemeProvider`'s effect → the
+    `:root` dark palette painted first for light users; `<html>` itself had no background.
+  - **Clipping (#5):** `Button` was `whitespace-nowrap` with a fixed `h-*`; `Badge` truncated with
+    no `max-w-full` (the landing's "Like Avrae…" tag cut mid-word at 360).
+  - **Stress pips (#6):** 9 fixed-width pips in a non-wrapping flex row squashed into ovals; the
+    fill colour changed with the stress level (green on one sheet, orange on another).
+  - **/discord (#8):** the command table lived in an `overflow-x-auto` box — Needs/Does invisible on
+    phones and keyboard-unscrollable (axe `scrollable-region-focusable`).
+  - **Contrast (#9):** light `--color-foreground-muted` (#71717a) = 4.39:1 on card surfaces;
+    outline/ghost button text used the brand FILL colour (2.5:1 on the wizard footer's Back);
+    the dark landing wordmark 3.49:1.
+  - **Wizard (#10/#20):** unvisited steps rendered green (validity ≠ visited); the selected
+    playbook got a red "Selected"; a "0" derived attribute was a red badge; `role=tablist` around
+    buttons (axe `aria-required-children`); the action dots were all named "Set rating to N".
+  - **Shell (#11):** no gap under the header; footer floated mid-screen on short pages; crumbs
+    used a fixed `max-w-4xl` while most deep pages are 3xl (≈80px misaligned at 1440).
+- **fix:**
+  - `AuthHeader` is one compact row (`Header size='sm'`, ≈60px): brand is a home **link** (not an
+    h1); signed-in nav is a `<nav aria-label="Main">` from `lg`, and below `lg` a **menu button**
+    (`aria-expanded`/`aria-controls`, focus moves into the panel, Escape/outside-click/navigation
+    close it and Escape returns focus) opens a panel with the links, welcome, language + sign-out.
+    Signed-out phones show one short "Sign In" button; the clickwrap line moved out of the sticky
+    row. `Header` lost its fade/slide-in entrance (a CLS source). Page titles are the h1 now
+    (wizard step title, 404, sign-in gates).
+  - `Button` animates `y` only (no inline opacity); disabled = 50% + `cursor-not-allowed`, no
+    hover lift. Sizes use `min-h-*` + `whitespace-normal` so long labels wrap; `size='sm'` is
+    44px tall below `sm`. `Textarea` fixed the same way. Unit test pins "no inline opacity".
+  - Root layout inlines a no-flash theme script (`lib/theme-script.ts`) that sets `light`/`dark`
+    on `<html>` before paint (+ `suppressHydrationWarning`); `ThemeProvider` skips its first
+    class write when the script already set one. `html` takes the theme background + `color-scheme`.
+  - `Badge` gains `wrap` (+ `max-w-full` always); the landing tag uses it.
+  - `StressTracker`/`ActionDots`: `aspect-square shrink-0` pips in a wrapping row, a ≥40px
+    invisible hit area on phones, ONE stress colour (ember; error only when full), and
+    `ActionDots name=` → "Set Hunt to 2" labels (wired in both wizard allocators).
+  - `/discord` command reference is one `<dl>`: stacked cards (Command / Needs / Does labelled)
+    below `md`, a table-like grid from `md` — nothing scrolls sideways.
+  - Tokens: light muted → `hsl(240 4% 40%)` (≥5:1 on every light surface); outline/ghost/link
+    button text → `text-brand-fg`; landing wordmark → `text-brand-fg`.
+  - Wizard stepper is `<nav><ol>` with `aria-current="step"`; statuses current (brand) / complete
+    (green ✓, only for passed + valid) / needs attention (amber !) / not started (outline), each
+    with an sr-only label; same model in the rail layout (`layout/step-status.ts`). Selected
+    playbook = success badge + brand ring; derived attribute 0 = outline, >0 = info.
+  - `AppShell`: `min-h-dvh` flex column, `main` is `flex-1 pt-6 sm:pt-10`; `Breadcrumbs` take the
+    route's own column width/padding; footer links are 44px tall on phones.
+- **still open (other owners):** `CharacterSheet` name is an h2 — with the brand no longer an h1
+  the sheet has no h1 (make the sheet title `as='h1'`); the sheet's centred "← Back to campaign".
+- **status:** fixed @PENDING (launch pixel round, 2026-10-17)
+
 ### F1 — Empty rating pips become invisible on card hover
 
 - **severity:** S2 · **type:** CX-flaw

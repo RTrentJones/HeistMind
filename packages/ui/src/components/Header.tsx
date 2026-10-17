@@ -80,6 +80,9 @@ export interface HeaderProps
     VariantProps<typeof headerVariants> {
   /** Max width constraint for header content */
   maxWidth?: VariantProps<typeof headerContentVariants>['maxWidth'];
+  /** Optional full-width second line under the header row (e.g. a legal notice), kept inside the
+   * banner landmark so it isn't stray page content. */
+  subline?: React.ReactNode;
   /** ARIA role override */
   role?: string;
   /** ARIA label */
@@ -127,6 +130,7 @@ const Header = React.forwardRef<HTMLDivElement, HeaderProps>(
       sticky,
       shadow,
       maxWidth,
+      subline,
       children,
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledBy,
@@ -155,6 +159,9 @@ const Header = React.forwardRef<HTMLDivElement, HeaderProps>(
         {...rest}
       >
         <div className={cn(headerContentVariants({ maxWidth }))}>{children}</div>
+        {subline && (
+          <div className={cn(headerContentVariants({ maxWidth }), 'justify-end')}>{subline}</div>
+        )}
       </div>
     );
   }

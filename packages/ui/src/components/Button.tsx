@@ -46,11 +46,12 @@ const buttonVariants = cva(
           'hover:from-semantic-error/80 hover:via-semantic-error/60 hover:to-semantic-error/80',
           'border border-semantic-error/20',
         ],
-        // text-brand-fg, not -primary: the fill color is below AA as small TEXT on dark (F87).
+        // text-brand-fg, not -primary: the fill color is below AA as small TEXT on dark (F87). The
+        // hover keeps it too — hover:text-brand-accent was 2.45:1 on the light hover tint (F93).
         outline: [
           'border-2 border-brand-primary/50 bg-transparent text-brand-fg',
           'hover:bg-brand-primary/10 hover:border-brand-primary',
-          'hover:text-brand-accent hover:shadow-lg hover:shadow-brand-primary/20',
+          'hover:shadow-lg hover:shadow-brand-primary/20',
           'backdrop-blur-sm',
         ],
         secondary: [
@@ -59,11 +60,8 @@ const buttonVariants = cva(
           'hover:from-background-secondary hover:via-background-elevated hover:to-background-secondary',
           'hover:shadow-lg hover:shadow-black/20',
         ],
-        ghost: [
-          'bg-transparent text-brand-fg hover:bg-brand-primary/10',
-          'hover:text-brand-accent hover:shadow-md',
-        ],
-        link: ['text-brand-fg underline-offset-4 hover:underline', 'hover:text-brand-accent'],
+        ghost: ['bg-transparent text-brand-fg hover:bg-brand-primary/10', 'hover:shadow-md'],
+        link: ['text-brand-fg underline-offset-4 hover:underline'],
         // Game-specific variants
         ember: [
           'bg-gradient-to-r from-game-ember via-game-ember/80 to-game-crimson',

@@ -349,7 +349,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           ) : (
             <Stack direction='row' justify='between' align='center' className='flex-wrap'>
               <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                <Heading level='h2' variant='gradient'>
+                <Heading level='h2' as='h1' variant='gradient'>
                   {character.name}
                 </Heading>
                 {character.status !== 'active' && (

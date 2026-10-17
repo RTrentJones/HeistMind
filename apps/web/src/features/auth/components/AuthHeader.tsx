@@ -111,7 +111,17 @@ export function AuthHeader() {
 
   return (
     <>
-      <Header size='sm'>
+      <Header
+        size='sm'
+        // Signed-out clickwrap under the sign-in buttons (desktop only — the page-level notices
+        // carry it on phones), as a second banner line so the row itself never wraps.
+        // max-sm:hidden, NOT `hidden sm:block` (F83).
+        subline={
+          !signedIn && !COMING_SOON ? (
+            <ClickwrapNotice className='text-right max-sm:hidden' />
+          ) : undefined
+        }
+      >
         <HeaderBrand className='min-w-0'>
           <Link
             href='/'
@@ -243,14 +253,6 @@ export function AuthHeader() {
           </div>
         )}
       </Header>
-      {/* Signed-out clickwrap under the header's sign-in buttons (desktop only — the page-level
-          notices carry it on phones). Outside the sticky header so it scrolls away and never
-          makes the header row wrap. max-sm:hidden, NOT `hidden sm:block` (F83). */}
-      {!signedIn && !COMING_SOON && (
-        <div className='mx-auto flex max-w-7xl justify-end px-4 pt-1 max-sm:hidden sm:px-6 lg:px-8'>
-          <ClickwrapNotice className='text-right' />
-        </div>
-      )}
     </>
   );
 }
