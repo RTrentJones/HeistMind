@@ -77,6 +77,24 @@ describe('applyStress', () => {
     expect(out.success && out.data?.trauma).toBe(false);
   });
 
+  it("lets the campaign's GM mark stress on a player's character (owner-or-GM, like the RLS write)", async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const asGmGame = {
+      ...CHARACTER,
+      createdBy: 'player-1',
+      game: { createdBy: 'gm-1' },
+    } as unknown as CharacterWithDetails;
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(asGmGame)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await applyStress(r, { characterId: 'c1', userId: 'gm-1', stress: 2 });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('c1', 'gm-1', {
+      characterData: expect.objectContaining({ stress: 8 }),
+    });
+  });
+
   it('marking the LAST stress box → stress 0, one trauma owed, and a feed note (RAW)', async () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'n1' }));

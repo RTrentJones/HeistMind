@@ -246,6 +246,50 @@ export function isAbilityUnlocked(
   return true;
 }
 
+/**
+ * RAW: taking Veteran IS taking an ability from another playbook — one advance, not two. When a
+ * cross-playbook `abilityId` is locked only for want of a slot, returns the id of an unheld,
+ * takeable Veteran-granting ability from the character's OWN roster that would open it, so the
+ * advance can add both together. Null when the ability is already unlocked, is locked for another
+ * reason (prerequisite), or no such Veteran ability exists.
+ */
+export function veteranGatewayFor(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  abilityId: string,
+  crew?: CrewContext | null
+): string | null {
+  const ability = findAbility(ruleset, abilityId);
+  if (!ability || !prerequisiteSatisfied(ruleset, data, ability)) return null;
+  if (isAbilityUnlocked(ruleset, data, abilityId, crew)) return null;
+  const roster = findPlaybook(ruleset, data.playbook)?.specialAbilities ?? [];
+  for (const id of roster) {
+    if (data.specialAbilities.includes(id)) continue;
+    if ((findAbility(ruleset, id)?.effects?.veteran ?? 0) <= 0) continue;
+    if (!isAbilityUnlocked(ruleset, data, id, crew)) continue;
+    const withVeteran = { ...data, specialAbilities: [...data.specialAbilities, id] };
+    if (isAbilityUnlocked(ruleset, withVeteran, abilityId, crew)) return id;
+  }
+  return null;
+}
+
+/**
+ * Whether an advance may take this ability: it is unlocked now, or it is a cross-playbook pick the
+ * advance can reach by taking the playbook's Veteran with it ({@link veteranGatewayFor}). The one
+ * predicate the editor, the bot's suggestions and the repository's advance gate share.
+ */
+export function isAbilityAdvanceable(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  abilityId: string,
+  crew?: CrewContext | null
+): boolean {
+  return (
+    isAbilityUnlocked(ruleset, data, abilityId, crew) ||
+    veteranGatewayFor(ruleset, data, abilityId, crew) !== null
+  );
+}
+
 /** Clamp a stress value into the ruleset's track (0..max). */
 export function clampStress(content: RulesetContent, value: number): number {
   return Math.max(0, Math.min(value, stressBounds(content).max));
@@ -613,6 +657,25 @@ const warn = (field: string, message: string, suggestion?: string): ValidationWa
   message,
   suggestion,
 });
+
+/**
+ * Grandfathering for the live veteran budget: a sheet saved before that budget existed may hold
+ * cross-playbook abilities without a slot. Don't brick its everyday writes (gear, harm, stress) —
+ * an `ABILITY_LOCKED` error only stands when the write ADDS an ability the prior sheet didn't hold.
+ * Shared by the repository's server-side gate and the editor's client-side save gate so they agree.
+ */
+export function grandfatherHeldAbilities(
+  result: ValidationResult,
+  priorAbilities: readonly string[],
+  nextAbilities: readonly string[]
+): ValidationResult {
+  const prior = new Set(priorAbilities);
+  if (nextAbilities.some(id => !prior.has(id))) return result;
+  const errors = result.errors.filter(
+    e => !(e.code === 'ABILITY_LOCKED' && e.field.startsWith('specialAbilities.'))
+  );
+  return { ...result, errors, isValid: errors.length === 0 };
+}
 
 /**
  * Validate a character build against its ruleset. `errors` block (isValid=false); `warnings`

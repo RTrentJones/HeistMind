@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { RulesetContent, CharacterData } from '../domain';
 import {
+  grandfatherHeldAbilities,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   clampStress,
   validateCharacter,
   pointBuySpent,
@@ -358,6 +361,36 @@ describe('validateCharacter — creation mode', () => {
       crew: { crewAbilities: ['crew-vet'] },
     });
     expect(covered.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
+  });
+
+  it('veteranGatewayFor: a locked cross-playbook pick is reachable by taking the playbook Veteran', () => {
+    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
+    // Without a Veteran on the roster there is no gateway, so the pick is not advanceable.
+    expect(veteranGatewayFor(rs, character(), 'ghost-step')).toBeNull();
+    expect(isAbilityAdvanceable(rs, character(), 'ghost-step')).toBe(false);
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'pb-veteran', name: 'Veteran', description: '', effects: { veteran: 1 } },
+    ];
+    rs.playbooks[0]!.specialAbilities = [...rs.playbooks[0]!.specialAbilities, 'pb-veteran'];
+    expect(veteranGatewayFor(rs, character(), 'ghost-step')).toBe('pb-veteran');
+    expect(isAbilityAdvanceable(rs, character(), 'ghost-step')).toBe(true);
+    // Once Veteran is held and its slot used, no second gateway exists.
+    const used = character({ specialAbilities: ['pb-veteran', 'ghost-step'] });
+    rs.specialAbilities.push({ id: 'shadow-form', name: 'Shadow Form', description: '' });
+    expect(veteranGatewayFor(rs, used, 'shadow-form')).toBeNull();
+    // A prerequisite lock is never bypassed by Veteran.
+    expect(veteranGatewayFor(rs, character(), 'menace')).toBeNull();
+  });
+
+  it('grandfatherHeldAbilities drops ABILITY_LOCKED only when the write adds no ability', () => {
+    const locked = {
+      isValid: false,
+      errors: [{ field: 'specialAbilities.ghost-step', code: 'ABILITY_LOCKED', message: 'x' }],
+      warnings: [],
+    } as ReturnType<typeof validateCharacter>;
+    expect(grandfatherHeldAbilities(locked, ['ghost-step'], ['ghost-step']).isValid).toBe(true);
+    expect(grandfatherHeldAbilities(locked, ['ghost-step'], ['ghost-step', 'menace'])).toBe(locked);
   });
 
   it('isAbilityUnlocked offers a candidate only while a veteran slot is free', () => {

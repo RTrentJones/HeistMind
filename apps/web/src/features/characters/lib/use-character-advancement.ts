@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  grandfatherHeldAbilities,
   validateCharacter,
   type CharacterAdvancement,
   type CharacterData,
@@ -48,7 +49,13 @@ export function useCharacterAdvancement(character: CharacterWithDetails, crew: C
   ): Promise<SaveBuildOutcome> => {
     const userId = user?.id;
     if (!userId) return { status: 'failed' };
-    const result = validateCharacter(content, draft, { mode: 'live', crew });
+    // Same grandfathering as the server: an unslotted cross-playbook ability the sheet already held
+    // doesn't block an unrelated save (gear, harm) — only a newly added one does.
+    const result = grandfatherHeldAbilities(
+      validateCharacter(content, draft, { mode: 'live', crew }),
+      base.specialAbilities,
+      draft.specialAbilities
+    );
     if (!result.isValid) {
       setError(result.errors.map(e => e.message).join(' '));
       return { status: 'failed' };

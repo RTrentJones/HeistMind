@@ -410,7 +410,8 @@
       "fillTrackForDot": "Fill an attribute XP track to add an action dot.",
       "pickAction": "{{name}} — pick an action to raise",
       "maxSuffix": " (max)",
-      "incrementSuffix": " → +1"
+      "incrementSuffix": " → +1",
+      "viaVeteran": "Takes Veteran"
     },
     "rollPanel": {
       "rollFailed": "Roll failed.",

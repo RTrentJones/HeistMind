@@ -20,7 +20,7 @@ import {
   type Roll,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { notOwner } from './ownership';
+import { notOwner, notOwnerOrGm } from './ownership';
 
 /**
  * Campaign-feed copy for a stress overflow (RAW: marking the last stress box = trauma). Functions of
@@ -68,7 +68,7 @@ export async function applyStress(
   if (!found.success) return found as Result<never>;
   if (!found.data) return { success: true, data: null };
   const char = found.data;
-  const owned = notOwner(char, input.userId);
+  const owned = notOwnerOrGm(char, input.userId);
   if (owned) return owned;
   const data = char.characterData;
   const change = applyStressChange(char.ruleset.content, data, input.stress);
