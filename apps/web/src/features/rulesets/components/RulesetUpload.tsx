@@ -60,7 +60,9 @@ export function RulesetUpload() {
     <Stack direction='column' gap='lg'>
       <Card variant='outline'>
         <Stack direction='column' gap='xs'>
-          <Heading level='h3'>{t('forms.rulesetUpload.startHeading')}</Heading>
+          <Heading level='h3' as='h2'>
+            {t('forms.rulesetUpload.startHeading')}
+          </Heading>
           <Text variant='muted' size='sm'>
             {t('forms.rulesetUpload.starterHintPrefix')}{' '}
             <Link href='/rulesets' className='underline'>

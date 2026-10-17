@@ -37,11 +37,7 @@ export function loadDiscordTestKeys(): DiscordTestKeys | null {
 }
 
 /** Sign an interaction body the way Discord does: Ed25519 over `timestamp + rawBody`. */
-export function signInteraction(
-  keys: DiscordTestKeys,
-  timestamp: string,
-  rawBody: string
-): string {
+export function signInteraction(keys: DiscordTestKeys, timestamp: string, rawBody: string): string {
   const privateKey = createPrivateKey(keys.privateKeyPem);
   return sign(null, Buffer.from(timestamp + rawBody), privateKey).toString('hex');
 }

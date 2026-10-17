@@ -79,7 +79,7 @@ export default function NewStandaloneCharacterPage() {
           // STRAIGHT into the wizard (no /rulesets detour).
           <Stack direction='column' gap='sm'>
             <Text variant='muted'>{t('characters.startWithBuiltin')}</Text>
-            <StarterCatalogInline onLoaded={setPicked} />
+            <StarterCatalogInline onLoaded={setPicked} headingLevel='h2' />
             <Text variant='muted' size='sm'>
               {t('characters.orUpload')}{' '}
               <Link href='/rulesets/new' className='underline'>
@@ -93,7 +93,9 @@ export default function NewStandaloneCharacterPage() {
               <Card key={rs.id} variant='outline'>
                 <Stack direction='row' justify='between' align='center' className='flex-wrap'>
                   <div className='min-w-0'>
-                    <Heading level='h3'>{rs.name}</Heading>
+                    <Heading level='h3' as='h2'>
+                      {rs.name}
+                    </Heading>
                     <Text variant='muted' size='sm'>
                       {t('characters.rulesetVersion', { version: rs.version })}
                     </Text>
@@ -113,7 +115,9 @@ export default function NewStandaloneCharacterPage() {
             {/* The catalog stays reachable with rulesets present too — grab another system and
                 continue straight into the wizard. */}
             <Stack direction='column' gap='sm'>
-              <Heading level='h3'>{t('characters.moreSystems')}</Heading>
+              <Heading level='h3' as='h2'>
+                {t('characters.moreSystems')}
+              </Heading>
               <StarterCatalogInline onLoaded={setPicked} />
             </Stack>
           </Stack>

@@ -16,7 +16,14 @@ import { LoadBuiltinRulesetButton } from './LoadBuiltinRulesetButton';
  * "refresh my copy" instead of a second identical "Add"). `onLoaded` receives the OWNED copy so
  * the caller continues with it directly.
  */
-export function StarterCatalogInline({ onLoaded }: { onLoaded?: (ruleset: Ruleset) => void }) {
+export function StarterCatalogInline({
+  onLoaded,
+  headingLevel = 'h3',
+}: {
+  onLoaded?: (ruleset: Ruleset) => void;
+  /** Entry titles: h3 under a section h2; h2 when the catalog sits straight under the page h1. */
+  headingLevel?: 'h2' | 'h3';
+}) {
   const { t } = useTranslation();
   const { user } = useAuth();
   // Copies are created under the builtin's name (the refresh flow matches on it too).
@@ -29,7 +36,9 @@ export function StarterCatalogInline({ onLoaded }: { onLoaded?: (ruleset: Rulese
           <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
             <div className='min-w-0'>
               <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                <Heading level='h3'>{b.content.metadata.name}</Heading>
+                <Heading level='h3' as={headingLevel}>
+                  {b.content.metadata.name}
+                </Heading>
                 <Badge variant={b.tier === 'starter' ? 'gold' : 'steel'}>{b.tier}</Badge>
                 {b.license && <Badge variant='steel'>{b.license}</Badge>}
               </Stack>

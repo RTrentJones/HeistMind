@@ -5,47 +5,13 @@
 import { isLocalStack } from '../support/env';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName } from '../support/rulesets';
+import {
+  addBrackwater,
+  buildBrackwaterCharacter,
+  buildStandaloneBrackwater,
+} from '../support/characters';
 
 test.describe.configure({ timeout: 180_000 });
-
-// Add the bundled Brackwater starter (action-ratings mode) and return the ruleset identifiers used
-// to create a campaign + recognise it in the standalone ruleset picker.
-async function addBrackwater(page: import('@playwright/test').Page) {
-  await page.goto('/rulesets');
-  await page
-    .getByRole('button', { name: /Add Brackwater to my rulesets|Refresh my Brackwater copy/i })
-    .first()
-    .click();
-  await expect(page.getByRole('heading', { name: 'Brackwater' }).last()).toBeVisible({
-    timeout: 30_000,
-  });
-  return { name: 'Brackwater', version: '1.0.0', optionLabel: 'Brackwater (v1.0.0)' };
-}
-
-// Build a character through the wizard currently mounted on the page (Brackwater: name → playbook →
-// step to the end → Create). Works for both the standalone and in-campaign mounts.
-async function buildBrackwaterCharacter(page: import('@playwright/test').Page, name: string) {
-  await page.getByLabel('Character name').fill(name);
-  await page.getByRole('button', { name: 'The Knife' }).click();
-  const next = page.getByRole('button', { name: 'Next', exact: true });
-  for (let i = 0; i < 7; i++) await next.click();
-  await page.getByRole('button', { name: 'Create character' }).click();
-}
-
-// Build a STANDALONE Brackwater character (My Characters → New character → pick Brackwater → wizard).
-// Lands on the standalone sheet.
-async function buildStandaloneBrackwater(page: import('@playwright/test').Page, name: string) {
-  await page.goto('/characters/new');
-  await page
-    .locator('div')
-    .filter({ hasText: 'Brackwater' })
-    .filter({ has: page.getByRole('button', { name: 'Build' }) })
-    .last()
-    .getByRole('button', { name: 'Build' })
-    .click();
-  await buildBrackwaterCharacter(page, name);
-  await page.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
-}
 
 test.describe('Phase 5: portable characters', () => {
   test.beforeEach(() => {
