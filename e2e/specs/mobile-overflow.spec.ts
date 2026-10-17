@@ -1,5 +1,5 @@
 // Phone-width layout gate (review item 9 / F91): at 360px no page may scroll horizontally — the
-// starter catalog's long "Add … to my rulesets" CTAs and the ruleset list's "Create game" buttons
+// starter catalog's long "Add … to my rulesets" CTAs and the ruleset list's "Create campaign" buttons
 // used to push 45–70px past the viewport (Button is whitespace-nowrap). Every signed-in route is
 // visited at 360×740 and its document width compared with the viewport, plus a check that no
 // visible element's right edge pokes past it.

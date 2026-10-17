@@ -32,17 +32,18 @@ test.describe('RLS: tenant isolation', () => {
     // …and a DIRECT navigation to the game's URL reads as nonexistent (RLS returns no row —
     // the page can't even distinguish "not yours" from "not there", which is the point).
     await playerPage.goto(new URL(gameUrl).pathname);
-    await expect(playerPage.getByText('Game not found')).toBeVisible({ timeout: 15_000 });
+    await expect(playerPage.getByText('Campaign not found')).toBeVisible({ timeout: 15_000 });
     await expect(playerPage.getByRole('heading', { name: campaignName })).toHaveCount(0);
   });
 
   test('a non-member is denied joining without a valid code', async ({ playerPage }) => {
     await playerPage.goto('/games');
-    await playerPage.getByLabel('Invite code').fill('NO-SUCH-CODE');
+    await playerPage.getByLabel('Join code').fill('NO-SUCH-CODE');
     await playerPage.getByRole('button', { name: 'Join', exact: true }).click();
-    await expect(playerPage.getByText("Couldn't join — check the code and try again.")).toBeVisible(
-      { timeout: 10_000 }
-    );
+    // F94 — the failure says WHY (the code doesn't exist), not a generic "check the code".
+    await expect(playerPage.getByText(/that join code doesn't exist/i)).toBeVisible({
+      timeout: 10_000,
+    });
     // Still on the list page — no campaign was entered.
     await expect(playerPage).toHaveURL(/\/games$/);
   });
@@ -55,13 +56,13 @@ test.describe('RLS: tenant isolation', () => {
     const campaignName = uniqueName('Member Gate');
     await createCampaign(gmPage, ruleset, campaignName);
     await gmPage.getByRole('button', { name: 'Create a join code' }).click();
-    const codeEl = gmPage.locator('code').first();
+    const codeEl = gmPage.getByTestId('join-code-row').locator('code');
     await expect(codeEl).toBeVisible({ timeout: 10_000 });
     const code = (await codeEl.innerText()).trim();
 
     // Player joins → CAN read the shared campaign hub (membership grants the read)…
     await playerPage.goto('/games');
-    await playerPage.getByLabel('Invite code').fill(code);
+    await playerPage.getByLabel('Join code').fill(code);
     await playerPage.getByRole('button', { name: 'Join', exact: true }).click();
     await playerPage.waitForURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
     await expect(playerPage.getByRole('heading', { name: campaignName })).toBeVisible({

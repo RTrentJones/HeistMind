@@ -281,7 +281,7 @@ test.describe('Cross-client parity: web wizard → bot gameplay → web feed', (
     // A full navigation (not client-side cache) so React Query fetches fresh — the DB polls
     // above already proved the after()-completed writes landed.
     await discordPage.goto(gameUrl);
-    await expect(discordPage.getByRole('heading', { name: 'Roll Log' })).toBeVisible();
+    await expect(discordPage.getByRole('heading', { name: 'Campaign log' })).toBeVisible();
 
     // The roll entry: labeled with the ruleset action, attributed, wearing a DICE outcome badge.
     await expect(discordPage.getByText(ACTION, { exact: true })).toBeVisible({ timeout: 15_000 });
