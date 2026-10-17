@@ -223,7 +223,7 @@ export function CharacterCreationWizard({
                   type='button'
                   onClick={() => goToStep(i)}
                   aria-current={status === 'current' ? 'step' : undefined}
-                  className='flex min-h-11 cursor-pointer items-center rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary'
+                  className='flex min-h-11 cursor-pointer items-center rounded-3xl border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary'
                 >
                   <Badge variant={STEP_BADGE[status]} className={STEP_BADGE_CLASS[status]}>
                     <span aria-hidden='true' className='mr-1 tabular-nums'>
