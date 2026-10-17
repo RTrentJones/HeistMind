@@ -7,6 +7,7 @@
 // player edited ALSO changed underneath their draft, it refuses with `CHARACTER_CONFLICT` instead of
 // overwriting the other writer.
 import {
+  applyStressChange,
   clampStress,
   type Character,
   type CharacterData,
@@ -14,7 +15,7 @@ import {
   type Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { notOwnerOrGm } from './ownership';
+import { crewContextFor, notOwnerOrGm } from './ownership';
 
 /** Order-insensitive structural equality for JSON-shaped data (JSONB reorders object keys). */
 export function sameJson(a: unknown, b: unknown): boolean {
@@ -42,7 +43,13 @@ async function patchLive(
   repos: DatabaseRepositories,
   characterId: string,
   userId: string,
-  build: (fresh: CharacterWithDetails) => Partial<CharacterData> | Result<never> | null
+  build: (
+    fresh: CharacterWithDetails
+  ) =>
+    | Partial<CharacterData>
+    | Result<never>
+    | null
+    | Promise<Partial<CharacterData> | Result<never> | null>
 ): Promise<Result<Character | null>> {
   const found = await repos.characters.findWithDetails(characterId);
   if (!found.success) return found as Result<never>;
@@ -50,7 +57,7 @@ async function patchLive(
   const fresh = found.data;
   const denied = notOwnerOrGm(fresh, userId);
   if (denied) return denied;
-  const patch = build(fresh);
+  const patch = await build(fresh);
   if (patch === null) return { success: true, data: null };
   if ('success' in patch) return patch;
   return repos.characterManagement.updateCharacterWithValidation(characterId, userId, {
@@ -103,7 +110,7 @@ export function saveCharacterBuild(
   repos: DatabaseRepositories,
   input: SaveCharacterBuildInput
 ): Promise<Result<Character | null>> {
-  return patchLive(repos, input.characterId, input.userId, fresh => {
+  return patchLive(repos, input.characterId, input.userId, async fresh => {
     const { base, draft } = input;
     const live = fresh.characterData as unknown as Record<string, unknown>;
     const from = base as unknown as Record<string, unknown>;
@@ -123,6 +130,20 @@ export function saveCharacterBuild(
         },
       };
     }
-    return Object.fromEntries(changed.map(k => [k, to[k]])) as Partial<CharacterData>;
+    const patch = Object.fromEntries(changed.map(k => [k, to[k]])) as Partial<CharacterData>;
+    // Raising stress in the editor follows the same RAW overflow as every other stress path:
+    // marking the last box resets stress to 0 and owes a trauma (never a full track kept as-is).
+    const liveStress = fresh.characterData.stress ?? 0;
+    if (typeof patch.stress === 'number' && patch.stress > liveStress) {
+      const change = applyStressChange(
+        fresh.ruleset.content,
+        { ...fresh.characterData, ...patch, stress: liveStress },
+        patch.stress - liveStress,
+        await crewContextFor(repos, fresh.gameId)
+      );
+      patch.stress = change.stress;
+      if (change.traumaPending > 0) patch.traumaPending = change.traumaPending;
+    }
+    return patch;
   });
 }

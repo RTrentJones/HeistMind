@@ -373,6 +373,25 @@ describe('chooseTrauma', () => {
     expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'picked' }));
   });
 
+  it("lets the campaign's GM pick the condition on a player's sheet (owner-or-GM)", async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const asGm = { ...owing, createdBy: 'player-1', game: { createdBy: 'gm-1' } };
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'n1' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(asGm)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await chooseTrauma(r, {
+      characterId: 'c1',
+      userId: 'gm-1',
+      condition,
+      logNote: 'picked',
+      retireNote: 'retire',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalled();
+  });
+
   it('refuses when nothing is owed, or the condition is not in the ruleset list', async () => {
     const r = repos({
       characters: { findWithDetails: vi.fn().mockResolvedValue(ok(owing)) },

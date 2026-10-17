@@ -52,6 +52,7 @@ function reposWithLive(live: CharacterWithDetails) {
     characters: { findWithDetails: vi.fn().mockResolvedValue(ok(live)) },
     characterManagement: { updateCharacterWithValidation: update },
     rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+    crews: { findByGame: vi.fn().mockResolvedValue(ok(null)) },
   } as unknown as DatabaseRepositories;
   const written = () => update.mock.calls.at(-1)?.[2].characterData as CharacterData;
   return { r, update, written };
@@ -137,6 +138,16 @@ describe('saveCharacterBuild — patches only the fields the player changed', ()
     });
     expect(out).toEqual(ok(null));
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('filling the stress track in the editor follows RAW overflow (stress 0, one trauma owed)', async () => {
+    const max = DEFAULT_RULESET.stress?.max ?? 9;
+    const { r, written } = reposWithLive(character(LIVE_DATA));
+    const base = { ...LIVE_DATA };
+    const draft = { ...LIVE_DATA, stress: max };
+    const out = await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base, draft });
+    expect(out.success).toBe(true);
+    expect(written()).toMatchObject({ stress: 0, traumaPending: 1 });
   });
 
   it("lets the campaign's GM save (mirrors RLS) and rejects anyone else", async () => {

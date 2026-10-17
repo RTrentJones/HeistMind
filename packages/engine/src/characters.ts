@@ -15,13 +15,12 @@ import {
   type Character,
   type CharacterAdvancement,
   type CharacterHarm,
-  type CrewContext,
   type HarmLevel,
   type Result,
   type Roll,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { notOwner, notOwnerOrGm } from './ownership';
+import { crewContextFor, notOwner, notOwnerOrGm } from './ownership';
 
 /**
  * Campaign-feed copy for a stress overflow (RAW: marking the last stress box = trauma). Functions of
@@ -50,16 +49,6 @@ export interface StressOutcome {
   trauma: boolean;
   /** The character is at the trauma limit (retire, or take the fall). */
   mustRetire: boolean;
-}
-
-/** The crew context a character's rules are judged in: its campaign crew's abilities, or none. */
-async function crewContextFor(
-  repos: DatabaseRepositories,
-  gameId: string | null
-): Promise<CrewContext | null> {
-  if (gameId === null) return null;
-  const crew = await repos.crews.findByGame(gameId);
-  return crew.success && crew.data ? { crewAbilities: crew.data.crewAbilities } : null;
 }
 
 /**
@@ -149,7 +138,7 @@ export async function chooseTrauma(
   if (!found.success) return found as Result<never>;
   if (!found.data) return { success: false, error: { message: 'Character not found' } };
   const char = found.data;
-  const owned = notOwner(char, input.userId);
+  const owned = notOwnerOrGm(char, input.userId);
   if (owned) return owned;
   const content = char.ruleset.content;
   if (pendingTrauma(char.characterData) === 0) {
