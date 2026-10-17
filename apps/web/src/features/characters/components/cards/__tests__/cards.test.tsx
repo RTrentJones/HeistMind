@@ -54,12 +54,14 @@ describe('HarmCard', () => {
     expect(input).toHaveValue('');
   });
 
-  it('quick mode: clicking a wound box clears that entry', async () => {
+  it('quick mode: a wound box clears its entry on a CONFIRMED (second) click', async () => {
     const onClear = vi.fn();
     render(
       <HarmCard content={CONTENT} data={DATA} quick={{ busy: false, onTake: () => {}, onClear }} />
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clear harm: Bruised' }));
+    expect(onClear).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm clearing Bruised' }));
     expect(onClear).toHaveBeenCalledWith('lesser', 'Bruised');
   });
 

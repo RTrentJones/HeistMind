@@ -97,13 +97,32 @@ export function CharacterEditor({
     });
   }, [character.id, character.updatedAt, character.characterData]);
 
+  // A save CONFLICT (a field the player edited also changed elsewhere) rebases the draft onto the
+  // live row on the next render — after the mutation's awaited refetch has landed in the cache.
+  const [rebase, setRebase] = useState(false);
+  useEffect(() => {
+    if (!rebase) return;
+    draftBaseRef.current = JSON.stringify(character.characterData);
+    setDraft(structuredClone(character.characterData));
+    setRebase(false);
+  }, [rebase, character.characterData]);
+
   const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
 
-  // Loadout moved off the build to the character sheet (per-score choice, not a build/advance) —
-  // the editor does NOT own it, so every save carries the LIVE value. Otherwise a draft based on
-  // a pre-refetch snapshot (the dirty-guard above keeps it, by design) would silently wipe a
-  // loadout the sheet saved moments earlier: a full-object write from a stale base.
-  const saveDraft = () => void saveBuild({ ...draft, loadout: character.characterData.loadout });
+  // Saves are a PATCH of only the fields this draft changed vs the snapshot it started from,
+  // merged server-side onto the LIVE row (engine `saveCharacterBuild`). So everything the editor
+  // didn't touch — the per-score loadout, harm the GM marked, XP the bot logged, stress clicked on
+  // the sheet — keeps its live value instead of being reverted by a stale draft (review item 2).
+  const saveDraft = async () => {
+    const base = JSON.parse(draftBaseRef.current) as CharacterData;
+    const out = await saveBuild(base, draft);
+    if (out.status === 'saved') {
+      draftBaseRef.current = JSON.stringify(out.data);
+      setDraft(structuredClone(out.data));
+    } else if (out.status === 'conflict') {
+      setRebase(true);
+    }
+  };
 
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const playbookContacts = playbook?.contacts ?? [];
@@ -195,7 +214,7 @@ export function CharacterEditor({
               </>
             )}
 
-            <Button variant='ember' onClick={saveDraft} loading={saving}>
+            <Button variant='ember' onClick={() => void saveDraft()} loading={saving}>
               {t('components.characterEditor.saveBuild')}
             </Button>
           </Stack>
@@ -220,7 +239,7 @@ export function CharacterEditor({
 
             <HarmCard content={content} data={draft} edit={{ onPatch: patch }} />
 
-            <Button variant='ember' onClick={saveDraft} loading={saving}>
+            <Button variant='ember' onClick={() => void saveDraft()} loading={saving}>
               {t('components.characterEditor.saveStress')}
             </Button>
           </Stack>
@@ -235,7 +254,7 @@ export function CharacterEditor({
 
             <GearCard data={draft} edit={{ playbookContacts, onPatch: patch }} />
 
-            <Button variant='ember' onClick={saveDraft} loading={saving}>
+            <Button variant='ember' onClick={() => void saveDraft()} loading={saving}>
               {t('components.characterEditor.saveGear')}
             </Button>
           </Stack>
@@ -268,7 +287,12 @@ export function CharacterEditor({
                 ))}
               </Stack>
               <Heading level='h3'>{t('components.characterEditor.specialAbilities')}</Heading>
-              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <AdvancementOptions
+                character={character}
+                crew={crew}
+                onBuy={buyAbility}
+                saving={saving}
+              />
               <Heading level='h3'>{t('components.characterEditor.actionDots')}</Heading>
               <ActionDotOptions
                 character={character}
@@ -284,7 +308,12 @@ export function CharacterEditor({
                   {t('components.characterEditor.xpAvailable', { xp: character.experiencePoints })}
                 </Badge>
               </Stack>
-              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <AdvancementOptions
+                character={character}
+                crew={crew}
+                onBuy={buyAbility}
+                saving={saving}
+              />
             </Stack>
           ))}
       </Stack>

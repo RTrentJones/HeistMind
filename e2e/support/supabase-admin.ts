@@ -39,24 +39,31 @@ export interface TestUser {
 // then deletes the personas so they don't persist at all.
 const RUN_PASSWORD = `E2e-${randomUUID()}`;
 
+/**
+ * Optional persona namespace (`E2E_PERSONA_SUFFIX`, e.g. "-fe"): lets concurrent runs share one
+ * local stack without one run's teardown deleting the personas another run is signed in as.
+ * Unset (CI, the default) keeps the canonical emails.
+ */
+const SUFFIX = (process.env.E2E_PERSONA_SUFFIX ?? '').replace(/[^a-z0-9-]/gi, '');
+
 /** Deterministic personas (stable emails → idempotent provisioning; per-run password). */
 export const TEST_USERS = {
   gm: {
-    email: 'e2e-gm@heistmind.test',
+    email: `e2e-gm${SUFFIX}@heistmind.test`,
     password: RUN_PASSWORD,
-    username: 'e2e-gamemaster',
+    username: `e2e-gamemaster${SUFFIX}`,
   } satisfies TestUser,
   player: {
-    email: 'e2e-player@heistmind.test',
+    email: `e2e-player${SUFFIX}@heistmind.test`,
     password: RUN_PASSWORD,
-    username: 'e2e-player',
+    username: `e2e-player${SUFFIX}`,
   } satisfies TestUser,
   /** The bot persona — provisioned like a REAL Discord signup (trigger-linked; F68 regression). */
   discord: {
-    email: 'e2e-discord@heistmind.test',
+    email: `e2e-discord${SUFFIX}@heistmind.test`,
     password: RUN_PASSWORD,
-    username: 'e2e-discord',
-    discordId: 'e2e-discord-424242',
+    username: `e2e-discord${SUFFIX}`,
+    discordId: `e2e-discord-424242${SUFFIX}`,
   } satisfies TestUser,
 } as const;
 

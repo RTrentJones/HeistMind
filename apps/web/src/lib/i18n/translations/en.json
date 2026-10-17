@@ -65,6 +65,11 @@
       "acceptableUse": "Acceptable use",
       "licenses": "Licenses",
       "copyright": "© {{year}} Trent Jones (HeistMind)"
+    },
+    "chrome": {
+      "navLabel": "Main",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
     }
   },
   "components": {
@@ -230,7 +235,8 @@
         "chooseRoleFirst": "Choose a crew role first to see its special abilities.",
         "showMore": "Show {{count}} more abilities from other roles",
         "hideMore": "Hide abilities from other roles",
-        "otherPlaybooks": "From other playbooks — locked at creation unless your crew's veteran upgrade opens them."
+        "otherPlaybooks": "From other playbooks — each needs a free Veteran slot. Take your playbook's Veteran ability to open one.",
+        "needsVeteran": "Needs a free Veteran slot"
       },
       "identity": {
         "heritageLabel": "Heritage",
@@ -263,6 +269,16 @@
       }
     },
     "characterSheet": {
+      "traumaLogNote": "{{name}} marked their last stress box — trauma! Stress clears; a trauma condition is owed.",
+      "traumaRetireLogNote": "{{name}} has reached the trauma limit and must retire (or take the fall for the crew).",
+      "traumaChosenLog": "{{name}} takes the trauma: {{condition}}",
+      "traumaPendingOne": "Your last stress box was marked — you suffer a trauma. Stress is back to 0; choose the trauma condition.",
+      "traumaPendingMany": "You owe {{count}} trauma conditions from marking your last stress box — choose them one at a time.",
+      "traumaPickLabel": "Trauma condition",
+      "traumaPickPlaceholder": "Choose a condition…",
+      "traumaMark": "Mark trauma",
+      "traumaFailed": "Couldn't mark the trauma.",
+      "traumaRetireBanner": "Trauma limit reached — this scoundrel can't continue. Retire them to a different life, or send them to prison to take the fall for the crew.",
       "notFound": "Character not found",
       "loadFailed": "Failed to load",
       "saveNameFailed": "Failed to save name",
@@ -380,6 +396,7 @@
       "xpAvailable": "{{xp}} XP available",
       "noAbilityAdvancements": "This ruleset defines no ability advancements.",
       "allLearned": "All special abilities have been learned.",
+      "veteranLocked": "{{count}} more abilities from other playbooks need a free Veteran slot — take Veteran to open one.",
       "optionTrack": "{{name}} — clears a full playbook track.",
       "optionFlat": "{{name}} — {{cost}} XP each.",
       "fillTrack": "Fill the playbook XP track",
@@ -393,7 +410,8 @@
       "fillTrackForDot": "Fill an attribute XP track to add an action dot.",
       "pickAction": "{{name}} — pick an action to raise",
       "maxSuffix": " (max)",
-      "incrementSuffix": " → +1"
+      "incrementSuffix": " → +1",
+      "viaVeteran": "Takes Veteran"
     },
     "rollPanel": {
       "rollFailed": "Roll failed.",
@@ -590,7 +608,9 @@
       "wanted": "Wanted",
       "coin": "Coin",
       "vault": "Vault",
-      "advanceTier": "Advance to Tier {{tier}} (spend 12 Rep)",
+      "advanceTier": "Advance to Tier {{tier}} (pay {{cost}} coin)",
+      "strengthenHold": "Strengthen hold (spend full Rep)",
+      "tierCoinShort": "Needs {{cost}} coin (new Tier × 8) — the crew has {{have}} in coin + vault.",
       "incarcerate": "Incarcerated (−1 Wanted, clear Heat)",
       "advancementXp": "Advancement",
       "xpReady": "Full — ready to advance",
@@ -607,8 +627,8 @@
       "holdWeak": "weak",
       "toggleHold": "Toggle hold",
       "holdTooltipTitle": "Crew hold",
-      "holdTooltipStrong": "Strong hold: the crew is stable — a setback knocks it down to weak hold, not apart.",
-      "holdTooltipWeak": "Weak hold: the crew is shaky — another setback can break it up entirely.",
+      "holdTooltipStrong": "Strong hold: the crew is stable — losing hold drops it to weak. With a full Rep tracker you can pay new Tier × 8 coin to raise the Tier (hold then drops to weak).",
+      "holdTooltipWeak": "Weak hold: losing hold again costs the crew a Tier (at Tier 0, your lair comes under threat). A full Rep tracker turns hold strong.",
       "resources": "Resources",
       "crewAbilities": "Crew Abilities",
       "noneTaken": "None taken.",
@@ -624,7 +644,8 @@
       "add": "Add",
       "logLabel": "Crew",
       "logHeatNote": "Heat marked — heat {{heat}}, wanted {{wanted}}",
-      "logTierNote": "Advanced to Tier {{tier}} (full Rep track spent)",
+      "logTierNote": "Advanced to Tier {{tier}} — paid {{cost}} coin; Rep reset, hold now weak",
+      "logHoldNote": "Full Rep spent — hold strengthened (weak → strong)",
       "logIncarcerateNote": "Incarceration — heat cleared, wanted {{wanted}}"
     },
     "factionsPanel": {
@@ -646,7 +667,7 @@
       "status": "Status",
       "logStatusNote": "Status shifted to {{status}} ({{label}})",
       "statusLegendTitle": "Faction status (−3 to +3)",
-      "statusLegendScale": "−3 War · −2/−1 Hostile · 0 Neutral · +1/+2 Friendly · +3 Allied",
+      "statusLegendScale": "−3 War · −2 Hostile · −1 Interfering · 0 Neutral · +1 Helpful · +2 Friendly · +3 Allies",
       "statusLegendAria": "Faction status scale",
       "lowerStatusAria": "Lower {{name}} status",
       "raiseStatusAria": "Raise {{name}} status",
@@ -690,6 +711,80 @@
     },
     "starterCatalog": {
       "footnote": "Each loads as an editable copy you own; loading one again refreshes it to the latest bundle."
+    },
+    "characterConflict": {
+      "message": "This character changed elsewhere while you were editing, and the same fields were touched. Your draft was reloaded with the latest values — re-apply your change and save again."
+    },
+    "confirmAction": {
+      "removeClock": "Confirm remove",
+      "removeClockAria": "Confirm removing {{name}}",
+      "short": "Sure?",
+      "deleteFaction": "Confirm delete",
+      "deleteFactionAria": "Confirm deleting {{name}}",
+      "endScore": "Confirm end score",
+      "clearHarm": "Clear?",
+      "clearHarmAria": "Confirm clearing {{name}}"
+    },
+    "asyncState": {
+      "retry": "Try again",
+      "loading": "Loading…",
+      "backToCampaigns": "Back to your campaigns",
+      "campaignsLoadFailed": "Couldn't load your campaigns.",
+      "charactersLoadFailed": "Couldn't load characters.",
+      "activityLoadFailed": "Couldn't load recent activity.",
+      "rosterLoadFailed": "Couldn't load the roster.",
+      "invitesLoadFailed": "Couldn't load invite codes.",
+      "rollLogLoadFailed": "Couldn't load the campaign log.",
+      "rulesetsLoadFailed": "Couldn't load rulesets.",
+      "retireFailed": "Couldn't retire {{name}}.",
+      "clipboardFailed": "Couldn't copy — select the code and copy it manually.",
+      "stateChangeFailed": "Couldn't change the campaign state."
+    },
+    "enumLabels": {
+      "rollKind": {
+        "action": "Action roll",
+        "resistance": "Resistance roll",
+        "fortune": "Fortune roll",
+        "downtime": "Downtime",
+        "loadout": "Loadout",
+        "score": "Score",
+        "crew": "Crew",
+        "faction": "Faction",
+        "clock": "Clock",
+        "xp": "XP",
+        "harm": "Harm",
+        "note": "Note"
+      },
+      "gameState": {
+        "draft": "Draft",
+        "recruiting": "Recruiting",
+        "active": "Active",
+        "paused": "Paused",
+        "completed": "Completed"
+      },
+      "characterStatus": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "retired": "Retired",
+        "dead": "Dead"
+      },
+      "rollAnnouncement": "{{label}}: {{outcome}}"
+    },
+    "a11yLabels": {
+      "siteNav": "Main",
+      "home": "HeistMind home",
+      "clockAria": "{{name}}: {{filled}} of {{segments}} segments filled",
+      "harmLevel": {
+        "severe": "Severe",
+        "moderate": "Moderate",
+        "lesser": "Lesser"
+      }
+    },
+    "wizardSteps": {
+      "current": "current step",
+      "complete": "complete",
+      "incomplete": "needs attention",
+      "upcoming": "not started"
     }
   },
   "auth": {

@@ -10,6 +10,22 @@ import { useTranslation } from '@/lib/i18n/hooks';
 import { WizardStep } from './WizardStep';
 import { WizardRail } from './layout/WizardRail';
 import { WizardSummary } from './layout/WizardSummary';
+import { STEP_STATUS_KEY, stepStatus, type StepStatus } from './layout/step-status';
+
+// Pill look per status: brand = here, green = done, amber = visited but invalid, outline = ahead.
+const STEP_BADGE: Record<StepStatus, 'default' | 'success' | 'warning' | 'outline'> = {
+  current: 'default',
+  complete: 'success',
+  incomplete: 'warning',
+  upcoming: 'outline',
+};
+const STEP_BADGE_CLASS: Record<StepStatus, string> = {
+  // brand-secondary, not the brand-primary fill: white on brand-primary is only 4.2:1.
+  current: 'bg-brand-secondary ring-2 ring-brand-primary/40',
+  complete: '',
+  incomplete: '',
+  upcoming: 'text-foreground-muted',
+};
 
 interface CharacterCreationWizardProps {
   ruleset: Ruleset;
@@ -100,7 +116,7 @@ export function CharacterCreationWizard({
 
   const stepHeading = (
     <div>
-      <Heading level='h2' variant='primary'>
+      <Heading level='h2' as='h1' variant='primary'>
         {step.name}
       </Heading>
       {step.description && <Text className='text-foreground-muted'>{step.description}</Text>}
@@ -194,27 +210,34 @@ export function CharacterCreationWizard({
     <div className='mx-auto' style={{ maxWidth: 900, padding: '36px clamp(20px,4vw,32px) 130px' }}>
       <div style={{ marginBottom: 26 }}>{nameField}</div>
 
-      {/* Stepper — Badge isn't clickable on its own, so wrap in a button */}
-      <div
-        className='flex flex-wrap gap-2'
-        style={{ marginBottom: 30 }}
-        role='tablist'
-        aria-label={t('components.wizard.stepsLabel')}
-      >
-        {steps.map((s, i) => (
-          <button
-            key={s.id}
-            type='button'
-            onClick={() => goToStep(i)}
-            aria-current={i === stepIndex}
-            className='cursor-pointer border-0 bg-transparent p-0'
-          >
-            <Badge variant={i === stepIndex ? 'ember' : stepValidity[i] ? 'success' : 'outline'}>
-              {s.name}
-            </Badge>
-          </button>
-        ))}
-      </div>
+      {/* Stepper (F93) — an ordered list of steps, not a tablist (it held buttons, not tabs: the
+          axe aria-required-children violation). Status is in the pill's look AND its accessible
+          name; only the step on screen carries aria-current="step". */}
+      <nav aria-label={t('components.wizard.stepsLabel')} style={{ marginBottom: 30 }}>
+        <ol className='flex flex-wrap gap-2'>
+          {steps.map((s, i) => {
+            const status = stepStatus(i, stepIndex, stepValidity[i] ?? false);
+            return (
+              <li key={s.id}>
+                <button
+                  type='button'
+                  onClick={() => goToStep(i)}
+                  aria-current={status === 'current' ? 'step' : undefined}
+                  className='flex min-h-11 cursor-pointer items-center rounded-3xl border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary'
+                >
+                  <Badge variant={STEP_BADGE[status]} className={STEP_BADGE_CLASS[status]}>
+                    <span aria-hidden='true' className='mr-1 tabular-nums'>
+                      {status === 'complete' ? '✓' : status === 'incomplete' ? '!' : i + 1}
+                    </span>
+                    <span>{s.name}</span>
+                    <span className='sr-only'> ({t(STEP_STATUS_KEY[status])})</span>
+                  </Badge>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
       {stepHeading}
       <div style={{ marginTop: 26 }}>{content}</div>

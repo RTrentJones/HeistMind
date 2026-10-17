@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { RulesetContent, CharacterData } from '../domain';
 import {
+  grandfatherHeldAbilities,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   clampStress,
   validateCharacter,
   pointBuySpent,
@@ -30,6 +33,14 @@ import {
   DEFAULT_STRESS,
   DEFAULT_HARM,
   effectiveLoadLimit,
+  applyStressChange,
+  chooseTraumaCondition,
+  consumesVeteranSlot,
+  creationAbilityLimit,
+  effectiveStressMax,
+  mustRetireFromTrauma,
+  ownVeteranGrants,
+  pendingTrauma,
 } from './character-rules';
 
 /** An action-rating ruleset: two attributes with 2 actions each; playbook seeds one dot. */
@@ -173,10 +184,26 @@ describe('advancementCost', () => {
       })
     ).toBe(6);
   });
-  it('falls back to the supplied cost when no option matches', () => {
+  it('never trusts the client cost: no matching option → null (refused upstream)', () => {
     expect(
       advancementCost(ruleset(), { type: 'skill', target: 'x', cost: 2, description: '' })
-    ).toBe(2);
+    ).toBeNull();
+  });
+  it('rejects a negative or non-finite ruleset cost (an invalid uploaded ruleset)', () => {
+    const negative = ruleset({
+      advancement: {
+        xpTriggers: [],
+        advancementOptions: [
+          { id: 'buy-ability', name: 'x', description: '', cost: -5, category: 'ability' },
+        ],
+      },
+    });
+    const adv = { type: 'ability' as const, target: 'buy-ability', cost: -5, description: '' };
+    expect(advancementCost(negative, adv)).toBeNull();
+    negative.advancement.advancementOptions[0]!.cost = Number.NaN;
+    expect(advancementCost(negative, adv)).toBeNull();
+    negative.advancement.advancementOptions[0]!.cost = 2.7;
+    expect(advancementCost(negative, adv)).toBe(2);
   });
 });
 
@@ -262,9 +289,15 @@ describe('validateCharacter — creation mode', () => {
     expect(codes(r)).toContain('ABILITY_LOCKED');
   });
 
-  it('tier-locks a cross-playbook ability: error in a campaign, warning standalone', () => {
-    // ghost-step is tier 2, has no prerequisite, and is not in the Razor's roster.
-    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
+  it('locks a cross-playbook ability: error in a campaign, warning standalone when a crew could grant', () => {
+    // ghost-step has no prerequisite and is not in the Razor's roster.
+    const rs = ruleset({
+      characterCreation: { steps: [], abilityChoices: 5 },
+      crew: {
+        types: [],
+        abilities: [{ id: 'crew-vet', name: 'Veteran', description: '', effects: { veteran: 1 } }],
+      },
+    });
     const data = character({ specialAbilities: ['ghost-step'] });
     // In a campaign (crew context) with no veteran grant → blocked.
     const inCampaign = validateCharacter(rs, data, {
@@ -272,12 +305,16 @@ describe('validateCharacter — creation mode', () => {
       crew: { crewAbilities: [] },
     });
     expect(inCampaign.errors.find(e => e.code === 'ABILITY_LOCKED')?.message).toMatch(
-      /not available at character creation/
+      /another playbook — it needs a free Veteran slot/
     );
     // Standalone (no crew context) → can't verify a crew grant, so warn rather than block.
     const standalone = validateCharacter(rs, data, { mode: 'creation' });
     expect(standalone.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
     expect(standalone.warnings.length).toBeGreaterThan(0);
+    // A ruleset whose crew can NEVER grant a slot → decidable without crew context: blocked.
+    const noGrant = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
+    const blocked = validateCharacter(noGrant, data, { mode: 'creation' });
+    expect(codes(blocked)).toContain('ABILITY_LOCKED');
   });
 
   it('a crew veteran grant unlocks a tier-2 cross-playbook ability', () => {
@@ -324,6 +361,36 @@ describe('validateCharacter — creation mode', () => {
       crew: { crewAbilities: ['crew-vet'] },
     });
     expect(covered.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
+  });
+
+  it('veteranGatewayFor: a locked cross-playbook pick is reachable by taking the playbook Veteran', () => {
+    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
+    // Without a Veteran on the roster there is no gateway, so the pick is not advanceable.
+    expect(veteranGatewayFor(rs, character(), 'ghost-step')).toBeNull();
+    expect(isAbilityAdvanceable(rs, character(), 'ghost-step')).toBe(false);
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'pb-veteran', name: 'Veteran', description: '', effects: { veteran: 1 } },
+    ];
+    rs.playbooks[0]!.specialAbilities = [...rs.playbooks[0]!.specialAbilities, 'pb-veteran'];
+    expect(veteranGatewayFor(rs, character(), 'ghost-step')).toBe('pb-veteran');
+    expect(isAbilityAdvanceable(rs, character(), 'ghost-step')).toBe(true);
+    // Once Veteran is held and its slot used, no second gateway exists.
+    const used = character({ specialAbilities: ['pb-veteran', 'ghost-step'] });
+    rs.specialAbilities.push({ id: 'shadow-form', name: 'Shadow Form', description: '' });
+    expect(veteranGatewayFor(rs, used, 'shadow-form')).toBeNull();
+    // A prerequisite lock is never bypassed by Veteran.
+    expect(veteranGatewayFor(rs, character(), 'menace')).toBeNull();
+  });
+
+  it('grandfatherHeldAbilities drops ABILITY_LOCKED only when the write adds no ability', () => {
+    const locked = {
+      isValid: false,
+      errors: [{ field: 'specialAbilities.ghost-step', code: 'ABILITY_LOCKED', message: 'x' }],
+      warnings: [],
+    } as ReturnType<typeof validateCharacter>;
+    expect(grandfatherHeldAbilities(locked, ['ghost-step'], ['ghost-step']).isValid).toBe(true);
+    expect(grandfatherHeldAbilities(locked, ['ghost-step'], ['ghost-step', 'menace'])).toBe(locked);
   });
 
   it('isAbilityUnlocked offers a candidate only while a veteran slot is free', () => {
@@ -523,6 +590,7 @@ describe('isAbilityUnlocked / prerequisites — edge cases', () => {
     rs.specialAbilities = [
       { id: 'sharpshot', name: 'Sharpshot', description: '', tier: 1, prerequisite: 'a keen eye' },
     ];
+    rs.playbooks[0]!.specialAbilities = ['sharpshot'];
     expect(isAbilityUnlocked(rs, character({ specialAbilities: ['sharpshot'] }), 'sharpshot')).toBe(
       true
     );
@@ -666,18 +734,50 @@ describe('defensive branches', () => {
 });
 
 describe('validateCharacter — live mode is looser than creation', () => {
-  it('does not enforce point-buy, ability count, tier gating, or required steps', () => {
+  it('does not enforce point-buy, ability count, or required steps', () => {
     const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 1 } });
-    // Over creation budget + more abilities than allowed + a tier-2 ability — all legal post-creation.
+    // Over creation budget + more (roster) abilities than allowed — all legal post-creation.
     const advanced = character({
       attributes: { grit: 4, edge: 4 },
-      specialAbilities: ['battle-born', 'ghost-step'],
+      specialAbilities: ['battle-born', 'menace'],
     });
     const r = validateCharacter(rs, advanced, { mode: 'live' });
     expect(codes(r)).not.toContain('POINTBUY_OVER');
     expect(codes(r)).not.toContain('ABILITY_LIMIT');
     expect(codes(r)).not.toContain('STEP_INCOMPLETE');
     expect(r.isValid).toBe(true);
+  });
+
+  it('enforces the veteran budget in live mode too (review #1: cross-playbook needs a slot)', () => {
+    // No crew ability can grant veteran here, so even without crew context it is decidable.
+    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 1 } });
+    const cross = character({ specialAbilities: ['battle-born', 'ghost-step'] });
+    const r = validateCharacter(rs, cross, { mode: 'live' });
+    expect(codes(r)).toContain('ABILITY_LOCKED');
+    // A playbook Veteran ability (effects.veteran) opens exactly one slot.
+    rs.specialAbilities.push({
+      id: 'veteran',
+      name: 'Veteran',
+      description: '',
+      effects: { veteran: 1 },
+    });
+    rs.playbooks[0]!.specialAbilities.push('veteran');
+    const withVet = character({ specialAbilities: ['battle-born', 'veteran', 'ghost-step'] });
+    expect(validateCharacter(rs, withVet, { mode: 'live' }).isValid).toBe(true);
+    rs.specialAbilities.push({ id: 'shade', name: 'Shade', description: '' });
+    const twoCross = character({
+      specialAbilities: ['battle-born', 'veteran', 'ghost-step', 'shade'],
+    });
+    expect(codes(validateCharacter(rs, twoCross, { mode: 'live' }))).toContain('ABILITY_LOCKED');
+  });
+
+  it('a tier-1 cross-playbook ability is not exempt from the veteran budget', () => {
+    const rs = ruleset();
+    rs.specialAbilities.push({ id: 'quick', name: 'Quick', description: '', tier: 1 });
+    expect(isAbilityUnlocked(rs, character(), 'quick')).toBe(false);
+    // …while a playbook with no roster partitions nothing (custom rulesets stay lenient).
+    rs.playbooks[0]!.specialAbilities = [];
+    expect(isAbilityUnlocked(rs, character(), 'quick')).toBe(true);
   });
 
   it('still enforces caps and prerequisites in live mode', () => {
@@ -1014,5 +1114,184 @@ describe('clampStress', () => {
     expect(clampStress(content, -2)).toBe(0);
     expect(clampStress(content, 4)).toBe(4);
     expect(clampStress(content, 99)).toBe(9);
+  });
+});
+
+// ----- rules-accuracy round (review-rules #1/#3/#8/#9) -----------------------------------------
+
+describe('stress overflow → trauma (RAW: marking the last box = trauma, stress back to 0)', () => {
+  const rs = ruleset({ traumaConditions: ['Cold', 'Haunted', 'Soft', 'Vicious'] });
+
+  it('a cost that fills the track resets stress to 0 and owes one trauma', () => {
+    const out = applyStressChange(rs, character({ stress: 8 }), 2);
+    expect(out).toEqual({ stress: 0, traumaPending: 1, trauma: true, mustRetire: false });
+    // Exactly marking the LAST box counts too (7 + 2 = 9 of 9).
+    expect(applyStressChange(rs, character({ stress: 7 }), 2).trauma).toBe(true);
+    // Short of the last box: an ordinary mark, nothing owed.
+    expect(applyStressChange(rs, character({ stress: 6 }), 2)).toEqual({
+      stress: 8,
+      traumaPending: 0,
+      trauma: false,
+      mustRetire: false,
+    });
+  });
+
+  it('a clear never goes below 0 and never owes trauma', () => {
+    expect(applyStressChange(rs, character({ stress: 1 }), -3)).toMatchObject({
+      stress: 0,
+      trauma: false,
+    });
+  });
+
+  it('the trauma that fills the trauma track flags retirement; owed trauma never exceeds it', () => {
+    const three = character({ stress: 9, trauma: ['Cold', 'Haunted', 'Soft'] });
+    const out = applyStressChange(rs, three, 1);
+    expect(out).toMatchObject({ trauma: true, traumaPending: 1, mustRetire: true });
+    // Already at the limit with one owed → a further overflow can't owe a fifth.
+    const owed = { ...three, stress: 8, traumaPending: 1 };
+    expect(applyStressChange(rs, owed, 3).traumaPending).toBe(1);
+    expect(mustRetireFromTrauma(rs, character({ trauma: ['Cold'] }))).toBe(false);
+  });
+
+  it('chooseTraumaCondition resolves one owed trauma from the ruleset list only', () => {
+    const owing = character({ traumaPending: 1, trauma: ['Cold'] });
+    expect(chooseTraumaCondition(rs, owing, 'Soft')).toMatchObject({
+      trauma: ['Cold', 'Soft'],
+      traumaPending: 0,
+    });
+    expect(chooseTraumaCondition(rs, owing, 'Grumpy')).toBeNull(); // not a named condition
+    expect(chooseTraumaCondition(rs, owing, 'Cold')).toBeNull(); // already marked
+    expect(chooseTraumaCondition(rs, character(), 'Soft')).toBeNull(); // nothing owed
+    expect(pendingTrauma({ traumaPending: -2 })).toBe(0);
+  });
+
+  it('validates owed trauma: non-negative, and it fits the trauma track with marked conditions', () => {
+    expect(codes(validateCharacter(rs, character({ traumaPending: -1 })))).toContain(
+      'TRAUMA_PENDING_INVALID'
+    );
+    const over = character({ trauma: ['Cold', 'Haunted', 'Soft'], traumaPending: 2 });
+    expect(codes(validateCharacter(rs, over))).toContain('TRAUMA_OVER');
+    expect(validateCharacter(rs, character({ traumaPending: 1 })).isValid).toBe(true);
+  });
+
+  it('ability stress boxes lengthen the track (BitD Survivor: +1)', () => {
+    const tough = ruleset();
+    tough.specialAbilities.push({
+      id: 'survivor',
+      name: 'Survivor',
+      description: '',
+      effects: { stressBoxes: 1 },
+    });
+    tough.playbooks[0]!.specialAbilities.push('survivor');
+    const data = character({ specialAbilities: ['battle-born', 'survivor'], stress: 10 });
+    expect(effectiveStressMax(tough, data)).toBe(10);
+    expect(validateCharacter(tough, data).isValid).toBe(true);
+    expect(applyStressChange(tough, { ...data, stress: 8 }, 1).trauma).toBe(false);
+    expect(applyStressChange(tough, { ...data, stress: 9 }, 1).trauma).toBe(true);
+  });
+});
+
+describe('creation: pre-placed playbook dots + restricted bonus dots (Deadly)', () => {
+  // Razor seeds Clash 1; 2 points to assign (cap 2 at creation, 3 absolute).
+  const deadlyRs = (restricted = true) =>
+    actionRuleset({
+      crew: {
+        types: [],
+        abilities: [
+          {
+            id: 'deadly',
+            name: 'Deadly',
+            description: '',
+            effects: restricted
+              ? {
+                  bonusActionDots: 1,
+                  bonusActionDotsIn: ['Clash', 'Skulk'],
+                  bonusDotsExceedCreationCap: true,
+                }
+              : { bonusActionDots: 1 },
+          },
+        ],
+      },
+    });
+  const crew = { crewAbilities: ['deadly'] };
+
+  it("rejects moving a playbook's pre-placed dot away (ACTION_BELOW_PLAYBOOK)", () => {
+    const moved = character({ skills: { Clash: 0, Track: 2, Rig: 1 } });
+    expect(codes(validateCharacter(actionRuleset(), moved, { mode: 'creation' }))).toContain(
+      'ACTION_BELOW_PLAYBOOK'
+    );
+    const kept = character({ skills: { Clash: 1, Track: 2 } });
+    expect(codes(validateCharacter(actionRuleset(), kept, { mode: 'creation' }))).not.toContain(
+      'ACTION_BELOW_PLAYBOOK'
+    );
+    // Live play may drop below the seed (nothing pins it after creation).
+    expect(codes(validateCharacter(actionRuleset(), moved, { mode: 'live' }))).not.toContain(
+      'ACTION_BELOW_PLAYBOOK'
+    );
+  });
+
+  it('a Deadly dot may lift an allowed action past the creation cap (RAW supersedes the limit)', () => {
+    const three = character({ skills: { Clash: 3, Track: 1 } });
+    const r = validateCharacter(deadlyRs(), three, { mode: 'creation', crew });
+    expect(codes(r)).not.toContain('ACTION_CREATION_CAP');
+    expect(r.isValid).toBe(true);
+    // Without Deadly the same build breaks the creation cap.
+    expect(codes(validateCharacter(actionRuleset(), three, { mode: 'creation' }))).toContain(
+      'ACTION_CREATION_CAP'
+    );
+  });
+
+  it('a Deadly dot can only go in its allowed actions', () => {
+    // Base budget (3) spent + the bonus dot in Rig (not allowed) → restricted.
+    const wrong = character({ skills: { Clash: 1, Track: 2, Rig: 1 } });
+    const r = validateCharacter(deadlyRs(), wrong, { mode: 'creation', crew });
+    expect(codes(r)).toContain('ACTION_BONUS_RESTRICTED');
+    // Same total with the 4th dot in Skulk (allowed) is legal.
+    const right = character({ skills: { Clash: 1, Track: 2, Skulk: 1 } });
+    expect(validateCharacter(deadlyRs(), right, { mode: 'creation', crew }).isValid).toBe(true);
+    // Two actions above the creation cap need two bonus dots → refused.
+    const twoHigh = character({ skills: { Clash: 3, Skulk: 3 } });
+    expect(
+      codes(validateCharacter(deadlyRs(), twoHigh, { mode: 'creation', crew })).some(c =>
+        ['ACTION_BONUS_RESTRICTED', 'ACTION_POINTS_OVER'].includes(c)
+      )
+    ).toBe(true);
+  });
+
+  it('an unrestricted bonus dot (custom rulesets) keeps the old any-action behaviour', () => {
+    const anywhere = character({ skills: { Clash: 1, Track: 2, Rig: 1 } });
+    expect(validateCharacter(deadlyRs(false), anywhere, { mode: 'creation', crew }).isValid).toBe(
+      true
+    );
+  });
+});
+
+describe('creation: a Veteran pick opens exactly one cross-playbook slot', () => {
+  const vetRs = () => {
+    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 1 } });
+    rs.specialAbilities.push({
+      id: 'veteran',
+      name: 'Veteran',
+      description: '',
+      effects: { veteran: 1 },
+    });
+    rs.playbooks[0]!.specialAbilities.push('veteran');
+    return rs;
+  };
+
+  it('Veteran + one cross-playbook ability is a legal starting pick', () => {
+    const rs = vetRs();
+    const data = character({ specialAbilities: ['veteran', 'ghost-step'] });
+    expect(creationAbilityLimit(rs, data)).toBe(2);
+    expect(ownVeteranGrants(rs, data)).toBe(1);
+    expect(consumesVeteranSlot(rs, data, 'ghost-step')).toBe(true);
+    expect(validateCharacter(rs, data, { mode: 'creation' }).isValid).toBe(true);
+  });
+
+  it("the Veteran slot can't hold a second roster ability", () => {
+    const data = character({ specialAbilities: ['veteran', 'battle-born'] });
+    expect(codes(validateCharacter(vetRs(), data, { mode: 'creation' }))).toContain(
+      'ABILITY_LIMIT'
+    );
   });
 });

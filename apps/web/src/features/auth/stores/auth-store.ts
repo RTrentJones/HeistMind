@@ -6,6 +6,7 @@ import { type User } from '@heist-mind/database';
 import { type LoadingState } from '@/shared/types';
 import { captureError } from '@heist-mind/telemetry';
 import { getAuthService } from '@/lib/auth';
+import { getQueryClient } from '@/lib/query/client';
 // Profile reads go through the profiles data seam (its non-hook surface — this store's actions run
 // outside React); repositories are never touched here directly.
 import * as profilesApi from '@/features/profiles/data/api';
@@ -22,6 +23,13 @@ interface AuthState extends LoadingState {
 
   // Session state
   sessionChecked: boolean;
+  /**
+   * True once the persisted slice has been read from localStorage (client-only, after mount — see
+   * `rehydrateAuthStore`). Before that, every render (server HTML and the first client render)
+   * sees the signed-out defaults, so auth-dependent UI should hold a neutral placeholder rather
+   * than flash a sign-in prompt to a returning user.
+   */
+  hasHydrated: boolean;
 
   // Auth actions (Discord OAuth is the only sign-in method — see BRD; the profile row is created
   // by the DB trigger on first sign-in, so there is no client-side signup/profile-create path).
@@ -48,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
         profile: null,
         isAuthenticated: false,
         sessionChecked: false,
+        hasHydrated: false,
         isLoading: false,
         error: null,
         lastUpdated: undefined,
@@ -71,6 +80,9 @@ export const useAuthStore = create<AuthState>()(
               sessionChecked: false,
               lastUpdated: new Date(),
             });
+            // Drop every cached query so the next account on this browser never sees the previous
+            // user's campaigns/characters/rolls served from cache.
+            getQueryClient().clear();
           } catch (error) {
             set({
               error: error instanceof Error ? error.message : 'Sign out failed',
@@ -175,13 +187,32 @@ export const useAuthStore = create<AuthState>()(
         // Bump when the persisted shape changes; rehydration drops older versions (a fresh
         // checkSession rebuilds the session state).
         version: 1,
+        // Don't hydrate at store creation; `rehydrateAuthStore()` runs it from <AuthListener/>
+        // right after mount. localStorage exists only in the browser, so the server HTML is
+        // always signed-out. (zustand v5's hook already hydrates React from getInitialState(),
+        // which avoids a mismatch on its own — verified with a prod build — but hydrating at a
+        // known point is explicit, doesn't lean on that library detail, and gives us
+        // `hasHydrated` for SignInGate.)
+        skipHydration: true,
+        // The persisted slice is a DISPLAY HINT (who was signed in, to avoid a sign-in flash),
+        // never proof of a session: `sessionChecked` is not persisted, so every boot re-validates
+        // the session with Supabase (INITIAL_SESSION / checkSession).
         partialize: state => ({
-          // Only persist essential auth state
           user: state.user,
           profile: state.profile,
           isAuthenticated: state.isAuthenticated,
-          sessionChecked: state.sessionChecked,
         }),
+        // Older (v1) entries also carried `sessionChecked: true`; whitelist the hint fields so a
+        // stale flag can't short-circuit the boot-time session check.
+        merge: (persisted, current) => {
+          const p = (persisted ?? {}) as Partial<AuthState>;
+          return {
+            ...current,
+            ...(p.user !== undefined && { user: p.user }),
+            ...(p.profile !== undefined && { profile: p.profile }),
+            ...(p.isAuthenticated !== undefined && { isAuthenticated: p.isAuthenticated }),
+          };
+        },
       }
     ),
     {
@@ -189,6 +220,21 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+/**
+ * Read the persisted auth hint from localStorage and mark the store hydrated. Client-only; call it
+ * from a layout effect after mount (see <AuthListener/>) so the server HTML and the first client
+ * render agree. Synchronous for localStorage, so the hydrated state commits before first paint.
+ */
+export function rehydrateAuthStore(): void {
+  if (typeof window === 'undefined' || useAuthStore.getState().hasHydrated) return;
+  try {
+    void useAuthStore.persist.rehydrate();
+  } catch {
+    // Storage blocked → start signed-out; the session check below still restores a live session.
+  }
+  useAuthStore.setState({ hasHydrated: true });
+}
 
 /** Grace period letting the OAuth listener claim the session before the manual check runs. */
 const SESSION_CHECK_DELAY_MS = 100;
@@ -236,7 +282,9 @@ export function initAuthListener(): void {
         });
       }
     } else {
-      // User signed out or no session
+      // User signed out or no session. If someone WAS signed in (sign-out in another tab, an
+      // expired refresh token), drop their cached data along with the session.
+      if (useAuthStore.getState().isAuthenticated) getQueryClient().clear();
       useAuthStore.setState({
         user: null,
         profile: null,
@@ -271,6 +319,7 @@ export const useAuth = () =>
       isAuthenticated: state.isAuthenticated,
       isLoading: state.isLoading,
       error: state.error,
+      hasHydrated: state.hasHydrated,
     }))
   );
 

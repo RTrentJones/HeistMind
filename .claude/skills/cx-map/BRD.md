@@ -157,7 +157,8 @@ records why.
 
 - **US-G1** As a GM, I maintain the crew sheet (type, tier, rep, heat, wanted, abilities, claims,
   cohorts, coin/vault) and progression runs by the rules (rep→tier, heat→wanted cascade,
-  incarceration). [R-A1..A3, CV] ✅
+  incarceration). [R-A1..A3, CV] ✅ _(rep→tier was non-RAW until F92 — now weak hold → strong,
+  strong hold pays new Tier × 8 coin, Rep max 12 − turf. Crew upgrades remain open — F92 deferred.)_
 - **US-G2** As a GM, I run progress clocks (4/6/8/10/12) and filling one is announced as the
   table-visible milestone. [R-G1] ✅
 - **US-G3** As a GM, I track factions (tier, status −3..+3) against the crew. [R-G2] 🟡 _(war
@@ -182,7 +183,7 @@ records why.
 - **US-D1** As anyone in any server or DM (no account needed), I roll FitD dice — `/roll`,
   `/resist`, `/fortune`, `/dice` — with outcomes classified. [R-H2] ✅
 - **US-D2** As a player, signing into the web app with Discord IS the account link; `/character
-  use` then makes my sheet roll from Discord (`/roll action:` with autocomplete from my own
+use` then makes my sheet roll from Discord (`/roll action:` with autocomplete from my own
   ruleset). [R-H2.3] ✅ _(F68 fixed — the link is trigger-written at signup)_
 - **US-D3** As a GM, I link a channel, category, or the whole server to my campaign; rolls and
   sheet changes there persist to the campaign log, attributed and score-tagged. [R-H2.1, R-H2.2,
@@ -298,7 +299,7 @@ usable).
   before parsing; unsigned/forged → 401. Bot tokens are used only for command registration, never
   at runtime.
 - **N-SEC4 — Secrets** flow via Terraform TF_VARs / GitHub Actions secrets / `greenlight secrets
-  gather` (hidden input); never committed, never written to disk.
+gather` (hidden input); never committed, never written to disk.
 - **N-TEST1 — Gates**: lint + type-check + tests + build on every PR; per-package coverage floors
   are **upward-only ratchets** set from measured reality (engine 90, discord 90/70, core 100
   per-file rules, ui 40/62/44/40, web 15, database 36+); e2e (local Supabase) on every PR;
@@ -324,25 +325,25 @@ usable).
 
 **✅ Built · 🟡 Partial · ❌ Missing** — F-refs are the open work in `FINDINGS.md`.
 
-| Req | Capability | Status | Notes |
-| --- | --- | --- | --- |
-| R-A1..A4 | Crew sheet + progression | ✅ | `CrewSheet`, `crews.ts` rules, engine use-cases |
-| R-B1 | Character build | ✅ | wizard + editor; contacts step missing (F12) |
-| R-B2 | Stress/trauma/harm | 🟡 | live trackers ✅; web harm edits feedless (F65); harm/armor don't affect rolls (F43/F44) |
-| R-B3/B4 | Coin/stash; no per-score in build | ✅ | |
-| R-C1/C2 | Character + crew XP | ✅ | track + flat modes, gated advances |
-| R-C3 | XP changes logged | 🟡 | bot + flat-pool ✅; web `setXp` feedless (F70) |
-| R-D1..D5 | Scores + per-score loadout + history | ✅ | F45 closed (per-score load level) |
-| R-E1..E3 | Unified campaign log | ✅ | incl. `harm` kind + zero-dice display (audit P2/P3) |
-| R-F1..F3 | Roster / retire / status | ✅ | |
-| R-F4..F7 | Portable characters | ✅ | Phase 5 + 5b; 5c (cross-ruleset) open |
-| R-G1 | Clocks | ✅ | |
-| R-G2 | Factions | 🟡 | war state + faction clocks unsurfaced (F47) |
-| R-H1 | In-app dice | 🟡 | core loop ✅; teamwork (F10), flashbacks (F16), fortune types (F46), consequence capture (F52), downtime menu (F15) open |
-| R-H2 | Discord client | ✅ | all four phases; residue F65–F67 |
-| R-I1..I4 | Platform | ✅ | F68 (identity trigger) fixed |
-| N-SEC1 | RLS isolation | 🟡 | enforced in DB; **unproven by e2e (F75, S2)** |
-| N-A11Y | Accessibility | 🟡 | fixed cases; no CI enforcement (F76) |
+| Req      | Capability                           | Status | Notes                                                                                                                    |
+| -------- | ------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------ |
+| R-A1..A4 | Crew sheet + progression             | ✅     | `CrewSheet`, `crews.ts` rules, engine use-cases                                                                          |
+| R-B1     | Character build                      | ✅     | wizard + editor; contacts step missing (F12)                                                                             |
+| R-B2     | Stress/trauma/harm                   | 🟡     | live trackers ✅; web harm edits feedless (F65); harm/armor don't affect rolls (F43/F44)                                 |
+| R-B3/B4  | Coin/stash; no per-score in build    | ✅     |                                                                                                                          |
+| R-C1/C2  | Character + crew XP                  | ✅     | track + flat modes, gated advances                                                                                       |
+| R-C3     | XP changes logged                    | 🟡     | bot + flat-pool ✅; web `setXp` feedless (F70)                                                                           |
+| R-D1..D5 | Scores + per-score loadout + history | ✅     | F45 closed (per-score load level)                                                                                        |
+| R-E1..E3 | Unified campaign log                 | ✅     | incl. `harm` kind + zero-dice display (audit P2/P3)                                                                      |
+| R-F1..F3 | Roster / retire / status             | ✅     |                                                                                                                          |
+| R-F4..F7 | Portable characters                  | ✅     | Phase 5 + 5b; 5c (cross-ruleset) open                                                                                    |
+| R-G1     | Clocks                               | ✅     |                                                                                                                          |
+| R-G2     | Factions                             | 🟡     | war state + faction clocks unsurfaced (F47)                                                                              |
+| R-H1     | In-app dice                          | 🟡     | core loop ✅; teamwork (F10), flashbacks (F16), fortune types (F46), consequence capture (F52), downtime menu (F15) open |
+| R-H2     | Discord client                       | ✅     | all four phases; residue F65–F67                                                                                         |
+| R-I1..I4 | Platform                             | ✅     | F68 (identity trigger) fixed                                                                                             |
+| N-SEC1   | RLS isolation                        | 🟡     | enforced in DB; **unproven by e2e (F75, S2)**                                                                            |
+| N-A11Y   | Accessibility                        | 🟡     | fixed cases; no CI enforcement (F76)                                                                                     |
 
 ---
 

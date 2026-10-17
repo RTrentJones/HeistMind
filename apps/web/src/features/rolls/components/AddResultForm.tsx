@@ -53,37 +53,53 @@ export function AddResultForm({
 
   return (
     <Stack direction='column' gap='sm'>
-      <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-        {characters.length > 0 && (
-          <Select
-            label={t('components.addResult.character')}
-            value={characterId}
-            onChange={e => setCharacterId(e.target.value)}
-          >
-            <option value=''>{t('components.addResult.noCharacter')}</option>
-            {characters.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        )}
-        <Input
-          label={t('components.addResult.resultLabel')}
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder={t('components.addResult.placeholder')}
-        />
-        <Button
-          variant='outline'
-          size='sm'
-          loading={createRoll.isPending}
-          disabled={!text.trim()}
-          onClick={add}
+      {/* A real form: Enter submits (review item 11). */}
+      <form
+        onSubmit={e => {
+          e.preventDefault();
+          add();
+        }}
+      >
+        <Stack
+          direction='row'
+          gap='sm'
+          align='end'
+          className='flex-wrap [&>*]:min-w-0 [&>*]:max-w-full [&_select]:max-w-full'
         >
-          {t('components.addResult.add')}
-        </Button>
-      </Stack>
+          {characters.length > 0 && (
+            <Select
+              label={t('components.addResult.character')}
+              value={characterId}
+              onChange={e => setCharacterId(e.target.value)}
+            >
+              <option value=''>{t('components.addResult.noCharacter')}</option>
+              {characters.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {/* The note field takes the row's spare width (its placeholder used to truncate). */}
+          <div className='min-w-0 flex-1 basis-64'>
+            <Input
+              label={t('components.addResult.resultLabel')}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={t('components.addResult.placeholder')}
+            />
+          </div>
+          <Button
+            variant='outline'
+            size='sm'
+            loading={createRoll.isPending}
+            disabled={!text.trim()}
+            type='submit'
+          >
+            {t('components.addResult.add')}
+          </Button>
+        </Stack>
+      </form>
       {/* A failed write must not vanish silently — the entered text stays for a retry. */}
       {createRoll.isError && (
         <Alert variant='destructive' size='sm'>

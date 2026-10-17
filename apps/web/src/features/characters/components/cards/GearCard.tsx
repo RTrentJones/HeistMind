@@ -97,7 +97,9 @@ export function GearCard({
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='md'>
-        <Heading level='h3'>{t('components.characterSheet.gearAndCoin')}</Heading>
+        <Heading level='h3' as='h2'>
+          {t('components.characterSheet.gearAndCoin')}
+        </Heading>
         <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
           <Badge variant='gold'>
             {t('components.characterSheet.coin', { coins: data.coins ?? 0 })}

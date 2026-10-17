@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { Character } from '@heist-mind/core';
+import type { Character, RulesetContent } from '@heist-mind/core';
 import { Button, Stack, Text } from '@heist-mind/ui';
 import { useRetireCharacter } from '@/features/characters/data/mutations';
 import { useProfileNames } from '@/features/profiles/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { errorMessage } from '@/lib/query/result';
+import { useNotificationStore } from '@/shared/stores/notification-store';
 import { CharacterCard } from './CharacterCard';
+import { playbookLabel } from '../lib/playbook-label';
 
 /**
  * The campaign roster: every character attributed to its player, with status. Active characters lead;
@@ -19,18 +22,22 @@ export function CharacterRoster({
   gmId,
   userId,
   characters,
+  rulesetContent,
 }: {
   gameId: string;
   gmId: string | undefined;
   userId: string | undefined;
   characters: Character[];
+  /** The campaign's ruleset — resolves playbook ids to their display names. */
+  rulesetContent?: RulesetContent;
 }) {
   const { t } = useTranslation();
   // Resolve each character's owner (createdBy) → a player name for attribution.
   const owners = useProfileNames(characters.map(c => c.createdBy));
   const retireMut = useRetireCharacter(gameId);
-  const [busy, setBusy] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  // Busy is the mutation's own pending state (single fire-and-observe write, per the conventions).
+  const busy = retireMut.isPending ? (retireMut.variables?.character.id ?? null) : null;
 
   const ownerName = (id: string) => owners[id] || t('components.roster.unknownPlayer');
   const canManage = (ch: Character) =>
@@ -38,19 +45,22 @@ export function CharacterRoster({
 
   // Retire: status → retired, bank carried coin into stash (BitD), log a note. The mutation
   // invalidates the roster + log, so both refresh without an imperative reload.
-  const retire = async (ch: Character) => {
+  const retire = (ch: Character) => {
     if (!userId) return;
-    setBusy(ch.id);
-    try {
-      await retireMut.mutateAsync({
-        character: ch,
-        userId,
-        note: t('components.roster.retiredNote'),
-      });
-    } finally {
-      setBusy(null);
-      setConfirming(null);
-    }
+    retireMut.mutate(
+      { character: ch, userId, note: t('components.roster.retiredNote') },
+      {
+        // A failed retire used to be an unhandled rejection the player never saw (review item 6).
+        onError: err =>
+          useNotificationStore
+            .getState()
+            .error(
+              t('components.asyncState.retireFailed', { name: ch.name }),
+              errorMessage(err) || undefined
+            ),
+        onSettled: () => setConfirming(null),
+      }
+    );
   };
 
   const renderCard = (ch: Character) => (
@@ -58,7 +68,7 @@ export function CharacterRoster({
       key={ch.id}
       character={ch}
       meta={t('components.roster.meta', {
-        playbook: ch.playbookType,
+        playbook: playbookLabel(ch.playbookType, rulesetContent),
         xp: ch.experiencePoints,
         player: ownerName(ch.createdBy),
       })}
@@ -71,7 +81,7 @@ export function CharacterRoster({
                 variant='crimson'
                 size='sm'
                 loading={busy === ch.id}
-                onClick={() => void retire(ch)}
+                onClick={() => retire(ch)}
               >
                 {t('components.roster.confirmRetire')}
               </Button>

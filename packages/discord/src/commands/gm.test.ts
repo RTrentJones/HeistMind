@@ -95,21 +95,81 @@ describe('/crew', () => {
     expect(content(calls)).toContain('Wanted 3/4');
   });
 
-  it('tier spends the full Rep track; an unfilled track refuses BEFORE any write', async () => {
+  it('tier (strong hold, full Rep) pays new Tier × 8 coin: Tier +1, rep 0, hold weak, logged', async () => {
     const r = repos();
     const calls = await run(await handleCrew(ctx(r), guildCmd('crew', 'tier')));
-    expect(r.crews.update).toHaveBeenCalledWith('cr1', { tier: 2, rep: 1 });
+    // New Tier 2 costs 16: all 10 coin + 6 from the 8 in the vault.
+    expect(r.crews.update).toHaveBeenCalledWith('cr1', {
+      tier: 2,
+      rep: 0,
+      hold: 'weak',
+      coin: 0,
+      vault: 2,
+    });
+    expect(content(calls)).toContain('Paid **16 coin**');
     expect(content(calls)).toContain('Tier 2');
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({
+        kind: 'crew',
+        note: 'Advanced to Tier 2 — paid 16 coin; hold now weak',
+      })
+    );
+  });
 
+  it('tier with weak hold turns hold strong for free (Tier unchanged)', async () => {
+    const r = repos({
+      crews: {
+        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, hold: 'weak', coin: 0, vault: 0 })),
+        update: vi
+          .fn()
+          .mockImplementation((_id: string, patch: object) =>
+            Promise.resolve(ok({ ...CREW, ...patch }))
+          ),
+      },
+    });
+    const calls = await run(await handleCrew(ctx(r), guildCmd('crew', 'tier')));
+    expect(r.crews.update).toHaveBeenCalledWith('cr1', {
+      tier: 1,
+      rep: 0,
+      hold: 'strong',
+      coin: 0,
+      vault: 0,
+    });
+    expect(content(calls)).toContain('hold is now strong');
+  });
+
+  it('tier refuses BEFORE any write: unfilled Rep (turf-aware) and short coin', async () => {
     const grinding = repos({
       crews: {
-        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, rep: 5 })),
+        findByGame: vi
+          .fn()
+          .mockResolvedValue(ok({ ...CREW, rep: 5, claims: ['Turf', 'Turf (Docks)'] })),
         update: vi.fn(),
       },
     });
     const refusal = await run(await handleCrew(ctx(grinding), guildCmd('crew', 'tier')));
     expect(grinding.crews.update).not.toHaveBeenCalled();
-    expect(String(refusal[1]?.payload)).toContain('5/12');
+    expect(String(refusal[1]?.payload)).toContain('5/10');
+
+    const broke = repos({
+      crews: {
+        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, coin: 3, vault: 2 })),
+        update: vi.fn(),
+      },
+    });
+    const short = await run(await handleCrew(ctx(broke), guildCmd('crew', 'tier')));
+    expect(broke.crews.update).not.toHaveBeenCalled();
+    expect(String(short[1]?.payload)).toContain('16 coin');
+  });
+
+  it('heat accepts a negative amount (reduce heat) — never below 0, Wanted untouched', async () => {
+    const r = repos();
+    await run(
+      await handleCrew(ctx(r), guildCmd('crew', 'heat', [{ name: 'amount', type: 4, value: -3 }]))
+    );
+    expect(r.crews.update).toHaveBeenCalledWith('cr1', { heat: 5, wanted: 2 });
+    expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ note: '-3 heat' }));
   });
 
   it('incarcerate clears heat and drops a Wanted level; no crew sheet refuses', async () => {

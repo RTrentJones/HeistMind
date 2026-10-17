@@ -1,10 +1,14 @@
 'use client';
 
 import {
+  consumesVeteranSlot,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   usesXpTracks,
   xpTrackFull,
   PLAYBOOK_TRACK,
   type CharacterWithDetails,
+  type CrewContext,
 } from '@heist-mind/core';
 import { Badge, Button, Card, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -14,10 +18,13 @@ export function AdvancementOptions({
   character,
   onBuy,
   saving,
+  crew = null,
 }: {
   character: CharacterWithDetails;
   onBuy: (abilityId: string, cost: number, name: string) => void;
   saving: boolean;
+  /** The campaign's crew — its veteran grants open cross-playbook picks (null = no crew). */
+  crew?: CrewContext | null;
 }) {
   const { t } = useTranslation();
   const content = character.ruleset.content;
@@ -31,7 +38,23 @@ export function AdvancementOptions({
       </Text>
     );
   }
-  const buyable = content.specialAbilities.filter(a => !owned.includes(a.id));
+  // RAW (review #1): an advance takes an ability from YOUR playbook; another playbook's ability
+  // needs a free Veteran slot (your own Veteran, or a crew grant) — the same gate the repository
+  // runs. Other playbooks' abilities with no slot free are hidden behind a count, not offered.
+  const unowned = content.specialAbilities.filter(a => !owned.includes(a.id) && !a.retired);
+  const data = character.characterData;
+  const crossLocked = unowned.filter(
+    a =>
+      consumesVeteranSlot(content, data, a.id) && !isAbilityAdvanceable(content, data, a.id, crew)
+  );
+  const buyable = unowned
+    .filter(a => !crossLocked.includes(a))
+    // Your playbook's roster first, then any cross-playbook pick a free slot opens.
+    .sort(
+      (a, b) =>
+        Number(consumesVeteranSlot(content, data, a.id)) -
+        Number(consumesVeteranSlot(content, data, b.id))
+    );
   if (buyable.length === 0) {
     return (
       <Text variant='muted' size='sm'>
@@ -52,6 +75,11 @@ export function AdvancementOptions({
           ? t('components.characterEditor.optionTrack', { name: option.name })
           : t('components.characterEditor.optionFlat', { name: option.name, cost: option.cost })}
       </Text>
+      {crossLocked.length > 0 && (
+        <Text variant='muted' size='sm' data-testid='veteran-locked-count'>
+          {t('components.characterEditor.veteranLocked', { count: crossLocked.length })}
+        </Text>
+      )}
       {buyable.map(ability => {
         const prereqKnown =
           !!ability.prerequisite &&
@@ -76,6 +104,11 @@ export function AdvancementOptions({
             <Stack direction='row' justify='between' align='center' gap='sm'>
               <div>
                 <Text as='strong'>{ability.name}</Text>
+                {veteranGatewayFor(content, data, ability.id, crew) && (
+                  <Badge variant='outline' size='sm' className='ml-2'>
+                    {t('components.characterEditor.viaVeteran')}
+                  </Badge>
+                )}
                 {ability.tier != null && (
                   <Badge variant='gold' size='sm' className='ml-2'>
                     {t('components.characterEditor.tier', { tier: ability.tier })}

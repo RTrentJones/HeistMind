@@ -3,7 +3,10 @@ import { devtools, persist } from 'zustand/middleware';
 import {
   validateCharacter,
   abilityChoiceLimit,
+  consumesVeteranSlot,
   isAbilityUnlocked,
+  ownVeteranGrants,
+  veteranPicksUsed,
   pointBuySpent,
   usesActionRatings,
   actionDotsSpent,
@@ -206,7 +209,9 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
               ...state.draft,
               skills: { ...state.draft.skills, [actionId]: 0 },
             });
-            const next = Math.max(0, Math.min(value, cap, budget - others));
+            // RAW: the playbook's pre-placed dots are a floor — they can't be moved elsewhere.
+            const seed = Math.max(0, playbook?.skills?.[actionId] ?? 0);
+            const next = Math.max(seed, Math.min(value, cap, budget - others));
             const skills = { ...state.draft.skills, [actionId]: next };
             return {
               draft: {
@@ -224,28 +229,51 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
             const { specialAbilities, playbook } = state.draft;
             const has = specialAbilities.includes(abilityId);
             const limit = abilityChoiceLimit(content, playbook);
-            // Single-slot pick (BitD: exactly ONE ability at creation) → radio semantics. Clicking
-            // the current pick keeps it (a character must start with an ability — can't drop to zero);
-            // clicking a different UNLOCKED ability SWAPS to it rather than being a dead no-op. (Gaining
-            // ADDITIONAL abilities happens later via XP advancement in the editor, not this toggle.)
+            const cross = (data: CharacterData, id: string) =>
+              consumesVeteranSlot(content, data, id);
+            // After any change, drop cross-playbook picks the remaining Veteran slots no longer
+            // cover (e.g. Veteran itself was swapped out) — the draft never holds an illegal pick.
+            const prune = (next: string[]): string[] => {
+              let out = next;
+              const draftOf = (abilities: string[]) => ({
+                ...state.draft,
+                specialAbilities: abilities,
+              });
+              while (
+                veteranPicksUsed(content, draftOf(out)) > ownVeteranGrants(content, draftOf(out))
+              ) {
+                const lastCross = [...out].reverse().find(id => cross(draftOf(out), id));
+                if (!lastCross) break;
+                out = out.filter(id => id !== lastCross);
+              }
+              return out;
+            };
+            const write = (next: string[]) => ({
+              draft: { ...state.draft, specialAbilities: prune(next) },
+            });
+
+            // Cross-playbook pick (RAW: needs a free Veteran slot — take Veteran first).
+            if (cross(state.draft, abilityId)) {
+              if (has) return write(specialAbilities.filter(a => a !== abilityId));
+              if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
+              return write([...specialAbilities, abilityId]);
+            }
+            // Roster pick. Single-slot (BitD: exactly ONE ability at creation) → radio semantics:
+            // clicking the current pick keeps it (a character must start with an ability), clicking
+            // a different UNLOCKED roster ability SWAPS to it. Veteran's extra slot only takes a
+            // cross-playbook pick, so cross picks are kept alongside the swap.
+            const rosterPicks = specialAbilities.filter(a => !cross(state.draft, a));
             if (limit === 1) {
               if (has) return {};
               if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
-              return { draft: { ...state.draft, specialAbilities: [abilityId] } };
+              const crossPicks = specialAbilities.filter(a => cross(state.draft, a));
+              return write([abilityId, ...crossPicks]);
             }
-            // Multi-select: toggle off if held, else add up to the limit (tier/prereq gated).
-            if (has)
-              return {
-                draft: {
-                  ...state.draft,
-                  specialAbilities: specialAbilities.filter(a => a !== abilityId),
-                },
-              };
-            if (specialAbilities.length >= limit) return {};
+            // Multi-select: toggle off if held, else add up to the limit (prereq gated).
+            if (has) return write(specialAbilities.filter(a => a !== abilityId));
+            if (rosterPicks.length >= limit) return {};
             if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
-            return {
-              draft: { ...state.draft, specialAbilities: [...specialAbilities, abilityId] },
-            };
+            return write([...specialAbilities, abilityId]);
           }),
 
         setIdentityField: (field, value) =>

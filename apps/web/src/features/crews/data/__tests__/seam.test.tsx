@@ -7,7 +7,7 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { RepositoryError } from '@/lib/query/result';
 import { crewKeys, useCrewByGame } from '../queries';
-import { useUpdateCrew } from '../mutations';
+import { useApplyCrewHeat, useUpdateCrew } from '../mutations';
 
 // Representative seam tests: one read hook (Result unwrapping into RQ data/error state) and one
 // write hook (repo call + the game's crew invalidation), per the characters seam pattern.
@@ -113,5 +113,33 @@ describe('useUpdateCrew (write side)', () => {
       'not the GM'
     );
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('crew ops (review item 3 — fresh value per click)', () => {
+  it('useUpdateCrew writes the returned row into the cache before settling', async () => {
+    const update = vi.fn().mockResolvedValue({ success: true, data: { ...CREW, rep: 4 } });
+    mockRepos({ crews: { update } });
+    const qc = testQueryClient();
+    qc.setQueryData(crewKeys.byGame('g1'), CREW);
+    const { result } = renderHook(() => useUpdateCrew('g1'), { wrapper: createWrapper(qc) });
+    await result.current.mutateAsync({ id: 'cr1', patch: PATCH });
+    expect(qc.getQueryData<Crew>(crewKeys.byGame('g1'))?.rep).toBe(4);
+  });
+
+  it('useApplyCrewHeat computes the second click from the fresh cached heat', async () => {
+    const base = { ...CREW, gameId: 'g1', heat: 0, wanted: 0 } as unknown as Crew;
+    const update = vi.fn((_id: string, patch: Partial<Crew>) =>
+      Promise.resolve({ success: true, data: { ...base, ...patch } })
+    );
+    const create = vi.fn().mockResolvedValue({ success: true, data: { id: 'r1' } });
+    mockRepos({ crews: { update }, rolls: { create } });
+    const qc = testQueryClient();
+    qc.setQueryData(crewKeys.byGame('g1'), base);
+    const { result } = renderHook(() => useApplyCrewHeat('g1'), { wrapper: createWrapper(qc) });
+    const vars = { crew: base, userId: 'u1', amount: 1, logLabel: 'x', logNote: 'y' };
+    await result.current.mutateAsync(vars);
+    await result.current.mutateAsync(vars); // stale heat 0 passed again
+    expect(update).toHaveBeenLastCalledWith('cr1', expect.objectContaining({ heat: 2 }));
   });
 });

@@ -62,15 +62,15 @@ describe('Button Component', () => {
       const sizeVariants = [
         {
           props: { size: 'sm' as const, children: 'Small' },
-          expectedClasses: ['h-8', 'px-3', 'text-xs'],
+          expectedClasses: ['min-h-8', 'max-sm:min-h-11', 'px-3', 'text-xs'],
         },
         {
           props: { size: 'default' as const, children: 'Default' },
-          expectedClasses: ['h-10', 'px-4', 'py-2'],
+          expectedClasses: ['min-h-10', 'px-4', 'py-2'],
         },
         {
           props: { size: 'lg' as const, children: 'Large' },
-          expectedClasses: ['h-12', 'px-8', 'text-base'],
+          expectedClasses: ['min-h-12', 'px-8', 'text-base'],
         },
       ];
 
@@ -104,6 +104,21 @@ describe('Button Component', () => {
       expect(button).toBeDisabled();
       await user.click(button);
       expect(handleClick).not.toHaveBeenCalled();
+    });
+
+    // F93 — framer's `animate` used to write an inline `opacity: 1`, which outranks the
+    // `disabled:opacity-50` class, so disabled buttons rendered at full strength.
+    it('never pins an inline opacity, so disabled:opacity-50 applies', () => {
+      render(<Button disabled>Blocked</Button>);
+      const button = screen.getByRole('button');
+      expect(button.style.opacity).toBe('');
+      expect(button).toHaveClass('disabled:opacity-50', 'disabled:cursor-not-allowed');
+    });
+
+    it('lets long labels wrap instead of clipping', () => {
+      render(<Button>Add Brackwater to my rulesets</Button>);
+      expect(screen.getByRole('button')).toHaveClass('whitespace-normal');
+      expect(screen.getByRole('button')).not.toHaveClass('whitespace-nowrap');
     });
 
     it('shows loading state correctly', () => {

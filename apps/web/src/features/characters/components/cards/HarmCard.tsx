@@ -10,6 +10,7 @@ import {
 } from '@heist-mind/core';
 import { Badge, Button, HarmTracker, Heading, Input, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 
 const EMPTY_HARM: CharacterHarm = { lesser: [], moderate: [], severe: [] };
 
@@ -53,6 +54,11 @@ export function HarmCard({
   const bounds = harmBounds(content);
   const harm = data.harm ?? EMPTY_HARM;
   const trauma = data.trauma ?? [];
+  const harmLabels = {
+    severe: t('components.a11yLabels.harmLevel.severe'),
+    moderate: t('components.a11yLabels.harmLevel.moderate'),
+    lesser: t('components.a11yLabels.harmLevel.lesser'),
+  };
 
   if (!edit) {
     const takeQuick = (level: keyof CharacterHarm) => {
@@ -68,11 +74,16 @@ export function HarmCard({
           <HarmTracker
             harm={harm}
             bounds={bounds}
+            labels={harmLabels}
             {...(quick
               ? {
                   onClearEntry: quick.onClear,
                   clearLabel: (text: string) =>
                     t('components.characterSheet.clearHarmAria', { name: text }),
+                  // Clearing a wound takes two clicks (review item 5).
+                  confirmClearLabel: t('components.confirmAction.clearHarm'),
+                  confirmClearAriaLabel: (text: string) =>
+                    t('components.confirmAction.clearHarmAria', { name: text }),
                   disabled: quick.busy,
                 }
               : {})}
@@ -218,24 +229,27 @@ export function HarmCard({
       )}
 
       <Heading level='h3'>{t('components.characterEditor.harm')}</Heading>
-      <HarmTracker harm={harm} bounds={bounds} />
+      <HarmTracker harm={harm} bounds={bounds} labels={harmLabels} />
       {(['severe', 'moderate', 'lesser'] as const).map(level =>
         harm[level].length > 0 ? (
           <Stack key={level} direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Text size='sm' className='w-20 capitalize'>
-              {level}
+            <Text size='sm' className='w-20'>
+              {harmLabels[level]}
             </Text>
             {harm[level].map(h => (
               <Badge key={h} variant='stress-critical'>
                 {h}
-                <button
-                  type='button'
+                <ConfirmButton
+                  variant='ghost'
+                  size='icon-sm'
+                  className='ml-1 h-6 w-auto min-w-6 px-1'
                   aria-label={t('components.characterEditor.remove', { name: h })}
-                  className='ml-1.5 cursor-pointer'
-                  onClick={() => removeHarm(level, h)}
+                  confirmAriaLabel={t('components.confirmAction.clearHarmAria', { name: h })}
+                  confirmLabel={t('components.confirmAction.clearHarm')}
+                  onConfirm={() => removeHarm(level, h)}
                 >
                   ×
-                </button>
+                </ConfirmButton>
               </Badge>
             ))}
           </Stack>

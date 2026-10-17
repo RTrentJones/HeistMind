@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   Character,
   CharacterAdvancement,
+  CharacterData,
   CharacterLoadout,
   CharacterWithDetails,
   HarmLevel,
@@ -13,14 +14,19 @@ import type {
 } from '@heist-mind/core';
 import {
   advanceCharacter,
+  applyStress,
+  chooseTrauma,
   clearHarm,
   flashback,
   indulgeVice,
   markXp,
   retireCharacter,
+  saveCharacterBuild,
   saveLoadout,
+  setStress,
   takeHarm,
   type IndulgeViceOutcome,
+  type TraumaLogCopy,
 } from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
@@ -40,15 +46,31 @@ export function useUpdateCharacter(characterId: string) {
   });
 }
 
-/** Validated character-data write (stress, XP marks, downtime) — runs the ruleset validation path. */
-export function useUpdateCharacterData(characterId: string) {
+/**
+ * Set stress to an absolute value (the sheet's live tracker) via the ENGINE: it re-reads the live
+ * row and patches ONLY `stress`, so a stale sheet can't revert harm/XP another client wrote
+ * (review item 2). Awaits the refetch so the tracker re-enables on the fresh value.
+ */
+export function useSetCharacterStress(characterId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { userId: string; data: UpdateCharacterData }): Promise<Character> =>
-      getRepositories()
-        .characterManagement.updateCharacterWithValidation(characterId, vars.userId, vars.data)
-        .then(unwrap),
+    mutationFn: async (vars: { userId: string; stress: number }) =>
+      unwrap(await setStress(getRepositories(), { characterId, ...vars })),
     onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+  });
+}
+
+/**
+ * Save the build editor's draft via the ENGINE as a field-level PATCH onto the live row (only the
+ * fields changed vs `base`); a field also changed elsewhere fails with `CHARACTER_CONFLICT`.
+ * Invalidation runs on success AND conflict (settled) so the editor can rebase on fresh data.
+ */
+export function useSaveCharacterBuild(characterId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { userId: string; base: CharacterData; draft: CharacterData }) =>
+      unwrap(await saveCharacterBuild(getRepositories(), { characterId, ...vars })),
+    onSettled: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
   });
 }
 
@@ -67,9 +89,9 @@ export function useAdvanceCharacter(characterId: string, gameId: string | null) 
       logNote: string;
     }): Promise<Character> =>
       unwrap(await advanceCharacter(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -90,9 +112,9 @@ export function useAddExperience(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await markXp(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -114,9 +136,9 @@ export function useTakeHarm(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: (appliedLevel: HarmLevel | null) => string;
     }) => unwrap(await takeHarm(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -132,9 +154,9 @@ export function useClearHarm(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await clearHarm(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -152,10 +174,49 @@ export function useFlashback(gameId: string | null) {
       stress: number;
       logLabel: string;
       logNote: string;
+      traumaLog?: TraumaLogCopy;
     }) => unwrap(await flashback(getRepositories(), vars)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * Mark stress via the ENGINE (RAW: marking the LAST box is trauma — stress resets to 0 and a
+ * condition is owed; the overflow is logged to the campaign feed). Used for the sheet tracker's
+ * increases; clears stay a plain validated write.
+ */
+export function useApplyStress(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { userId: string; stress: number; traumaLog: TraumaLogCopy }) =>
+      unwrap(await applyStress(getRepositories(), { characterId, ...vars })),
+    // Awaited so `isPending` holds until the tracker has the fresh value — a second click on a
+    // stale cache would otherwise send a delta computed from the old stress.
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/** Resolve an owed trauma by marking the chosen condition (ENGINE chooseTrauma + feed note). */
+export function useChooseTrauma(characterId: string, gameId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      userId: string;
+      condition: string;
+      logNote: string;
+      retireNote: string;
+    }) => unwrap(await chooseTrauma(getRepositories(), { characterId, ...vars })),
+    // Awaited so `isPending` holds until the tracker has the fresh value — a second click on a
+    // stale cache would otherwise send a delta computed from the old stress.
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -175,9 +236,9 @@ export function useIndulgeVice(gameId: string | null) {
       zeroDice: boolean;
       logLabel: string;
     }): Promise<IndulgeViceOutcome> => unwrap(await indulgeVice(getRepositories(), vars)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -194,9 +255,9 @@ export function useSaveLoadout(gameId: string | null) {
       loadout: CharacterLoadout;
       logNote: string;
     }): Promise<Character> => unwrap(await saveLoadout(getRepositories(), vars)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -217,10 +278,10 @@ export function useRetireCharacter(gameId: string) {
           logNote: vars.note,
         })
       ),
-    onSuccess: () => {
+    onSuccess: async () => {
       // Retiring changes roster, My-Characters, and the sheet — invalidate the whole concept.
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }

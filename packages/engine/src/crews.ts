@@ -6,10 +6,12 @@ import {
   applyHeat,
   advanceTier,
   crewAdvanceReady,
+  crewHalvesTierCost,
   incarcerate,
   withCrewXp,
   type Crew,
   type Result,
+  type RulesetContent,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
 
@@ -25,7 +27,9 @@ interface CrewLogInput {
 async function updateAndLog(
   repos: DatabaseRepositories,
   input: CrewLogInput,
-  patch: Partial<Pick<Crew, 'heat' | 'wanted' | 'tier' | 'rep' | 'resources'>>
+  patch: Partial<
+    Pick<Crew, 'heat' | 'wanted' | 'tier' | 'rep' | 'hold' | 'coin' | 'vault' | 'resources'>
+  >
 ): Promise<Result<Crew>> {
   const updated = await repos.crews.update(input.crew.id, patch);
   if (!updated.success) return updated;
@@ -46,7 +50,11 @@ export interface ApplyCrewHeatInput extends CrewLogInput {
   amount: number;
 }
 
-/** Add heat (BitD: a full track marks a Wanted level) and log the change to the feed. */
+/**
+ * Change heat and log it. A positive amount adds heat (BitD: a full track marks a Wanted level); a
+ * negative amount reduces it (downtime "reduce heat", a cover operation…) — never below 0, and
+ * Wanted is untouched.
+ */
 export function applyCrewHeat(
   repos: DatabaseRepositories,
   input: ApplyCrewHeatInput
@@ -55,13 +63,45 @@ export function applyCrewHeat(
   return updateAndLog(repos, input, next);
 }
 
-/** Spend a full Rep track to advance the crew one Tier (BitD) and log it. */
+export interface AdvanceCrewTierInput extends Omit<CrewLogInput, 'logNote'> {
+  /** The campaign's ruleset content — read for Tier-cost effects (BitD crew "Patron" halves it). */
+  content?: Pick<RulesetContent, 'crew'> | null;
+  /** Log-note copy, told what happened (a hold development, or a paid Tier raise and its cost). */
+  logNote: (outcome: { kind: 'hold' | 'tier'; tier: number; cost: number }) => string;
+}
+
+/**
+ * Develop the crew from a FULL rep tracker, RAW (core `advanceTier`): weak hold → strong (rep 0, no
+ * coin); strong hold → pay new Tier × 8 coin (halved by Patron; treasury first, then vault) for
+ * Tier +1, rep 0, hold weak. Refusals come back as failures with the core code (`REP_NOT_FULL`,
+ * `TIER_MAX`, `INSUFFICIENT_COIN`) and nothing is written or logged.
+ */
 export function advanceCrewTier(
   repos: DatabaseRepositories,
-  input: CrewLogInput
+  input: AdvanceCrewTierInput
 ): Promise<Result<Crew>> {
-  const next = advanceTier({ tier: input.crew.tier, rep: input.crew.rep });
-  return updateAndLog(repos, input, next);
+  const { crew } = input;
+  const out = advanceTier({
+    tier: crew.tier,
+    rep: crew.rep,
+    hold: crew.hold,
+    coin: crew.coin,
+    vault: crew.vault,
+    claims: crew.claims,
+    halfCost: crewHalvesTierCost(input.content, crew.crewAbilities),
+  });
+  if (!out.ok) {
+    return Promise.resolve({
+      success: false,
+      error: { message: `Crew can't develop: ${out.code}`, code: out.code },
+    });
+  }
+  const logNote = input.logNote({ kind: out.kind, tier: out.tier, cost: out.cost });
+  return updateAndLog(
+    repos,
+    { ...input, logNote },
+    { tier: out.tier, rep: out.rep, hold: out.hold, coin: out.coin, vault: out.vault }
+  );
 }
 
 /** Apply an incarceration (BitD: −1 Wanted, clear Heat) and log it. */

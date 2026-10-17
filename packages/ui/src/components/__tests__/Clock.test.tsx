@@ -21,6 +21,11 @@ describe('Clock', () => {
     expect(screen.getByRole('img', { name: /Escape: 2 of 6 segments filled/ })).toBeInTheDocument();
   });
 
+  it('uses the localized accessible name the app passes', () => {
+    render(<Clock segments={6} filled={2} label='Escape' ariaLabel='Évasion : 2 sur 6' />);
+    expect(screen.getByRole('img', { name: 'Évasion : 2 sur 6' })).toBeInTheDocument();
+  });
+
   it('clamps an out-of-range fill for display', () => {
     const { container } = render(<Clock segments={4} filled={99} />);
     expect(container.querySelectorAll('path.fill-game-ember')).toHaveLength(4);
