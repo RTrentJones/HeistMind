@@ -87,9 +87,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
     playbook = success badge + brand ring; derived attribute 0 = outline, >0 = info.
   - `AppShell`: `min-h-dvh` flex column, `main` is `flex-1 pt-6 sm:pt-10`; `Breadcrumbs` take the
     route's own column width/padding; footer links are 44px tall on phones.
-- **still open (other owners):** `CharacterSheet` name is an h2 — with the brand no longer an h1
-  the sheet has no h1 (make the sheet title `as='h1'`); the sheet's centred "← Back to campaign".
-- **status:** fixed @PENDING (launch pixel round, 2026-10-17)
+- **still open:** axe `heading-order` (h1 → card-title h3, no h2) on /games, /games/new,
+  /characters(/new), /rulesets/new, the hub and now the sheets (whose title became the h1 here) —
+  Card titles should be h2; the sheet's centred "← Back to campaign" link.
+- **verify:** recapture of all 246 shots (`scratchpad/pixel-after/`): 0 color-contrast,
+  0 aria-required-children, 0 scrollable-region-focusable; signed-in header 61px sticky at 360
+  (sheet: 622px content between header and the 57px thumb bar at 360×740).
+- **status:** fixed @6abebae, 1b1f341, e21e625 (launch pixel round, 2026-10-17)
 
 ### F1 — Empty rating pips become invisible on card hover
 
