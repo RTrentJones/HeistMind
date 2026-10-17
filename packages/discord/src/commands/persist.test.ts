@@ -84,6 +84,7 @@ describe('/roll action — persisted (Phase 2)', () => {
     );
     expect(r.rolls.create).not.toHaveBeenCalled();
     expect(firstEmbed(calls).footer?.text).toContain('not a member');
+    expect(firstEmbed(calls).footer?.text).toContain('Ask the GM for an invite link');
   });
 
   it('active character crews a DIFFERENT campaign → wrongCampaign footer, nothing persisted', async () => {
