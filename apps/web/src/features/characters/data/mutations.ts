@@ -22,7 +22,6 @@ import {
   saveCharacterBuild,
   saveLoadout,
   setStress,
-  setXpMarks,
   takeHarm,
   type IndulgeViceOutcome,
 } from '@heist-mind/engine';
@@ -54,16 +53,6 @@ export function useSetCharacterStress(characterId: string) {
   return useMutation({
     mutationFn: async (vars: { userId: string; stress: number }) =>
       unwrap(await setStress(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
-  });
-}
-
-/** Set an XP track's marks (sheet pips) via the ENGINE — patches only `xp`, from the live row. */
-export function useSetXpMarks(characterId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (vars: { userId: string; track: string; marks: number }) =>
-      unwrap(await setXpMarks(getRepositories(), { characterId, ...vars })),
     onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
   });
 }

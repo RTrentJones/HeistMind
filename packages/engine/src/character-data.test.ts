@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Character, CharacterData, CharacterWithDetails, Result } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
 import { DEFAULT_RULESET } from '@heist-mind/shared';
-import { saveCharacterBuild, sameJson, setStress, setXpMarks } from './character-data';
+import { saveCharacterBuild, sameJson, setStress } from './character-data';
 import { indulgeVice } from './downtime';
 import { saveLoadout } from './loadout';
 
@@ -167,16 +167,6 @@ describe('setStress — the sheet tracker patches only stress, from the live row
       ok(null)
     );
     expect(update).not.toHaveBeenCalled();
-  });
-});
-
-describe('setXpMarks — computes the track from the live XP', () => {
-  it('a playbook mark keeps an attribute mark made concurrently, plus harm/stress', async () => {
-    const { r, written } = reposWithLive(character(LIVE_DATA));
-    await setXpMarks(r, { characterId: 'c1', userId: 'player', track: 'playbook', marks: 5 });
-    expect(written().xp).toEqual({ playbook: 5, attributes: { prowess: 2 } });
-    expect(written().harm).toEqual(LIVE_DATA.harm);
-    expect(written().stress).toBe(5);
   });
 });
 

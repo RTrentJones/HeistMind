@@ -62,7 +62,9 @@ test.describe('Player: join, create, roll, advance', () => {
     // --- Roll from the sheet's Dice panel: immediate outcome + persisted faces in the log. ---
     await expect(playerPage.getByRole('heading', { name: 'Dice' })).toBeVisible();
     await playerPage.getByRole('button', { name: 'Roll', exact: true }).click();
-    await expect(playerPage.getByText(/Critical!|Success|Partial|Bad outcome/)).toBeVisible({
+    await expect(
+      playerPage.getByTestId('roll-result').getByText(/Critical!|Success|Partial|Bad outcome/)
+    ).toBeVisible({
       timeout: 10_000,
     });
     await expect(playerPage.getByText(/\[\d/).first()).toBeVisible();

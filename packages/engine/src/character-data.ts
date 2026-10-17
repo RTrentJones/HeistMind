@@ -8,9 +8,6 @@
 // overwriting the other writer.
 import {
   clampStress,
-  markXpTrack,
-  xpMarks,
-  xpTrackSize,
   type Character,
   type CharacterData,
   type CharacterWithDetails,
@@ -79,34 +76,6 @@ export function setStress(
   return patchLive(repos, input.characterId, input.userId, fresh => {
     const next = clampStress(fresh.ruleset.content, input.stress);
     return next === (fresh.characterData?.stress ?? 0) ? null : { stress: next };
-  });
-}
-
-export interface SetXpMarksInput {
-  characterId: string;
-  userId: string;
-  /** `'playbook'` or an attribute id. */
-  track: string;
-  /** The ABSOLUTE number of marks the player clicked; clamped into [0, track size]. */
-  marks: number;
-}
-
-/**
- * Set an XP track's marks to an absolute value (the sheet's track pips), patching ONLY `xp` — and
- * computing the new track from the LIVE xp, so a concurrent mark on another track survives.
- * Resolves `data: null` when nothing changes. Unlogged bookkeeping (corrections); the logged
- * "mark XP" path is `markXp`.
- */
-export function setXpMarks(
-  repos: DatabaseRepositories,
-  input: SetXpMarksInput
-): Promise<Result<Character | null>> {
-  return patchLive(repos, input.characterId, input.userId, fresh => {
-    const content = fresh.ruleset.content;
-    const current = xpMarks(fresh.characterData, input.track);
-    const target = Math.max(0, Math.min(input.marks, xpTrackSize(content, input.track)));
-    if (target === current) return null;
-    return { xp: markXpTrack(content, fresh.characterData, input.track, target - current) };
   });
 }
 

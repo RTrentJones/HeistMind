@@ -48,7 +48,11 @@ test.describe('GM: harm + live stress', () => {
     // .last() — the sheet's quick take-harm row (F65) has a '+ Lesser' too; the editor's renders last.
     await gmPage.getByRole('button', { name: '+ Lesser' }).last().click();
     await gmPage.getByRole('button', { name: /Save stress, harm/ }).click();
-    await expect(gmPage.getByText('Battered').first()).toBeVisible({ timeout: 10_000 });
+    // Wait for the SAVED harm on the sheet face (its quick-clear box), not the editor's draft
+    // text — reloading before the save lands made this flaky under load.
+    await expect(gmPage.getByRole('button', { name: 'Clear harm: Battered' })).toBeVisible({
+      timeout: 15_000,
+    });
     await gmPage.reload();
     await expect(gmPage.getByText('Battered').first()).toBeVisible({ timeout: 15_000 }); // persisted
   });
