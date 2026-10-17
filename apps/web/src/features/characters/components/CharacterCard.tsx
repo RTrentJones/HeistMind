@@ -45,7 +45,7 @@ export function CharacterCard({
 }: CharacterCardProps) {
   const { t } = useTranslation();
   return (
-    <Card variant='character'>
+    <Card variant='character' data-testid='character-card'>
       <Stack direction='row' justify='between' align='center' className='flex-wrap'>
         <div>
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>

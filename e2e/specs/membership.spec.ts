@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures';
 import { getE2EEnv, hasAdminAuth, isLocalStack } from '../support/env';
 import { campaignWithJoinCode, joinViaLink } from '../support/campaign';
-import { buildCampaignBrackwater } from '../support/characters';
+import { buildCampaignBrackwater, characterCard } from '../support/characters';
 import { throwawayPage } from '../support/personas';
 import { uniqueName } from '../support/rulesets';
 import { mintAccessToken } from '../support/supabase-admin';
@@ -19,11 +19,9 @@ test.describe.configure({ timeout: 240_000 });
 /** The character opens from My Characters as a standalone sheet (ruleset still readable). */
 async function expectStandaloneAndOpens(page: Page, name: string) {
   await page.goto('/characters');
-  const card = page
-    .locator('div')
-    .filter({ has: page.getByRole('heading', { name, exact: true }) });
-  await expect(card.getByText('Standalone').first()).toBeVisible({ timeout: 15_000 });
-  await card.getByRole('link', { name: 'Open' }).last().click();
+  const card = characterCard(page, name);
+  await expect(card.getByText('Standalone', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await card.getByRole('link', { name: 'Open' }).click();
   await page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible({ timeout: 15_000 });
 }
