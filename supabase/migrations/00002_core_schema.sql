@@ -382,12 +382,12 @@ END $$;
 CREATE OR REPLACE FUNCTION is_game_master(user_id UUID, game_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
+  -- GM authority derives from games.created_by, never a game_players.role row (F89; 00022 is
+  -- the authoritative version — CI re-runs this file on every deploy, so keep it safe here too).
   RETURN EXISTS (
-    SELECT 1 FROM game_players
-    WHERE player_id = user_id
-    AND game_players.game_id = is_game_master.game_id
-    AND (role = 'game_master' OR role = 'co_gm')
-    AND status = 'active'
+    SELECT 1 FROM games g
+    WHERE g.id = is_game_master.game_id
+    AND g.created_by = is_game_master.user_id
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -398,13 +398,17 @@ RETURNS TEXT AS $$
 DECLARE
   user_role TEXT;
 BEGIN
+  IF EXISTS (SELECT 1 FROM games g WHERE g.id = get_user_game_role.game_id
+             AND g.created_by = get_user_game_role.user_id) THEN
+    RETURN 'game_master';
+  END IF;
   SELECT role INTO user_role
   FROM game_players
   WHERE player_id = user_id
   AND game_players.game_id = get_user_game_role.game_id
   AND status = 'active';
 
-  RETURN COALESCE(user_role, 'none');
+  RETURN CASE WHEN user_role = 'game_master' THEN 'player' ELSE COALESCE(user_role, 'none') END;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -562,7 +566,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('games_insert_policy')
                    AND tablename = 'games'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON games FOR INSERT WITH CHECK (created_by = auth.uid())',
+        EXECUTE format('CREATE POLICY %I ON games FOR INSERT TO authenticated WITH CHECK (created_by = auth.uid() AND EXISTS (SELECT 1 FROM rulesets r WHERE r.id = ruleset_id AND (r.created_by = auth.uid() OR r.is_public = true)))',
                        get_constraint_name('games_insert_policy'));
     END IF;
 
@@ -571,7 +575,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('games_update_policy')
                    AND tablename = 'games'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON games FOR UPDATE USING (created_by = auth.uid())',
+        EXECUTE format('CREATE POLICY %I ON games FOR UPDATE TO authenticated USING (created_by = auth.uid()) WITH CHECK (created_by = auth.uid())',
                        get_constraint_name('games_update_policy'));
     END IF;
 
@@ -605,7 +609,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('game_players_insert_policy')
                    AND tablename = 'game_players'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON game_players FOR INSERT WITH CHECK (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
+        EXECUTE format('CREATE POLICY %I ON game_players FOR INSERT TO authenticated WITH CHECK (is_game_master(auth.uid(), game_id) AND role <> ''game_master'')',
                        get_constraint_name('game_players_insert_policy'));
     END IF;
 
@@ -614,7 +618,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('game_players_update_policy')
                    AND tablename = 'game_players'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON game_players FOR UPDATE USING (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
+        EXECUTE format('CREATE POLICY %I ON game_players FOR UPDATE TO authenticated USING (is_game_master(auth.uid(), game_id)) WITH CHECK (is_game_master(auth.uid(), game_id) AND (role <> ''game_master'' OR player_id = auth.uid()))',
                        get_constraint_name('game_players_update_policy'));
     END IF;
 
@@ -623,7 +627,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('game_players_delete_policy')
                    AND tablename = 'game_players'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON game_players FOR DELETE USING (is_game_master(auth.uid(), game_id) OR player_id = auth.uid())',
+        EXECUTE format('CREATE POLICY %I ON game_players FOR DELETE TO authenticated USING (is_game_master(auth.uid(), game_id) OR (player_id = auth.uid() AND status <> ''removed''))',
                        get_constraint_name('game_players_delete_policy'));
     END IF;
 END $$;
@@ -657,7 +661,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('characters_update_policy')
                    AND tablename = 'characters'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON characters FOR UPDATE USING (created_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
+        EXECUTE format('CREATE POLICY %I ON characters FOR UPDATE TO authenticated USING (created_by = auth.uid() OR is_game_master(auth.uid(), game_id)) WITH CHECK (created_by = auth.uid() OR is_game_master(auth.uid(), game_id))',
                        get_constraint_name('characters_update_policy'));
     END IF;
 
@@ -700,7 +704,7 @@ BEGIN
                    WHERE policyname = get_constraint_name('invitations_update_policy')
                    AND tablename = 'invitations'
                    AND schemaname = current_schema()) THEN
-        EXECUTE format('CREATE POLICY %I ON invitations FOR UPDATE USING (invited_by = auth.uid() OR invited_player = auth.uid() OR is_game_master(auth.uid(), game_id))',
+        EXECUTE format('CREATE POLICY %I ON invitations FOR UPDATE TO authenticated USING (is_game_master(auth.uid(), game_id)) WITH CHECK (is_game_master(auth.uid(), game_id))',
                        get_constraint_name('invitations_update_policy'));
     END IF;
 

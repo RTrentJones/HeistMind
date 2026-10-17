@@ -13,9 +13,11 @@ BEGIN
   EXECUTE format('SET search_path TO %I, public, extensions', target_schema);
   RAISE NOTICE 'Widening rolls kind check (crew/faction/clock/xp) in schema: %', target_schema;
 
+  -- CI re-applies every migration on every deploy: use the FINAL kind list (00018) here so a re-run
+  -- never narrows the check below rows that already exist (it used to fail the deploy, F89).
   EXECUTE format('ALTER TABLE rolls DROP CONSTRAINT IF EXISTS %I', target_schema || '_rolls_kind_check');
   EXECUTE format(
-    'ALTER TABLE rolls ADD CONSTRAINT %I CHECK (kind IN (''action'', ''resistance'', ''fortune'', ''downtime'', ''loadout'', ''score'', ''crew'', ''faction'', ''clock'', ''xp'', ''note''))',
+    'ALTER TABLE rolls ADD CONSTRAINT %I CHECK (kind IN (''action'', ''resistance'', ''fortune'', ''downtime'', ''loadout'', ''score'', ''crew'', ''faction'', ''clock'', ''xp'', ''harm'', ''note''))',
     target_schema || '_rolls_kind_check');
 END
 $do$;

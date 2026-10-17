@@ -5,8 +5,20 @@ import type { Tables, TablesUpdate, Json } from '../supabase-types';
 import type { Profile, UpdateProfileData } from '@heist-mind/core';
 
 // Supabase type aliases for cleaner code
-type ProfileRow = Tables<'profiles'>;
 type ProfileUpdate = TablesUpdate<'profiles'>;
+
+/**
+ * The profile columns the API roles may read (migration 00022 column grants). `discord_id` and
+ * `preferences` are service-role only, so a signed-in client must never `select('*')` here — it
+ * would fail with `42501 permission denied`. Every profile read selects exactly this list.
+ */
+export const PROFILE_COLUMNS = 'id, username, avatar_url, created_at, updated_at' as const;
+
+/** The readable slice of a profile row (see PROFILE_COLUMNS). */
+export type ProfileRow = Pick<
+  Tables<'profiles'>,
+  'id' | 'username' | 'avatar_url' | 'created_at' | 'updated_at'
+>;
 
 /**
  * Transform Supabase profile row to domain Profile entity

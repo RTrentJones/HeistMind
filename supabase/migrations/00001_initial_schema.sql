@@ -108,7 +108,9 @@ BEGIN
   INSERT INTO public.profiles (id, username, avatar_url)
   VALUES (
     new.id,
-    COALESCE(new.raw_user_meta_data->>'username', new.email),
+    -- Never the email (F89: it was world-readable as the username). 00022 replaces this
+    -- function with the derived, collision-safe display name; CI re-runs this file first.
+    new.raw_user_meta_data->>'username',
     new.raw_user_meta_data->>'avatar_url'
   )
   ON CONFLICT (id) DO UPDATE SET

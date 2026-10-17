@@ -76,9 +76,11 @@ BEGIN
   -- Widen the roll-log "kind" check so loadout/score events can live in the existing append-only log
   -- (the campaign log is the roll log). `kind` stays TEXT — no column/type change, so this needs no
   -- supabase-types regen; only the new `scores` table does.
+  -- CI re-applies every migration on every deploy: use the FINAL kind list (00018) here so a re-run
+  -- never narrows the check below rows that already exist (it used to fail the deploy, F89).
   EXECUTE format('ALTER TABLE rolls DROP CONSTRAINT IF EXISTS %I', target_schema || '_rolls_kind_check');
   EXECUTE format(
-    'ALTER TABLE rolls ADD CONSTRAINT %I CHECK (kind IN (''action'', ''resistance'', ''fortune'', ''downtime'', ''loadout'', ''score''))',
+    'ALTER TABLE rolls ADD CONSTRAINT %I CHECK (kind IN (''action'', ''resistance'', ''fortune'', ''downtime'', ''loadout'', ''score'', ''crew'', ''faction'', ''clock'', ''xp'', ''harm'', ''note''))',
     target_schema || '_rolls_kind_check');
 END
 $do$;

@@ -17,7 +17,7 @@ import {
   toSupabaseGameUpdate,
 } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
-import { fromSupabaseProfile, stubProfile } from '../adapters/profile-adapter';
+import { fromSupabaseProfile, PROFILE_COLUMNS, stubProfile } from '../adapters/profile-adapter';
 import { fromSupabaseGamePlayer } from '../adapters/game-player-adapter';
 import { failFromError, NO_ROWS } from './result-helpers';
 import { SupabaseRepositoryBase } from './repository-base';
@@ -102,7 +102,7 @@ export class SupabaseGameRepository extends SupabaseRepositoryBase implements Ga
       // creator profile (public schema)
       const { data: creatorRow, error: cErr } = await this.client
         .from('profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('id', game.createdBy)
         .single();
       if (cErr && cErr.code !== NO_ROWS) return failFromError(cErr);
@@ -119,7 +119,7 @@ export class SupabaseGameRepository extends SupabaseRepositoryBase implements Ga
       if (playerIds.length > 0) {
         const { data: profileRows, error: prErr } = await this.client
           .from('profiles')
-          .select('*')
+          .select(PROFILE_COLUMNS)
           .in('id', playerIds);
         if (prErr) return failFromError(prErr);
         for (const pr of profileRows ?? []) profilesById.set(pr.id, fromSupabaseProfile(pr));

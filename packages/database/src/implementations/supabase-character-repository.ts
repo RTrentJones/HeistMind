@@ -16,7 +16,12 @@ import {
 } from '../adapters/character-adapter';
 import { fromSupabaseGame } from '../adapters/game-adapter';
 import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
-import { fromSupabaseProfile, toJson, stubProfile } from '../adapters/profile-adapter';
+import {
+  fromSupabaseProfile,
+  PROFILE_COLUMNS,
+  toJson,
+  stubProfile,
+} from '../adapters/profile-adapter';
 import { failFromError, NO_ROWS } from './result-helpers';
 import { SupabaseRepositoryBase } from './repository-base';
 import { newId } from './id';
@@ -93,7 +98,7 @@ export class SupabaseCharacterRepository
       // them rather than after.
       const creatorPromise = this.client
         .from('profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('id', character.createdBy)
         .single();
 
