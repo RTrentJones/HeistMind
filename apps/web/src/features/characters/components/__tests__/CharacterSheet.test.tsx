@@ -33,7 +33,7 @@ const updateCharData = {
 const noopMutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false };
 vi.mock('@/features/characters/data/mutations', () => ({
   useUpdateCharacter: () => noopMutation,
-  useUpdateCharacterData: () => updateCharData,
+  useSetCharacterStress: () => updateCharData,
   useAddExperience: () => noopMutation,
   useIndulgeVice: () => noopMutation,
   useTakeHarm: () => noopMutation,
@@ -46,7 +46,9 @@ vi.mock('@/features/auth/stores/auth-store', () => ({
 
 // Campaign-scoped panels and the editor are their own components with their own seams — out of
 // scope for the error-split behavior under test.
-vi.mock('@/features/rolls/components/RollPanel', () => ({ RollPanel: () => null }));
+vi.mock('@/features/rolls/components/RollPanel', () => ({
+  RollPanel: () => <div data-testid='roll-panel' />,
+}));
 vi.mock('@/features/rolls/components/RollLog', () => ({ RollLog: () => null }));
 vi.mock('../CharacterEditor', () => ({ CharacterEditor: () => null }));
 vi.mock('../LoadoutCard', () => ({ LoadoutCard: () => null }));
@@ -124,5 +126,38 @@ describe('CharacterSheet error split (F73)', () => {
 
     expect(screen.getByText('boom')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Silks' })).not.toBeInTheDocument();
+  });
+});
+
+describe('CharacterSheet writes + read-only gating', () => {
+  it('a stress click sends ONLY the clicked value (the engine patches the live row)', async () => {
+    renderSheet();
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 4' }));
+    expect(updateCharData.mutate).toHaveBeenCalledWith(
+      { userId: 'u1', stress: 4 },
+      expect.anything()
+    );
+  });
+
+  it("the character name is the page's h1", () => {
+    renderSheet();
+    expect(screen.getByRole('heading', { level: 1, name: 'Silks' })).toBeInTheDocument();
+  });
+
+  it('offers the Roll panel to the owner but not to a read-only viewer (pixel #3)', () => {
+    characterQuery.data = { ...character, gameId: 'g1', game: { createdBy: 'gm' } } as never;
+    const { unmount } = renderSheet();
+    expect(screen.getByTestId('roll-panel')).toBeInTheDocument();
+    unmount();
+
+    characterQuery.data = {
+      ...character,
+      gameId: 'g1',
+      game: { createdBy: 'gm' },
+      createdBy: 'someone-else',
+    } as never;
+    renderSheet();
+    expect(screen.queryByTestId('roll-panel')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set stress to 4' })).not.toBeInTheDocument();
   });
 });

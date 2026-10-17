@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   availableArmor,
-  clampStress,
   deriveAttributes,
   stressBounds,
   usesActionRatings,
@@ -36,8 +35,8 @@ import {
   useFlashback,
   useIndulgeVice,
   useTakeHarm,
+  useSetCharacterStress,
   useUpdateCharacter,
-  useUpdateCharacterData,
 } from '@/features/characters/data/mutations';
 import type { HarmLevel } from '@heist-mind/core';
 import { viceDicePool } from '@heist-mind/engine';
@@ -45,6 +44,8 @@ import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
+import { characterStatusLabel } from '@/features/rolls/lib/labels';
+import { playbookLabel } from '../lib/playbook-label';
 import { CharacterEditor } from './CharacterEditor';
 import { LoadoutCard } from './LoadoutCard';
 import { AttachToCampaign } from './AttachToCampaign';
@@ -64,7 +65,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   const activeScore = (scoresQuery.data ?? []).find(s => s.status === 'active') ?? null;
 
   const updateChar = useUpdateCharacter(characterId);
-  const updateCharData = useUpdateCharacterData(characterId);
+  const setStressMut = useSetCharacterStress(characterId);
   const addXpMut = useAddExperience(characterId, character?.gameId ?? null);
   const indulgeViceMut = useIndulgeVice(character?.gameId ?? null);
   const takeHarmMut = useTakeHarm(characterId, character?.gameId ?? null);
@@ -100,7 +101,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
   const busy =
     updateChar.isPending ||
-    updateCharData.isPending ||
+    setStressMut.isPending ||
     addXpMut.isPending ||
     indulgeViceMut.isPending ||
     takeHarmMut.isPending ||
@@ -135,15 +136,13 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   };
 
   // Live stress: clicking the tracker on the sheet face saves immediately (no "Edit build" needed).
+  // The ENGINE re-reads the live row and patches ONLY stress — spreading this (possibly stale)
+  // cached characterData used to revert harm/XP the GM wrote meanwhile (review item 2).
   const setStress = (v: number) => {
     const userId = user?.id;
     if (!userId || !character) return;
-    const characterData = {
-      ...character.characterData,
-      stress: clampStress(character.ruleset.content, v),
-    };
-    updateCharData.mutate(
-      { userId, data: { characterData } },
+    setStressMut.mutate(
+      { userId, stress: v },
       {
         onError: e => setSaveError(e.message ?? t('components.characterSheet.saveStressFailed')),
       }
@@ -291,6 +290,12 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       <ErrorDisplay
         title={t('components.characterSheet.loadError')}
         message={message ?? t('components.characterSheet.unknownError')}
+        {...(characterQuery.isError
+          ? {
+              onRetry: () => void characterQuery.refetch(),
+              retryText: t('components.asyncState.retry'),
+            }
+          : {})}
       />
     );
   }
@@ -327,16 +332,23 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       <Card variant='character'>
         <Stack direction='column' gap='md'>
           {editing ? (
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                saveName();
+              }}
+            >
             <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
               <Input
                 label={t('components.characterSheet.nameLabel')}
                 value={name}
                 onChange={e => setName(e.target.value)}
               />
-              <Button variant='ember' onClick={saveName} loading={busy}>
+              <Button type='submit' variant='ember' loading={busy}>
                 {t('common.actions.save')}
               </Button>
               <Button
+                type='button'
                 variant='ghost'
                 onClick={() => {
                   setEditing(false);
@@ -346,18 +358,18 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 {t('common.actions.cancel')}
               </Button>
             </Stack>
+            </form>
           ) : (
             <Stack direction='row' justify='between' align='center' className='flex-wrap'>
               <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                <Heading level='h2' variant='gradient'>
+                <Heading level='h2' as='h1' variant='gradient'>
                   {character.name}
                 </Heading>
                 {character.status !== 'active' && (
                   <Badge
                     variant={character.status === 'dead' ? 'stress-critical' : 'steel'}
-                    className='capitalize'
                   >
-                    {character.status}
+                    {characterStatusLabel(character.status, t)}
                   </Badge>
                 )}
               </Stack>
@@ -388,7 +400,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           )}
 
           <Text variant='muted'>
-            {character.ruleset.name} · {character.playbookType}
+            {character.ruleset.name} ·{' '}
+            {playbookLabel(character.playbookType, character.ruleset.content)}
           </Text>
 
           {/* Flat XP pool (point-buy rulesets); track rulesets show the Experience card below. */}
@@ -456,7 +469,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       {/* Abilities live in their own (non-animated) card so the expandable rules are clickable. */}
       <Card variant='outline' className='max-sm:order-2'>
         <Stack direction='column' gap='md'>
-          <Heading level='h3'>{t('components.characterSheet.specialAbilities')}</Heading>
+          <Heading level='h3' as='h2'>
+            {t('components.characterSheet.specialAbilities')}
+          </Heading>
           {abilities.length > 0 ? (
             <Stack direction='column' gap='xs'>
               {abilities.map(id => {
@@ -488,14 +503,16 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
 
       <Card variant='outline' id='sheet-condition' className='scroll-mt-4'>
         <Stack direction='column' gap='md'>
-          <Heading level='h3'>{t('components.characterSheet.condition')}</Heading>
+          <Heading level='h3' as='h2'>
+            {t('components.characterSheet.condition')}
+          </Heading>
           <StressTracker
             current={character.characterData?.stress ?? 0}
             max={stressBounds(character.ruleset.content).max}
-            interactive={canEdit}
+            interactive={canEdit && !busy}
             showNumbers
             size='lg'
-            onChange={v => void setStress(v)}
+            onChange={v => setStress(v)}
           />
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             {canEdit && (
@@ -584,10 +601,15 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       {character.gameId && (
         <Card variant='outline' id='sheet-dice' className='scroll-mt-4'>
           <Stack direction='column' gap='md'>
-            <Heading level='h3'>{t('components.characterSheet.dice')}</Heading>
+            <Heading level='h3' as='h2'>
+              {t('components.characterSheet.dice')}
+            </Heading>
             {/* F23 — resistance rolls the ATTRIBUTE (derived on action-rating rulesets, stored on
                 point-buy ones), matching the sheet's Attributes badges. */}
-            {derivedMode ? (
+            {/* Rolls are attributed to this character, so only someone who can edit it may roll
+                (owner or GM — the same canEdit gate as every other write; pixel review #3). A
+                read-only viewer still sees the shared log. */}
+            {!canEdit ? null : derivedMode ? (
               <RollPanel
                 gameId={character.gameId}
                 characterId={character.id}

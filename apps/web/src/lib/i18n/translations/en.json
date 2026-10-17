@@ -690,6 +690,9 @@
     },
     "starterCatalog": {
       "footnote": "Each loads as an editable copy you own; loading one again refreshes it to the latest bundle."
+    },
+    "characterConflict": {
+      "message": "This character changed elsewhere while you were editing, and the same fields were touched. Your draft was reloaded with the latest values — re-apply your change and save again."
     }
   },
   "auth": {

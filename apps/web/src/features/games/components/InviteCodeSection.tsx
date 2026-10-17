@@ -43,7 +43,9 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='sm'>
-        <Heading level='h3'>{t('inviteSection.title')}</Heading>
+        <Heading level='h3' as='h2'>
+          {t('inviteSection.title')}
+        </Heading>
         <Text variant='muted' size='sm'>
           {t('inviteSection.description')}
         </Text>

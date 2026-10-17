@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   Character,
   CharacterAdvancement,
+  CharacterData,
   CharacterLoadout,
   CharacterWithDetails,
   HarmLevel,
@@ -18,7 +19,10 @@ import {
   indulgeVice,
   markXp,
   retireCharacter,
+  saveCharacterBuild,
   saveLoadout,
+  setStress,
+  setXpMarks,
   takeHarm,
   type IndulgeViceOutcome,
 } from '@heist-mind/engine';
@@ -40,15 +44,41 @@ export function useUpdateCharacter(characterId: string) {
   });
 }
 
-/** Validated character-data write (stress, XP marks, downtime) — runs the ruleset validation path. */
-export function useUpdateCharacterData(characterId: string) {
+/**
+ * Set stress to an absolute value (the sheet's live tracker) via the ENGINE: it re-reads the live
+ * row and patches ONLY `stress`, so a stale sheet can't revert harm/XP another client wrote
+ * (review item 2). Awaits the refetch so the tracker re-enables on the fresh value.
+ */
+export function useSetCharacterStress(characterId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { userId: string; data: UpdateCharacterData }): Promise<Character> =>
-      getRepositories()
-        .characterManagement.updateCharacterWithValidation(characterId, vars.userId, vars.data)
-        .then(unwrap),
+    mutationFn: async (vars: { userId: string; stress: number }) =>
+      unwrap(await setStress(getRepositories(), { characterId, ...vars })),
     onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+  });
+}
+
+/** Set an XP track's marks (sheet pips) via the ENGINE — patches only `xp`, from the live row. */
+export function useSetXpMarks(characterId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { userId: string; track: string; marks: number }) =>
+      unwrap(await setXpMarks(getRepositories(), { characterId, ...vars })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
+  });
+}
+
+/**
+ * Save the build editor's draft via the ENGINE as a field-level PATCH onto the live row (only the
+ * fields changed vs `base`); a field also changed elsewhere fails with `CHARACTER_CONFLICT`.
+ * Invalidation runs on success AND conflict (settled) so the editor can rebase on fresh data.
+ */
+export function useSaveCharacterBuild(characterId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { userId: string; base: CharacterData; draft: CharacterData }) =>
+      unwrap(await saveCharacterBuild(getRepositories(), { characterId, ...vars })),
+    onSettled: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
   });
 }
 

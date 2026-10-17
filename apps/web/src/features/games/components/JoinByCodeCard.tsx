@@ -32,7 +32,9 @@ export function JoinByCodeCard() {
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='sm'>
-        <Heading level='h3'>{t('gamesList.joinTitle')}</Heading>
+        <Heading level='h3' as='h2'>
+          {t('gamesList.joinTitle')}
+        </Heading>
         <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
           <Input
             label={t('gamesList.codeLabel')}

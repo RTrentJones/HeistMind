@@ -362,6 +362,7 @@ describe('indulgeVice', () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
     const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
       characterManagement: { updateCharacterWithValidation: update },
       rolls: { create },
     });
@@ -383,6 +384,7 @@ describe('indulgeVice', () => {
     const create = vi.fn();
     const standalone = { ...CHARACTER, gameId: null } as CharacterWithDetails;
     const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(standalone)) },
       characterManagement: {
         updateCharacterWithValidation: vi.fn().mockResolvedValue(ok({} as Character)),
       },
@@ -408,7 +410,10 @@ describe('retireCharacter', () => {
     } as unknown as Character;
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
-    const r = repos({ characters: { update }, rolls: { create } });
+    const r = repos({
+      characters: { update, findById: vi.fn().mockResolvedValue(ok(withCoin)) },
+      rolls: { create },
+    });
     await retireCharacter(r, { character: withCoin, userId: 'u1', gameId: 'g1', logNote: 'gone' });
     expect(update).toHaveBeenCalledWith('c1', 'u1', {
       status: 'retired',
@@ -455,6 +460,7 @@ describe('saveLoadout', () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
     const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
       characterManagement: { updateCharacterWithValidation: update },
       rolls: { create },
     });
@@ -478,6 +484,7 @@ describe('saveLoadout', () => {
     const create = vi.fn();
     const standalone = { ...CHARACTER, gameId: null } as CharacterWithDetails;
     const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(standalone)) },
       characterManagement: { updateCharacterWithValidation: update },
       rolls: { create },
     });

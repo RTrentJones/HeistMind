@@ -54,7 +54,7 @@ export function XpTracksCard({
       label={label}
       current={xpMarks(data, id)}
       size={xpTrackSize(content, id)}
-      interactive={canEdit}
+      interactive={canEdit && !busy}
       disabled={busy}
       readyLabel={t('components.characterSheet.fullReadyToAdvance')}
       action={advanceCta}
@@ -67,7 +67,7 @@ export function XpTracksCard({
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='md'>
-        <Heading level='h3'>{t('components.characterSheet.experience')}</Heading>
+        <Heading level='h3' as='h2'>{t('components.characterSheet.experience')}</Heading>
         <Text variant='muted' size='sm'>
           {t('components.characterSheet.markXpPre')}
           <strong>{t('components.characterSheet.markXpBold')}</strong>
