@@ -29,7 +29,7 @@ export default function GamesPage() {
   return (
     <Container maxWidth='4xl' padding='lg'>
       <Stack direction='column' gap='lg'>
-        <Stack direction='row' justify='between' align='center'>
+        <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
           <Heading level='h1' variant='hero'>
             {t('gamesList.title')}
           </Heading>
@@ -41,10 +41,14 @@ export default function GamesPage() {
         <JoinByCodeCard />
 
         <ResourceList
-          isLoading={created.isLoading}
-          isError={created.isError}
+          isLoading={created.isLoading || joined.isLoading}
+          isError={created.isError || joined.isError}
           errorTitle={t('gamesList.loadError')}
-          errorText={created.error?.message ?? t('gamesList.loadFailed')}
+          errorText={created.error?.message ?? joined.error?.message ?? t('gamesList.loadFailed')}
+          onRetry={() => {
+            if (created.isError) void created.refetch();
+            if (joined.isError) void joined.refetch();
+          }}
           isEmpty={createdGames.length === 0 && joinedOnly.length === 0}
           emptyContent={<Text variant='muted'>{t('gamesList.empty')}</Text>}
         >

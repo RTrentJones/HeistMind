@@ -51,7 +51,13 @@ export async function indulgeVice(
   const { character, userId, results, zeroDice } = input;
   const owned = notOwner(character, userId);
   if (owned) return owned;
-  const stress = character.characterData?.stress ?? 0;
+  // Clear from the LIVE stress and patch only `stress` — the caller's `character` may be a stale
+  // cached snapshot (spreading its characterData reverted harm/XP written since: review item 2).
+  const found = await repos.characters.findWithDetails(character.id);
+  if (!found.success) return found as Result<never>;
+  if (!found.data) return { success: false, error: { message: 'Character not found' } };
+  const live = found.data.characterData;
+  const stress = live?.stress ?? 0;
   const cleared = viceStressCleared(results, { zeroDice });
   const overindulged = isOverindulged(cleared, stress);
   const nextStress = Math.max(0, stress - cleared);
@@ -59,7 +65,7 @@ export async function indulgeVice(
   const updated = await repos.characterManagement.updateCharacterWithValidation(
     character.id,
     userId,
-    { characterData: { ...character.characterData, stress: nextStress } }
+    { characterData: { ...live, stress: nextStress } }
   );
   if (!updated.success) return updated as Result<never>;
 

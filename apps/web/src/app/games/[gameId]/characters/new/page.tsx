@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, use } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { GameWithDetails } from '@heist-mind/core';
 import { Container, ErrorDisplay, LoadingSpinner } from '@heist-mind/ui';
@@ -8,7 +9,7 @@ import { SignInGate } from '@/features/auth/components/SignInGate';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useGameDetail } from '@/features/games/data/queries';
 import { CharacterCreationWizard } from '@/features/characters/components/CharacterCreationWizard';
-import { usePageTranslation } from '@/lib/i18n/hooks';
+import { usePageTranslation, useTranslation } from '@/lib/i18n/hooks';
 
 /** Wizard with the layout chosen by `?layout=rail` (default `single`). */
 function WizardWithLayout({ game, gameId }: { game: GameWithDetails; gameId: string }) {
@@ -20,6 +21,7 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
   const { gameId } = use(params);
   const { isAuthenticated } = useAuth();
   const { t } = usePageTranslation();
+  const { t: tAll } = useTranslation();
   const game = useGameDetail(gameId);
 
   if (!isAuthenticated) {
@@ -42,7 +44,14 @@ export default function NewCharacterPage({ params }: { params: Promise<{ gameId:
           message={
             game.isError ? (game.error?.message ?? t('game.loadFailed')) : t('game.notFound')
           }
-        />
+          {...(game.isError
+            ? { onRetry: () => void game.refetch(), retryText: tAll('components.asyncState.retry') }
+            : {})}
+        >
+          <Link href='/games' className='underline'>
+            {tAll('components.asyncState.backToCampaigns')}
+          </Link>
+        </ErrorDisplay>
       </Container>
     );
   }

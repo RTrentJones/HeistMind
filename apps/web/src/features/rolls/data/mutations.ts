@@ -35,14 +35,14 @@ export function useActionRoll(gameId: string) {
   return useMutation({
     mutationFn: async (input: Omit<ActionRollInput, 'gameId'>): Promise<Roll> =>
       unwrap(await rollAction(getRepositories(), { ...input, gameId })),
-    onSuccess: (_roll, input) => {
-      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async (_roll, input) => {
+      await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
       if (input.pushed === true && input.characterId !== undefined) {
-        void qc.invalidateQueries({ queryKey: characterKeys.detail(input.characterId) });
+        await qc.invalidateQueries({ queryKey: characterKeys.detail(input.characterId) });
       }
       // An assist may have charged the helper's stress (F10) — refresh their sheet too.
       if (input.assist !== undefined) {
-        void qc.invalidateQueries({ queryKey: characterKeys.detail(input.assist.characterId) });
+        await qc.invalidateQueries({ queryKey: characterKeys.detail(input.assist.characterId) });
       }
     },
   });
@@ -56,10 +56,10 @@ export function useResistanceRoll(gameId: string) {
       input: Omit<ResistanceRollInput, 'gameId'>
     ): Promise<{ roll: Roll; stress: number }> =>
       unwrap(await rollResistance(getRepositories(), { ...input, gameId })),
-    onSuccess: (_out, input) => {
-      void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async (_out, input) => {
+      await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
       if (input.characterId !== undefined) {
-        void qc.invalidateQueries({ queryKey: characterKeys.detail(input.characterId) });
+        await qc.invalidateQueries({ queryKey: characterKeys.detail(input.characterId) });
       }
     },
   });

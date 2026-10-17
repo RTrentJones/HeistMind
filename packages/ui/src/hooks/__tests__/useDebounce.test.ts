@@ -280,22 +280,25 @@ describe('useDebounce', () => {
     });
 
     it('should not update state after unmount', () => {
-      const { rerender, unmount } = renderHook(({ value }) => useDebounce(value, 500), {
+      const { result, rerender, unmount } = renderHook(({ value }) => useDebounce(value, 500), {
         initialProps: { value: 'initial' },
       });
 
       rerender({ value: 'changed' });
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
       // Unmount before timer completes
       unmount();
 
-      // Timer should not fire and update state
+      // The pending debounce timer was cleared — nothing can fire after unmount…
+      expect(vi.getTimerCount()).toBe(0);
       act(() => {
         vi.advanceTimersByTime(500);
       });
-
-      // This test verifies that no errors are thrown due to state updates after unmount
-      expect(true).toBe(true);
+      // …so the last rendered value is still the pre-debounce one and React logged nothing.
+      expect(result.current).toBe('initial');
+      expect(consoleError).not.toHaveBeenCalled();
     });
   });
 

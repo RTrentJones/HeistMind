@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import type { GameState } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useEndScore, useStartScore } from '@/features/scores/data/mutations';
+import { useUpdateGameState } from '@/features/games/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 
 /**
  * Score / operation lifecycle (campaign). A game runs as a series of scores — the per-operation unit
@@ -14,12 +17,22 @@ import { useTranslation } from '@/lib/i18n/hooks';
  */
 const RECENT_SCORES_SHOWN = 5;
 
-export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) {
+export function ScorePanel({
+  gameId,
+  isGm,
+  gameState,
+}: {
+  gameId: string;
+  isGm: boolean;
+  /** The campaign's lifecycle state — a draft/recruiting campaign goes active on its first score. */
+  gameState?: GameState;
+}) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const scoresQuery = useScoresByGame(gameId);
   const startScoreMut = useStartScore(gameId);
   const endScoreMut = useEndScore(gameId);
+  const updateGameState = useUpdateGameState(gameId);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +65,11 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
         logNote: t('components.scorePanel.startedNote'),
       });
       setName('');
+      // Starting play makes the campaign active — the hub no longer says "Draft" mid-score
+      // (pixel review #12). Best-effort: the score already started either way.
+      if (gameState === 'draft' || gameState === 'recruiting') {
+        updateGameState.mutate({ userId, state: 'active' });
+      }
     } catch (e) {
       setError(
         `${t('components.scorePanel.startFailed')}${
@@ -104,30 +122,43 @@ export function ScorePanel({ gameId, isGm }: { gameId: string; isGm: boolean }) 
           <Badge variant='ember'>{t('components.scorePanel.inProgress')}</Badge>
           <Text as='strong'>{active.name ?? t('components.scorePanel.unnamed')}</Text>
           {isGm && (
-            <Button variant='outline' size='sm' disabled={busy} onClick={() => void endScore()}>
+            // Ending a score is final (per-score loadouts reset) — two-click armed confirm.
+            <ConfirmButton
+              confirmLabel={t('components.confirmAction.endScore')}
+              disabled={busy}
+              loading={endScoreMut.isPending}
+              onConfirm={() => void endScore()}
+            >
               {t('components.scorePanel.endScore')}
-            </Button>
+            </ConfirmButton>
           )}
         </Stack>
       ) : (
-        <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-          <Text variant='muted' size='sm'>
-            {t('components.scorePanel.none')}
-          </Text>
-          {isGm && (
-            <>
-              <Input
-                label={t('components.scorePanel.nameLabel')}
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder={t('components.scorePanel.namePlaceholder')}
-              />
-              <Button variant='ember' size='sm' disabled={busy} onClick={() => void startScore()}>
-                {t('components.scorePanel.startScore')}
-              </Button>
-            </>
-          )}
-        </Stack>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            void startScore();
+          }}
+        >
+          <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+            <Text variant='muted' size='sm'>
+              {t('components.scorePanel.none')}
+            </Text>
+            {isGm && (
+              <>
+                <Input
+                  label={t('components.scorePanel.nameLabel')}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder={t('components.scorePanel.namePlaceholder')}
+                />
+                <Button type='submit' variant='ember' size='sm' disabled={busy}>
+                  {t('components.scorePanel.startScore')}
+                </Button>
+              </>
+            )}
+          </Stack>
+        </form>
       )}
 
       {recent.length > 0 && (

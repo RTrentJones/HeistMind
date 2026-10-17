@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import '@/lib/i18n';
 import { ResourceList } from '../ResourceList';
 
 describe('ResourceList', () => {
@@ -28,6 +29,26 @@ describe('ResourceList', () => {
     );
     expect(screen.getByText(/boom/)).toBeInTheDocument();
     expect(screen.queryByText('row')).not.toBeInTheDocument();
+  });
+
+  it('offers a retry wired to the refetch on failure', () => {
+    const onRetry = vi.fn();
+    render(
+      <ResourceList
+        isLoading={false}
+        isError
+        errorTitle='Load failed.'
+        errorText='boom'
+        isEmpty={false}
+        emptyContent='nothing here'
+        onRetry={onRetry}
+      >
+        <div>row</div>
+      </ResourceList>
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Load failed.');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('shows the empty content when empty', () => {

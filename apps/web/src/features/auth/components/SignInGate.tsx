@@ -32,7 +32,7 @@ export function SignInGate({ prompt, heading }: { prompt: string; heading?: stri
     <Container maxWidth='md' padding='lg'>
       <Card variant='outline'>
         <Stack direction='column' gap='md' align='start'>
-          <Heading level='h2' variant='primary'>
+          <Heading level='h2' as='h1' variant='primary'>
             {heading ?? t('auth.gate.heading')}
           </Heading>
           <Text variant='muted'>{prompt}</Text>

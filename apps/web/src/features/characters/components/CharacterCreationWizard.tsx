@@ -100,7 +100,7 @@ export function CharacterCreationWizard({
 
   const stepHeading = (
     <div>
-      <Heading level='h2' variant='primary'>
+      <Heading level='h2' as='h1' variant='primary'>
         {step.name}
       </Heading>
       {step.description && <Text className='text-foreground-muted'>{step.description}</Text>}

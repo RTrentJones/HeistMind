@@ -186,7 +186,10 @@ export async function retireCharacter(
 ): Promise<Result<Roll>> {
   const owned = notOwner(input.character, input.userId);
   if (owned) return owned;
-  const data = input.character.characterData;
+  // Bank coin from the LIVE row (the passed character may be a stale roster snapshot).
+  const found = await repos.characters.findById(input.character.id);
+  if (!found.success) return found as Result<never>;
+  const data = found.data?.characterData ?? input.character.characterData;
   const coins = data?.coins ?? 0;
   const updated = await repos.characters.update(input.character.id, input.userId, {
     status: 'retired',

@@ -12,3 +12,17 @@ export function notOwner(
   if (character.createdBy === userId) return null;
   return { success: false, error: { message: 'Not the character owner', code: 'NOT_OWNER' } };
 }
+
+/**
+ * Null when the actor owns the character OR is its campaign's GM — mirrors the characters RLS
+ * write policy (owner OR the game's creator), so the sheet-face edits a GM may make on the web
+ * (stress, XP marks, the build editor) behave identically through the engine.
+ */
+export function notOwnerOrGm(
+  character: Pick<Character, 'createdBy'> & { game?: { createdBy: string } | null },
+  userId: string
+): Result<never> | null {
+  if (character.createdBy === userId) return null;
+  if (character.game?.createdBy === userId) return null;
+  return notOwner(character, userId);
+}

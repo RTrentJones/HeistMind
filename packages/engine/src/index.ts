@@ -33,6 +33,8 @@ export type {
   RetireCharacterInput,
   TakeHarmInput,
 } from './characters';
+export { saveCharacterBuild, sameJson, setStress } from './character-data';
+export type { SaveCharacterBuildInput, SetStressInput } from './character-data';
 export { rollAction, rollResistance } from './rolls';
 export type { ActionRollInput, ResistanceRollInput } from './rolls';
 export { flashback, indulgeVice, viceDicePool } from './downtime';

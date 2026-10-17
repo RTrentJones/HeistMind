@@ -109,7 +109,7 @@ function CallbackShell({ error = null }: { error?: string | null }) {
                 />
 
                 <Stack gap='sm' align='center'>
-                  <Heading level='h2' variant='primary'>
+                  <Heading level='h2' as='h1' variant='primary'>
                     {t('callback.completingTitle')}
                   </Heading>
 

@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
 import { rollPool } from '@/features/rolls/lib/roll-pool';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { OUTCOME_KEY, OUTCOME_VARIANT } from '@/features/rolls/lib/labels';
 
 interface ActionOption {
   name: string;
@@ -14,20 +15,6 @@ interface ActionOption {
 }
 
 type RollMode = 'action' | 'fortune' | 'resistance';
-
-const OUTCOME_VARIANT = {
-  crit: 'gold',
-  success: 'success',
-  partial: 'warning',
-  bad: 'stress-critical',
-} as const;
-// Static (non-template) keys so they stay in the typed TranslationKey union.
-const OUTCOME_KEY = {
-  crit: 'components.rollPanel.outcome.crit',
-  success: 'components.rollPanel.outcome.success',
-  partial: 'components.rollPanel.outcome.partial',
-  bad: 'components.rollPanel.outcome.bad',
-} as const;
 
 // BitD fallback attributes for resistance when a ruleset has no action ratings to draw on. Without
 // per-attribute ratings here they roll at 0 (2d take-lowest) — the harshest, most desperate resist.
@@ -226,7 +213,14 @@ export function RollPanel({
           {error}
         </Alert>
       )}
-      <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+      {/* min-w-0/max-w-full on every child + full-width selects: long option labels shrink
+          inside the card instead of running past it at 360px (pixel review #7). */}
+      <Stack
+        direction='row'
+        gap='sm'
+        align='center'
+        className='flex-wrap [&>*]:min-w-0 [&>*]:max-w-full [&_select]:max-w-full'
+      >
         {modes.length > 1 && (
           <Select
             aria-label={t('components.rollPanel.modeLabel')}
@@ -429,25 +423,29 @@ export function RollPanel({
           {t('components.rollPanel.harmLesserHint')}
         </Text>
       )}
-      {last && (
-        <Stack direction='row' gap='sm' align='center'>
-          {last.stress != null ? (
-            last.stress < 0 ? (
-              // A critical resistance CLEARS 1 stress (negative delta) — celebrate, don't alarm.
-              <Badge variant='gold'>{t('components.rollPanel.stressCleared')}</Badge>
+      {/* Always-mounted polite live region: the newest result is ANNOUNCED to screen-reader users
+          (the app's core action had no feedback for them — review item 8). */}
+      <div role='status' aria-live='polite' aria-atomic='true' data-testid='roll-result'>
+        {last && (
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+            {last.stress != null ? (
+              last.stress < 0 ? (
+                // A critical resistance CLEARS 1 stress (negative delta) — celebrate, don't alarm.
+                <Badge variant='gold'>{t('components.rollPanel.stressCleared')}</Badge>
+              ) : (
+                <Badge variant='stress-critical'>
+                  {t('components.rollPanel.stressTaken', { count: last.stress })}
+                </Badge>
+              )
             ) : (
-              <Badge variant='stress-critical'>
-                {t('components.rollPanel.stressTaken', { count: last.stress })}
-              </Badge>
-            )
-          ) : (
-            <Badge variant={OUTCOME_VARIANT[last.outcome]}>{t(OUTCOME_KEY[last.outcome])}</Badge>
-          )}
-          <Text variant='muted' size='sm'>
-            [{last.results.join(', ')}]
-          </Text>
-        </Stack>
-      )}
+              <Badge variant={OUTCOME_VARIANT[last.outcome]}>{t(OUTCOME_KEY[last.outcome])}</Badge>
+            )}
+            <Text variant='muted' size='sm'>
+              [{last.results.join(', ')}]
+            </Text>
+          </Stack>
+        )}
+      </div>
       {/* F46 — the tiered fortune reading, phrased the way the SRD grades fortune results. */}
       {last?.kind === 'fortune' && (
         <Text variant='muted' size='sm'>

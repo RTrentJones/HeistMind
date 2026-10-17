@@ -73,7 +73,7 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='sm'>
-        <Heading level='h3'>
+        <Heading level='h3' as='h2'>
           {inCampaign
             ? t('components.attachToCampaign.moveTitle')
             : t('components.attachToCampaign.title')}

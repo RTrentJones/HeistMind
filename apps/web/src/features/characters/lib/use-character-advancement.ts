@@ -9,9 +9,18 @@ import {
   type CrewContext,
 } from '@heist-mind/core';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useAdvanceCharacter, useUpdateCharacterData } from '@/features/characters/data/mutations';
-import { errorMessage } from '@/lib/query/result';
+import { useAdvanceCharacter, useSaveCharacterBuild } from '@/features/characters/data/mutations';
+import { errorCode, errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
+
+/**
+ * What a build save came back with. `saved`/`conflict` carry the character data the editor should
+ * rebase its draft onto: the merged row after a save, or the fresh live row after a conflict.
+ */
+export type SaveBuildOutcome =
+  | { status: 'saved'; data: CharacterData }
+  | { status: 'conflict' }
+  | { status: 'failed' };
 
 /**
  * The character write-side for the editor surfaces: validity-gated build saves (client-side
@@ -22,25 +31,39 @@ import { useTranslation } from '@/lib/i18n/hooks';
 export function useCharacterAdvancement(character: CharacterWithDetails, crew: CrewContext | null) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const updateData = useUpdateCharacterData(character.id);
+  const saveBuildMut = useSaveCharacterBuild(character.id);
   const advanceChar = useAdvanceCharacter(character.id, character.gameId);
   const [error, setError] = useState<string | null>(null);
-  const saving = updateData.isPending || advanceChar.isPending;
+  const saving = saveBuildMut.isPending || advanceChar.isPending;
   const content = character.ruleset.content;
 
-  const saveBuild = async (draft: CharacterData) => {
+  /**
+   * Save the draft as a PATCH of the fields changed vs `base` (the snapshot the draft started
+   * from), merged server-side onto the live row — so harm/XP/stress written elsewhere since the
+   * draft was taken are never reverted (review item 2).
+   */
+  const saveBuild = async (
+    base: CharacterData,
+    draft: CharacterData
+  ): Promise<SaveBuildOutcome> => {
     const userId = user?.id;
-    if (!userId) return;
+    if (!userId) return { status: 'failed' };
     const result = validateCharacter(content, draft, { mode: 'live', crew });
     if (!result.isValid) {
       setError(result.errors.map(e => e.message).join(' '));
-      return;
+      return { status: 'failed' };
     }
     try {
-      await updateData.mutateAsync({ userId, data: { characterData: draft } });
+      const saved = await saveBuildMut.mutateAsync({ userId, base, draft });
       setError(null);
+      return { status: 'saved', data: saved?.characterData ?? draft };
     } catch (err) {
+      if (errorCode(err) === 'CHARACTER_CONFLICT') {
+        setError(t('components.characterConflict.message'));
+        return { status: 'conflict' };
+      }
       setError(errorMessage(err) || t('components.characterEditor.saveFailed'));
+      return { status: 'failed' };
     }
   };
 

@@ -136,6 +136,11 @@ bootstrap).
   `/games/new`, `/rulesets`, `/rulesets/new`, `/games/[gameId]`, character sheets.
 - **CX intent:** logged out, communicate the two ways to use HeistMind above the fold (not "play the
   whole game here"); signed in, open to _your_ campaigns + characters, not marketing.
+- **Dashboard states (F91, 2026-10-17):** each section (campaigns / characters / recent activity)
+  has its own loading → error (Try again) → empty; Recent activity stays loading across the
+  per-campaign fan-out, so "No recent activity" never flashes before the rows (the F79 residue);
+  activity titles and playbooks are translated/named.
+- _Last verified:_ 2026-10-17 (F91)
 
 ### `/auth/callback` — OAuth return
 
@@ -229,6 +234,17 @@ bootstrap).
       `crew` events._
       Entries are **grouped by score** (newest operation first, under its name); with no scores in
       play it falls back to a flat feed.
+- **Launch-review round (F91, 2026-10-17):** the roster, invite codes and campaign log each show
+  **loading → error (Try again) → empty** distinctly (no "No characters yet"/"No codes" flash, no
+  vanishing log); "game not found" links back to `/games`; the GM state select is translated and
+  toasts on failure, and a draft/recruiting campaign flips to **Active** when its first score
+  starts. **Two-click confirms** on remove clock, delete faction and end score. Clock/faction/crew
+  steppers stay disabled until the written row is in the cache (no swallowed double-click ticks).
+  Join-code, new clock, add faction, start score and "What happened" are real forms (Enter
+  submits). The log translates outcomes / kinds / position-effect, puts the meta line
+  (who · dice · position/effect) on its own line without a leading "·", and roster playbooks show
+  their names, not ids.
+- _Last verified:_ 2026-10-17 (F91 launch-review frontend round)
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -314,8 +330,16 @@ bootstrap).
   editor's ability list offers your playbook's roster plus other playbooks' abilities only while a
   Veteran slot is free (own Veteran, or a crew grant — F62); the rest are summarised as "N more
   need a free Veteran slot". The repository refuses the same picks server-side.
+- **Launch-review round (F91, 2026-10-17):** the character name is the page **h1**; status and
+  playbook render translated/named. Stress clicks and XP marks patch only their own field onto the
+  LIVE row (engine `setStress` / `markXp`); the build editor saves a **field-level patch** of what
+  the player changed and refuses with a "changed elsewhere — reloaded" notice if a field it edited
+  also changed underneath (no more reverting the GM's harm/XP). Trackers disable while a save is in
+  flight. Clearing a wound (sheet box or editor ×) is a **two-click confirm**. The **Roll panel is
+  only offered to someone who can edit** the character (owner/GM); read-only viewers keep the log.
+  The newest roll result is announced via an `aria-live` region; the rename row is a real form.
 - _Last verified:_ 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire banner,
-  Veteran-gated advances; previously 2026-07-11 backlog rounds E+F)
+  Veteran-gated advances; F91 launch-review frontend round; previously 2026-07-11 backlog rounds E+F)
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -338,6 +362,10 @@ bootstrap).
   (was the ambiguous "Load … starter" — F36).
 - **Nav:** → `/rulesets/new`, → `/games/new?ruleset=<id>`.
 - `LoadDefaultRulesetButton` remains as a thin back-compat wrapper over `LoadBuiltinRulesetButton`.
+- **360px (F91, 2026-10-17):** the long "Add … to my rulesets" CTAs and the list rows wrap instead
+  of running past a phone viewport (also on `/characters/new` and `/games/new`, which embed the
+  catalog); a load error offers Try again. `e2e/specs/mobile-overflow.spec.ts` checks every route at 360px.
+- _Last verified:_ 2026-10-17 (F91)
 
 ### `/rulesets/new` — Upload ruleset
 
@@ -451,6 +479,9 @@ bootstrap).
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
   (`errors.notFoundTitle` / `errors.backHome`) — server-rendered with a 404 status and `noindex`
   since F90 (it used to SSR the raw loading key under the stale root title).
+- **F91 (2026-10-17):** the 404, route-error, sign-in-gate, auth-callback and wizard-step titles
+  are the page's `<h1>` (kept visually at h2 size); in-page `Alert`s use `role="alert"` only for
+  errors (hints/warnings are polite `status`).
 
 _Last verified:_ 2026-10-17 (F90: every route server-renders real content — i18n gate removed,
 post-mount auth-store hydration, per-page metadata + OG card, robots/sitemap, security headers,

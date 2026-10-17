@@ -22,10 +22,15 @@ export async function saveLoadout(
   if (owned) return owned;
   // The VALIDATED write path: load legality (level caps, item load) is server-enforced like every
   // other character write — a non-web client can't persist an over-limit loadout.
+  // Patch ONLY the loadout onto the LIVE row — the caller's `character` may be a stale cached
+  // snapshot, and spreading its characterData would revert harm/XP/stress written since.
+  const found = await repos.characters.findWithDetails(character.id);
+  if (!found.success) return found as Result<never>;
+  if (!found.data) return { success: false, error: { message: 'Character not found' } };
   const updated = await repos.characterManagement.updateCharacterWithValidation(
     character.id,
     userId,
-    { characterData: { ...character.characterData, loadout: input.loadout } }
+    { characterData: { ...found.data.characterData, loadout: input.loadout } }
   );
   if (!updated.success) return updated;
   if (character.gameId !== null) {

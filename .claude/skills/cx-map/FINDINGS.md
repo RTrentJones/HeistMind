@@ -725,6 +725,42 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
 
+### F91 — Launch-review frontend round: lost updates, swallowed ticks, silent failures, a11y + 360px
+
+- **severity:** S2 · **type:** CX-flaw / bug cluster · **(2026-10-17, frontend launch review items
+  2/3/5/6/7/8/9/10/11/16 + pixel review #3/#7/#12/#13)**
+- **lost updates (item 2):** the build editor and the sheet's stress tracker wrote the WHOLE
+  `characterData` blob from a cached snapshot, so a dirty editor draft or a stale sheet silently
+  reverted harm/XP/stress written by the GM or the bot. **Fix:** engine `setStress` / `setXpMarks` /
+  `saveCharacterBuild` re-read the live row and patch only the fields they own; the build save is a
+  field-level diff vs the draft's base with an optimistic-concurrency guard (`CHARACTER_CONFLICT`
+  when an edited field also changed underneath → the editor rebases on the live row). `saveLoadout`,
+  `indulgeVice`, `retireCharacter` merge onto the live row too. No migration (a DB `updated_at` CAS
+  was rejected: timestamptz µs vs JS ms makes the compare unreliable). Trackers disable while saving.
+- **swallowed ticks (item 3):** mutations now `setQueryData` the returned row and AWAIT the
+  invalidation before settling; tick / faction status / tier / crew ops compute from the freshest
+  cached row.
+- **destructive one-clicks (item 5):** delete faction, remove clock, end score and clearing a harm
+  entry (sheet wound box + editor ×) are two-click armed confirms (`shared/components/ConfirmButton`,
+  `HarmTracker confirmClearLabel`).
+- **silent failures / empty flashes (items 6/7):** `QueryLoading` / `QueryError` (retry wired to
+  `refetch`) on RollLog, dashboard sections (activity loading covers the campaign fan-out — the F79
+  residue), hub roster, invite codes, /games joined errors, every page ErrorDisplay; retire toasts on
+  failure; the hub state select toasts on failure; "game not found" links back to /games. e2e
+  `dashboard.spec` now fails if the activity empty state is ever attached on the way to the rows.
+- **raw enums + a11y (items 8/10/16, pixel #12/#13):** outcomes, kinds, position/effect, game state,
+  character status and playbook names render translated/named; the newest roll result is in an
+  `aria-live` region; the sheet name is the page h1 (gates/404/wizard promote theirs); Alert is
+  `role=alert` only for errors; Clock/HarmTracker/Alert take localized labels; the campaign-log meta
+  line has no stray leading "·".
+- **forms + layout (items 9/11, pixel #3/#7):** single-purpose inputs are real `<form>`s (Enter
+  submits); starter-catalog CTAs wrap at 360px (new `mobile-overflow.spec` checks every route at
+  360px); dice-card controls shrink inside their card; the sheet's Roll panel is gated on `canEdit`.
+  A draft/recruiting campaign flips to active when its first score starts.
+- **not in this round (owned elsewhere):** header brand-not-h1 / `<nav>` landmark / mobile header
+  collapse (design-system round), Button `whitespace-nowrap` base.
+- **status:** fixed (this branch).
+
 ### F88 — Account deletion 500s for any user who owns a campaign (trigger breaks the auth cascade)
 
 _(Landed on `development` numbered F84, which this branch had already assigned to the
