@@ -11,10 +11,17 @@ import { useComponentValidation, validateButtonProps } from '../lib/validation';
 const buttonVariants = cva(
   [
     // Base styles
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium',
+    // Labels wrap instead of clipping when a long (or translated) label meets a narrow card (F93):
+    // `min-h-*` sizes below keep the height floor while letting a wrapped label grow the button.
+    'inline-flex items-center justify-center gap-2 text-center rounded-lg text-sm font-medium',
+    'whitespace-normal break-words',
     'transition-all duration-200 ease-in-out',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background-primary',
-    'disabled:pointer-events-none disabled:opacity-50',
+    // F93 — the motion `animate` below must NOT write an inline opacity (inline styles beat this
+    // class), otherwise disabled buttons render at full strength. Disabled = 50% + not-allowed.
+    // `cursor-not-allowed` needs pointer events, so hover/active feedback is suppressed instead.
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none',
+    'disabled:hover:shadow-none disabled:active:scale-100 disabled:before:hidden',
     'relative overflow-hidden group',
     // Enhanced interaction states
     'active:scale-[0.98] hover:shadow-lg',
@@ -99,10 +106,11 @@ const buttonVariants = cva(
         ],
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-12 rounded-lg px-8 text-base',
-        xl: 'h-14 rounded-xl px-10 text-lg',
+        default: 'min-h-10 px-4 py-2',
+        // 32px on desktop density; a 44px tap target on phones (F93 / WCAG 2.5.5).
+        sm: 'min-h-8 max-sm:min-h-11 rounded-md px-3 py-1 text-xs',
+        lg: 'min-h-12 rounded-lg px-8 py-2 text-base',
+        xl: 'min-h-14 rounded-xl px-10 py-2 text-lg',
         icon: 'h-10 w-10',
         'icon-sm': 'h-8 w-8',
         'icon-lg': 'h-12 w-12',
@@ -176,7 +184,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const isDisabled = disabled || loading;
     const { ids } = useComponentIds('btn');
     const { loadingContent } = useLoadingState(loading, loadingText, announceStateChanges);
-    const { motionProps, getInitialAnimation, getTransitionDuration } = useInteractiveMotion(
+    const { motionProps, prefersReducedMotion, getTransitionDuration } = useInteractiveMotion(
       isDisabled,
       loading
     );
@@ -230,8 +238,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ref={ref}
           className={cn(buttonVariants({ variant, size, loading, className }))}
           disabled={isDisabled}
-          initial={getInitialAnimation()}
-          animate={{ opacity: 1, y: 0 }}
+          // Animate `y` only — an animated `opacity: 1` lands as an INLINE style that outranks
+          // `disabled:opacity-50`, so disabled buttons looked enabled (F93).
+          initial={prefersReducedMotion ? false : { y: 10 }}
+          animate={{ y: 0 }}
           transition={{ duration: getTransitionDuration(), ease: 'easeOut' }}
           {...motionProps}
           {...ariaAttributes}

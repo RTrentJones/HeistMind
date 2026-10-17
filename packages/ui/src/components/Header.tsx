@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../lib/utils';
-import { MotionDiv } from '../lib/motion-safe';
-import { useReducedMotion } from '../lib/accessibility';
 
 const headerVariants = cva(
   [
@@ -138,27 +136,26 @@ const Header = React.forwardRef<HTMLDivElement, HeaderProps>(
     },
     ref
   ) => {
-    const prefersReducedMotion = useReducedMotion();
-
     const ariaAttributes = {
-      'aria-label': ariaLabel || 'Main navigation',
+      // A banner is not a navigation: only label it when the caller names it (the nav inside
+      // carries its own label).
+      'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledBy,
       'aria-describedby': ariaDescribedBy,
       role: role || 'banner',
     };
 
+    // No entrance animation (F93): the old fade/slide-in (`opacity 0, y -10`) was a layout
+    // shift on every route and painted the header translucent before hydration.
     return (
-      <MotionDiv
+      <div
         ref={ref}
         className={cn(headerVariants({ variant, size, sticky, shadow }), className)}
-        initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
         {...ariaAttributes}
         {...rest}
       >
         <div className={cn(headerContentVariants({ maxWidth }))}>{children}</div>
-      </MotionDiv>
+      </div>
     );
   }
 );

@@ -66,6 +66,7 @@ export function AttributesStep() {
             </div>
           )}
           <ActionDots
+            name={attr.name}
             current={values[attr.id] ?? 0}
             max={Math.max(attr.maxValue ?? 4, 1)}
             interactive

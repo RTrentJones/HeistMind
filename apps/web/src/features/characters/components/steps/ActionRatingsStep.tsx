@@ -53,7 +53,12 @@ export function ActionRatingsStep() {
               {attr.name}
             </span>
             {/* Just the number — the header beside it already names the attribute (F53). */}
-            <Badge variant='ember' size='sm' data-testid={`derived-${attr.id}`}>
+            {/* F93 — 0 is neutral, not a red alarm; a rated attribute gets the info tint. */}
+            <Badge
+              variant={(derived[attr.id] ?? 0) > 0 ? 'info' : 'outline'}
+              size='sm'
+              data-testid={`derived-${attr.id}`}
+            >
               {derived[attr.id] ?? 0}
             </Badge>
           </div>
@@ -67,6 +72,7 @@ export function ActionRatingsStep() {
               <div key={action} className='flex items-center justify-between gap-3'>
                 <span style={{ fontSize: 14 }}>{action}</span>
                 <ActionDots
+                  name={action}
                   current={draft.skills?.[action] ?? 0}
                   max={cap}
                   interactive

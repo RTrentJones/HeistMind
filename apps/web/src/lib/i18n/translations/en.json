@@ -65,6 +65,11 @@
       "acceptableUse": "Acceptable use",
       "licenses": "Licenses",
       "copyright": "© {{year}} Trent Jones (HeistMind)"
+    },
+    "chrome": {
+      "navLabel": "Main",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
     }
   },
   "components": {
@@ -690,6 +695,12 @@
     },
     "starterCatalog": {
       "footnote": "Each loads as an editable copy you own; loading one again refreshes it to the latest bundle."
+    },
+    "wizardSteps": {
+      "current": "current step",
+      "complete": "complete",
+      "incomplete": "needs attention",
+      "upcoming": "not started"
     }
   },
   "auth": {
