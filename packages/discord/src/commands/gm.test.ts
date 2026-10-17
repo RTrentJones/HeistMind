@@ -110,7 +110,10 @@ describe('/crew', () => {
     expect(content(calls)).toContain('Tier 2');
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',
-      expect.objectContaining({ kind: 'crew', note: 'Advanced to Tier 2 — paid 16 coin; hold now weak' })
+      expect.objectContaining({
+        kind: 'crew',
+        note: 'Advanced to Tier 2 — paid 16 coin; hold now weak',
+      })
     );
   });
 

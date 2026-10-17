@@ -140,9 +140,7 @@ describe('applyStress', () => {
       characterManagement: { updateCharacterWithValidation: update },
     });
     expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 0 })).toEqual(ok(null));
-    expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: -3 })).toEqual(
-      ok(null)
-    );
+    expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: -3 })).toEqual(ok(null));
     expect(update).not.toHaveBeenCalled();
   });
 

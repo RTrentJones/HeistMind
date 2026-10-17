@@ -188,7 +188,8 @@ export class SupabaseCharacterManagementRepository
         : result.errors.filter(
             e => !(e.code === 'ABILITY_LOCKED' && e.field.startsWith('specialAbilities.'))
           );
-      if (errors.length > 0) return failValidation<Character>({ ...result, errors, isValid: false });
+      if (errors.length > 0)
+        return failValidation<Character>({ ...result, errors, isValid: false });
 
       return this.characters.update(characterId, userId, data);
     });
@@ -314,11 +315,7 @@ export class SupabaseCharacterManagementRepository
       const post = validateCharacter(ruleset, next, { mode: 'live', crew });
       const held = new Set(character.characterData.specialAbilities);
       const postErrors = post.errors.filter(
-        e =>
-          !(
-            e.code === 'ABILITY_LOCKED' &&
-            held.has(e.field.replace(/^specialAbilities\./, ''))
-          )
+        e => !(e.code === 'ABILITY_LOCKED' && held.has(e.field.replace(/^specialAbilities\./, '')))
       );
       if (postErrors.length > 0)
         return failValidation<Character>({ ...post, errors: postErrors, isValid: false });

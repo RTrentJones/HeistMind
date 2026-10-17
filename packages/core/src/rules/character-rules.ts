@@ -312,10 +312,20 @@ export function applyStressChange(
     const marked = (data.trauma ?? []).length;
     const traumaPending = Math.min(owed + 1, Math.max(0, traumaMax - marked));
     const next = { ...data, traumaPending };
-    return { stress: 0, traumaPending, trauma: true, mustRetire: mustRetireFromTrauma(ruleset, next) };
+    return {
+      stress: 0,
+      traumaPending,
+      trauma: true,
+      mustRetire: mustRetireFromTrauma(ruleset, next),
+    };
   }
   const stress = Math.max(0, Math.min(current + delta, max));
-  return { stress, traumaPending: owed, trauma: false, mustRetire: mustRetireFromTrauma(ruleset, data) };
+  return {
+    stress,
+    traumaPending: owed,
+    trauma: false,
+    mustRetire: mustRetireFromTrauma(ruleset, data),
+  };
 }
 
 /**
@@ -411,9 +421,7 @@ export function collectAbilityEffects(
   ruleset: RulesetContent,
   data: CharacterData,
   crew?: CrewContext | null
-): Required<
-  Pick<AbilityEffects, 'actionMax' | 'bonusActionDots' | 'veteran' | 'stressBoxes'>
-> & {
+): Required<Pick<AbilityEffects, 'actionMax' | 'bonusActionDots' | 'veteran' | 'stressBoxes'>> & {
   loadCapacity: Partial<Record<LoadLevel, number>>;
   /** Union of the actions bonus dots are restricted to (empty = any action). */
   bonusActionDotsIn: string[];
@@ -475,7 +483,8 @@ export function effectiveLoadLimit(
  */
 export function advancementCost(ruleset: RulesetContent, adv: CharacterAdvancement): number | null {
   const options = ruleset.advancement?.advancementOptions ?? [];
-  const option = options.find(o => o.id === adv.target) ?? options.find(o => o.category === adv.type);
+  const option =
+    options.find(o => o.id === adv.target) ?? options.find(o => o.category === adv.type);
   const cost = option?.cost;
   if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0) return null;
   return Math.floor(cost);

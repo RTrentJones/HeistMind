@@ -101,9 +101,7 @@ export interface ResistanceRollInput {
 export async function rollResistance(
   repos: DatabaseRepositories,
   input: ResistanceRollInput
-): Promise<
-  Result<{ roll: Roll; stress: number; trauma: boolean; mustRetire: boolean }>
-> {
+): Promise<Result<{ roll: Roll; stress: number; trauma: boolean; mustRetire: boolean }>> {
   const stress = resistanceStress(input.results, { zeroDice: input.zeroDice });
   const created = await repos.rolls.create(input.userId, {
     gameId: input.gameId,

@@ -104,8 +104,7 @@ export const copy = {
   scoreLogStart: 'Score started',
   scoreLogEnd: 'Score ended',
   noCrew: 'No crew sheet yet — create it on the web app first.',
-  crewTierNotReady: (rep: number, needed: number) =>
-    `The Rep track isn’t full — ${rep}/${needed}.`,
+  crewTierNotReady: (rep: number, needed: number) => `The Rep track isn’t full — ${rep}/${needed}.`,
   crewTierMax: 'The crew is already at the top Tier.',
   crewTierCoinShort: (needed: number, have: number) =>
     `Raising the Tier costs **${needed} coin** (new Tier × 8) — the crew has ${have} (coin + vault).`,
@@ -130,7 +129,8 @@ export const copy = {
   assistNote: 'Assisted (+1d) — the helper marks 1 stress',
   resistNeedsAttribute: (names: string[]) =>
     `Name the attribute you resist with — one of ${names.join(', ')}. Your sheet sets the dice.`,
-  resistNeedsDice: 'Give the dice to roll (`dice:`), or set an active character in a linked channel.',
+  resistNeedsDice:
+    'Give the dice to roll (`dice:`), or set an active character in a linked channel.',
   crewLogIncarcerate: 'Incarceration — Wanted down one, Heat cleared',
   harmPenaltyNote: '−1d (moderate harm)',
   severeHarmNote: 'Severe harm — acting needs help or a push',

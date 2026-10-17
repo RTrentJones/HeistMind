@@ -136,7 +136,9 @@ describe('/resist — persisted (Phase 2)', () => {
   // so the rating is 1; rating a second of its actions makes it 2.
   const secondAction = DEFAULT_RULESET.attributes[0]!.skills[1]!;
   const ratedTwo = () =>
-    characterOnDefaultRuleset({ characterData: { skills: { [RATED_ACTION]: 2, [secondAction]: 1 } } });
+    characterOnDefaultRuleset({
+      characterData: { skills: { [RATED_ACTION]: 2, [secondAction]: 1 } },
+    });
 
   it('linked + member + in-campaign → rolls the SHEET rating (typed dice ignored) and marks stress', async () => {
     const r = repos();

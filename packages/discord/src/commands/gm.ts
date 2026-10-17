@@ -150,13 +150,15 @@ export const handleCrew: CommandHandler = (ctx, interaction) => {
         content,
         userId: gm.actorId,
         logLabel: crewName,
-        logNote: o =>
-          o.kind === 'hold' ? copy.crewLogHold : copy.crewLogTierPaid(o.tier, o.cost),
+        logNote: o => (o.kind === 'hold' ? copy.crewLogHold : copy.crewLogTierPaid(o.tier, o.cost)),
       });
       if (!out.success) {
         const code = out.error.code;
         if (code === 'REP_NOT_FULL')
-          return failEphemeral(followUp, copy.crewTierNotReady(crew.rep, repToDevelop(crew.claims)));
+          return failEphemeral(
+            followUp,
+            copy.crewTierNotReady(crew.rep, repToDevelop(crew.claims))
+          );
         if (code === 'TIER_MAX') return failEphemeral(followUp, copy.crewTierMax);
         if (code === 'INSUFFICIENT_COIN') {
           const preview = advanceTier({
@@ -176,7 +178,10 @@ export const handleCrew: CommandHandler = (ctx, interaction) => {
       const what =
         out.data.hold === 'strong' && out.data.tier === crew.tier
           ? copy.crewHoldStrengthened
-          : copy.crewTierRaised(out.data.tier, crew.coin + crew.vault - out.data.coin - out.data.vault);
+          : copy.crewTierRaised(
+              out.data.tier,
+              crew.coin + crew.vault - out.data.coin - out.data.vault
+            );
       return followUp.editOriginal({
         content: `**${crewName}** — ${what} ${copy.statusCrewLine(out.data.tier, out.data.heat, out.data.wanted)}.`,
       });

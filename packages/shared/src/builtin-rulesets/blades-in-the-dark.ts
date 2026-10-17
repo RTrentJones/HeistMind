@@ -678,8 +678,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       id: 'spider-connected',
       name: 'Connected',
       description: 'Better acquire-asset and reduce-heat results.',
-      rules:
-        'During downtime, you get +1 result level when you acquire an asset or reduce heat.',
+      rules: 'During downtime, you get +1 result level when you acquire an asset or reduce heat.',
       category: 'spider',
     },
     {

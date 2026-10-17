@@ -96,7 +96,8 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
       const names = (character.ruleset.content.attributes ?? []).map(a => a.name);
       return failEphemeral(followUp, copy.resistNeedsAttribute(names));
     }
-    const rating = deriveAttributes(character.ruleset.content, character.characterData)[attr.id] ?? 0;
+    const rating =
+      deriveAttributes(character.ruleset.content, character.characterData)[attr.id] ?? 0;
     const roll = rollPool(ctx, rating);
 
     const logged = await rollResistance(repos, {

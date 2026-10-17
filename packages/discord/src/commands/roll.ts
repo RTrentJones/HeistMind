@@ -74,10 +74,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
   const assist = booleanOption(interaction, 'assist') === true;
   if (push && bargain) return inline(reply(copy.rollPushAndBargain, { ephemeral: true }));
   const extra = (push || bargain ? 1 : 0) + (assist ? 1 : 0);
-  const moveNotes = [
-    ...(bargain ? [copy.bargainNote] : []),
-    ...(assist ? [copy.assistNote] : []),
-  ];
+  const moveNotes = [...(bargain ? [copy.bargainNote] : []), ...(assist ? [copy.assistNote] : [])];
 
   const finish = (title: string, pool: number, rollNote?: string) => {
     const { count, zeroDice } = diceForRating(pool);
