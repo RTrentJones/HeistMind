@@ -16,6 +16,7 @@
 export {
   advanceCharacter,
   applyStress,
+  chooseTrauma,
   clearHarm,
   markXp,
   retireCharacter,
@@ -24,7 +25,10 @@ export {
 export type {
   AdvanceCharacterInput,
   ApplyStressInput,
+  ChooseTraumaInput,
   ClearHarmInput,
+  StressOutcome,
+  TraumaLogCopy,
   MarkXpInput,
   RetireCharacterInput,
   TakeHarmInput,
@@ -44,7 +48,7 @@ export {
   markCrewXp,
   takeCrewAdvance,
 } from './crews';
-export type { ApplyCrewHeatInput, MarkCrewXpInput } from './crews';
+export type { AdvanceCrewTierInput, ApplyCrewHeatInput, MarkCrewXpInput } from './crews';
 export { setFactionStatus } from './factions';
 export type { SetFactionStatusInput } from './factions';
 export { tickClock } from './clocks';

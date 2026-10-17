@@ -32,12 +32,17 @@ describe('faction bounds', () => {
     expect(clampFactionStatus(Infinity)).toBe(0);
   });
 
-  it('factionStatusLabel maps the range to words', () => {
-    expect(factionStatusLabel(-3)).toBe('War');
-    expect(factionStatusLabel(-1)).toBe('Hostile');
-    expect(factionStatusLabel(0)).toBe('Neutral');
-    expect(factionStatusLabel(2)).toBe('Friendly');
-    expect(factionStatusLabel(3)).toBe('Allied');
-    expect(factionStatusLabel(99)).toBe('Allied'); // clamped first
+  it('factionStatusLabel uses the SRD name for each of the seven levels', () => {
+    expect([-3, -2, -1, 0, 1, 2, 3].map(factionStatusLabel)).toEqual([
+      'War',
+      'Hostile',
+      'Interfering',
+      'Neutral',
+      'Helpful',
+      'Friendly',
+      'Allies',
+    ]);
+    expect(factionStatusLabel(99)).toBe('Allies'); // clamped first
+    expect(factionStatusLabel(-99)).toBe('War');
   });
 });

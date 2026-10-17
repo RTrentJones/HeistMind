@@ -10,7 +10,7 @@ import {
   type Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { applyStress } from './characters';
+import { applyStress, type TraumaLogCopy } from './characters';
 import { notOwner } from './ownership';
 
 /** The vice-roll dice pool for a character: dice = the LOWEST attribute rating (0 → 2 take-lowest). */
@@ -86,6 +86,8 @@ export interface FlashbackInput {
   /** Campaign-log copy — the client owns the words. */
   logLabel: string;
   logNote: string;
+  /** Feed copy when the flashback's stress marks the last box (→ trauma). */
+  traumaLog?: TraumaLogCopy;
 }
 
 /**
@@ -103,11 +105,12 @@ export async function flashback(
   if (owned) return owned;
 
   if (input.stress > 0) {
-    // Through applyStress so the cost clamps into the ruleset's track like every stress write.
+    // Through applyStress so the cost follows the RAW track (overflow → trauma) like every stress write.
     const updated = await applyStress(repos, {
       characterId: character.id,
       userId,
       stress: input.stress,
+      ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
     if (!updated.success) return updated as Result<never>;
   }

@@ -16,6 +16,7 @@ import { DEFAULT_RULESET } from '@heist-mind/shared';
 import {
   advanceCharacter,
   applyStress,
+  chooseTrauma,
   clearHarm,
   markXp,
   retireCharacter,
@@ -63,31 +64,85 @@ function repos(overrides: Record<string, unknown>): DatabaseRepositories {
 }
 
 describe('applyStress', () => {
-  it('adds and clamps stress through the validated write', async () => {
+  it('adds stress through the validated write', async () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const r = repos({
       characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
       characterManagement: { updateCharacterWithValidation: update },
     });
-    await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 5 });
-    // 6 + 5 clamps to the default 9-stress track.
+    const out = await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 2 });
     expect(update).toHaveBeenCalledWith('c1', 'u1', {
-      characterData: expect.objectContaining({ stress: 9 }),
+      characterData: expect.objectContaining({ stress: 8 }),
     });
+    expect(out.success && out.data?.trauma).toBe(false);
   });
 
-  it('is a no-op success for zero cost and for already-clamped characters', async () => {
-    const update = vi.fn();
-    const maxed = {
+  it('marking the LAST stress box → stress 0, one trauma owed, and a feed note (RAW)', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'n1' }));
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    // 6 + 5 overflows the default 9-stress track — no silent clamp to 9.
+    const out = await applyStress(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      stress: 5,
+      traumaLog: { note: n => `${n} broke`, retireNote: n => `${n} retires` },
+    });
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 0, traumaPending: 1 }),
+    });
+    expect(out.success && out.data).toMatchObject({ trauma: true, mustRetire: false });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ kind: 'note', label: 'Silks', note: 'Silks broke' })
+    );
+  });
+
+  it('the trauma that fills the trauma track also logs the retirement prompt', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'n1' }));
+    const scarred = {
       ...CHARACTER,
-      characterData: { ...CHARACTER.characterData, stress: 9 },
+      characterData: {
+        ...CHARACTER.characterData,
+        stress: 8,
+        trauma: DEFAULT_RULESET.traumaConditions!.slice(0, 3),
+      },
     } as CharacterWithDetails;
     const r = repos({
-      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(maxed)) },
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(scarred)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await applyStress(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      stress: 2,
+      traumaLog: { note: n => `${n} broke`, retireNote: n => `${n} retires` },
+    });
+    expect(out.success && out.data?.mustRetire).toBe(true);
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'Silks retires' }));
+  });
+
+  it('is a no-op success for zero cost and for a clear at 0', async () => {
+    const update = vi.fn();
+    const calm = {
+      ...CHARACTER,
+      characterData: { ...CHARACTER.characterData, stress: 0 },
+    } as CharacterWithDetails;
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(calm)) },
       characterManagement: { updateCharacterWithValidation: update },
     });
     expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 0 })).toEqual(ok(null));
-    expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 })).toEqual(ok(null));
+    expect(await applyStress(r, { characterId: 'c1', userId: 'u1', stress: -3 })).toEqual(
+      ok(null)
+    );
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -237,10 +292,68 @@ describe('rollResistance', () => {
       zeroDice: true,
     });
     expect(out.success && out.data.stress).toBe(5);
-    // 6 + 5 clamps to the default 9-stress track.
+    // 6 + 5 overflows the default 9-stress track → trauma: stress resets, a condition is owed.
     expect(update).toHaveBeenCalledWith('c1', 'u1', {
-      characterData: expect.objectContaining({ stress: 9 }),
+      characterData: expect.objectContaining({ stress: 0, traumaPending: 1 }),
     });
+    expect(out.success && out.data.trauma).toBe(true);
+  });
+});
+
+describe('chooseTrauma', () => {
+  const owing = {
+    ...CHARACTER,
+    ruleset: { content: DEFAULT_RULESET },
+    characterData: { ...CHARACTER.characterData, stress: 0, traumaPending: 1 },
+  } as unknown as CharacterWithDetails;
+  const condition = DEFAULT_RULESET.traumaConditions![0]!;
+
+  it('marks the chosen ruleset condition, clears the debt, and logs it', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'n1' }));
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(owing)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await chooseTrauma(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      condition,
+      logNote: 'picked',
+      retireNote: 'retire',
+    });
+    expect(out.success && out.data.mustRetire).toBe(false);
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ trauma: [condition], traumaPending: 0 }),
+    });
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'picked' }));
+  });
+
+  it('refuses when nothing is owed, or the condition is not in the ruleset list', async () => {
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(owing)) },
+      characterManagement: { updateCharacterWithValidation: vi.fn() },
+    });
+    const bad = await chooseTrauma(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      condition: 'Grumpy',
+      logNote: 'x',
+      retireNote: 'y',
+    });
+    expect(!bad.success && bad.error.code).toBe('INVALID_TRAUMA');
+    const none = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+    });
+    const out = await chooseTrauma(none, {
+      characterId: 'c1',
+      userId: 'u1',
+      condition,
+      logNote: 'x',
+      retireNote: 'y',
+    });
+    expect(!out.success && out.error.code).toBe('NO_TRAUMA_PENDING');
   });
 });
 
@@ -525,13 +638,93 @@ describe('crew progression', () => {
     );
   });
 
-  it('advanceCrewTier spends a full Rep track and logs', async () => {
+  it('advanceCrewTier (strong hold) pays new Tier × 8 coin → Tier +1, rep 0, hold weak; logs', async () => {
     const update = vi.fn().mockResolvedValue(ok(CREW));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
     const r = repos({ crews: { update }, rolls: { create } });
-    await advanceCrewTier(r, { crew: CREW, userId: 'u1', logLabel: 'l', logNote: 'n' });
-    expect(update).toHaveBeenCalledWith('cr1', { tier: 2, rep: 1 });
+    const crew = { ...CREW, rep: 12, hold: 'strong', coin: 10, vault: 8, claims: [] } as Crew;
+    const note = vi.fn(() => 'n');
+    await advanceCrewTier(r, { crew, userId: 'u1', logLabel: 'l', logNote: note });
+    // New Tier 2 costs 16: 10 from coin, 6 from the vault.
+    expect(update).toHaveBeenCalledWith('cr1', {
+      tier: 2,
+      rep: 0,
+      hold: 'weak',
+      coin: 0,
+      vault: 2,
+    });
+    expect(note).toHaveBeenCalledWith({ kind: 'tier', tier: 2, cost: 16 });
     expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'crew' }));
+  });
+
+  it('advanceCrewTier (weak hold) turns hold strong for free; Patron halves a Tier cost', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const r = repos({ crews: { update }, rolls: { create: vi.fn().mockResolvedValue(ok({})) } });
+    const weak = { ...CREW, rep: 12, hold: 'weak', coin: 0, vault: 0, claims: [] } as Crew;
+    await advanceCrewTier(r, { crew: weak, userId: 'u1', logLabel: 'l', logNote: () => 'n' });
+    expect(update).toHaveBeenCalledWith('cr1', {
+      tier: 1,
+      rep: 0,
+      hold: 'strong',
+      coin: 0,
+      vault: 0,
+    });
+    const patron = {
+      ...CREW,
+      rep: 12,
+      hold: 'strong',
+      coin: 8,
+      vault: 0,
+      claims: [],
+      crewAbilities: ['patron'],
+    } as Crew;
+    const content = {
+      crew: {
+        types: [],
+        abilities: [
+          { id: 'patron', name: 'Patron', description: '', effects: { halfTierCost: true } },
+        ],
+      },
+    };
+    await advanceCrewTier(r, {
+      crew: patron,
+      content,
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: () => 'n',
+    });
+    expect(update).toHaveBeenLastCalledWith('cr1', expect.objectContaining({ tier: 2, coin: 0 }));
+  });
+
+  it('advanceCrewTier refuses (no write, no log) when rep isn’t full or coin is short', async () => {
+    const update = vi.fn();
+    const create = vi.fn();
+    const r = repos({ crews: { update }, rolls: { create } });
+    const short = { ...CREW, rep: 12, hold: 'strong', coin: 3, vault: 0, claims: [] } as Crew;
+    const out = await advanceCrewTier(r, {
+      crew: short,
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: () => 'n',
+    });
+    expect(!out.success && out.error.code).toBe('INSUFFICIENT_COIN');
+    const notFull = { ...short, rep: 5 } as Crew;
+    const out2 = await advanceCrewTier(r, {
+      crew: notFull,
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: () => 'n',
+    });
+    expect(!out2.success && out2.error.code).toBe('REP_NOT_FULL');
+    expect(update).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('applyCrewHeat with a negative amount reduces heat (never below 0, Wanted untouched)', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const r = repos({ crews: { update }, rolls: { create: vi.fn().mockResolvedValue(ok({})) } });
+    await applyCrewHeat(r, { crew: CREW, userId: 'u1', amount: -3, logLabel: 'l', logNote: 'n' });
+    expect(update).toHaveBeenCalledWith('cr1', { heat: 5, wanted: 2 });
   });
 
   it('incarcerateCrew clears heat, drops wanted, and logs; a failed write never logs', async () => {

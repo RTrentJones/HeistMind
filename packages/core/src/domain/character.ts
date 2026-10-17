@@ -40,6 +40,12 @@ export interface CharacterData {
   items: CharacterItem[];
   stress: number;
   trauma: string[];
+  /**
+   * Trauma conditions OWED but not yet chosen: marking the last stress box resets stress to 0 and
+   * owes one trauma (RAW) — the player picks which condition from the ruleset's list on the sheet.
+   * Absent/0 when nothing is owed. JSONB-only (no migration).
+   */
+  traumaPending?: number;
   /** Harm entries per level (each a short description). Bounded by the ruleset's `harm` rules. */
   harm?: CharacterHarm;
   /** Chosen load level + the items carried this score (item ids from the ruleset). */

@@ -12,6 +12,11 @@ import {
   crewXp,
   crewAdvanceReady,
   withCrewXp,
+  turfHeld,
+  repToDevelop,
+  clampRep,
+  tierAdvanceCost,
+  crewHalvesTierCost,
 } from './crews';
 
 describe('crew bounds', () => {
@@ -55,17 +60,87 @@ describe('crew bounds', () => {
     expect(applyHeat({ heat: 8, wanted: 4 }, 5)).toEqual({ heat: 9, wanted: 4 });
   });
 
-  it('advanceTier spends a full Rep track to raise Tier (BitD)', () => {
+  it('advanceTier develops the crew RAW: weak hold → strong (free); strong → pay Tier×8 coin', () => {
     expect(REP_PER_TIER).toBe(12);
-    // Short of a full track → no change.
-    expect(advanceTier({ tier: 0, rep: 11 })).toEqual({ tier: 0, rep: 11 });
-    // Full track → +1 Tier, Rep clears carrying the remainder.
-    expect(advanceTier({ tier: 0, rep: 12 })).toEqual({ tier: 1, rep: 0 });
-    expect(advanceTier({ tier: 1, rep: 14 })).toEqual({ tier: 2, rep: 2 });
-    // One Tier per call (deliberate), even with a big Rep bank.
-    expect(advanceTier({ tier: 0, rep: 30 })).toEqual({ tier: 1, rep: 18 });
-    // No-op once Tier is maxed (4).
-    expect(advanceTier({ tier: 4, rep: 20 })).toEqual({ tier: 4, rep: 20 });
+    const strong = { hold: 'strong' as const, coin: 0 };
+    // Rep tracker not full → refused with what's needed.
+    expect(advanceTier({ tier: 0, rep: 11, ...strong })).toEqual({
+      ok: false,
+      code: 'REP_NOT_FULL',
+      needed: 12,
+    });
+    // Weak hold + full rep → hold becomes strong, rep resets, NO coin spent, Tier unchanged.
+    expect(advanceTier({ tier: 1, rep: 12, hold: 'weak', coin: 3, vault: 2 })).toEqual({
+      ok: true,
+      kind: 'hold',
+      tier: 1,
+      rep: 0,
+      hold: 'strong',
+      coin: 3,
+      vault: 2,
+      cost: 0,
+    });
+    // Strong hold + full rep but short of coin (new Tier 1 × 8 = 8) → refused.
+    expect(advanceTier({ tier: 0, rep: 12, hold: 'strong', coin: 5, vault: 2 })).toEqual({
+      ok: false,
+      code: 'INSUFFICIENT_COIN',
+      needed: 8,
+    });
+    // Paid from coin first, then the vault; Tier +1, rep 0, hold → weak. No remainder carry.
+    expect(advanceTier({ tier: 1, rep: 12, hold: 'strong', coin: 10, vault: 9 })).toEqual({
+      ok: true,
+      kind: 'tier',
+      tier: 2,
+      rep: 0,
+      hold: 'weak',
+      coin: 0,
+      vault: 3,
+      cost: 16,
+    });
+    // Patron halves the cost (new Tier 2: 16 → 8).
+    expect(tierAdvanceCost(2, true)).toBe(8);
+    expect(tierAdvanceCost(3)).toBe(24);
+    // Tier maxed (4) with strong hold → refused; a weak-hold crew at Tier 4 can still go strong.
+    expect(advanceTier({ tier: 4, rep: 12, hold: 'strong', coin: 99 })).toMatchObject({
+      ok: false,
+      code: 'TIER_MAX',
+    });
+    expect(advanceTier({ tier: 4, rep: 12, hold: 'weak', coin: 0 })).toMatchObject({
+      ok: true,
+      kind: 'hold',
+    });
+  });
+
+  it('turf lowers the rep needed — and caps Rep (12 − turf, max 6 turf)', () => {
+    expect(turfHeld(['Lair', 'Turf', 'Turf (Docks)', 'Vice Den'])).toBe(2);
+    expect(repToDevelop(['Turf', 'Turf (Docks)'])).toBe(10);
+    expect(repToDevelop(Array.from({ length: 9 }, (_, i) => `Turf ${i}`))).toBe(6);
+    expect(repToDevelop(undefined)).toBe(12);
+    expect(clampRep(15, ['Turf'])).toBe(11);
+    expect(clampRep(-2, [])).toBe(0);
+    // A crew with 2 turf develops at 10 rep.
+    expect(
+      advanceTier({ tier: 0, rep: 10, hold: 'weak', coin: 0, claims: ['Turf', 'Turf 2'] })
+    ).toMatchObject({ ok: true, kind: 'hold' });
+  });
+
+  it('crewHalvesTierCost reads the halfTierCost effect off the crew’s held abilities', () => {
+    const rs = {
+      crew: {
+        types: [],
+        abilities: [
+          { id: 'patron', name: 'Patron', description: '', effects: { halfTierCost: true } },
+        ],
+      },
+    };
+    expect(crewHalvesTierCost(rs, ['patron'])).toBe(true);
+    expect(crewHalvesTierCost(rs, [])).toBe(false);
+    expect(crewHalvesTierCost(null, ['patron'])).toBe(false);
+  });
+
+  it('applyHeat accepts a negative delta (reduce heat) without touching Wanted', () => {
+    expect(applyHeat({ heat: 5, wanted: 1 }, -3)).toEqual({ heat: 2, wanted: 1 });
+    expect(applyHeat({ heat: 2, wanted: 1 }, -5)).toEqual({ heat: 0, wanted: 1 });
   });
 
   it('incarcerate drops Wanted by 1 and clears Heat (BitD)', () => {
