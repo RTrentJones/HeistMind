@@ -3,6 +3,20 @@ import React from 'react';
 import '../src/styles/globals.css';
 import { ThemeProvider, type ThemeMode } from '../src/lib/theme';
 import { TooltipProvider } from '../src/components/Tooltip';
+import { MotionGlobalConfig } from 'framer-motion';
+
+// Under the automated test runner (a webdriver-controlled browser), render every story at its
+// final state: entrance fades otherwise leave text at partial opacity for a moment, and the axe
+// colour-contrast gate scores whichever frame it lands on. That made the F76 smoke flaky without
+// any component being inaccessible. Interactive Storybook use keeps its motion.
+const underTestRunner = typeof navigator !== 'undefined' && navigator.webdriver;
+if (underTestRunner) {
+  MotionGlobalConfig.skipAnimations = true;
+  const style = document.createElement('style');
+  style.textContent =
+    '*,*::before,*::after{transition-duration:0s!important;animation-duration:0s!important;animation-delay:0s!important}';
+  document.head.appendChild(style);
+}
 
 const preview: Preview = {
   parameters: {
@@ -19,6 +33,9 @@ const preview: Preview = {
     backgrounds: {
       disable: true, // Disable Storybook backgrounds since we handle theme switching
     },
+    // The test runner's own axe pass (.storybook/test-runner.ts) is the gate; the addon's automatic
+    // run would race it ("Axe is already running"), so under the runner the addon waits to be asked.
+    a11y: { manual: underTestRunner },
     viewport: {
       viewports: {
         mobile: {
