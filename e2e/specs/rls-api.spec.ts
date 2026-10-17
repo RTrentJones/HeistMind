@@ -400,7 +400,7 @@ test.describe('RLS at the API level (F89)', () => {
     expect(roleAuthed.error?.code).toBe('42501');
   });
 
-  test('profiles: anon reads nothing; users read display columns only and edit only safe ones', async () => {
+  test('profiles: anon reads nothing; users edit only their own safe columns', async () => {
     const anon = createClient(env.supabaseUrl!, env.supabaseAnonKey!, opts);
     const anonRead = await anon.from('profiles').select('id, username');
     expect(anonRead.error?.code).toBe('42501');
@@ -409,16 +409,16 @@ test.describe('RLS at the API level (F89)', () => {
     expect(probe.error).toBeNull();
     expect(probe.data).toHaveLength(1);
 
+    // Signed-in users can read other players' display names. (SELECT stays table-level until the
+    // F89 follow-up narrows it to PROFILE_COLUMNS with the first development→main promotion —
+    // prod's `main` code still selects `*` from this shared table.)
     const names = await attacker.pub
       .from('profiles')
       .select('id, username, avatar_url')
       .eq('id', gm.id);
     expect(names.error).toBeNull();
     expect(names.data).toHaveLength(1);
-    for (const col of ['discord_id', 'preferences', '*']) {
-      const leak = await attacker.pub.from('profiles').select(col).eq('id', gm.id);
-      expect(leak.error?.code).toBe('42501');
-    }
+    expect(names.data?.[0]?.username).not.toContain('@');
 
     // discord_id squatting (blocks the victim's signup / hijacks their bot identity) is refused.
     const squat = await attacker.pub

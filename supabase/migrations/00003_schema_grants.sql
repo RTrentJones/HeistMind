@@ -47,9 +47,9 @@ END $$;
 -- public.profiles), so every game/character detail read needs SELECT here. RLS ("Public
 -- profiles are viewable by everyone" / "update own") still governs which rows.
 --
--- F89: no anon access (emails/discord ids were world-readable), and column-level grants only —
--- signed-in users read the display columns and edit their own safe columns (never discord_id/id).
--- 00022 restates this as the authoritative final state.
-GRANT SELECT (id, username, avatar_url, created_at, updated_at) ON public.profiles TO authenticated;
+-- F89: no anon access (emails/discord ids were world-readable); signed-in users read profiles and
+-- edit only their own safe columns (never discord_id/id). 00022 restates this as the
+-- authoritative final state (and carries the TODO to narrow SELECT to a column list).
+GRANT SELECT ON public.profiles TO authenticated;
 GRANT UPDATE (username, avatar_url, preferences) ON public.profiles TO authenticated;
 GRANT ALL ON public.profiles TO service_role;

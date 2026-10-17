@@ -110,9 +110,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `created_by`. (2) `handle_new_user` derives the name from `custom_claims.global_name` →
   `full_name` → `name` (sans `#0`) → `user_name` → `username`, never the email, collision-safe
   (suffix; a held `discord_id` is left NULL instead of failing signup); '@' usernames backfilled +
-  `profiles_username_not_email` CHECK; anon has no profile access; authenticated reads only
-  `id, username, avatar_url, created_at, updated_at` and updates only `username, avatar_url,
-preferences` on its own row (column grants; repos select `PROFILE_COLUMNS`). A non-PII
+  `profiles_username_not_email` CHECK; anon has no profile access; authenticated updates only
+  `username, avatar_url, preferences` on its own row (column grants) and still reads profiles at
+  table level for now (see the TODO below; the new repos already select only `PROFILE_COLUMNS`).
+  A non-PII
   `public.keepalive_probe` table replaces profiles as the anon keepalive target. (3) games INSERT
   WITH CHECK + a `games_guard_write` trigger: ruleset must be owned or public (also on change);
   `created_by`, `current_players` and the Discord link columns are service-role-only. A
@@ -127,6 +128,23 @@ preferences` on its own row (column grants; repos select `PROFILE_COLUMNS`). A n
   `member.permissions`; `/heist unlink` requires the same, and a Manage Server member may unlink a
   squatter's campaign. Also fixed: `00012`/`00013`/`00015` narrowed the `rolls.kind` CHECK on every
   re-run and would fail the deploy once any newer-kind row existed — they now use the final list.
+- **TODO (ships with the first `development → main` promotion) — column-level SELECT tightening
+  (hide `discord_id`/`preferences` from other users).** `public.profiles` is shared with prod, and
+  prod runs `main`, whose repositories still `select('*')` on profiles as `authenticated` — a
+  column-level grant before that code is replaced would 42501 every prod profile read. Once `main`
+  carries the `PROFILE_COLUMNS` selects, add a forward migration (and change 00022's/00003's
+  `GRANT SELECT ON public.profiles TO authenticated` to match, since CI re-applies every file):
+
+  ```sql
+  -- public schema (shared): narrow profile reads to the display columns.
+  REVOKE SELECT ON public.profiles FROM authenticated;
+  GRANT SELECT (id, username, avatar_url, created_at, updated_at) ON public.profiles TO authenticated;
+  -- (UPDATE stays column-level: username, avatar_url, preferences; service_role keeps ALL.)
+  ```
+
+  and re-add the `rls-api.spec.ts` assertions that `select('discord_id')`, `select('preferences')`
+  and `select('*')` on another user's profile return `42501`.
+
 - **status:** **fixed (this branch)** — regression guard `e2e/specs/rls-api.spec.ts` (11 tests,
   local-stack): self-promotion refused, kicked player can't reactivate/delete/re-redeem, anon can't
   read profiles (keepalive probe still readable), no email in username + collision-safe signup,

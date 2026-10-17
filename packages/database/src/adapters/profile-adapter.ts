@@ -8,9 +8,10 @@ import type { Profile, UpdateProfileData } from '@heist-mind/core';
 type ProfileUpdate = TablesUpdate<'profiles'>;
 
 /**
- * The profile columns the API roles may read (migration 00022 column grants). `discord_id` and
- * `preferences` are service-role only, so a signed-in client must never `select('*')` here — it
- * would fail with `42501 permission denied`. Every profile read selects exactly this list.
+ * The profile columns the app reads. `discord_id` and `preferences` are bot/self concerns, so no
+ * client read pulls them: every profile read selects exactly this list (never `select('*')`).
+ * Migration 00022 keeps a table-level SELECT for now (prod still runs code that selects `*`);
+ * the F89 follow-up narrows the grant to this list, after which `*` would fail with 42501.
  */
 export const PROFILE_COLUMNS = 'id, username, avatar_url, created_at, updated_at' as const;
 

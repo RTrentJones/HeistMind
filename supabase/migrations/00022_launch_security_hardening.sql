@@ -13,8 +13,8 @@
 --   2. profiles: emails were stored as username (Discord sends no `username` key) and every
 --      profile was world-readable to anon. Now: handle_new_user derives a display name from the
 --      Discord metadata (never the email), collision-safe; '@' usernames are backfilled; anon has
---      no access; authenticated reads only (id, username, avatar_url, created_at, updated_at) and
---      updates only (username, avatar_url, preferences) on its own row — never discord_id/id.
+--      no access; authenticated may read profiles (table-level for now — see A5) and updates only
+--      (username, avatar_url, preferences) on its own row — never discord_id/id.
 --   3. games INSERT/ruleset change requires a ruleset the caller owns or that is public (blocked
 --      the private-ruleset leak + the account-deletion FK grief). characters.game_id/created_by/
 --      original_ruleset_id change only via the attach/detach RPCs. invitations UPDATE is GM-only
@@ -180,11 +180,18 @@ END
 $do$;
 
 -- A5. profiles access. Revoke everything first (a table-level REVOKE also clears column grants),
---     then grant back exactly what the app needs: authenticated reads the display columns of any
---     profile (players see each other's names) and edits only its own safe columns. discord_id
---     and preferences are service-role/self-only via the bot and nothing in the web reads them.
+--     then grant back what the app needs. Anon gets nothing. Writes: authenticated edits only its
+--     own safe columns (never discord_id/id; INSERT is the signup trigger's job, DELETE the
+--     account-deletion cascade's).
+--     Reads stay TABLE-LEVEL for authenticated for now: public.profiles is shared with PROD, and
+--     prod runs the `main` code that still does `select('*')` on profiles — a column-level grant
+--     would 42501 every prod profile read the moment this lands on development. The emails are
+--     gone (backfill + CHECK), so what other users can still see is discord_id + preferences.
+--     TODO(F89): tighten to the column list with the first development→main promotion (the exact
+--     SQL is in FINDINGS.md F89): REVOKE SELECT … FROM authenticated; GRANT SELECT (id, username,
+--     avatar_url, created_at, updated_at) … TO authenticated.
 REVOKE ALL ON public.profiles FROM anon, authenticated;
-GRANT SELECT (id, username, avatar_url, created_at, updated_at) ON public.profiles TO authenticated;
+GRANT SELECT ON public.profiles TO authenticated;
 GRANT UPDATE (username, avatar_url, preferences) ON public.profiles TO authenticated;
 GRANT ALL ON public.profiles TO service_role;
 
