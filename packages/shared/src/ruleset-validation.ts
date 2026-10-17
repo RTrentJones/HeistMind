@@ -107,6 +107,16 @@ export function validateRulesetContent(input: unknown): RulesetValidationResult 
     }
   }
 
+  // Advancement option costs must be finite and non-negative — a negative cost would let a
+  // flat-XP advance ADD experience (review #13). The engine also refuses them at advance time.
+  if (isObject(content.advancement) && Array.isArray(content.advancement.advancementOptions)) {
+    content.advancement.advancementOptions.forEach((o: unknown, i: number) => {
+      const cost = isObject(o) ? o.cost : undefined;
+      if (typeof cost !== 'number' || !Number.isFinite(cost) || cost < 0)
+        errors.push(`advancement.advancementOptions[${i}].cost must be a number ≥ 0.`);
+    });
+  }
+
   // Cross-references — catch a structurally-valid but internally-inconsistent ruleset that would
   // break the wizard or the rules engine (an unresolvable ability/item id, an action claimed by two
   // attributes). Only run once the basics above hold and the referenced collection actually exists.
