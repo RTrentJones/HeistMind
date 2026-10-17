@@ -205,7 +205,14 @@ export function RollPanel({
           {error}
         </Alert>
       )}
-      <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+      {/* min-w-0/max-w-full on every child + full-width selects: long option labels shrink
+          inside the card instead of running past it at 360px (pixel review #7). */}
+      <Stack
+        direction='row'
+        gap='sm'
+        align='center'
+        className='flex-wrap [&>*]:min-w-0 [&>*]:max-w-full [&_select]:max-w-full'
+      >
         {modes.length > 1 && (
           <Select
             aria-label={t('components.rollPanel.modeLabel')}
@@ -400,7 +407,7 @@ export function RollPanel({
           (the app's core action had no feedback for them — review item 8). */}
       <div role='status' aria-live='polite' aria-atomic='true' data-testid='roll-result'>
       {last && (
-        <Stack direction='row' gap='sm' align='center'>
+        <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
           {last.stress != null ? (
             last.stress < 0 ? (
               // A critical resistance CLEARS 1 stress (negative delta) — celebrate, don't alarm.

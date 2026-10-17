@@ -35,22 +35,30 @@ export function JoinByCodeCard() {
         <Heading level='h3' as='h2'>
           {t('gamesList.joinTitle')}
         </Heading>
-        <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-          <Input
-            label={t('gamesList.codeLabel')}
-            value={code}
-            onChange={e => setCode(e.target.value)}
-            placeholder={t('gamesList.joinPlaceholder')}
-          />
-          <Button
-            variant='default'
-            onClick={() => void onJoin()}
-            loading={join.isPending}
-            disabled={!code.trim()}
-          >
-            {t('gamesList.joinCta')}
-          </Button>
-        </Stack>
+        {/* A real form: Enter submits (review item 11). */}
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            void onJoin();
+          }}
+        >
+          <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+            <Input
+              label={t('gamesList.codeLabel')}
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              placeholder={t('gamesList.joinPlaceholder')}
+            />
+            <Button
+              type='submit'
+              variant='default'
+              loading={join.isPending}
+              disabled={!code.trim()}
+            >
+              {t('gamesList.joinCta')}
+            </Button>
+          </Stack>
+        </form>
         {joinError && (
           <Text variant='muted' size='sm' className='text-semantic-error'>
             {joinError}

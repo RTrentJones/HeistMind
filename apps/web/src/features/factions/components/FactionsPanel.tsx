@@ -107,30 +107,33 @@ export function FactionsPanel({
       )}
 
       {isGm && available.length > 0 && (
-        <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-          <Select
-            label={t('components.factionsPanel.addFaction')}
-            value={pick}
-            onChange={e => setPick(e.target.value)}
-          >
-            <option value=''>—</option>
-            {available.map(s => (
-              <option key={s.name} value={s.name}>
-                {s.name}
-                {s.tier != null
-                  ? ` (${t('components.factionsPanel.tierOption', { tier: s.tier })})`
-                  : ''}
-              </option>
-            ))}
-          </Select>
-          <Button
-            variant='ember'
-            disabled={createFaction.isPending || !pick}
-            onClick={addSuggested}
-          >
-            {t('components.factionsPanel.addFaction')}
-          </Button>
-        </Stack>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            addSuggested();
+          }}
+        >
+          <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+            <Select
+              label={t('components.factionsPanel.addFaction')}
+              value={pick}
+              onChange={e => setPick(e.target.value)}
+            >
+              <option value=''>—</option>
+              {available.map(s => (
+                <option key={s.name} value={s.name}>
+                  {s.name}
+                  {s.tier != null
+                    ? ` (${t('components.factionsPanel.tierOption', { tier: s.tier })})`
+                    : ''}
+                </option>
+              ))}
+            </Select>
+            <Button type='submit' variant='ember' disabled={createFaction.isPending || !pick}>
+              {t('components.factionsPanel.addFaction')}
+            </Button>
+          </Stack>
+        </form>
       )}
     </Stack>
   );

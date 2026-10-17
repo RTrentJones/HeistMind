@@ -61,6 +61,8 @@ export function GameForm() {
       <ErrorDisplay
         title={t('forms.gameForm.errorTitle')}
         message={rulesetsQuery.error?.message ?? t('forms.gameForm.loadRulesetsFailed')}
+        onRetry={() => void rulesetsQuery.refetch()}
+        retryText={t('components.asyncState.retry')}
       />
     );
   }
@@ -77,38 +79,46 @@ export function GameForm() {
   }
 
   return (
-    <Stack direction='column' gap='md'>
-      <Input
-        label={t('forms.gameForm.nameLabel')}
-        required
-        value={name}
-        onChange={e => setName(e.target.value)}
-        placeholder={t('forms.gameForm.namePlaceholder')}
-      />
-      <Input
-        label={t('forms.gameForm.descriptionLabel')}
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        placeholder={t('forms.gameForm.descriptionPlaceholder')}
-      />
-      <Select
-        label={t('forms.gameForm.rulesetLabel')}
-        value={rulesetId}
-        onChange={e => setRulesetId(e.target.value)}
-        className='w-full rounded-lg bg-background-tertiary px-3 py-2'
-      >
-        {rulesets.map(rs => (
-          <option key={rs.id} value={rs.id}>
-            {t('forms.gameForm.rulesetOption', { name: rs.name, version: rs.version })}
-          </option>
-        ))}
-      </Select>
+    // A real form: Enter submits, `required` gets native validation (review item 11).
+    <form
+      onSubmit={e => {
+        e.preventDefault();
+        void onSubmit();
+      }}
+    >
+      <Stack direction='column' gap='md'>
+        <Input
+          label={t('forms.gameForm.nameLabel')}
+          required
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder={t('forms.gameForm.namePlaceholder')}
+        />
+        <Input
+          label={t('forms.gameForm.descriptionLabel')}
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder={t('forms.gameForm.descriptionPlaceholder')}
+        />
+        <Select
+          label={t('forms.gameForm.rulesetLabel')}
+          value={rulesetId}
+          onChange={e => setRulesetId(e.target.value)}
+          className='w-full rounded-lg bg-background-tertiary px-3 py-2'
+        >
+          {rulesets.map(rs => (
+            <option key={rs.id} value={rs.id}>
+              {t('forms.gameForm.rulesetOption', { name: rs.name, version: rs.version })}
+            </option>
+          ))}
+        </Select>
 
-      {error && <ErrorDisplay title={t('forms.gameForm.errorTitle')} message={error} />}
+        {error && <ErrorDisplay title={t('forms.gameForm.errorTitle')} message={error} />}
 
-      <Button variant='ember' onClick={onSubmit} loading={createGame.isPending}>
-        {t('forms.gameForm.createCta')}
-      </Button>
-    </Stack>
+        <Button type='submit' variant='ember' loading={createGame.isPending}>
+          {t('forms.gameForm.createCta')}
+        </Button>
+      </Stack>
+    </form>
   );
 }

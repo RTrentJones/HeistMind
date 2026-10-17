@@ -16,6 +16,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { Footer } from '@/shared/components/Footer';
 import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
 import { rollKindLabel } from '@/features/rolls/lib/labels';
+import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
@@ -65,7 +66,7 @@ export function Dashboard() {
       key={ch.id}
       character={ch}
       meta={t('pages.dashboard.characterMeta', {
-        playbook: ch.playbookType,
+        playbook: playbookLabel(ch.playbookType),
         campaign: ch.gameId ? (gameNameById.get(ch.gameId) ?? '') : t('pages.dashboard.standalone'),
       })}
       actions={

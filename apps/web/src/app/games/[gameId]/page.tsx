@@ -164,6 +164,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           <Text variant='muted'>{t('game.noCharacters')}</Text>
         ) : (
           <CharacterRoster
+            rulesetContent={game.ruleset.content}
             gameId={gameId}
             gmId={game.createdBy}
             userId={user?.id}
@@ -204,7 +205,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           {t('game.scoreHeading')}
         </Heading>
         <Card variant='outline'>
-          <ScorePanel gameId={gameId} isGm={game.createdBy === user?.id} />
+          <ScorePanel gameId={gameId} isGm={game.createdBy === user?.id} gameState={game.state} />
         </Card>
 
         <Heading level='h2' variant='primary'>

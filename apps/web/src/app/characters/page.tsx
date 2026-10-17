@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { SignInGate } from '@/features/auth/components/SignInGate';
 import { usePageTranslation, useTranslation } from '@/lib/i18n/hooks';
+import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
 import { useCloneCharacter } from '@/features/characters/data/mutations';
@@ -77,7 +78,7 @@ export default function MyCharactersPage() {
       character={ch}
       standaloneLabel={t('characters.standalone')}
       meta={t('characters.meta', {
-        playbook: ch.playbookType,
+        playbook: playbookLabel(ch.playbookType),
         campaign: ch.gameId ? (gameNames[ch.gameId] ?? '') : t('characters.standalone'),
       })}
       actions={

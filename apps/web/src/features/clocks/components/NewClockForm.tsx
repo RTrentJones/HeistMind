@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { CLOCK_SEGMENTS, type ClockSegments } from '@heist-mind/core';
 import { Button, Input, Select, Stack } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -32,7 +32,8 @@ export function NewClockForm({
   const [name, setName] = useState('');
   const [segments, setSegments] = useState<ClockSegments>(DEFAULT_SEGMENTS);
 
-  const submit = () => {
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!name.trim()) return;
     onCreate(name.trim(), segments);
     setName('');
@@ -40,33 +41,36 @@ export function NewClockForm({
   };
 
   return (
-    <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
-      <Input
-        label={label}
-        value={name}
-        onChange={e => setName(e.target.value)}
-        placeholder={placeholder}
-      />
-      <Select
-        label={t('components.clocksPanel.segments')}
-        value={segments}
-        onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
-      >
-        {CLOCK_SEGMENTS.map(s => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </Select>
-      <Button
-        variant={ctaVariant}
-        size={ctaVariant === 'outline' ? 'sm' : undefined}
-        aria-label={ctaAriaLabel}
-        disabled={busy || !name.trim()}
-        onClick={submit}
-      >
-        {cta}
-      </Button>
-    </Stack>
+    // A real form: Enter in the name field submits (review item 11).
+    <form onSubmit={submit}>
+      <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+        <Input
+          label={label}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder={placeholder}
+        />
+        <Select
+          label={t('components.clocksPanel.segments')}
+          value={segments}
+          onChange={e => setSegments(Number(e.target.value) as ClockSegments)}
+        >
+          {CLOCK_SEGMENTS.map(s => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </Select>
+        <Button
+          variant={ctaVariant}
+          size={ctaVariant === 'outline' ? 'sm' : undefined}
+          aria-label={ctaAriaLabel}
+          disabled={busy || !name.trim()}
+          type='submit'
+        >
+          {cta}
+        </Button>
+      </Stack>
+    </form>
   );
 }

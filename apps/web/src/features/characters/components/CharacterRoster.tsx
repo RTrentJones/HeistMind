@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { Character } from '@heist-mind/core';
+import type { Character, RulesetContent } from '@heist-mind/core';
 import { Button, Stack, Text } from '@heist-mind/ui';
 import { useRetireCharacter } from '@/features/characters/data/mutations';
 import { useProfileNames } from '@/features/profiles/data/queries';
@@ -10,6 +10,7 @@ import { useTranslation } from '@/lib/i18n/hooks';
 import { errorMessage } from '@/lib/query/result';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import { CharacterCard } from './CharacterCard';
+import { playbookLabel } from '../lib/playbook-label';
 
 /**
  * The campaign roster: every character attributed to its player, with status. Active characters lead;
@@ -21,11 +22,14 @@ export function CharacterRoster({
   gmId,
   userId,
   characters,
+  rulesetContent,
 }: {
   gameId: string;
   gmId: string | undefined;
   userId: string | undefined;
   characters: Character[];
+  /** The campaign's ruleset — resolves playbook ids to their display names. */
+  rulesetContent?: RulesetContent;
 }) {
   const { t } = useTranslation();
   // Resolve each character's owner (createdBy) → a player name for attribution.
@@ -64,7 +68,7 @@ export function CharacterRoster({
       key={ch.id}
       character={ch}
       meta={t('components.roster.meta', {
-        playbook: ch.playbookType,
+        playbook: playbookLabel(ch.playbookType, rulesetContent),
         xp: ch.experiencePoints,
         player: ownerName(ch.createdBy),
       })}

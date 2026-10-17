@@ -6,6 +6,9 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseRepositories } from '@heist-mind/database';
+// The hook composes several concepts' data hooks; the test drives them all through the mocked
+// repository accessor (test/setup.ts) rather than mocking each seam separately.
+// eslint-disable-next-line no-restricted-imports
 import { getRepositories } from '@/lib/auth';
 import '@/lib/i18n';
 import { useDashboardData } from '../use-dashboard-data';

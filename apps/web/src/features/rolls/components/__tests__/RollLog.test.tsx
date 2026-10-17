@@ -100,5 +100,7 @@ describe('RollLog', () => {
     expect(screen.getByText('Action roll')).toBeInTheDocument();
     expect(screen.getByText(/Risky\/Standard/)).toBeInTheDocument();
     expect(screen.queryByText('bad')).not.toBeInTheDocument();
+    // The meta line is its own line with no leading separator (pixel review #13).
+    expect(screen.getByText('Silks · [6, 3] · Risky/Standard')).toBeInTheDocument();
   });
 });

@@ -115,17 +115,23 @@ export function RollLog({ gameId }: { gameId: string }) {
       <Card key={r.id} variant='outline'>
         <Stack direction='row' justify='between' align='center' className='flex-wrap'>
           <div>
-            <Text as='strong'>{r.label ?? rollKindLabel(r.kind, t)}</Text>
-            <Text variant='muted' size='sm'>
-              {' '}
-              · {who}
-              {r.results.length > 0 ? ` · [${r.results.join(', ')}]` : ''}
-              {/* F7 — a zero-pool roll shows why two dice appear: 2d, take the lowest. */}
-              {r.zeroDice || (r.dice === 0 && r.results.length > 0)
-                ? ` · ${t('components.rollLog.zeroDice')}`
-                : ''}
-              {posEffect ? ` · ${posEffect}` : ''}
-              {resisted ? ` · ${resisted}` : ''}
+            <Text as='strong' className='block'>
+              {r.label ?? rollKindLabel(r.kind, t)}
+            </Text>
+            {/* Its own line, joined without a leading separator (pixel review #13). */}
+            <Text variant='muted' size='sm' className='block'>
+              {[
+                who,
+                r.results.length > 0 ? `[${r.results.join(', ')}]` : '',
+                // F7 — a zero-pool roll shows why two dice appear: 2d, take the lowest.
+                r.zeroDice || (r.dice === 0 && r.results.length > 0)
+                  ? t('components.rollLog.zeroDice')
+                  : '',
+                posEffect,
+                resisted ?? '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </Text>
             {/* Free-text note — e.g. a pushed roll, a devil's bargain, or a recorded result. */}
             {r.note ? (
