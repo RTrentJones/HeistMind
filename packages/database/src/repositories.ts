@@ -78,7 +78,8 @@ export interface RulesetRepository {
   findById(id: string): Promise<Result<Ruleset | null>>;
   findByCreator(userId: string): Promise<Result<Ruleset[]>>;
   update(id: string, userId: string, data: UpdateRulesetData): Promise<Result<Ruleset>>;
-  /** Owner-only (RLS). Fails with the FK code 23503 while a campaign or character still uses it. */
+  /** Owner-only (RLS). Fails with the FK code 23503 while a campaign or one of the owner's own
+   * characters still uses it (other players' characters get a private copy — 00023). */
   delete(id: string): Promise<Result<void>>;
 }
 

@@ -63,8 +63,9 @@ export function useLoadBuiltinRuleset() {
 }
 
 /**
- * Delete a ruleset you own. The FKs block it (Postgres 23503) while any campaign or character
- * still uses it — `rulesetDeleteBlocked(err)` lets the UI say so plainly.
+ * Delete a ruleset you own. The FKs block it (Postgres 23503) while any campaign or one of YOUR
+ * characters still uses it — `rulesetDeleteBlocked(err)` lets the UI say so plainly. Other
+ * players' characters bound to it get their own copy first (00023 trigger).
  */
 export function useDeleteRuleset() {
   const qc = useQueryClient();

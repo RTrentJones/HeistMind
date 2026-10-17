@@ -21,11 +21,14 @@
 --      whose name would collide with one of its owner's standalone characters (the 00014 partial
 --      unique index) — otherwise a single name clash made campaign delete (and account deletion,
 --      which cascades through games) fail with a 23505.
+--   5. rulesets BEFORE DELETE trigger: other players' characters bound to a deleted ruleset get
+--      their own private copy of it first (see section 5) — this is what lets a GM whose players
+--      built characters in their campaign delete their account at all.
 --
 -- Delete policies needed by the web's new deletes already exist (00002): rulesets/games/characters
 -- FOR DELETE by their creator. Ruleset delete stays blocked by the FKs while any campaign
--- (games.ruleset_id RESTRICT) or character (characters.original_ruleset_id) still uses it — the web
--- maps that 23503 to a clear message.
+-- (games.ruleset_id RESTRICT) or one of the owner's own characters (characters.
+-- original_ruleset_id) still uses it — the web maps that 23503 to a clear message.
 --
 -- No table/column changes → no `pnpm db:types` regen needed (RPCs are called through a narrow cast).
 
@@ -232,13 +235,55 @@ BEGIN
        || 'FOR EACH ROW EXECUTE FUNCTION games_detach_characters()';
 
   -- ---------------------------------------------------------------------------------------
-  -- 5. Privileges (00022 B7 discipline): no PUBLIC/anon EXECUTE, authenticated + service_role
+  -- 5. Ruleset delete → OTHER players' characters bound to it get their own copy first.
+  --    A player's character in your campaign is bound to YOUR ruleset (characters.
+  --    original_ruleset_id, NO ACTION). Once the campaign is gone (deleted, or cascaded away by
+  --    account deletion) that FK made deleting the ruleset — and so deleting the GM's ACCOUNT —
+  --    fail, and left the player's sheet pointing at a ruleset they can no longer read. Now each
+  --    such player receives an exact private copy (name kept, or suffixed on a clash) and their
+  --    characters are re-bound to it. The owner's OWN characters and any campaign still on the
+  --    ruleset keep blocking a direct delete (the web explains that).
+  -- ---------------------------------------------------------------------------------------
+  EXECUTE $create$
+    CREATE OR REPLACE FUNCTION rulesets_rehome_characters()
+    RETURNS trigger AS $fnbody$
+    DECLARE
+      r      RECORD;
+      v_name TEXT;
+      v_new  UUID;
+      n      INTEGER;
+    BEGIN
+      FOR r IN SELECT DISTINCT created_by FROM characters
+               WHERE original_ruleset_id = OLD.id AND created_by <> OLD.created_by LOOP
+        v_name := OLD.name; n := 1;
+        WHILE EXISTS (SELECT 1 FROM rulesets WHERE created_by = r.created_by AND name = v_name) LOOP
+          n := n + 1; v_name := OLD.name || ' (' || n || ')';
+        END LOOP;
+        INSERT INTO rulesets (created_by, name, description, version, content, schema_version,
+                              status, is_public, tags, compatibility_flags)
+          VALUES (r.created_by, v_name, OLD.description, OLD.version, OLD.content,
+                  OLD.schema_version, OLD.status, false, OLD.tags, OLD.compatibility_flags)
+          RETURNING id INTO v_new;
+        UPDATE characters SET original_ruleset_id = v_new
+          WHERE original_ruleset_id = OLD.id AND created_by = r.created_by;
+      END LOOP;
+      RETURN OLD;
+    END;
+    $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
+  $create$;
+  EXECUTE 'DROP TRIGGER IF EXISTS rulesets_rehome_characters ON rulesets';
+  EXECUTE 'CREATE TRIGGER rulesets_rehome_characters BEFORE DELETE ON rulesets '
+       || 'FOR EACH ROW EXECUTE FUNCTION rulesets_rehome_characters()';
+
+  -- ---------------------------------------------------------------------------------------
+  -- 6. Privileges (00022 B7 discipline): no PUBLIC/anon EXECUTE, authenticated + service_role
   --    for the RPCs, service_role only for the trigger function; pinned search_path everywhere.
   -- ---------------------------------------------------------------------------------------
   FOREACH fn IN ARRAY ARRAY['redeem_invite_code(text)', 'remove_game_player(uuid, uuid, text)',
-                            'leave_game(uuid, text)', 'games_detach_characters()'] LOOP
+                            'leave_game(uuid, text)', 'games_detach_characters()',
+                            'rulesets_rehome_characters()'] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM PUBLIC, anon', target_schema, fn);
-    IF fn = 'games_detach_characters()' THEN
+    IF fn IN ('games_detach_characters()', 'rulesets_rehome_characters()') THEN
       EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM authenticated', target_schema, fn);
     ELSE
       EXECUTE format('GRANT EXECUTE ON FUNCTION %I.%s TO authenticated', target_schema, fn);

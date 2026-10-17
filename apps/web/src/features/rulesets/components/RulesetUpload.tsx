@@ -122,6 +122,14 @@ export function RulesetUpload() {
           />
           <span>{t('forms.rulesetUpload.attestLabel')}</span>
         </label>
+        {/* The concrete Acceptable Use rule, stated where the upload happens (PR #167 intent). */}
+        <Text variant='muted' size='xs' className='pl-6'>
+          {t('forms.rulesetUpload.attestAupPrefix')}
+          <Link href='/legal/acceptable-use' className='underline'>
+            {t('forms.rulesetUpload.attestAupLink')}
+          </Link>
+          {t('forms.rulesetUpload.attestAupSuffix')}
+        </Text>
         <Text variant='muted' size='xs' className='pl-6'>
           {t('forms.rulesetUpload.attestHintPrefix')}
           <Link href='/legal/terms' className='underline'>

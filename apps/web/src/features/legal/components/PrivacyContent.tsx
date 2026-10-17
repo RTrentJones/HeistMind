@@ -8,7 +8,7 @@ import { LegalPageLayout, LegalSection } from './LegalPageLayout';
 
 export function PrivacyContent() {
   return (
-    <LegalPageLayout title='Privacy Policy' effectiveDate='July 5, 2026'>
+    <LegalPageLayout title='Privacy Policy' effectiveDate='October 17, 2026'>
       <Paragraph variant='description'>
         HeistMind is a free, personal hobby project operated by Trent Jones. This policy describes
         exactly what we collect and why — which is deliberately little. We show no ads, run no
@@ -19,8 +19,9 @@ export function PrivacyContent() {
         <ul className='list-disc pl-6 space-y-1 text-foreground-secondary'>
           <li>
             <strong>Discord sign-in profile</strong> — when you sign in with Discord we receive your
-            Discord ID, username, email address, and avatar, stored with our authentication provider
-            (Supabase Auth).
+            Discord ID, username and display name, email address, and avatar, stored with our
+            authentication provider (Supabase Auth). Your HeistMind name is your Discord display
+            name (or username) — never your email address.
           </li>
           <li>
             <strong>Your game content</strong> — the rulesets, campaigns, characters, rolls, notes,
@@ -66,28 +67,39 @@ export function PrivacyContent() {
       <LegalSection title='5. Sharing'>
         <Paragraph variant='description'>
           Your content is shared only as the product works: with the members of your campaigns, and
-          with a Discord server when you connect a campaign to it. We may disclose data if legally
-          compelled to. We do not sell or rent personal data — to anyone, ever.
+          with a Discord server when you connect a campaign to it. Your display name, avatar and
+          Discord ID are visible to other signed-in HeistMind users (that is how campaign rosters
+          and the Discord bot recognise you); your email address is never shown to other users.
+          Messages the bot posts in a Discord channel are visible to everyone in that channel, under
+          Discord&rsquo;s own policies. We may disclose data if legally compelled to. We do not sell
+          or rent personal data — to anyone, ever.
         </Paragraph>
       </LegalSection>
 
       <LegalSection title='6. Retention and deletion'>
         <Paragraph variant='description'>
-          We keep your data while your account exists. You can{' '}
+          We keep your data while your account exists. You can delete individual characters,
+          campaigns you run, and rulesets you own at any time, or{' '}
           <Link href='/settings' className='underline'>
             delete your account
           </Link>{' '}
-          yourself at any time — deletion is immediate and permanent, removing your profile and all
-          your content. You can also email legal@heistmind.com and we will delete it for you.
+          yourself — deletion is immediate and permanent. Deleting your account removes your
+          profile, your characters and rulesets, the campaigns you run (with their crew, clocks,
+          factions, scores and log), your memberships, and the log entries you made. Characters
+          other players brought to a campaign you ran are returned to them, not deleted. Shared
+          campaign records you created inside someone else&rsquo;s campaign (a clock, faction or
+          score) stay with that campaign without your name attached. Messages the bot already posted
+          in Discord are not removed, because they live on Discord. You can also email
+          legal@heistmind.com and we will delete your data for you.
         </Paragraph>
       </LegalSection>
 
       <LegalSection title='7. Your rights'>
         <Paragraph variant='description'>
           Depending on where you live (e.g. GDPR in the EU, CCPA in California), you may have rights
-          to access, correct, export, or erase your personal data, and to object to or restrict
-          processing. Email legal@heistmind.com and we will honor these requests for all users
-          regardless of jurisdiction.
+          to access, correct, receive a copy of, or erase your personal data, and to object to or
+          restrict processing. There is no self-service export in the app; email legal@heistmind.com
+          and we will honor these requests for all users regardless of jurisdiction.
         </Paragraph>
       </LegalSection>
 
