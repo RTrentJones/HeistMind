@@ -72,6 +72,70 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## S1 — blockers
 
+### F90 — No page server-rendered its content; link previews, indexing and headers were wrong (front-door cluster)
+
+- **severity:** S1 · **type:** CX-flaw (launch blocker) · **(2026-10-17 launch-readiness review:
+  PM #1/#3/#6/#9, frontend #1/#4/#15, security #7/#11)**
+- **where / what (all verified against beta + a local prod build):**
+  (1) `lib/i18n/provider.tsx` returned a full-screen splash until a client `useEffect` flipped
+  `isInitialized`, and it wrapped the whole app — so the HTML of **every** route (`/`, `/discord`,
+  `/legal/*`, the 404, the app pages) was only `⚡ common.loading.preparingShadows`, a raw key (the
+  lookup was `common.loading…` inside the `common` namespace). Crawlers, link unfurlers and the
+  first paint saw no content; two code comments claimed the opposite.
+  (2) Root metadata carried a stale tagline ("HeistMind - Forged in the Dark Platform … The
+  definitive platform …"), no OG image, `twitter:card summary`, and `alternates.canonical: '/'`
+  that every page inherited (`/discord` and `/legal/*` declared the homepage as canonical). Pages
+  that set `title` still unfurled with the root OG text. No `robots.txt` / `sitemap.xml` (404);
+  beta was indexable.
+  (3) The coming-soon gate keyed only on `VERCEL_ENV === 'production'`, with a false header
+  claiming it lived only on `main` and "revert this commit on main" as the launch plan — a
+  reverted gate would come back on the next develop→main promote.
+  (4) Only HSTS on responses (no nosniff / referrer policy / frame protection / CSP); `next@15.3.8`
+  carried critical/high advisories, incl. a middleware-bypass class relevant to the gate.
+  (5) Removing (1) exposes the persisted auth store to hydration (server signed-out vs a returning
+  user's localStorage), and the web app built **two** Supabase clients (`createAuthService()` +
+  `createRepositories()`) → "Multiple GoTrueClient instances", two refreshers on one token; sign-out
+  never cleared the React Query cache.
+- **fix / status:** **fixed (launch round, 2026-10-17, branch `fix/web-launch-blockers`)** —
+  • i18n: `initAsync: false` + the inline catalog → English is ready on the first render on server
+  and client; `I18nProvider` renders children immediately; a saved language is applied after
+  hydration. The `/auth/callback` `useSearchParams` reader got the `<Suspense>` boundary that SSR
+  now requires.
+  • auth store: `skipHydration` + `rehydrateAuthStore()` from `AuthListener`'s layout effect;
+  `hasHydrated` lets `SignInGate` hold a spinner instead of flashing "sign in" at a returning
+  user; `sessionChecked` is no longer persisted (every boot re-validates); one provider → one
+  Supabase client; sign-out (and a signed-out auth event after a session) clears the query cache.
+  (Measured: zustand v5's hook already hydrates React from `getInitialState()`, so a sync hydrate
+  did not actually mismatch — the explicit post-mount hydrate is kept for clarity + `hasHydrated`.)
+  • metadata: `lib/site.ts` (env-aware `SITE_URL`, `INDEXABLE`, `publicPageMetadata`) — brand
+  title/description, `%s · HeistMind` template, no root canonical, per-page canonical + OG/Twitter
+  text on `/`, `/discord`, `/legal/*`; titles for app sections via server `layout.tsx` files;
+  `app/opengraph-image.tsx` + `twitter-image.tsx` (next/og, FitD palette on noir).
+  • indexing: `app/robots.ts` + `app/sitemap.ts` (public pages only); non-prod deployments and
+  non-canonical prod hosts get `noindex` (metadata + `X-Robots-Tag` from middleware + disallow-all
+  robots). The middleware matcher now also skips icons/OG images/webmanifest, which the prod gate
+  used to redirect to `/`.
+  • gate: `resolveComingSoon(NEXT_PUBLIC_COMING_SOON, VERCEL_ENV)` — explicit flag wins
+  (`0` launches prod, `1` forces it on), default unchanged (prod gated, everything else open), so
+  prod stays dark without any infra change; launch = one Terraform env var + redeploy.
+  • headers: nosniff, `strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, minimal
+  `Permissions-Policy`, and a prod-build CSP (self + Supabase https/wss + Sentry ingest from the
+  DSN; vercel.live on previews; `frame-ancestors 'none'`; `script-src 'unsafe-inline'` kept —
+  nonces would force every page dynamic). `poweredByHeader: false`.
+  • `next` + `eslint-config-next` → 15.5.28.
+  • coverage: `e2e/specs/ssr-hydration.spec.ts` (raw HTML of `/`, `/legal/*`, `/discord`, 404
+  carries real copy, never `common.loading`; no React hydration error / dual-GoTrue warning,
+  anonymous and for a returning signed-in GM — the detector was proven by a deliberate mismatch);
+  unit tests for `resolveComingSoon`, `rehydrateAuthStore`, sign-out cache clear, SignInGate's
+  pre-hydration state.
+- **residue (open):** (a) launching prod still needs `NEXT_PUBLIC_COMING_SOON=0` added to the
+  production env map in `RTrentJones.dev/infra/heistmind.tf`; (b) a returning signed-in user's `/`
+  still paints the marketing HTML until JS hydrates (auth lives in localStorage; a cookie-backed
+  session would let the server pick the Dashboard); (c) `common.loading.preparingShadows` and
+  other dead keys remain in `en.json` (PM #18 cleanup); (d) `/discord` is unreachable while the
+  prod gate is up (the gate allow-list is unchanged — add it if the guide should be public before
+  launch).
+
 ### F2 — No way for a player to discover or join a campaign
 
 - **severity:** S1 · **type:** CX-flaw · **(verified)**

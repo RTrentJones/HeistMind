@@ -1,8 +1,9 @@
 'use client';
 
 /* eslint-disable i18next/no-literal-string -- a temporary English-only holding page; literal text
-   (not i18n t(), which isn't initialized during SSR) so the message is in the server-rendered
-   HTML — no hydration flash, works without JS. Matches the legal pages' literal-text approach. */
+   keeps it independent of the message catalog (it is deleted at launch). It is in the
+   server-rendered HTML either way (i18n initializes synchronously). Matches the legal pages'
+   literal-text approach. */
 import { Container, Heading, Stack, Text } from '@heist-mind/ui';
 import { Footer } from '@/shared/components/Footer';
 

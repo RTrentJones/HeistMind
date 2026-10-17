@@ -1,52 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { Section, Stack, StatusIcon, Text, TooltipProvider } from '@heist-mind/ui';
+import { TooltipProvider } from '@heist-mind/ui';
 import i18n from '@/lib/i18n/';
+import { LANGUAGE_STORAGE_KEY } from '@/lib/i18n/hooks';
 
 interface I18nProviderProps {
   children: React.ReactNode;
-  initialLanguage?: string;
 }
 
-export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
-  const [isInitialized, setIsInitialized] = useState(false);
-
+/**
+ * Mounts i18next for the client tree. The instance is initialized synchronously with the bundled
+ * English resources (lib/i18n/index.ts), so children render immediately — on the server too, which
+ * is what puts each page's real copy in the initial HTML. There is deliberately NO "is i18n ready?"
+ * gate: one used to hold every route behind a client effect, so no page ever server-rendered.
+ *
+ * A saved language preference (written by `useLanguageSwitcher`) lives in localStorage, which only
+ * exists in the browser; it is applied AFTER hydration so the first client render matches the
+ * server's English HTML. `changeLanguage` then re-renders the translated tree.
+ */
+export function I18nProvider({ children }: I18nProviderProps) {
   useEffect(() => {
-    const initializeI18n = async () => {
-      // Get language preference from localStorage or use initial language
-      const savedLanguage =
-        typeof window !== 'undefined' ? localStorage.getItem('heistmind-language') : null;
-
-      const language = savedLanguage || initialLanguage || 'en';
-
-      // Change language if different from current
-      if (i18n.language !== language) {
-        await i18n.changeLanguage(language);
-      }
-
-      setIsInitialized(true);
-    };
-
-    void initializeI18n();
-  }, [initialLanguage]);
-
-  // Show loading until i18n is initialized
-  if (!isInitialized) {
-    return (
-      <Section variant='hero' padding='none' width='full' className='min-h-screen'>
-        <Stack justify='center' align='center' className='min-h-screen'>
-          <Stack gap='md' align='center'>
-            <StatusIcon status='loading' size='xl' icon='⚡' animation='pulse' />
-            {/* Rendered before <I18nextProvider> mounts, so read off the i18n instance directly
-                (initialized to English) rather than the useTranslation hook. */}
-            <Text variant='secondary'>{i18n.t('common.loading.preparingShadows')}</Text>
-          </Stack>
-        </Stack>
-      </Section>
-    );
-  }
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    } catch {
+      // Storage blocked (private mode / disabled cookies) → stay on the default language.
+    }
+    if (saved && saved !== i18n.language && i18n.hasResourceBundle(saved, 'common')) {
+      void i18n.changeLanguage(saved);
+    }
+  }, []);
 
   // TooltipProvider (Radix) must wrap the app so tooltip-bearing components — e.g. the
   // StressTracker dot allocator used in the character wizard's Attributes step — can render
