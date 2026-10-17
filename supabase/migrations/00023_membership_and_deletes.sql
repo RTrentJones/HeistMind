@@ -24,6 +24,9 @@
 --   5. rulesets BEFORE DELETE trigger: other players' characters bound to a deleted ruleset get
 --      their own private copy of it first (see section 5) — this is what lets a GM whose players
 --      built characters in their campaign delete their account at all.
+--   6. characters BEFORE UPDATE OF game_id trigger: a character leaving a campaign (leave, remove,
+--      campaign delete, "Return to My Characters") keeps a ruleset its owner can read — they get
+--      a private copy of the GM's ruleset (see section 6).
 --
 -- Delete policies needed by the web's new deletes already exist (00002): rulesets/games/characters
 -- FOR DELETE by their creator. Ruleset delete stays blocked by the FKs while any campaign
@@ -276,14 +279,65 @@ BEGIN
        || 'FOR EACH ROW EXECUTE FUNCTION rulesets_rehome_characters()';
 
   -- ---------------------------------------------------------------------------------------
-  -- 6. Privileges (00022 B7 discipline): no PUBLIC/anon EXECUTE, authenticated + service_role
+  -- 6. A character leaving a campaign keeps a readable ruleset.
+  --    In a campaign, a player's character is bound to the GM's ruleset, which the player reads
+  --    only as an ACTIVE member (user_can_access_ruleset). Detached — by leave/remove, campaign
+  --    delete (incl. the GM's account deletion), or "Return to My Characters" — the sheet could
+  --    no longer load its ruleset. Now, when game_id goes NULL on a character bound to someone
+  --    else's private ruleset, the owner gets that ruleset as their own copy (an identical
+  --    same-named copy they already own is reused) and the character is re-bound to it.
+  --    Named so it fires AFTER characters_guard_update (BEFORE triggers run alphabetically),
+  --    which therefore still sees the original binding.
+  -- ---------------------------------------------------------------------------------------
+  EXECUTE $create$
+    CREATE OR REPLACE FUNCTION characters_keep_ruleset()
+    RETURNS trigger AS $fnbody$
+    DECLARE
+      rs     rulesets%ROWTYPE;
+      v_id   UUID;
+      v_name TEXT;
+      n      INTEGER;
+    BEGIN
+      IF OLD.game_id IS NULL OR NEW.game_id IS NOT NULL OR NEW.original_ruleset_id IS NULL THEN
+        RETURN NEW;
+      END IF;
+      SELECT * INTO rs FROM rulesets WHERE id = NEW.original_ruleset_id;
+      IF NOT FOUND OR rs.created_by = NEW.created_by OR COALESCE(rs.is_public, false) THEN
+        RETURN NEW;
+      END IF;
+      SELECT id INTO v_id FROM rulesets
+        WHERE created_by = NEW.created_by AND name = rs.name AND content = rs.content
+        LIMIT 1;
+      IF v_id IS NULL THEN
+        v_name := rs.name; n := 1;
+        WHILE EXISTS (SELECT 1 FROM rulesets WHERE created_by = NEW.created_by AND name = v_name) LOOP
+          n := n + 1; v_name := rs.name || ' (' || n || ')';
+        END LOOP;
+        INSERT INTO rulesets (created_by, name, description, version, content, schema_version,
+                              status, is_public, tags, compatibility_flags)
+          VALUES (NEW.created_by, v_name, rs.description, rs.version, rs.content,
+                  rs.schema_version, rs.status, false, rs.tags, rs.compatibility_flags)
+          RETURNING id INTO v_id;
+      END IF;
+      NEW.original_ruleset_id := v_id;
+      RETURN NEW;
+    END;
+    $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
+  $create$;
+  EXECUTE 'DROP TRIGGER IF EXISTS characters_keep_ruleset ON characters';
+  EXECUTE 'CREATE TRIGGER characters_keep_ruleset BEFORE UPDATE OF game_id ON characters '
+       || 'FOR EACH ROW EXECUTE FUNCTION characters_keep_ruleset()';
+
+  -- ---------------------------------------------------------------------------------------
+  -- 7. Privileges (00022 B7 discipline): no PUBLIC/anon EXECUTE, authenticated + service_role
   --    for the RPCs, service_role only for the trigger function; pinned search_path everywhere.
   -- ---------------------------------------------------------------------------------------
   FOREACH fn IN ARRAY ARRAY['redeem_invite_code(text)', 'remove_game_player(uuid, uuid, text)',
                             'leave_game(uuid, text)', 'games_detach_characters()',
-                            'rulesets_rehome_characters()'] LOOP
+                            'rulesets_rehome_characters()', 'characters_keep_ruleset()'] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM PUBLIC, anon', target_schema, fn);
-    IF fn IN ('games_detach_characters()', 'rulesets_rehome_characters()') THEN
+    IF fn IN ('games_detach_characters()', 'rulesets_rehome_characters()',
+              'characters_keep_ruleset()') THEN
       EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM authenticated', target_schema, fn);
     ELSE
       EXECUTE format('GRANT EXECUTE ON FUNCTION %I.%s TO authenticated', target_schema, fn);
