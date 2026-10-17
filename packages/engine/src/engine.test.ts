@@ -60,7 +60,11 @@ const CHARACTER = {
 } as unknown as CharacterWithDetails;
 
 function repos(overrides: Record<string, unknown>): DatabaseRepositories {
-  return overrides as unknown as DatabaseRepositories;
+  // Default: the campaign has no crew yet (no crew-granted stress boxes); suites override `crews`.
+  return {
+    crews: { findByGame: vi.fn().mockResolvedValue(ok(null)) },
+    ...overrides,
+  } as unknown as DatabaseRepositories;
 }
 
 describe('applyStress', () => {
@@ -92,6 +96,29 @@ describe('applyStress', () => {
     expect(out.success).toBe(true);
     expect(update).toHaveBeenCalledWith('c1', 'gm-1', {
       characterData: expect.objectContaining({ stress: 8 }),
+    });
+  });
+
+  it("counts the campaign crew's stress boxes before calling an overflow", async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const content = structuredClone(CHARACTER.ruleset.content);
+    content.crew = {
+      ...(content.crew ?? { types: [] }),
+      abilities: [
+        { id: 'crew-hardened', name: 'Hardened', description: '', effects: { stressBoxes: 1 } },
+      ],
+    } as typeof content.crew;
+    const onCrew = { ...CHARACTER, ruleset: { ...CHARACTER.ruleset, content } };
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(onCrew)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      crews: { findByGame: vi.fn().mockResolvedValue(ok({ crewAbilities: ['crew-hardened'] })) },
+    });
+    // 6 + 3 = 9: the base track would overflow here, but the crew box makes the max 10.
+    const out = await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 });
+    expect(out.success && out.data?.trauma).toBe(false);
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 9 }),
     });
   });
 

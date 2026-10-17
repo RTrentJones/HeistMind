@@ -81,6 +81,11 @@ export interface CrewAbilityDefinition {
    * `{ veteran: 1 }`. Applied by `validateCharacter` when crew context is supplied.
    */
   effects?: AbilityEffects;
+  /**
+   * A definition kept only so sheets that already hold it still render its text (e.g. a built-in
+   * ability removed when the content was corrected against the SRD). Never offered for a new pick.
+   */
+  retired?: boolean;
 }
 
 export interface StressRules {
@@ -169,6 +174,11 @@ export interface AbilityDefinition {
   category?: string;
   /** Optional structured effects applied by the validator (see {@link AbilityEffects}). */
   effects?: AbilityEffects;
+  /**
+   * A definition kept only so sheets that already hold it still render its text (e.g. a built-in
+   * ability removed when the content was corrected against the SRD). Never offered for a new pick.
+   */
+  retired?: boolean;
 }
 
 export interface ContactDefinition {

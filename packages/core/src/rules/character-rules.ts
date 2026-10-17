@@ -236,6 +236,8 @@ export function isAbilityUnlocked(
 ): boolean {
   const ability = findAbility(ruleset, abilityId);
   if (!ability) return true;
+  // A retired definition stays legal for a sheet that already holds it, never as a new pick.
+  if (ability.retired && !data.specialAbilities.includes(abilityId)) return false;
   if (!prerequisiteSatisfied(ruleset, data, ability)) return false;
   if (consumesVeteranSlot(ruleset, data, abilityId)) {
     const granted = collectAbilityEffects(ruleset, data, crew).veteran;

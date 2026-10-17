@@ -15,6 +15,7 @@ import {
   type Character,
   type CharacterAdvancement,
   type CharacterHarm,
+  type CrewContext,
   type HarmLevel,
   type Result,
   type Roll,
@@ -51,6 +52,16 @@ export interface StressOutcome {
   mustRetire: boolean;
 }
 
+/** The crew context a character's rules are judged in: its campaign crew's abilities, or none. */
+async function crewContextFor(
+  repos: DatabaseRepositories,
+  gameId: string | null
+): Promise<CrewContext | null> {
+  if (gameId === null) return null;
+  const crew = await repos.crews.findByGame(gameId);
+  return crew.success && crew.data ? { crewAbilities: crew.data.crewAbilities } : null;
+}
+
 /**
  * Apply a stress delta the RAW way (core `applyStressChange`): a clear never goes below 0, and a
  * cost that marks the LAST stress box resets stress to 0 and owes a trauma condition
@@ -71,7 +82,14 @@ export async function applyStress(
   const owned = notOwnerOrGm(char, input.userId);
   if (owned) return owned;
   const data = char.characterData;
-  const change = applyStressChange(char.ruleset.content, data, input.stress);
+  // The campaign crew's abilities can grant stress boxes (`effects.stressBoxes`); the overflow
+  // point must match the repository's validation, which counts them.
+  const change = applyStressChange(
+    char.ruleset.content,
+    data,
+    input.stress,
+    await crewContextFor(repos, char.gameId)
+  );
   if (!change.trauma && change.stress === (data?.stress ?? 0)) return { success: true, data: null };
   const updated = await repos.characterManagement.updateCharacterWithValidation(
     input.characterId,

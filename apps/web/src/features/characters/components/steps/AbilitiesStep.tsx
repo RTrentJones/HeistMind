@@ -42,8 +42,10 @@ export function AbilitiesStep() {
 
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const rosterIds = new Set(playbook?.specialAbilities ?? []);
-  const roster = abilities.filter(a => rosterIds.has(a.id));
-  const others = abilities.filter(a => !rosterIds.has(a.id));
+  // Retired definitions only render on sheets that already hold them — never as a wizard option.
+  const offered = abilities.filter(a => !a.retired || selected.includes(a.id));
+  const roster = offered.filter(a => rosterIds.has(a.id));
+  const others = offered.filter(a => !rosterIds.has(a.id));
 
   const renderCard = (ab: AbilityDefinition) => {
     const isSelected = selected.includes(ab.id);

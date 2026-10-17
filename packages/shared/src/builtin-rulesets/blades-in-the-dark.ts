@@ -811,6 +811,46 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
 
     // Every playbook
     ...VETERAN,
+
+    // Retired — earlier versions of this built-in shipped these non-SRD abilities. They stay only so
+    // a sheet that already holds one still shows its text after a GM refreshes their copy; they are
+    // on no roster and `retired` keeps them out of every pick (wizard, editor, bot, Veteran).
+    {
+      id: 'hound-tracker',
+      name: 'Tracker',
+      description: 'No trail goes cold for you.',
+      rules:
+        'When you follow a target, take +1d to track and to anticipate where they will go next.',
+      category: 'hound',
+      retired: true,
+    },
+    {
+      id: 'hound-vigorous',
+      name: 'Vigorous',
+      description: 'Heal faster and shrug off the worst.',
+      rules:
+        'Your healing clock has fewer segments and you take reduced harm penalties at the moderate level.',
+      category: 'hound',
+      retired: true,
+    },
+    {
+      id: 'slide-coverid',
+      name: 'Connected Cover',
+      description: 'Your false self has real backing.',
+      rules:
+        'Establish a standing cover identity with its own contacts and standing. It holds up to casual scrutiny without effort.',
+      category: 'slide',
+      retired: true,
+    },
+    {
+      id: 'slide-acalculating',
+      name: 'Cold Read',
+      description: 'You see what a person wants.',
+      rules:
+        'When you study someone in conversation, you learn their desire, their fear, or how to best appeal to them.',
+      category: 'slide',
+      retired: true,
+    },
   ],
 
   equipment: {
@@ -1208,6 +1248,19 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
           'A crew upgrade (four upgrade boxes in the book): PCs may advance their action ratings ' +
           'to 4 (instead of the usual cap of 3).',
         effects: { actionMax: 4 },
+      },
+      // Retired (non-SRD, shipped by earlier versions) — kept so a crew that holds one still shows it.
+      {
+        id: 'crew-deadly-friends',
+        name: 'Deadly Friends',
+        description: 'Your cohorts are elite — they roll with increased effect.',
+        retired: true,
+      },
+      {
+        id: 'crew-fortified',
+        name: 'Fortified',
+        description: 'Your lair is hardened — gain +1d to resist intrusion and raids.',
+        retired: true,
       },
     ],
     claims: [

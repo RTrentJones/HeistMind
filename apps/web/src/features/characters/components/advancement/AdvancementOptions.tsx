@@ -41,7 +41,7 @@ export function AdvancementOptions({
   // RAW (review #1): an advance takes an ability from YOUR playbook; another playbook's ability
   // needs a free Veteran slot (your own Veteran, or a crew grant) — the same gate the repository
   // runs. Other playbooks' abilities with no slot free are hidden behind a count, not offered.
-  const unowned = content.specialAbilities.filter(a => !owned.includes(a.id));
+  const unowned = content.specialAbilities.filter(a => !owned.includes(a.id) && !a.retired);
   const data = character.characterData;
   const crossLocked = unowned.filter(
     a =>
