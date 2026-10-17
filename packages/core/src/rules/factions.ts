@@ -20,12 +20,22 @@ export function clampFactionStatus(status: number): number {
   return Math.max(FACTION_STATUS_MIN, Math.min(Math.trunc(status), FACTION_STATUS_MAX));
 }
 
-/** A short, human label for a status value (war … allied). */
+/**
+ * The SRD's name for each status level ([SRD, Faction game → Faction status levels](
+ * https://bladesinthedark.com/faction-game)), indexed by `status + 3`.
+ */
+export const FACTION_STATUS_LABELS = [
+  'War',
+  'Hostile',
+  'Interfering',
+  'Neutral',
+  'Helpful',
+  'Friendly',
+  'Allies',
+] as const;
+
+/** A short, human label for a status value (War … Allies), per the SRD's seven levels. */
 export function factionStatusLabel(status: number): string {
-  const s = clampFactionStatus(status);
-  if (s <= -3) return 'War';
-  if (s < 0) return 'Hostile';
-  if (s === 0) return 'Neutral';
-  if (s < 3) return 'Friendly';
-  return 'Allied';
+  // clampFactionStatus keeps the index in 0..6, so the lookup always hits.
+  return FACTION_STATUS_LABELS[clampFactionStatus(status) - FACTION_STATUS_MIN] as string;
 }

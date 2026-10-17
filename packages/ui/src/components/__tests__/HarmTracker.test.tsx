@@ -24,6 +24,19 @@ describe('HarmTracker', () => {
     expect(screen.getByText('Scraped')).toBeInTheDocument();
   });
 
+  it('renders the localized level labels the app passes', () => {
+    render(
+      <HarmTracker
+        harm={{ lesser: [], moderate: [], severe: [] }}
+        bounds={bounds}
+        labels={{ severe: 'Grave', moderate: 'Modérée', lesser: 'Légère' }}
+      />
+    );
+    expect(screen.getByText('Grave')).toBeInTheDocument();
+    expect(screen.getByText('Légère')).toBeInTheDocument();
+    expect(screen.queryByText('Severe')).not.toBeInTheDocument();
+  });
+
   it('renders empty boxes without throwing when harm is empty/missing', () => {
     expect(() =>
       render(<HarmTracker harm={{ lesser: [], moderate: [], severe: [] }} bounds={bounds} />)
@@ -42,8 +55,30 @@ describe('HarmTracker', () => {
     );
     // Only the filled box is a button; empty boxes stay inert spans.
     expect(screen.getAllByRole('button')).toHaveLength(1);
+    // Two-click confirm: the first click only ARMS the box…
     await userEvent.click(screen.getByRole('button', { name: 'Clear harm: Scraped' }));
+    expect(onClearEntry).not.toHaveBeenCalled();
+    const armed = screen.getByRole('button', { name: 'Clear? Scraped' });
+    expect(armed).toHaveTextContent('Clear?');
+    // …the second clears.
+    await userEvent.click(armed);
     expect(onClearEntry).toHaveBeenCalledWith('lesser', 'Scraped');
+  });
+
+  it('an armed clear disarms on Escape without clearing', async () => {
+    const onClearEntry = vi.fn();
+    render(
+      <HarmTracker
+        harm={{ lesser: ['Scraped'], moderate: [], severe: [] }}
+        bounds={bounds}
+        onClearEntry={onClearEntry}
+        confirmClearLabel='Soigner ?'
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Clear harm: Scraped' }));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Clear harm: Scraped' })).toBeInTheDocument();
+    expect(onClearEntry).not.toHaveBeenCalled();
   });
 
   it('clear buttons disable while a save is in flight', () => {

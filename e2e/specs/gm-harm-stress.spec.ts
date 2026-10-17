@@ -41,6 +41,17 @@ test.describe('GM: harm + live stress', () => {
     await gmPage.reload();
     await expect(gmPage.getByText('3/9')).toBeVisible({ timeout: 15_000 }); // persisted
 
+    // --- F92 (RAW): marking the LAST stress box is trauma, not a clamp — stress resets to 0, the
+    // sheet asks for the condition (cinders names none → free text), and the feed logs both. ---
+    await gmPage.getByRole('button', { name: 'Set stress to 9' }).click();
+    await expect(gmPage.getByTestId('trauma-pending')).toBeVisible({ timeout: 10_000 });
+    await expect(gmPage.getByText('0/9')).toBeVisible();
+    await gmPage.getByLabel('Trauma condition').fill('Haunted');
+    await gmPage.getByRole('button', { name: 'Mark trauma' }).click();
+    await expect(gmPage.getByTestId('trauma-pending')).toBeHidden({ timeout: 10_000 });
+    await expect(gmPage.getByText(/marked their last stress box — trauma!/).first()).toBeVisible();
+    await expect(gmPage.getByText(/takes the trauma: Haunted/).first()).toBeVisible();
+
     // --- Harm: added in the editor's Stress tab; appears on the sheet's harm track. ---
     await gmPage.getByRole('button', { name: 'Edit build' }).click();
     await gmPage.getByRole('button', { name: 'Stress & Trauma' }).click();
@@ -48,7 +59,11 @@ test.describe('GM: harm + live stress', () => {
     // .last() — the sheet's quick take-harm row (F65) has a '+ Lesser' too; the editor's renders last.
     await gmPage.getByRole('button', { name: '+ Lesser' }).last().click();
     await gmPage.getByRole('button', { name: /Save stress, harm/ }).click();
-    await expect(gmPage.getByText('Battered').first()).toBeVisible({ timeout: 10_000 });
+    // Wait for the SAVED harm on the sheet face (its quick-clear box), not the editor's draft
+    // text — reloading before the save lands made this flaky under load.
+    await expect(gmPage.getByRole('button', { name: 'Clear harm: Battered' })).toBeVisible({
+      timeout: 15_000,
+    });
     await gmPage.reload();
     await expect(gmPage.getByText('Battered').first()).toBeVisible({ timeout: 15_000 }); // persisted
   });
@@ -87,7 +102,9 @@ test.describe('GM: harm + live stress', () => {
     // and cinders is a point-buy ruleset whose sheet panel has no action rolls to penalize.)
 
     // Recovery: clicking the wound box clears it, feed-logged.
+    // Two-click confirm (F91): the first click arms the box, the second clears it.
     await gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' }).click();
+    await gmPage.getByRole('button', { name: 'Confirm clearing Cracked ribs' }).click();
     await expect(gmPage.getByText('Cleared harm: Cracked ribs')).toBeVisible({ timeout: 10_000 });
     await expect(gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' })).toHaveCount(0);
   });

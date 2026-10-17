@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Character, CharacterStatus } from '@heist-mind/core';
 import { Badge, Card, Heading, Stack, Text } from '@heist-mind/ui';
+import { useTranslation } from '@/lib/i18n/hooks';
+import { characterStatusLabel } from '@/features/rolls/lib/labels';
 
 /**
  * Canonical character status → badge variant mapping. Previously duplicated (and diverged) across the
@@ -32,6 +34,7 @@ export interface CharacterCardProps {
  * the card itself stays a single implementation.
  */
 export function CharacterCard({ character, meta, actions, standaloneLabel }: CharacterCardProps) {
+  const { t } = useTranslation();
   return (
     <Card variant='character'>
       <Stack direction='row' justify='between' align='center' className='flex-wrap'>
@@ -39,8 +42,8 @@ export function CharacterCard({ character, meta, actions, standaloneLabel }: Cha
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             <Heading level='h3'>{character.name}</Heading>
             {character.status !== 'active' && (
-              <Badge variant={characterStatusVariant[character.status]} className='capitalize'>
-                {character.status}
+              <Badge variant={characterStatusVariant[character.status]}>
+                {characterStatusLabel(character.status, t)}
               </Badge>
             )}
             {standaloneLabel && !character.gameId && (

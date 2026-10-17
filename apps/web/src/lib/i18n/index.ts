@@ -9,9 +9,15 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 // Default language
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
 
-// Initialize i18n
+// Initialize i18n SYNCHRONOUSLY. Every message file is bundled inline (no HTTP backend), and
+// `initAsync: false` makes init() complete before this module finishes evaluating — so the very
+// first render, on the server AND on the client, already has English loaded. That is what lets
+// every page server-render its real copy with no client-side "wait for i18n" gate, and keeps the
+// server HTML and the first client render byte-identical (no hydration mismatch). A saved
+// non-English preference is applied after hydration (see ./provider.tsx).
 void i18n.use(initReactI18next).init({
   resources: translations,
+  initAsync: false,
   lng: DEFAULT_LANGUAGE,
   fallbackLng: DEFAULT_LANGUAGE,
   interpolation: {

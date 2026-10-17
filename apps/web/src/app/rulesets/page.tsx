@@ -38,7 +38,7 @@ export default function RulesetsPage() {
   return (
     <Container maxWidth='4xl' padding='lg'>
       <Stack direction='column' gap='lg'>
-        <Stack direction='row' justify='between' align='center'>
+        <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
           <Heading level='h1' variant='hero'>
             {t('pages.rulesetsCatalog.title')}
           </Heading>
@@ -47,7 +47,14 @@ export default function RulesetsPage() {
           </Button>
         </Stack>
 
-        {error && <ErrorDisplay title={t('pages.rulesetsCatalog.loadError')} message={error} />}
+        {error && (
+          <ErrorDisplay
+            title={t('pages.rulesetsCatalog.loadError')}
+            message={error}
+            onRetry={() => void rulesetsQuery.refetch()}
+            retryText={t('components.asyncState.retry')}
+          />
+        )}
 
         {/* Built-in catalog — load any system with one click (creates an editable copy you own). */}
         <Card variant='outline'>
@@ -64,15 +71,18 @@ export default function RulesetsPage() {
 
         {rulesetsQuery.isLoading ? (
           <LoadingSpinner />
-        ) : rulesets.length === 0 ? (
+        ) : rulesetsQuery.isError ? null : rulesets.length === 0 ? (
           <Text variant='muted'>{t('pages.rulesetsCatalog.empty')}</Text>
         ) : (
           <Stack direction='column' gap='md'>
             {rulesets.map(rs => (
               <Card key={rs.id} variant='outline'>
-                <Stack direction='row' justify='between' align='center'>
-                  <div>
-                    <Heading level='h3'>{rs.name}</Heading>
+                {/* Wraps at 360px instead of pushing the CTA off-screen (review item 9). */}
+                <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
+                  <div className='min-w-0'>
+                    <Heading level='h3' className='break-words'>
+                      {rs.name}
+                    </Heading>
                     <Text variant='muted' size='sm'>
                       {t('pages.rulesetsCatalog.versionPrefix')}
                       {rs.version}

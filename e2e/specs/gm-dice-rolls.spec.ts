@@ -45,7 +45,10 @@ test.describe('GM: dice rolls + roll log', () => {
     await expect(gmPage.getByRole('heading', { name: 'Dice' })).toBeVisible();
     await gmPage.getByRole('button', { name: 'Roll', exact: true }).click();
     // Immediate result feedback + an entry in the log (the "[n, …]" faces are unique to the log).
-    await expect(gmPage.getByText(/Critical!|Success|Partial|Bad outcome/)).toBeVisible({
+    // Scoped to the panel's live result region — the log's outcome badge is translated too now.
+    await expect(
+      gmPage.getByTestId('roll-result').getByText(/Critical!|Success|Partial|Bad outcome/)
+    ).toBeVisible({
       timeout: 10_000,
     });
     await expect(gmPage.getByText(/\[\d/).first()).toBeVisible();
@@ -93,7 +96,9 @@ test.describe('GM: dice rolls + roll log', () => {
     await expect(gmPage.getByRole('checkbox', { name: /waive harm penalty/i })).toBeVisible();
 
     // Recovery clears the wound and the penalty hint with it.
+    // Two-click confirm (F91): the first click arms the box, the second clears it.
     await gmPage.getByRole('button', { name: 'Clear harm: Cracked ribs' }).click();
+    await gmPage.getByRole('button', { name: 'Confirm clearing Cracked ribs' }).click();
     await expect(gmPage.getByText('Cleared harm: Cracked ribs')).toBeVisible({ timeout: 10_000 });
     await expect(gmPage.getByText('Moderate harm — this roll loses 1 die.')).toHaveCount(0, {
       timeout: 10_000,

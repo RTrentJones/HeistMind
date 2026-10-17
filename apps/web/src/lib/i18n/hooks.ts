@@ -107,6 +107,9 @@ export function usePageTranslation(): {
   return { t, isLoading: !ready };
 }
 
+/** localStorage key holding the visitor's chosen language (applied post-hydration by I18nProvider). */
+export const LANGUAGE_STORAGE_KEY = 'heistmind-language';
+
 /**
  * Utility hook for language switching
  */
@@ -117,7 +120,7 @@ export function useLanguageSwitcher() {
     await i18n.changeLanguage(language);
     // Persist language preference
     if (typeof window !== 'undefined') {
-      localStorage.setItem('heistmind-language', language);
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     }
   };
 

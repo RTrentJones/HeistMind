@@ -361,8 +361,17 @@ export function ThemeProvider({
   // `.light`/`.dark` blocks, the single source of truth. This provider used to also inject the
   // (stale) JS token map as inline styles, which outranked every stylesheet — the F87 root
   // cause: CSS-side contrast fixes silently never applied anywhere the provider ran.
+  //
+  // F93 — when the app's pre-hydration theme script already set the class, the FIRST run is skipped:
+  // state still holds `defaultMode` at that point (localStorage is read in an effect), so applying
+  // it would flash the default theme before the stored one lands a render later.
+  const appliedOnce = React.useRef(false);
   React.useEffect(() => {
     const root = document.documentElement;
+    if (!appliedOnce.current) {
+      appliedOnce.current = true;
+      if (root.classList.contains('light') || root.classList.contains('dark')) return;
+    }
     root.classList.remove('light', 'dark');
     root.classList.add(resolvedMode);
   }, [resolvedMode]);

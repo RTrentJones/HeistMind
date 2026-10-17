@@ -64,10 +64,12 @@ export function generateAccessibilityId(prefix?: string): string {
   return `${validatedPrefix}-${++idCounter}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
-// Create stable ID hook
-export function useId(prefix?: string): string {
-  const [id] = React.useState(() => generateAccessibilityId(prefix));
-  return id;
+// Create stable ID hook. Built on React.useId so the server-rendered id matches the client's —
+// a random id (generateAccessibilityId) differs between the SSR pass and hydration and breaks
+// every aria-describedby/aria-labelledby pairing on server-rendered pages.
+export function useId(prefix = 'a11y'): string {
+  const reactId = React.useId();
+  return `${prefix}-${reactId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
 }
 
 // ARIA live region announcer

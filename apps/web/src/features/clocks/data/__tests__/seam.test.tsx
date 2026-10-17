@@ -7,7 +7,7 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { RepositoryError } from '@/lib/query/result';
 import { clockKeys, useClocksByGame } from '../queries';
-import { useCreateClock } from '../mutations';
+import { useCreateClock, useDeleteClock, useTickClock } from '../mutations';
 
 // Representative seam tests: one read hook (Result unwrapping into RQ data/error state) and one
 // write hook (repo call + the game's clocks invalidation), per the characters seam pattern.
@@ -113,5 +113,65 @@ describe('useCreateClock (write side)', () => {
       'not the GM'
     );
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useTickClock (review item 3 — no swallowed double-click ticks)', () => {
+  it('writes the returned row into the cache and ticks the NEXT click from that fresh fill', async () => {
+    const update = vi.fn((id: string, patch: { filled: number }) =>
+      Promise.resolve({ success: true, data: { ...CLOCK, id, filled: patch.filled } })
+    );
+    mockRepos({ clocks: { update }, rolls: { create: vi.fn() } });
+    const qc = testQueryClient();
+    qc.setQueryData(clockKeys.byGame('g1'), [CLOCK]);
+
+    const { result } = renderHook(() => useTickClock('g1'), { wrapper: createWrapper(qc) });
+    const vars = { clock: CLOCK, userId: 'u1', delta: 1, logLabel: 'Alarm', logNote: 'filled' };
+
+    await result.current.mutateAsync(vars);
+    expect(qc.getQueryData<Clock[]>(clockKeys.byGame('g1'))?.[0]?.filled).toBe(1);
+
+    // The second click still carries the STALE clock (filled 0) from the earlier render…
+    await result.current.mutateAsync(vars);
+    // …but ticks from the cached fresh fill: 1 → 2, not 0 → 1 again.
+    expect(update).toHaveBeenLastCalledWith('cl1', { filled: 2 });
+    expect(qc.getQueryData<Clock[]>(clockKeys.byGame('g1'))?.[0]?.filled).toBe(2);
+  });
+
+  it('awaits the confirming invalidation before the mutation settles', async () => {
+    mockRepos({
+      clocks: {
+        update: vi.fn().mockResolvedValue({ success: true, data: { ...CLOCK, filled: 1 } }),
+      },
+    });
+    const qc = testQueryClient();
+    let resolveInvalidate: () => void = () => undefined;
+    vi.spyOn(qc, 'invalidateQueries').mockImplementation(
+      () => new Promise<void>(r => (resolveInvalidate = r))
+    );
+    const { result } = renderHook(() => useTickClock('g1'), { wrapper: createWrapper(qc) });
+
+    let settled = false;
+    const p = result.current
+      .mutateAsync({ clock: CLOCK, userId: 'u1', delta: 1, logLabel: 'a', logNote: 'b' })
+      .then(() => (settled = true));
+    await waitFor(() => expect(qc.invalidateQueries).toHaveBeenCalled());
+    expect(settled).toBe(false);
+    resolveInvalidate();
+    await p;
+    expect(settled).toBe(true);
+  });
+});
+
+describe('useDeleteClock', () => {
+  it('drops the deleted clock from the cached list', async () => {
+    mockRepos({
+      clocks: { delete: vi.fn().mockResolvedValue({ success: true, data: undefined }) },
+    });
+    const qc = testQueryClient();
+    qc.setQueryData(clockKeys.byGame('g1'), [CLOCK, { ...CLOCK, id: 'cl2' }]);
+    const { result } = renderHook(() => useDeleteClock('g1'), { wrapper: createWrapper(qc) });
+    await result.current.mutateAsync('cl1');
+    expect(qc.getQueryData<Clock[]>(clockKeys.byGame('g1'))?.map(c => c.id)).toEqual(['cl2']);
   });
 });

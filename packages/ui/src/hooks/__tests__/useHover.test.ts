@@ -411,15 +411,19 @@ describe('useHover', () => {
         result.current.handlers.onMouseEnter();
       });
 
+      // The pending enter-delay timer exists before unmount…
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
       // Unmount before timeout completes
       unmount();
 
-      // Should not throw or cause memory leaks
+      // …and is cleared by it: nothing left to fire, and no post-unmount state update warning.
+      expect(vi.getTimerCount()).toBe(0);
       act(() => {
         vi.advanceTimersByTime(100);
       });
-
-      expect(true).toBe(true); // Test passes if no errors thrown
+      expect(consoleError).not.toHaveBeenCalled();
     });
   });
 

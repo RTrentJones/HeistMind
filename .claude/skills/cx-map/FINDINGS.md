@@ -32,6 +32,69 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F93 — Launch pixel pass: phone header, look-enabled disabled buttons, wizard stepper, contrast tokens, mobile clipping
+
+- **severity:** S2 · **type:** CX-flaw (visual / a11y) — from the 2026-10 launch pixel audit
+  (246 screenshots × axe, `scratchpad/review-pixel.md` items #1, #2, #4-theme, #5, #6, #8–#11, #20)
+- **where / root causes:**
+  - **Header (#1):** `AuthHeader` wrapped four nav links + welcome + sign-out + toggle around a
+    56px `<h1>` brand inside a `flex-wrap` sticky header → **266px pinned at 360×740** (36% of the
+    screen). The brand was the page's `<h1>` on every route.
+  - **Disabled buttons (#2):** `Button` animated `opacity: 1` via framer-motion, which lands as
+    an INLINE style and outranks `disabled:opacity-50` — "Delete my account", "Upload ruleset" and
+    blocked wizard Next/Create looked live. `Textarea` had the same pattern.
+  - **Theme flash (#4, theme part):** no class on `<html>` until `ThemeProvider`'s effect → the
+    `:root` dark palette painted first for light users; `<html>` itself had no background.
+  - **Clipping (#5):** `Button` was `whitespace-nowrap` with a fixed `h-*`; `Badge` truncated with
+    no `max-w-full` (the landing's "Like Avrae…" tag cut mid-word at 360).
+  - **Stress pips (#6):** 9 fixed-width pips in a non-wrapping flex row squashed into ovals; the
+    fill colour changed with the stress level (green on one sheet, orange on another).
+  - **/discord (#8):** the command table lived in an `overflow-x-auto` box — Needs/Does invisible on
+    phones and keyboard-unscrollable (axe `scrollable-region-focusable`).
+  - **Contrast (#9):** light `--color-foreground-muted` (#71717a) = 4.39:1 on card surfaces;
+    outline/ghost button text used the brand FILL colour (2.5:1 on the wizard footer's Back);
+    the dark landing wordmark 3.49:1.
+  - **Wizard (#10/#20):** unvisited steps rendered green (validity ≠ visited); the selected
+    playbook got a red "Selected"; a "0" derived attribute was a red badge; `role=tablist` around
+    buttons (axe `aria-required-children`); the action dots were all named "Set rating to N".
+  - **Shell (#11):** no gap under the header; footer floated mid-screen on short pages; crumbs
+    used a fixed `max-w-4xl` while most deep pages are 3xl (≈80px misaligned at 1440).
+- **fix:**
+  - `AuthHeader` is one compact row (`Header size='sm'`, ≈60px): brand is a home **link** (not an
+    h1); signed-in nav is a `<nav aria-label="Main">` from `lg`, and below `lg` a **menu button**
+    (`aria-expanded`/`aria-controls`, focus moves into the panel, Escape/outside-click/navigation
+    close it and Escape returns focus) opens a panel with the links, welcome, language + sign-out.
+    Signed-out phones show one short "Sign In" button; the clickwrap line moved out of the sticky
+    row. `Header` lost its fade/slide-in entrance (a CLS source). Page titles are the h1 now
+    (wizard step title, 404, sign-in gates).
+  - `Button` animates `y` only (no inline opacity); disabled = 50% + `cursor-not-allowed`, no
+    hover lift. Sizes use `min-h-*` + `whitespace-normal` so long labels wrap; `size='sm'` is
+    44px tall below `sm`. `Textarea` fixed the same way. Unit test pins "no inline opacity".
+  - Root layout inlines a no-flash theme script (`lib/theme-script.ts`) that sets `light`/`dark`
+    on `<html>` before paint (+ `suppressHydrationWarning`); `ThemeProvider` skips its first
+    class write when the script already set one. `html` takes the theme background + `color-scheme`.
+  - `Badge` gains `wrap` (+ `max-w-full` always); the landing tag uses it.
+  - `StressTracker`/`ActionDots`: `aspect-square shrink-0` pips in a wrapping row, a ≥40px
+    invisible hit area on phones, ONE stress colour (ember; error only when full), and
+    `ActionDots name=` → "Set Hunt to 2" labels (wired in both wizard allocators).
+  - `/discord` command reference is one `<dl>`: stacked cards (Command / Needs / Does labelled)
+    below `md`, a table-like grid from `md` — nothing scrolls sideways.
+  - Tokens: light muted → `hsl(240 4% 40%)` (≥5:1 on every light surface); outline/ghost/link
+    button text → `text-brand-fg`; landing wordmark → `text-brand-fg`.
+  - Wizard stepper is `<nav><ol>` with `aria-current="step"`; statuses current (brand) / complete
+    (green ✓, only for passed + valid) / needs attention (amber !) / not started (outline), each
+    with an sr-only label; same model in the rail layout (`layout/step-status.ts`). Selected
+    playbook = success badge + brand ring; derived attribute 0 = outline, >0 = info.
+  - `AppShell`: `min-h-dvh` flex column, `main` is `flex-1 pt-6 sm:pt-10`; `Breadcrumbs` take the
+    route's own column width/padding; footer links are 44px tall on phones.
+- **still open:** axe `heading-order` (h1 → card-title h3, no h2) on /games, /games/new,
+  /characters(/new), /rulesets/new, the hub and now the sheets (whose title became the h1 here) —
+  Card titles should be h2; the sheet's centred "← Back to campaign" link.
+- **verify:** recapture of all 246 shots (`scratchpad/pixel-after/`): 0 color-contrast,
+  0 aria-required-children, 0 scrollable-region-focusable; signed-in header 61px sticky at 360
+  (sheet: 622px content between header and the 57px thumb bar at 360×740).
+- **status:** fixed @6abebae, 1b1f341, e21e625 (launch pixel round, 2026-10-17)
+
 ### F1 — Empty rating pips become invisible on card hover
 
 - **severity:** S2 · **type:** CX-flaw
@@ -153,6 +216,125 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   cross-user oracle when signed in), link columns + player count not client-writable, campaign
   deletion still works. Still open from the same review (not in this round): server-side ruleset
   validation/size cap, security headers/CSP, Discord timestamp-replay window, the Next.js bump.
+
+### F90 — No page server-rendered its content; link previews, indexing and headers were wrong (front-door cluster)
+
+- **severity:** S1 · **type:** CX-flaw (launch blocker) · **(2026-10-17 launch-readiness review:
+  PM #1/#3/#6/#9, frontend #1/#4/#15, security #7/#11)**
+- **where / what (all verified against beta + a local prod build):**
+  (1) `lib/i18n/provider.tsx` returned a full-screen splash until a client `useEffect` flipped
+  `isInitialized`, and it wrapped the whole app — so the HTML of **every** route (`/`, `/discord`,
+  `/legal/*`, the 404, the app pages) was only `⚡ common.loading.preparingShadows`, a raw key (the
+  lookup was `common.loading…` inside the `common` namespace). Crawlers, link unfurlers and the
+  first paint saw no content; two code comments claimed the opposite.
+  (2) Root metadata carried a stale tagline ("HeistMind - Forged in the Dark Platform … The
+  definitive platform …"), no OG image, `twitter:card summary`, and `alternates.canonical: '/'`
+  that every page inherited (`/discord` and `/legal/*` declared the homepage as canonical). Pages
+  that set `title` still unfurled with the root OG text. No `robots.txt` / `sitemap.xml` (404);
+  beta was indexable.
+  (3) The coming-soon gate keyed only on `VERCEL_ENV === 'production'`, with a false header
+  claiming it lived only on `main` and "revert this commit on main" as the launch plan — a
+  reverted gate would come back on the next develop→main promote.
+  (4) Only HSTS on responses (no nosniff / referrer policy / frame protection / CSP); `next@15.3.8`
+  carried critical/high advisories, incl. a middleware-bypass class relevant to the gate.
+  (5) Removing (1) exposes the persisted auth store to hydration (server signed-out vs a returning
+  user's localStorage), and the web app built **two** Supabase clients (`createAuthService()` +
+  `createRepositories()`) → "Multiple GoTrueClient instances", two refreshers on one token; sign-out
+  never cleared the React Query cache.
+- **fix / status:** **fixed (launch round, 2026-10-17, branch `fix/web-launch-blockers`)** —
+  • i18n: `initAsync: false` + the inline catalog → English is ready on the first render on server
+  and client; `I18nProvider` renders children immediately; a saved language is applied after
+  hydration. The `/auth/callback` `useSearchParams` reader got the `<Suspense>` boundary that SSR
+  now requires.
+  • auth store: `skipHydration` + `rehydrateAuthStore()` from `AuthListener`'s layout effect;
+  `hasHydrated` lets `SignInGate` hold a spinner instead of flashing "sign in" at a returning
+  user; `sessionChecked` is no longer persisted (every boot re-validates); one provider → one
+  Supabase client; sign-out (and a signed-out auth event after a session) clears the query cache.
+  (Measured: zustand v5's hook already hydrates React from `getInitialState()`, so a sync hydrate
+  did not actually mismatch — the explicit post-mount hydrate is kept for clarity + `hasHydrated`.)
+  • metadata: `lib/site.ts` (env-aware `SITE_URL`, `INDEXABLE`, `publicPageMetadata`) — brand
+  title/description, `%s · HeistMind` template, no root canonical, per-page canonical + OG/Twitter
+  text on `/`, `/discord`, `/legal/*`; titles for app sections via server `layout.tsx` files;
+  `app/opengraph-image.tsx` + `twitter-image.tsx` (next/og, FitD palette on noir).
+  • indexing: `app/robots.ts` + `app/sitemap.ts` (public pages only); non-prod deployments and
+  non-canonical prod hosts get `noindex` (metadata + `X-Robots-Tag` from middleware + disallow-all
+  robots). The middleware matcher now also skips icons/OG images/webmanifest, which the prod gate
+  used to redirect to `/`.
+  • gate: `resolveComingSoon(NEXT_PUBLIC_COMING_SOON, VERCEL_ENV)` — explicit flag wins
+  (`0` launches prod, `1` forces it on), default unchanged (prod gated, everything else open), so
+  prod stays dark without any infra change; launch = one Terraform env var + redeploy.
+  • headers: nosniff, `strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, minimal
+  `Permissions-Policy`, and a prod-build CSP (self + Supabase https/wss + Sentry ingest from the
+  DSN; vercel.live on previews; `frame-ancestors 'none'`; `script-src 'unsafe-inline'` kept —
+  nonces would force every page dynamic). `poweredByHeader: false`.
+  • `next` + `eslint-config-next` → 15.5.28.
+  • coverage: `e2e/specs/ssr-hydration.spec.ts` (raw HTML of `/`, `/legal/*`, `/discord`, 404
+  carries real copy, never `common.loading`; no React hydration error / dual-GoTrue warning,
+  anonymous and for a returning signed-in GM — the detector was proven by a deliberate mismatch);
+  unit tests for `resolveComingSoon`, `rehydrateAuthStore`, sign-out cache clear, SignInGate's
+  pre-hydration state.
+- **residue (open):** (a) launching prod still needs `NEXT_PUBLIC_COMING_SOON=0` added to the
+  production env map in `RTrentJones.dev/infra/heistmind.tf`; (b) a returning signed-in user's `/`
+  still paints the marketing HTML until JS hydrates (auth lives in localStorage; a cookie-backed
+  session would let the server pick the Dashboard); (c) `common.loading.preparingShadows` and
+  other dead keys remain in `en.json` (PM #18 cleanup); (d) `/discord` is unreachable while the
+  prod gate is up (the gate allow-list is unchanged — add it if the guide should be public before
+  launch).
+
+### F92 — Rules-accuracy launch blockers: illegal abilities, non-RAW crew Tier, no stress→trauma, wrong BitD ability text (rules review 2026-10-17)
+
+- **severity:** S1 · **type:** FitD-accuracy · **(verified vs the SRD — pages under
+  bladesinthedark.com; book-only mechanics marked)**
+- **where:** `packages/core/src/rules/{character-rules,crews,factions}.ts`,
+  `packages/engine/src/{characters,crews,rolls,downtime}.ts`, the character-management + crew
+  repositories, `packages/shared/src/builtin-rulesets/blades-in-the-dark.ts`, the bot
+  (`roll`/`resist`/`sheet`/`gm`/`manifest`), and the web wizard / editor / sheet / crew sheet /
+  roll panel / factions legend.
+- **root cause / evidence (review-rules #1–#6, #8, #9, #11, #13, faction labels):**
+  1. Any playbook's tier-1 abilities were legal at creation and by advance; the veteran budget only
+     ran at creation (where it's moot), `advanceCharacter` skipped the roster gate, the bot's
+     `/xp advance` autocomplete offered every ability, and the wizard copy promised a crew gate that
+     didn't exist.
+  2. `advanceTier` was "+1 Tier per 12 Rep, carry the remainder" — no coin, no hold, no turf cap.
+  3. Stress silently clamped at max; nothing ever triggered trauma or retirement.
+  4. ~20 of 49 BitD ability texts gave the wrong mechanic (Vigorous, Focused, Shadow, Rook's Gambit,
+     Foresight, Calculating, …), the Hound's Sharpshooter/Scout names were swapped, special armor
+     was written out, Patron/No Traces were invented, and no Veteran existed.
+  5. Push + devil's bargain stacked (+2d); the bot allowed `extra` 0–3 on top (+4d).
+  6. `/resist` wrote stress from a typed dice count, not the sheet's attribute.
+  7. A playbook's 3 pre-placed action dots could be moved away at creation.
+  8. Deadly was "+1 dot anywhere" and couldn't lift the creation cap.
+  9. Bot `/crew heat` couldn't lower heat.
+  10. Flat-XP advances trusted the client cost (a negative cost ADDED XP) and the client `value`.
+  - Faction labels: −1/+1 read Hostile/Friendly (SRD: Interfering/Helpful; +3 is Allies); the hold
+    tooltip claimed weak hold "can break up entirely"; the harm SRD link 404'd.
+- **fix / status:** **fixed on `fix/rules-accuracy`** —
+  1. `consumesVeteranSlot` = outside the playbook roster, any tier (rosterless playbooks stay
+     lenient); the budget runs in live mode and in `advanceCharacter` (`ABILITY_LOCKED`, definite
+     crew context); own Veteran (`effects.veteran`) + crew grants (F62) sum; legacy over-budget
+     sheets are grandfathered for writes that add no ability. Wizard: other playbooks' abilities are
+     non-selectable until Veteran is picked, which opens exactly one; the editor and bot autocomplete
+     list only legal picks.
+  2. RAW development (see F17's correction): weak → strong free; strong pays new Tier × 8 coin
+     (Patron halves; coin then vault); Rep max 12 − turf, capped in the repository.
+  3. `applyStressChange`: marking the last box → stress 0 + `characterData.traumaPending` (JSONB, no
+     migration); engine `applyStress` logs the overflow (and a retirement note at the limit) with
+     client copy; engine `chooseTrauma` resolves it. Web: sheet prompt to pick from the ruleset's
+     conditions + must-retire banner; tracker marks go through the engine. Bot: trauma reply with a
+     link to the web sheet.
+  4. BitD builtin rewritten to SRD wording (CC BY 3.0) or setting-free paraphrase; all 7 playbook
+     rosters per the book + Veteran ×3; Hound names fixed with ids stable; Survivor = +1 stress box
+     (`effects.stressBoxes`); crew abilities per SRD (Deadly restricted, Patron `halfTierCost`).
+     5/6/9/11/13 + labels: as described in F9/F19 corrections, `/resist` sheet rating,
+     `bonusActionDotsIn`/`bonusDotsExceedCreationCap`, `advancementCost` → ruleset-only and
+     `NO_ADVANCEMENT_OPTION`, upload validation rejects negative costs, `FACTION_STATUS_LABELS`.
+- **deferred (open):** desperate-roll XP track + playbook XP triggers (review #7); healing clock /
+  recovery step-down (#10); heavy/special armor as items + "push via special armor" (#12 — the
+  ability texts now say special armor, the mechanic is GM-adjudicated); crew upgrades / Mastery as
+  an upgrade / Tier+2 stash payout (#13 crew side); starting crew coin 2 (#15); coin/stash limits
+  (#16); crew-aware Deadly in the creation WIZARD (the validator/repository honour it; the wizard
+  has no crew context — F54 residue); a bot-side trauma picker (players pick on the web sheet);
+  automatic reduce-heat downtime roll.
 
 ### F2 — No way for a player to discover or join a campaign
 
@@ -306,9 +488,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **fix:** Toggles "Push yourself (+1d, 2 stress)" / "Devil's Bargain (+1d)"; add dice, deduct/record
   stress on save.
 - **status:** fixed — the action-roll panel has **Push** (+1d, applies 2 stress win-or-lose) and
-  **Devil's bargain** (+1d, with an optional complication field) toggles; both grow the dice pool (a
-  0-pool still rolls 2 take-lowest), and the move + complication persist to the roll's `note` (shown in
-  the feed). No schema change — `note` already existed. https://bladesinthedark.com/index.php/the-roll
+  **Devil's bargain** (+1d, with an optional complication field) toggles, and the move + complication
+  persist to the roll's `note` (shown in the feed). No schema change — `note` already existed.
+  **Correction (F92):** they originally _stacked_ (+2d) — a RAW violation ("you can either push
+  yourself or accept a Devil's Bargain — you can't get dice for both"; bladesinthedark.com/action-roll).
+  They are now one-or-the-other on the web (ticking one clears the other; `rollPool` grants +1d for
+  either) and on the bot (`push`/`bargain` booleans refuse together; the old 0–3 `extra` is gone —
+  an `assist` boolean is the separate +1d, so +2d max).
 
 ### F10 — Teamwork absent (assist / lead group action / set up / protect)
 
@@ -413,9 +599,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   is no conversion path, so crews can't advance tier through play.
 - **fix:** Uncap rep; add rep→tier conversion (auto at ≥12 or a GM "Advance tier" button); show the
   rule.
-- **status:** fixed — `advanceTier` (`crews.ts`, SRD-grounded: fill the 12-Rep track → +1 Tier,
-  clear Rep carrying the remainder, capped at Tier 4) + a GM "Advance to Tier N (spend 12 Rep)" button
-  on the crew sheet, shown once Rep ≥ 12. The Rep stat is now uncapped so it can accrue past 12.
+- **status:** fixed — **corrected in F92 (2026-10-17).** _The original fix ("uncap Rep, +1 Tier per
+  12 Rep, carry the remainder", labelled SRD-grounded) was itself a RAW deviation._ RAW
+  (bladesinthedark.com/faction-game → Development/Turf): Rep needs 12 less held turf and **12 is
+  the max** (no carry); with a full tracker a **weak** hold becomes strong (Rep → 0, no coin), a
+  **strong** hold pays **new Tier × 8 coin** (Patron: half) for +1 Tier, then Rep → 0 and hold →
+  weak. `advanceTier` / engine `advanceCrewTier` / the crew-sheet button ("Strengthen hold" /
+  "Advance to Tier N (pay X coin)") / bot `/crew tier` now do exactly that; the repository caps Rep.
 
 ### F18 — Crew XP / advancement absent
 
@@ -437,9 +627,14 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **root cause:** Heat filling → +1 wanted, and cooling off, are core consequences with no engine.
 - **fix:** Heat-threshold + wanted helpers in `crews.ts`; a cool-off action.
 - **status:** fixed — `applyHeat` cascades heat 9 → +1 Wanted (clear, carry remainder; SRD-verified)
-  and is wired into the crew sheet's heat control. **SRD correction:** core BitD has no "lay low /
-  reduce heat" activity — the direct release valve is **incarceration** (a convicted member/ally/framed
-  enemy → −1 Wanted and clears Heat). Modelled as `incarcerate` + a GM "Incarcerated" button.
+  and is wired into the crew sheet's heat control. Incarceration (a convicted member/ally/framed
+  enemy → −1 Wanted and clears Heat) is modelled as `incarcerate` + a GM "Incarcerated" button.
+  **Correction (F92, 2026-10-17):** an earlier note here claimed "core BitD has no reduce-heat
+  activity" — **false**: the SRD's downtime list has **Reduce Heat** (an action roll: 1-3 → −1, 4/5
+  → −2, 6 → −3, crit → −5; bladesinthedark.com/downtime-activities). The GM can now apply it on
+  both clients — the web heat stepper and bot `/crew heat amount:` accept a negative delta (−9..+9,
+  floored at 0, Wanted untouched). _Residue (open):_ a dedicated reduce-heat downtime use-case that
+  rolls and maps the result automatically.
 
 ### F20 — Theme system not wired; app is effectively dark-only
 
@@ -555,7 +750,12 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 - **status:** **fixed (round-3 PR-4)** — veteran grants are a **budget**: held cross-playbook picks
   (tier ≥ 2, outside the playbook roster, no held prerequisite) must fit within the summed grants;
   `isAbilityUnlocked` offers a candidate only while a slot is free, and validation flags an
-  over-budget set (`veteranPicksUsed` in character-rules).
+  over-budget set (`veteranPicksUsed` in character-rules). **Extended by F92:** the "tier ≥ 2"
+  exemption is gone (ANY ability outside the roster needs a slot), the budget is enforced in live
+  validation and on advance, and the BitD builtin models Veteran as the RAW **playbook** ability
+  (`effects.veteran`). The crew-granted budget mechanism stays (Brackwater's crew Veteran uses it);
+  the BitD builtin's crew Veteran is now the RAW crew ability (another crew type's ability), not a
+  PC slot.
 
 ### F69 — Bot action resolution read the WRONG field — no ruleset using the canonical shape worked
 
@@ -587,6 +787,42 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
   `auth.identities` Discord identity and teaches the trigger to capture `provider_id`/`sub` at
   signup (fill-if-null on conflict). Lesson recorded: an e2e that hand-seeds the very row a
   production trigger is supposed to create proves the READ path only.
+
+### F91 — Launch-review frontend round: lost updates, swallowed ticks, silent failures, a11y + 360px
+
+- **severity:** S2 · **type:** CX-flaw / bug cluster · **(2026-10-17, frontend launch review items
+  2/3/5/6/7/8/9/10/11/16 + pixel review #3/#7/#12/#13)**
+- **lost updates (item 2):** the build editor and the sheet's stress tracker wrote the WHOLE
+  `characterData` blob from a cached snapshot, so a dirty editor draft or a stale sheet silently
+  reverted harm/XP/stress written by the GM or the bot. **Fix:** engine `setStress` / `setXpMarks` /
+  `saveCharacterBuild` re-read the live row and patch only the fields they own; the build save is a
+  field-level diff vs the draft's base with an optimistic-concurrency guard (`CHARACTER_CONFLICT`
+  when an edited field also changed underneath → the editor rebases on the live row). `saveLoadout`,
+  `indulgeVice`, `retireCharacter` merge onto the live row too. No migration (a DB `updated_at` CAS
+  was rejected: timestamptz µs vs JS ms makes the compare unreliable). Trackers disable while saving.
+- **swallowed ticks (item 3):** mutations now `setQueryData` the returned row and AWAIT the
+  invalidation before settling; tick / faction status / tier / crew ops compute from the freshest
+  cached row.
+- **destructive one-clicks (item 5):** delete faction, remove clock, end score and clearing a harm
+  entry (sheet wound box + editor ×) are two-click armed confirms (`shared/components/ConfirmButton`,
+  `HarmTracker confirmClearLabel`).
+- **silent failures / empty flashes (items 6/7):** `QueryLoading` / `QueryError` (retry wired to
+  `refetch`) on RollLog, dashboard sections (activity loading covers the campaign fan-out — the F79
+  residue), hub roster, invite codes, /games joined errors, every page ErrorDisplay; retire toasts on
+  failure; the hub state select toasts on failure; "game not found" links back to /games. e2e
+  `dashboard.spec` now fails if the activity empty state is ever attached on the way to the rows.
+- **raw enums + a11y (items 8/10/16, pixel #12/#13):** outcomes, kinds, position/effect, game state,
+  character status and playbook names render translated/named; the newest roll result is in an
+  `aria-live` region; the sheet name is the page h1 (gates/404/wizard promote theirs); Alert is
+  `role=alert` only for errors; Clock/HarmTracker/Alert take localized labels; the campaign-log meta
+  line has no stray leading "·".
+- **forms + layout (items 9/11, pixel #3/#7):** single-purpose inputs are real `<form>`s (Enter
+  submits); starter-catalog CTAs wrap at 360px (new `mobile-overflow.spec` checks every route at
+  360px); dice-card controls shrink inside their card; the sheet's Roll panel is gated on `canEdit`.
+  A draft/recruiting campaign flips to active when its first score starts.
+- **not in this round (owned elsewhere):** header brand-not-h1 / `<nav>` landmark / mobile header
+  collapse (design-system round), Button `whitespace-nowrap` base.
+- **status:** fixed (this branch).
 
 ### F88 — Account deletion 500s for any user who owns a campaign (trigger breaks the auth cascade)
 

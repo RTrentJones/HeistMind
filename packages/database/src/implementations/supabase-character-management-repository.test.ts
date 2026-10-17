@@ -17,7 +17,7 @@ function content(overrides: Partial<RulesetContent> = {}): RulesetContent {
         name: 'Razor',
         description: '',
         startingAbilities: ['battle-born'],
-        specialAbilities: ['battle-born'],
+        specialAbilities: ['battle-born', 'sharpshot', 'veteran'],
         contacts: [],
         equipment: [],
         attributes: {},
@@ -30,6 +30,7 @@ function content(overrides: Partial<RulesetContent> = {}): RulesetContent {
       { id: 'battle-born', name: 'Battle-Born', description: '', tier: 1 },
       { id: 'sharpshot', name: 'Sharpshot', description: '', tier: 1 },
       { id: 'ghost-step', name: 'Ghost Step', description: '', tier: 2 },
+      { id: 'veteran', name: 'Veteran', description: '', effects: { veteran: 1 } },
     ],
     equipment: { loadCapacity: {}, items: [], categories: [] },
     advancement: {
@@ -338,6 +339,14 @@ describe('advanceCharacter', () => {
   });
 
   it('raises an attribute and re-validates against the cap', async () => {
+    const c = content();
+    c.advancement.advancementOptions.push({
+      id: 'raise',
+      name: 'Raise',
+      description: '',
+      cost: 2,
+      category: 'attribute',
+    });
     const { repo } = repoWith({
       characters: {
         data: charRow({
@@ -347,7 +356,7 @@ describe('advanceCharacter', () => {
         error: null,
       },
       games: { data: gameRow, error: null },
-      rulesets: { data: rulesetRow(content()), error: null },
+      rulesets: { data: rulesetRow(c), error: null },
     });
     // grit is already at the cap (4); raising it must be rejected by the live re-validation.
     const r = await repo.advanceCharacter('c1', 'u1', {
@@ -449,6 +458,120 @@ describe('advanceCharacter', () => {
       expect(r.data.characterData.xp?.playbook).toBe(2); // the playbook track untouched
     }
     expect(lastUpdate()?.data.character_data.xp.attributes.grit).toBe(0);
+  });
+
+  // --- rules-accuracy round (review #1 / #13) ------------------------------------------------
+
+  it('refuses a cross-playbook ability without a Veteran slot (ABILITY_LOCKED)', async () => {
+    const { repo } = repoWith({
+      characters: { data: charRow({ experience_points: 5 }), error: null },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(content()), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'ability',
+      target: 'ghost-step',
+      cost: 2,
+      description: 'x',
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.code).toBe('ABILITY_LOCKED');
+  });
+
+  it('a held Veteran ability opens one cross-playbook advance', async () => {
+    const { repo } = repoWith({
+      characters: {
+        data: charRow({
+          experience_points: 5,
+          character_data: charData({ specialAbilities: ['battle-born', 'veteran'] }),
+        }),
+        error: null,
+      },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(content()), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'ability',
+      target: 'ghost-step',
+      cost: 2,
+      description: 'x',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('refuses a flat-pool advance the ruleset has no valid option for (never trusts client cost)', async () => {
+    const c = content();
+    c.advancement.advancementOptions = [
+      { id: 'buy-ability', name: 'Buy', description: '', cost: -3, category: 'ability' },
+    ];
+    const { repo } = repoWith({
+      characters: { data: charRow({ experience_points: 0 }), error: null },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(c), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'ability',
+      target: 'sharpshot',
+      cost: -3,
+      description: 'free XP?',
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.code).toBe('NO_ADVANCEMENT_OPTION');
+  });
+
+  it('an advance adds exactly one dot whatever value the client sends', async () => {
+    const c = content();
+    c.advancement.advancementOptions.push({
+      id: 'raise',
+      name: 'Raise',
+      description: '',
+      cost: 1,
+      category: 'attribute',
+    });
+    const { repo } = repoWith({
+      characters: { data: charRow({ experience_points: 5 }), error: null },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(c), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'attribute',
+      target: 'grit',
+      value: 3,
+      cost: 1,
+      description: 'Raise Grit',
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.characterData.attributes.grit).toBe(1);
+  });
+});
+
+describe('updateCharacterWithValidation — veteran grandfathering', () => {
+  const legacy = () =>
+    charRow({ character_data: charData({ specialAbilities: ['battle-born', 'ghost-step'] }) });
+
+  it('lets a legacy over-budget sheet keep its everyday writes (no ability added)', async () => {
+    const { repo } = repoWith({
+      characters: { data: legacy(), error: null },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(content()), error: null },
+    });
+    const r = await repo.updateCharacterWithValidation('c1', 'u1', {
+      characterData: charData({ specialAbilities: ['battle-born', 'ghost-step'], stress: 3 }),
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('still refuses a write that ADDS an unslotted cross-playbook ability', async () => {
+    const { repo } = repoWith({
+      characters: { data: charRow(), error: null },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(content()), error: null },
+    });
+    const r = await repo.updateCharacterWithValidation('c1', 'u1', {
+      characterData: charData({ specialAbilities: ['battle-born', 'ghost-step'] }),
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.code).toBe('VALIDATION');
   });
 });
 

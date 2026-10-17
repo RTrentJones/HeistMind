@@ -2,6 +2,9 @@
 // per-click, exercised against small fixture rulesets (no DB, no components).
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Ruleset, RulesetContent } from '@heist-mind/core';
+import { getBuiltinById } from '@heist-mind/shared';
+
+const BLADES_IN_THE_DARK = getBuiltinById('blades-in-the-dark')!.content;
 import { useCharacterCreationStore } from '../character-creation-store';
 
 const asRuleset = (content: RulesetContent): Ruleset =>
@@ -148,9 +151,14 @@ describe('action-dot budget (setActionRating)', () => {
     store().setActionRating('skirmish', 2); // spent: hunt 1 + skirmish 2 = 3 of 3
     store().setActionRating('prowl', 2); // nothing left
     expect(store().draft.skills.prowl).toBe(0);
-    store().setActionRating('hunt', 0); // free a dot
+    store().setActionRating('skirmish', 1); // free a dot
     store().setActionRating('prowl', 2); // one dot affordable now
     expect(store().draft.skills.prowl).toBe(1);
+  });
+
+  it("never lowers an action below the playbook's pre-placed dot (review #8)", () => {
+    store().setActionRating('hunt', 0);
+    expect(store().draft.skills.hunt).toBe(1);
   });
 
   it('re-derives attributes as dots move', () => {
@@ -179,6 +187,24 @@ describe('ability picks (toggleAbility)', () => {
     store().setPlaybook('cutter');
     store().toggleAbility('ghost-step');
     expect(store().draft.specialAbilities).toEqual(['iron-will']);
+  });
+
+  // Review #1 on the REAL BitD builtin: another playbook's ability needs a free Veteran slot.
+  it('BitD: other playbooks are locked until Veteran is picked, then exactly one opens', () => {
+    store().initFromRuleset(asRuleset(BLADES_IN_THE_DARK));
+    store().setPlaybook('cutter');
+    store().toggleAbility('lurk-infiltrator'); // no slot → no-op
+    expect(store().draft.specialAbilities).toEqual(['cutter-battleborn']);
+
+    store().toggleAbility('veteran'); // the single roster slot swaps to Veteran
+    expect(store().draft.specialAbilities).toEqual(['veteran']);
+    store().toggleAbility('lurk-infiltrator'); // Veteran's slot takes one cross pick
+    expect(store().draft.specialAbilities).toEqual(['veteran', 'lurk-infiltrator']);
+    store().toggleAbility('whisper-compel'); // …and only one
+    expect(store().draft.specialAbilities).toEqual(['veteran', 'lurk-infiltrator']);
+
+    store().toggleAbility('cutter-mule'); // swapping Veteran out drops the cross pick it opened
+    expect(store().draft.specialAbilities).toEqual(['cutter-mule']);
   });
 });
 

@@ -7,7 +7,7 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 import { getRepositories } from '@/lib/auth';
 import { RepositoryError } from '@/lib/query/result';
 import { factionKeys, useFactionsByGame } from '../queries';
-import { useDeleteFaction } from '../mutations';
+import { useDeleteFaction, useSetFactionStatus, useShiftFactionTier } from '../mutations';
 
 // Representative seam tests: one read hook (Result unwrapping into RQ data/error state) and one
 // write hook (repo call + the game's factions invalidation), per the characters seam pattern.
@@ -110,5 +110,49 @@ describe('useDeleteFaction (write side)', () => {
 
     await expect(result.current.mutateAsync('f1')).rejects.toThrow('not the GM');
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('faction steppers (review item 3 — fresh value per click)', () => {
+  it('useShiftFactionTier computes each click from the fresh cached tier', async () => {
+    const update = vi.fn((id: string, patch: { tier: number }) =>
+      Promise.resolve({ success: true, data: { ...FACTION, id, tier: patch.tier } })
+    );
+    mockRepos({ factions: { update } });
+    const qc = testQueryClient();
+    qc.setQueryData(factionKeys.byGame('g1'), [FACTION]);
+    const { result } = renderHook(() => useShiftFactionTier('g1'), {
+      wrapper: createWrapper(qc),
+    });
+
+    await result.current.mutateAsync({ faction: FACTION, delta: 1 });
+    await result.current.mutateAsync({ faction: FACTION, delta: 1 }); // stale tier 2 passed again
+    expect(update).toHaveBeenNthCalledWith(1, 'f1', { tier: 3 });
+    expect(update).toHaveBeenNthCalledWith(2, 'f1', { tier: 4 });
+    expect(qc.getQueryData<Faction[]>(factionKeys.byGame('g1'))?.[0]?.tier).toBe(4);
+  });
+
+  it('useSetFactionStatus shifts from the fresh cached status and phrases the landed value', async () => {
+    const update = vi.fn((id: string, patch: { status: number }) =>
+      Promise.resolve({ success: true, data: { ...FACTION, id, status: patch.status } })
+    );
+    const create = vi.fn().mockResolvedValue({ success: true, data: { id: 'r1' } });
+    mockRepos({ factions: { update }, rolls: { create } });
+    const qc = testQueryClient();
+    qc.setQueryData(factionKeys.byGame('g1'), [FACTION]);
+    const { result } = renderHook(() => useSetFactionStatus('g1'), {
+      wrapper: createWrapper(qc),
+    });
+    const vars = {
+      faction: FACTION,
+      userId: 'u1',
+      delta: -1,
+      logLabel: 'The Magpies',
+      logNote: (s: number) => `now ${s}`,
+    };
+    await result.current.mutateAsync(vars);
+    await result.current.mutateAsync(vars);
+    expect(update).toHaveBeenLastCalledWith('f1', { status: -2 });
+    expect(create).toHaveBeenLastCalledWith('u1', expect.objectContaining({ note: 'now -2' }));
   });
 });

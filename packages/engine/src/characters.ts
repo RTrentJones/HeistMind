@@ -2,9 +2,12 @@
 // track escalation), the retire sequence, and the XP economy (mark XP / spend an advance) —
 // XP and harm changes are campaign-log events per BRD R-C3/R-E1.
 import {
+  applyStressChange,
   availableArmor,
-  clampStress,
+  chooseTraumaCondition,
   harmBounds,
+  mustRetireFromTrauma,
+  pendingTrauma,
   HARM_LEVELS,
   markXpTrack,
   PLAYBOOK_TRACK,
@@ -19,36 +22,150 @@ import {
 import type { DatabaseRepositories } from '@heist-mind/database';
 import { notOwner } from './ownership';
 
+/**
+ * Campaign-feed copy for a stress overflow (RAW: marking the last stress box = trauma). Functions of
+ * the character's name so ONE copy object serves the roller and an assister alike — the engine
+ * never owns copy.
+ */
+export interface TraumaLogCopy {
+  /** "Mara marked her last stress box — trauma (stress cleared). Pick a condition on the sheet." */
+  note: (characterName: string) => string;
+  /** "Mara has reached the trauma limit and must retire." — logged when the trauma track fills. */
+  retireNote: (characterName: string) => string;
+}
+
 export interface ApplyStressInput {
   characterId: string;
   userId: string;
   /** Stress DELTA: positive is a cost, negative CLEARS stress (a crit resist clears 1). Zero is a no-op. */
   stress: number;
+  /** Feed copy for an overflow → trauma. Omitted = the trauma still lands, unlogged. */
+  traumaLog?: TraumaLogCopy;
+}
+
+export interface StressOutcome {
+  character: Character;
+  /** This change marked the last stress box: stress reset to 0 and one trauma is owed. */
+  trauma: boolean;
+  /** The character is at the trauma limit (retire, or take the fall). */
+  mustRetire: boolean;
 }
 
 /**
- * Apply a stress delta to a character, clamped into the ruleset's track (a clear never goes below
- * 0). Reads the live character (current stress + bounds) then writes through the validated path.
- * Resolves `data: null` when nothing needed writing (no delta, character gone, or already at the
- * clamp).
+ * Apply a stress delta the RAW way (core `applyStressChange`): a clear never goes below 0, and a
+ * cost that marks the LAST stress box resets stress to 0 and owes a trauma condition
+ * (`characterData.traumaPending` — the player picks which on the sheet). Reads the live character
+ * then writes through the validated path; an overflow is logged to the campaign feed when
+ * `traumaLog` copy is supplied (plus a retirement note when the trauma track fills). Resolves
+ * `data: null` when nothing needed writing (no delta, character gone, or already at the clamp).
  */
 export async function applyStress(
   repos: DatabaseRepositories,
   input: ApplyStressInput
-): Promise<Result<Character | null>> {
+): Promise<Result<StressOutcome | null>> {
   if (input.stress === 0) return { success: true, data: null };
   const found = await repos.characters.findWithDetails(input.characterId);
-  if (!found.success) return found;
+  if (!found.success) return found as Result<never>;
   if (!found.data) return { success: true, data: null };
   const char = found.data;
   const owned = notOwner(char, input.userId);
   if (owned) return owned;
-  const current = char.characterData?.stress ?? 0;
-  const next = clampStress(char.ruleset.content, current + input.stress);
-  if (next === current) return { success: true, data: null };
-  return repos.characterManagement.updateCharacterWithValidation(input.characterId, input.userId, {
-    characterData: { ...char.characterData, stress: next },
-  });
+  const data = char.characterData;
+  const change = applyStressChange(char.ruleset.content, data, input.stress);
+  if (!change.trauma && change.stress === (data?.stress ?? 0)) return { success: true, data: null };
+  const updated = await repos.characterManagement.updateCharacterWithValidation(
+    input.characterId,
+    input.userId,
+    {
+      characterData: {
+        ...data,
+        stress: change.stress,
+        ...(change.traumaPending > 0 ? { traumaPending: change.traumaPending } : {}),
+      },
+    }
+  );
+  if (!updated.success) return updated as Result<never>;
+  if (change.trauma && input.traumaLog && char.gameId !== null) {
+    const notes = [input.traumaLog.note(char.name)];
+    if (change.mustRetire) notes.push(input.traumaLog.retireNote(char.name));
+    for (const note of notes) {
+      const logged = await repos.rolls.create(input.userId, {
+        gameId: char.gameId,
+        characterId: char.id,
+        kind: 'note',
+        label: char.name,
+        dice: 0,
+        results: [],
+        note,
+      });
+      if (!logged.success) return logged as Result<never>;
+    }
+  }
+  return {
+    success: true,
+    data: { character: updated.data, trauma: change.trauma, mustRetire: change.mustRetire },
+  };
+}
+
+export interface ChooseTraumaInput {
+  characterId: string;
+  userId: string;
+  /** The condition to mark (one of the ruleset's `traumaConditions` when it names them). */
+  condition: string;
+  /** Feed copy — the client's localized strings. */
+  logNote: string;
+  /** Logged additionally when this pick fills the trauma track (retirement prompt). */
+  retireNote: string;
+}
+
+/**
+ * Resolve one owed trauma by marking the chosen condition (validated write), and log the pick to
+ * the campaign feed. Refuses `NO_TRAUMA_PENDING` when nothing is owed and `INVALID_TRAUMA` for a
+ * condition outside the ruleset's list or already marked.
+ */
+export async function chooseTrauma(
+  repos: DatabaseRepositories,
+  input: ChooseTraumaInput
+): Promise<Result<{ character: Character; mustRetire: boolean }>> {
+  const found = await repos.characters.findWithDetails(input.characterId);
+  if (!found.success) return found as Result<never>;
+  if (!found.data) return { success: false, error: { message: 'Character not found' } };
+  const char = found.data;
+  const owned = notOwner(char, input.userId);
+  if (owned) return owned;
+  const content = char.ruleset.content;
+  if (pendingTrauma(char.characterData) === 0) {
+    return { success: false, error: { message: 'No trauma to choose', code: 'NO_TRAUMA_PENDING' } };
+  }
+  const next = chooseTraumaCondition(content, char.characterData, input.condition);
+  if (!next) {
+    return {
+      success: false,
+      error: { message: 'Not a valid trauma condition', code: 'INVALID_TRAUMA' },
+    };
+  }
+  const updated = await repos.characterManagement.updateCharacterWithValidation(
+    char.id,
+    input.userId,
+    { characterData: next }
+  );
+  if (!updated.success) return updated as Result<never>;
+  const mustRetire = mustRetireFromTrauma(content, next);
+  if (char.gameId !== null) {
+    for (const note of mustRetire ? [input.logNote, input.retireNote] : [input.logNote]) {
+      const logged = await repos.rolls.create(input.userId, {
+        gameId: char.gameId,
+        characterId: char.id,
+        kind: 'note',
+        label: char.name,
+        dice: 0,
+        results: [],
+        note,
+      });
+      if (!logged.success) return logged as Result<never>;
+    }
+  }
+  return { success: true, data: { character: updated.data, mustRetire } };
 }
 
 export interface RetireCharacterInput {
@@ -69,7 +186,10 @@ export async function retireCharacter(
 ): Promise<Result<Roll>> {
   const owned = notOwner(input.character, input.userId);
   if (owned) return owned;
-  const data = input.character.characterData;
+  // Bank coin from the LIVE row (the passed character may be a stale roster snapshot).
+  const found = await repos.characters.findById(input.character.id);
+  if (!found.success) return found as Result<never>;
+  const data = found.data?.characterData ?? input.character.characterData;
   const coins = data?.coins ?? 0;
   const updated = await repos.characters.update(input.character.id, input.userId, {
     status: 'retired',

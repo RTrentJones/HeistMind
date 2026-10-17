@@ -11,10 +11,28 @@ describe('Alert Components', () => {
   describe('Alert', () => {
     it('renders with default props', () => {
       render(<Alert>Alert message</Alert>);
-      const alert = screen.getByRole('alert');
+      const alert = screen.getByRole('status');
       expect(alert).toBeInTheDocument();
       expect(alert).toHaveTextContent('Alert message');
       expect(alert).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('uses role=alert only for errors; other variants are polite status messages', () => {
+      const { rerender } = render(<Alert variant='destructive'>Broken</Alert>);
+      expect(screen.getByRole('alert')).toHaveTextContent('Broken');
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      rerender(<Alert variant='warning'>Heads up</Alert>);
+      expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('labels the dismiss button with the localized dismissLabel', () => {
+      render(
+        <Alert dismissible dismissLabel='Fermer'>
+          x
+        </Alert>
+      );
+      expect(screen.getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
     });
 
     it('applies variant styles correctly', () => {
@@ -124,7 +142,7 @@ describe('Alert Components', () => {
 
       render(<Alert dismissible>Dismissible alert</Alert>);
 
-      const alert = screen.getByRole('alert');
+      const alert = screen.getByRole('status');
       const dismissButton = screen.getByRole('button', { name: /dismiss alert/i });
 
       expect(alert).toBeInTheDocument();
@@ -268,7 +286,7 @@ describe('Alert Components', () => {
   describe('Error Handling', () => {
     it('handles missing children gracefully', () => {
       render(<Alert />);
-      const alert = screen.getByRole('alert');
+      const alert = screen.getByRole('status');
       expect(alert).toBeInTheDocument();
     });
 
@@ -277,7 +295,7 @@ describe('Alert Components', () => {
 
       render(<Alert variant={'invalid' as never}>Alert with invalid variant</Alert>);
 
-      const alert = screen.getByRole('alert');
+      const alert = screen.getByRole('status');
       expect(alert).toBeInTheDocument();
 
       consoleError.mockRestore();
@@ -297,7 +315,7 @@ describe('Alert Components', () => {
       );
 
       const dismissButton = screen.getByRole('button', { name: /dismiss alert/i });
-      const alert = screen.getByRole('alert');
+      const alert = screen.getByRole('status');
 
       expect(alert).toBeInTheDocument();
 

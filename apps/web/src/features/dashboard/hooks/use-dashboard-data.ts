@@ -20,12 +20,23 @@ export interface DashboardActivity {
   gameName: string;
 }
 
-export interface DashboardData {
+/**
+ * One dashboard section's async state — kept DISTINCT per section so a failed query never renders
+ * as that section's empty state ("No activity" when the feed actually failed to load).
+ */
+export interface SectionStatus {
   loading: boolean;
   error: string | null;
+  retry: () => void;
+}
+
+export interface DashboardData {
   campaigns: DashboardCampaign[];
   characters: Character[];
   activity: DashboardActivity[];
+  campaignsStatus: SectionStatus;
+  charactersStatus: SectionStatus;
+  activityStatus: SectionStatus;
 }
 
 // Bound the activity fan-out: a few of the user's campaigns, a few events each, newest few overall.
@@ -72,15 +83,43 @@ export function useDashboardData(userId: string | undefined): DashboardData {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityQueries.map(q => q.dataUpdatedAt).join(','), campaigns]);
 
-  const error = created.isError
-    ? (created.error?.message ?? i18n.t('pages:dashboard.loadFailed'))
-    : null;
+  const loadFailed = i18n.t('pages:dashboard.loadFailed');
+  const campaignsLoading = created.isLoading || joined.isLoading;
+  const campaignsError = created.error ?? joined.error;
+  const campaignsStatus: SectionStatus = {
+    loading: campaignsLoading,
+    error: campaignsError ? campaignsError.message || loadFailed : null,
+    retry: () => {
+      if (created.isError) void created.refetch();
+      if (joined.isError) void joined.refetch();
+    },
+  };
+
+  const charactersStatus: SectionStatus = {
+    loading: charactersQuery.isLoading,
+    error: charactersQuery.error ? charactersQuery.error.message || loadFailed : null,
+    retry: () => void charactersQuery.refetch(),
+  };
+
+  // The activity fan-out only STARTS once campaigns resolve, so its loading flag must cover both
+  // the campaigns load and every per-campaign query still in flight — otherwise "No activity"
+  // flashes between the two (F79 residue, review item 7).
+  const activityError = campaignsError ?? activityQueries.find(q => q.isError)?.error ?? null;
+  const activityStatus: SectionStatus = {
+    loading: campaignsLoading || activityQueries.some(q => q.isLoading),
+    error: activityError ? activityError.message || loadFailed : null,
+    retry: () => {
+      campaignsStatus.retry();
+      activityQueries.filter(q => q.isError).forEach(q => void q.refetch());
+    },
+  };
 
   return {
-    loading: created.isLoading || joined.isLoading || charactersQuery.isLoading,
-    error,
     campaigns,
     characters: charactersQuery.data ?? [],
     activity,
+    campaignsStatus,
+    charactersStatus,
+    activityStatus,
   };
 }

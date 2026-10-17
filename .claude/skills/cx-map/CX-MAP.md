@@ -31,9 +31,16 @@ Campaigns/Characters/Rulesets/Settings nav — the Characters link is the Mode-1
 home, F81 — `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
 focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
 **`Footer`** (`shared/components/Footer.tsx` — Terms/Privacy/DMCA/Acceptable-use/Licenses links +
-"© {year} HeistMind, operated by Trent Jones"). The header wraps (`flex-wrap`) instead of
-overflowing on mobile; the signed-out header also carries the **clickwrap** line
-(`ClickwrapNotice`, `sm:`+ only — page-level notices cover phones). The shell steps aside on `/`
+"© {year} HeistMind, operated by Trent Jones"). **The header is one compact row at every width
+(F93, ≈60px):** the brand is a link home (not an h1 — each page owns its h1); signed in, the nav
+(`<nav aria-label="Main">`) shows from `lg`, and below `lg` a **menu button** (disclosure:
+`aria-expanded`, focus into the panel, Escape / outside click / navigation close) opens a panel
+with Campaigns/Characters/Rulesets/Settings, the welcome line, language and Sign out. Signed out,
+phones get one short "Sign In" button; the **clickwrap** line (`ClickwrapNotice`, `sm:`+ only —
+page-level notices cover phones) sits just under the header, outside the sticky row. The shell is
+a full-height column (`min-h-dvh`): `main` grows so the footer sits at the bottom of short pages,
+with a consistent `pt-6 sm:pt-10` under the header; breadcrumbs align to each route's own column.
+The theme class is set on `<html>` by an inline pre-paint script (no dark flash for light users). The shell steps aside on `/`
 (marketing hero owns its header) and `/auth/*` (transient callback), which render their own
 full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` themselves.
 
@@ -42,7 +49,38 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 `/games/[id]/characters/new`, `/games/[id]/characters/[id]`, `/characters/new`,
 `/characters/[id]`, `/rulesets/new`) — renders `SignInGate` (heading + prompt + a working Discord
 sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
-`e2e/specs/signin-gates.spec.ts`.
+`e2e/specs/signin-gates.spec.ts`. Until the persisted auth hint has been read (post-mount — see
+below) the gate shows a neutral spinner, so a returning signed-in user never sees a sign-in flash.
+
+**Server rendering + hydration (F90, 2026-10-17):** every route server-renders its real content.
+i18next initializes **synchronously** with the bundled English catalog (`lib/i18n/index.ts`,
+`initAsync: false`), so `I18nProvider` renders children immediately — there is no client
+"preparing the shadows" gate any more (it used to hold every page, so the HTML of `/`, `/discord`,
+`/legal/*` and the 404 was just a raw `common.loading.preparingShadows` key). A saved non-English
+language is applied after hydration. The persisted auth store (`auth-store`) hydrates **after
+mount** (`skipHydration` + `rehydrateAuthStore()` in `AuthListener`'s layout effect): server HTML
+and the first client render are always signed-out (no hydration mismatch); the persisted slice is
+only a display hint (`sessionChecked` is no longer persisted, so every boot re-validates the
+session). Auth + repositories share **one** Supabase client (`lib/auth`, no more "Multiple
+GoTrueClient instances"), and sign-out clears the React Query cache. Pinned by
+`e2e/specs/ssr-hydration.spec.ts` (raw-HTML copy checks + no React hydration error, anonymous and
+for a returning signed-in GM).
+
+**Metadata, indexing, headers (F90):** root `layout.tsx` sets the brand title/description, a
+`%s · HeistMind` title template, `summary_large_image` Twitter card, and `metadataBase` from the
+deployment's own `SITE_URL` (`lib/site.ts`); there is **no root canonical** (it used to point every
+page at `/`). Public pages (`/`, `/discord`, `/legal/*`) set their own title/description/canonical
+and OG/Twitter text via `publicPageMetadata`; app sections get titles from per-segment server
+`layout.tsx` files (Campaigns, Characters, Rulesets, Settings, …) and are `noindex`. The link-preview
+card is `app/opengraph-image.tsx` / `app/twitter-image.tsx` (next/og, ember/crimson/gold on noir).
+`app/robots.ts` + `app/sitemap.ts`: production on its canonical host (`www.heistmind.com`) allows
+the public pages and lists them in the sitemap; **beta, previews, local and non-canonical prod
+hosts are `noindex`** (root `robots` metadata + `X-Robots-Tag` from middleware + disallow-all
+robots.txt, empty sitemap). `next.config.ts` sends nosniff, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, a minimal `Permissions-Policy`, and (prod
+builds) a CSP built from the env (self + Supabase https/wss + the Sentry ingest host; vercel.live on
+previews; `frame-ancestors 'none'`; `script-src` keeps `'unsafe-inline'` for Next's inline
+bootstrap).
 
 ---
 
@@ -50,26 +88,30 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 
 ### `/` — Home (marketing when logged out, dashboard when signed in)
 
-- **Coming-soon gate (prod holding page) — PRODUCTION deployment only, `main` only:** `COMING_SOON`
-  (`apps/web/src/lib/coming-soon.ts`) keys on `VERCEL_ENV === 'production'` and lives **only on
-  `main`**, never on `development` — so beta, Vercel previews, and local are always un-gated (their
-  e2e suites run the real app), and only the prod deployment is gated. No env var to set. When
+- **Coming-soon gate (prod holding page):** `COMING_SOON` (`apps/web/src/lib/coming-soon.ts`,
+  ships on **both** `development` and `main`) resolves `NEXT_PUBLIC_COMING_SOON` first (`1`/`true`/
+  `on` forces it on anywhere, `0`/`false`/`off` forces it off), else defaults to
+  `VERCEL_ENV === 'production'` — so with no flag set (today's infra) only the prod deployment is
+  gated and beta (a Vercel preview), previews, local and CI are un-gated. **Launch = set
+  `NEXT_PUBLIC_COMING_SOON=0` on the Vercel production target** (`RTrentJones.dev`
+  `infra/heistmind.tf`) and redeploy — no code revert, nothing for a later promote to undo. When
   gated: `page.tsx` renders `<ComingSoon/>` at `/`, `middleware.ts` redirects every route except
   `/`, `/legal/*` and `/__version` (the deploy-identity JSON the Greenlight verify gate reads,
   rewritten to `app/api/version`) back to `/`, and `AuthHeader` omits its signed-out sign-in buttons — so there
-  is no login anywhere on prod. Discord/API routes are excluded from the matcher and keep working;
+  is no login anywhere on prod. Discord/API routes and the static/metadata files (icons, webmanifest,
+  OG/Twitter images, robots/sitemap) are excluded from the matcher and keep working;
   legal pages stay live (registered DMCA agent page). `NEXT_PUBLIC_VERCEL_ENV` is mapped from
   `VERCEL_ENV` in `next.config.ts` so the client bundle agrees with the server/edge. The public
   specs (home, auth-discord, auth-callback) are gate-tolerant via `e2e/support/coming-soon.ts` so
-  the prod post-deploy verify stays green. To bring prod online for real: revert this on `main`
-  (or reconcile `main` with `development`). _`main`-only; `development` has no gate._
+  the prod post-deploy verify stays green.
 - **File:** `apps/web/src/app/page.tsx` — a **server component** (exports the per-route `metadata` —
   the real `<title>`/description for the one public URL) that renders
   `<HomeSwitch marketing={<HomePage/>}/>`; `HomeSwitch`
   (`features/marketing/components/HomeSwitch.tsx`, client) does the auth branch:
   `isAuthenticated ? <Dashboard/> : marketing`. Signed-out is the prerender state, so the marketing
-  page arrives as server-rendered HTML. `AppShell` steps aside on `/`, so each side renders its own
-  `AuthHeader` + `<main>`.
+  page arrives as server-rendered HTML (true since F90 — before, the i18n gate meant the HTML was
+  only a loading key). `AppShell` steps aside on `/`, so each side renders its own `AuthHeader` +
+  `<main>`. Metadata: absolute brand title + description, canonical `/`, OG/Twitter card.
 - **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
   two-mode landing. Hero _"The mechanical home for your Forged-in-the-Dark crew,"_ a **dual CTA**
   (_Run a campaign_ / _Join with a code_ — both kick off Discord OAuth), **two "how you'll use it"
@@ -101,12 +143,19 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   `/games/new`, `/rulesets`, `/rulesets/new`, `/games/[gameId]`, character sheets.
 - **CX intent:** logged out, communicate the two ways to use HeistMind above the fold (not "play the
   whole game here"); signed in, open to _your_ campaigns + characters, not marketing.
+- **Dashboard states (F91, 2026-10-17):** each section (campaigns / characters / recent activity)
+  has its own loading → error (Try again) → empty; Recent activity stays loading across the
+  per-campaign fan-out, so "No recent activity" never flashes before the rows (the F79 residue);
+  activity titles and playbooks are translated/named.
+- _Last verified:_ 2026-10-17 (F91)
 
 ### `/auth/callback` — OAuth return
 
 - **File:** `apps/web/src/app/auth/callback/page.tsx`
 - **Purpose:** handles the Discord OAuth redirect; waits for auth state, then redirects.
-- **Actions:** none (automatic). Shows a loading state, or an error on failure/timeout.
+- **Actions:** none (automatic). Shows a loading state, or an error on failure/timeout. The
+  `useSearchParams` reader sits in a `<Suspense>` whose fallback is the same "completing sign-in"
+  card, so the route prerenders (title "Signing in · HeistMind", noindex).
 - **Nav:** → `/` on success; → `/?error=auth_failed` on failure.
 
 ### `/games` — Campaign hub (created + joined)
@@ -146,7 +195,12 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
     fallen" section (kept for history, not deleted). Retiring banks carried coin into stash and logs a
     `note` event. Plus a "Create character" button.
   - `CrewSheet` (`apps/web/src/features/crews/components/CrewSheet.tsx`) — crew type, tier, rep,
-    heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. Also renders any
+    heat, wanted, hold, crew abilities, claims, cohorts, coin/vault. GM-editable. **Development is
+    RAW (F92, correcting F17):** Rep caps at the tracker length (12 − held turf, no carry); with a
+    full tracker the GM button reads **"Strengthen hold (spend full Rep)"** on weak hold (→ strong,
+    free) or **"Advance to Tier N (pay X coin)"** on strong hold (new Tier × 8 coin, halved by a
+    Patron-style crew ability, paid from coin then vault; → Tier +1, Rep 0, hold weak) — disabled
+    with a "needs X coin" hint when the crew can't pay. The hold tooltip states the RAW. Also renders any
     **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
     threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
     **Crew advancement (XP round, F85):** the 8-box track is the same clickable `XpTrack` a
@@ -159,7 +213,8 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
     _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
     F74; CrewSheet always did.)_
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
-    status (−3..+3) and their project clocks. GM-editable.
+    status (−3..+3, labelled per the SRD: War · Hostile · Interfering · Neutral · Helpful · Friendly
+    · Allies — F92) and their project clocks. GM-editable.
   - `ScorePanel` (`apps/web/src/features/scores/components/ScorePanel.tsx`) — the **score / operation
     lifecycle**. A campaign runs as a series of scores (the per-operation unit per-score loadout hangs
     off); the GM **starts** one (at most one active at a time) and **ends** it, with the most recent
@@ -167,7 +222,9 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
     real-life and not modelled. Players see the active score read-only.
   - `RollPanel` + `AddResultForm` + `RollLog` (`apps/web/src/features/rolls/components/`). `RollPanel`:
     action / fortune / GM **and resistance** rolls — resistance mode picks the resisted attribute,
-    rolls, and deducts `6 − highest die` stress from the character. **`AddResultForm`**: record a
+    rolls, and deducts `6 − highest die` stress from the character. The action roll's **Push** and
+    **Devil's bargain** boxes are one-or-the-other (ticking one clears the other — RAW "you can't get
+    dice for both"); an assist is a separate +1d, so the pool tops out at +2d (F92). **`AddResultForm`**: record a
     result that was **settled elsewhere — in person or on Discord** (writes a `note` event,
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
@@ -184,6 +241,17 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
       `crew` events._
       Entries are **grouped by score** (newest operation first, under its name); with no scores in
       play it falls back to a flat feed.
+- **Launch-review round (F91, 2026-10-17):** the roster, invite codes and campaign log each show
+  **loading → error (Try again) → empty** distinctly (no "No characters yet"/"No codes" flash, no
+  vanishing log); "game not found" links back to `/games`; the GM state select is translated and
+  toasts on failure, and a draft/recruiting campaign flips to **Active** when its first score
+  starts. **Two-click confirms** on remove clock, delete faction and end score. Clock/faction/crew
+  steppers stay disabled until the written row is in the cache (no swallowed double-click ticks).
+  Join-code, new clock, add faction, start score and "What happened" are real forms (Enter
+  submits). The log translates outcomes / kinds / position-effect, puts the meta line
+  (who · dice · position/effect) on its own line without a leading "·", and roster playbooks show
+  their names, not ids.
+- _Last verified:_ 2026-10-17 (F91 launch-review frontend round)
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -195,7 +263,12 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   (`apps/web/src/features/characters/components/CharacterCreationWizard.tsx`) → `WizardStep`
   dispatcher → step components (see **Wizard** below). Layouts: `?layout=single` (default) or
   `?layout=rail` (step rail + live summary).
-- **Actions:** name; step through Back/Next or step badges; Create on the final step. A disabled
+- **Actions:** name; step through Back/Next or step badges; Create on the final step. **Stepper
+  (F93):** an ordered list (`<nav aria-label="Creation steps"><ol>`, `aria-current="step"`) of
+  pills — current (brand), complete (green ✓, only steps already passed that validate), needs
+  attention (amber !, passed but invalid), not started (outline); each carries an sr-only status.
+  The step title is the page h1. Back is disabled (visibly — 50% + not-allowed) on step 1; a
+  blocked Next/Create is visibly disabled too. A disabled
   Next/Create now shows the blocking reason in the footer (`stepError` → e.g. "Can't continue yet —
   Assigned 8 of 7 action dots.").
 - **State:** `useCharacterCreationStore`
@@ -259,7 +332,26 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   a failed inline save (stress, rename, XP, indulge vice) raises a dismissible alert at the top of
   the sheet and leaves it interactive; only a load failure / not-found swaps the page for
   `ErrorDisplay`.
-- _Last verified:_ 2026-07-11 (backlog rounds E+F: F44 armor, F23 derived attributes, F57 phone-first sheet)
+  **Stress → trauma (F92, RAW):** marking the LAST stress box — from the tracker, a push, an
+  assist, a resist, or a flashback — resets stress to 0 and owes a trauma condition (never a
+  silent clamp); the feed logs "<name> marked their last stress box — trauma!". The sheet shows a
+  **"choose the trauma condition"** prompt (`cards/TraumaPrompt.tsx`: a select over the ruleset's
+  unmarked conditions + "Mark trauma", feed-logged). At the trauma limit a **must-retire banner**
+  shows (retire, or take the fall) and the feed logs it; status is never changed automatically.
+  The tracker lengthens with ability stress boxes (BitD Survivor). **Advancement (F92):** the
+  editor's ability list offers your playbook's roster plus other playbooks' abilities only while a
+  Veteran slot is free (own Veteran, or a crew grant — F62); the rest are summarised as "N more
+  need a free Veteran slot". The repository refuses the same picks server-side.
+- **Launch-review round (F91, 2026-10-17):** the character name is the page **h1**; status and
+  playbook render translated/named. Stress clicks and XP marks patch only their own field onto the
+  LIVE row (engine `setStress` / `markXp`); the build editor saves a **field-level patch** of what
+  the player changed and refuses with a "changed elsewhere — reloaded" notice if a field it edited
+  also changed underneath (no more reverting the GM's harm/XP). Trackers disable while a save is in
+  flight. Clearing a wound (sheet box or editor ×) is a **two-click confirm**. The **Roll panel is
+  only offered to someone who can edit** the character (owner/GM); read-only viewers keep the log.
+  The newest roll result is announced via an `aria-live` region; the rename row is a real form.
+- _Last verified:_ 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire banner,
+  Veteran-gated advances; F91 launch-review frontend round; previously 2026-07-11 backlog rounds E+F)
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -282,6 +374,10 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   (was the ambiguous "Load … starter" — F36).
 - **Nav:** → `/rulesets/new`, → `/games/new?ruleset=<id>`.
 - `LoadDefaultRulesetButton` remains as a thin back-compat wrapper over `LoadBuiltinRulesetButton`.
+- **360px (F91, 2026-10-17):** the long "Add … to my rulesets" CTAs and the list rows wrap instead
+  of running past a phone viewport (also on `/characters/new` and `/games/new`, which embed the
+  catalog); a load error offers Try again. `e2e/specs/mobile-overflow.spec.ts` checks every route at 360px.
+- _Last verified:_ 2026-10-17 (F91)
 
 ### `/rulesets/new` — Upload ruleset
 
@@ -344,7 +440,11 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   copyright.gov agent registration to actually exist** (the page claims it).
 - **Nav:** public, no auth gate; AppShell chrome is automatic (paths aren't `/` or `/auth/*`).
   Footer links (separate PR) are the discovery path.
-- _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
+- **Metadata (F90):** titles render as "Terms of Service · HeistMind" etc. (template), each with
+  its own canonical + OG/Twitter text + the shared card image; the document text is in the
+  server-rendered HTML.
+- _Last verified:_ 2026-10-17 (F90: server-rendered copy, per-page canonical/OG; previously
+  2026-07-05 placeholders filled)
 
 ### `/discord` — The bot guide (public, F67)
 
@@ -357,7 +457,12 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   `packages/discord/README.md`'s table — update the three together).
 - **Nav:** public, no auth gate; linked from the landing's play-by-post track ("How the bot
   works →"). On gated prod the route redirects home (only `/` + `/legal/*` stay reachable).
-- _Last verified:_ 2026-07-11 (feature introduction — bot-parity round, F67)
+- **Metadata (F90):** "The Discord play-by-post bot · HeistMind", own canonical + OG/Twitter text;
+  the guide is in the server-rendered HTML (link unfurls and crawlers see it).
+- **Layout (F93):** the command reference is a single `<dl>` — stacked cards (command, then
+  labelled Needs / Does) below `md`, a 3-column table-like grid from `md`; nothing scrolls sideways.
+- _Last verified:_ 2026-10-17 (F90 SSR + metadata; F93 responsive command reference; previously
+  2026-07-11 feature introduction — bot-parity round, F67)
 
 ### `/settings` — Account settings (self-service deletion)
 
@@ -386,9 +491,15 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   the provider-free last resort for root-layout throws (own `<html>/<body>`, inline-styled, same
   copy via the bare i18n instance).
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
-  (`errors.notFoundTitle` / `errors.backHome`).
+  (`errors.notFoundTitle` / `errors.backHome`) — server-rendered with a 404 status and `noindex`
+  since F90 (it used to SSR the raw loading key under the stale root title).
+- **F91 (2026-10-17):** the 404, route-error, sign-in-gate, auth-callback and wizard-step titles
+  are the page's `<h1>` (kept visually at h2 size); in-page `Alert`s use `role="alert"` only for
+  errors (hints/warnings are polite `status`).
 
-_Last verified:_ 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
+_Last verified:_ 2026-10-17 (F90: every route server-renders real content — i18n gate removed,
+post-mount auth-store hydration, per-page metadata + OG card, robots/sitemap, security headers,
+env-flag coming-soon gate). Previously 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
 surfaces auth errors as a dismissible banner (F40); faction WAR callout at −3 (F47); zero-dice
 rolls annotated in the log (F7 closed); wizard playbook-switch + cancel are two-click with
 draft-saved reassurance (F27/F28); catalog flags owned copies, picker blurbs, standalone-sheet
@@ -412,21 +523,28 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
 `DEFAULT_STEPS`; a `review` step is always appended. Derivation: `deriveSteps`
 (`apps/web/src/features/characters/lib/creation-steps.ts`). Each step is dispatched by `WizardStep`.
 
-1. **Playbook** — `steps/PlaybookStep.tsx`. Card grid of playbooks; selecting one seeds skills,
+1. **Playbook** — `steps/PlaybookStep.tsx`. Card grid of playbooks (the selected card gets a brand
+   ring + a green "✓ Selected" badge, F93); selecting one seeds skills,
    starting abilities, and attributes (or derives them in action-rating mode). _Valid when a
    playbook is chosen._
 2. **Attributes** _(point-buy rulesets)_ — `steps/AttributesStep.tsx` — allocate dots per attribute
    within a budget. **or** **Action ratings** _(action-rating rulesets, e.g. Brackwater)_ —
    `steps/ActionRatingsStep.tsx` — allocate dots per action; the attribute rating is **derived**
-   (count of actions ≥1) and shown live; per-action + total-dot caps enforced. _Valid when the
-   allocation respects caps/budget._
+   (count of actions ≥1) and shown live; per-action + total-dot caps enforced, and **the playbook's
+   pre-placed dots are a floor** (RAW: "three action dots already placed" — they can't be clicked
+   below their seed; the validator refuses `ACTION_BELOW_PLAYBOOK`). _Valid when the allocation
+   respects caps/budget._
 3. **Special abilities** — `steps/AbilitiesStep.tsx`. Cards leading with the chosen playbook's
    roster, hiding other playbooks' behind a "show more" toggle; abilities can be locked (prerequisite
-   / not-at-creation / limit reached); shows name + tier + rules text. When the choice **limit is 1**
-   (BitD canon — the playbook seeds the suggested pick) the picker is **radio-style**: clicking a
-   different unlocked ability _swaps_ to it, the current pick can't be unclicked to zero, and other
-   roster abilities stay selectable. With limit > 1 it's a multi-select that disables the rest once
-   full. _Valid at or under the choice limit (limit can be 0)._
+   / limit reached / **"Needs a free Veteran slot"**); shows name + rules text (+ tier where a
+   custom ruleset defines one — the BitD builtin has none). **Other playbooks' abilities are
+   non-selectable unless a Veteran slot is free (rules-accuracy round, F92):** pick the playbook's
+   own **Veteran** ability and exactly ONE other-playbook ability opens beside it (swapping Veteran
+   back out drops it). When the choice **limit is 1** (BitD canon — the playbook seeds the suggested
+   pick) the roster picker is **radio-style**: clicking a different unlocked roster ability _swaps_
+   to it, the current pick can't be unclicked to zero. With limit > 1 it's a multi-select that
+   disables the rest once full. _Valid at or under the choice limit (+1 per Veteran, cross-playbook
+   only)._
 4. **Identity** — `steps/IdentityStep.tsx`. Either a card picker (if the step defines options for
    heritage/background/vice) or free-text inputs. _Always valid (optional)._
 5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`. _Valid
@@ -434,7 +552,9 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    passes._ "Create character" submits via
    `getRepositories().characterManagement.createCharacterWithValidation`.
 
-_Last verified:_ 2026-06-27 @ 2535b31
+_Last verified:_ 2026-10-17 (rules-accuracy round F92: Veteran-gated other-playbook abilities,
+pre-placed dot floor; F93 stepper statuses + selected-playbook / derived-attribute badges; previously
+2026-06-27 @ 2535b31)
 
 ---
 
@@ -448,12 +568,16 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   · `/dice` · `/heist about|help`. Pure compute, nothing stored.
 - **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
-  the character's own ruleset, `extra`/`push`; **moderate harm auto-applies −1d** — the title shows
+  the character's own ruleset, `push` **or** `bargain` (never both — RAW) plus `assist`, so at most
+  +2d (F92, replacing the old 0–3 `extra`); **moderate harm auto-applies −1d** — the title shows
   the malus, the note names it, severe adds a needs-help warning — F43), `/stress add|clear`,
   `/harm take|clear` (RAW escalation; `armor:true` spends a carried armor box so the harm lands
   one level lighter — lesser is absorbed outright, no armor phrases the refusal — F44),
-  `/vice indulge`, `/xp mark|advance` — the sheet commands
-  feed-log via the same engine use-cases the web calls.
+  `/vice indulge`, `/xp mark|advance` (the `advance` autocomplete offers only LEGAL picks —
+  roster, or other playbooks' while a Veteran slot is free — F92) — the sheet commands
+  feed-log via the same engine use-cases the web calls. A stress cost that marks the last box
+  (`/stress add`, a pushed `/roll`, a persisted `/resist`) replies with the trauma prompt and a
+  link to the web sheet to pick the condition (+ "must retire" at the limit).
 - **Linking (F89):** `/heist link` needs the campaign's GM (creator) AND the Discord member's own
   **Manage Channels** (channel/category scope) or **Manage Server** (server scope) — otherwise an
   ephemeral "needs the … permission" refusal. `/heist unlink` needs the same permission for the
@@ -461,9 +585,13 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   server. Link columns are bot-only (not writable from the web/REST).
 - **Linked campaign (GM: `/heist link`, scope channel/category/server; precedence in that order):**
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
-  that campaign (embed footer says "Logged to …" or exactly why not); `/log` (attributed,
+  that campaign (embed footer says "Logged to …" or exactly why not); a persisted `/resist` rolls
+  the named attribute's rating **from the sheet** (`attribute:` required there; a typed `dice:` only
+  drives the display-only form — F92); `/log` (attributed,
   score-tagged); `/heist status` (member snapshot).
 - **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
+  (`heat` takes −9..+9 — negative reduces heat; `tier` develops RAW: weak hold → strong, or pay
+  new Tier × 8 coin with refusals phrased — F92)
   (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, `advance` spends a FULL
   track and refuses otherwise, both feed-logged; F86) · `/clock tick` (filling announces "It comes
   to a head!") · `/faction status`. GM-gated INCLUDING autocompletes — campaign state never leaks
@@ -476,7 +604,9 @@ CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "n
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
 _Last verified:_ 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
-creator; previously 2026-07-11 rerun round: F66 thread-category link retry + signed `/crew xp|advance`
+creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only
+`/xp advance`, RAW `/crew tier`, negative `/crew heat`, trauma replies);
+previously 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
 e2e (Act 3.7); same day bot-parity round F86: `/crew xp|advance`, harm −1d on `/roll action:`,
 help/README updated; previously 2026-07-05 go-live smoke fixed F68 discord_id trigger-link + F69
 rulesetActions resolution; residue tracked as F70/F71; phases 0–3 complete #121–#132)

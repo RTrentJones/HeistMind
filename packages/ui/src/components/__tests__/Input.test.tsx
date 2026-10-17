@@ -306,7 +306,10 @@ describe('Input Component', () => {
       const { user } = render(<Input />);
 
       const input = screen.getByRole('textbox');
-      await user.type(input, longText);
+      // Paste rather than type 1000 keystrokes: typing timed out (5s) under a loaded parallel
+      // run while asserting nothing more than the value round-trips.
+      await user.click(input);
+      await user.paste(longText);
 
       expect(input).toHaveValue(longText);
     });

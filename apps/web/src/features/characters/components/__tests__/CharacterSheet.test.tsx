@@ -33,20 +33,26 @@ const updateCharData = {
 const noopMutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false };
 vi.mock('@/features/characters/data/mutations', () => ({
   useUpdateCharacter: () => noopMutation,
-  useUpdateCharacterData: () => updateCharData,
+  useSetCharacterStress: () => updateCharData,
   useAddExperience: () => noopMutation,
   useIndulgeVice: () => noopMutation,
   useTakeHarm: () => noopMutation,
   useClearHarm: () => noopMutation,
   useFlashback: () => noopMutation,
+  useApplyStress: () => applyStress,
+  useChooseTrauma: () => chooseTrauma,
 }));
+const applyStress = { mutate: vi.fn(), isPending: false };
+const chooseTrauma = { mutate: vi.fn(), isPending: false };
 vi.mock('@/features/auth/stores/auth-store', () => ({
   useAuth: () => ({ user: { id: 'u1' } }),
 }));
 
 // Campaign-scoped panels and the editor are their own components with their own seams — out of
 // scope for the error-split behavior under test.
-vi.mock('@/features/rolls/components/RollPanel', () => ({ RollPanel: () => null }));
+vi.mock('@/features/rolls/components/RollPanel', () => ({
+  RollPanel: () => <div data-testid='roll-panel' />,
+}));
 vi.mock('@/features/rolls/components/RollLog', () => ({ RollLog: () => null }));
 vi.mock('../CharacterEditor', () => ({ CharacterEditor: () => null }));
 vi.mock('../LoadoutCard', () => ({ LoadoutCard: () => null }));
@@ -102,8 +108,9 @@ describe('CharacterSheet error split (F73)', () => {
     renderSheet();
 
     // Click a stress pip (by its accessible name — F84) — the always-rendered inline mutation
-    // on the sheet face. The fixture sits at stress 2, so pip 4 reads "Set stress to 4".
-    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 4' }));
+    // on the sheet face. The fixture sits at stress 2; a CLEAR (pip 1) is the plain validated write
+    // (a mark goes through the engine's stress→trauma path, covered below).
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 1' }));
 
     // The failure surfaces in place (by content — the standalone banner is also an alert);
     // the sheet (name heading) is still there.
@@ -116,6 +123,46 @@ describe('CharacterSheet error split (F73)', () => {
     expect(screen.getByRole('heading', { name: 'Silks' })).toBeInTheDocument();
   });
 
+  it('marking stress goes through the engine (RAW last box → trauma), with feed copy', async () => {
+    applyStress.mutate.mockReset();
+    renderSheet();
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 9' }));
+    expect(applyStress.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', stress: 7, traumaLog: expect.any(Object) }),
+      expect.any(Object)
+    );
+    expect(updateCharData.mutate).not.toHaveBeenCalled();
+  });
+
+  it('an owed trauma prompts a pick from the ruleset’s conditions', async () => {
+    chooseTrauma.mutate.mockReset();
+    characterQuery.data = {
+      ...character,
+      characterData: { ...character.characterData, stress: 0, traumaPending: 1 },
+    } as CharacterWithDetails;
+    renderSheet();
+    expect(screen.getByTestId('trauma-pending')).toBeInTheDocument();
+    const condition = DEFAULT_RULESET.traumaConditions![0]!;
+    await userEvent.selectOptions(screen.getByLabelText('Trauma condition'), condition);
+    await userEvent.click(screen.getByRole('button', { name: 'Mark trauma' }));
+    expect(chooseTrauma.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', condition }),
+      expect.any(Object)
+    );
+  });
+
+  it('a full trauma track shows the must-retire banner', () => {
+    characterQuery.data = {
+      ...character,
+      characterData: {
+        ...character.characterData,
+        trauma: DEFAULT_RULESET.traumaConditions!.slice(0, 4),
+      },
+    } as CharacterWithDetails;
+    renderSheet();
+    expect(screen.getByTestId('trauma-retire')).toBeInTheDocument();
+  });
+
   it('a load failure still swaps the page for the error display', () => {
     characterQuery.data = null;
     characterQuery.isError = true;
@@ -124,5 +171,41 @@ describe('CharacterSheet error split (F73)', () => {
 
     expect(screen.getByText('boom')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Silks' })).not.toBeInTheDocument();
+  });
+});
+
+describe('CharacterSheet writes + read-only gating', () => {
+  it('a stress clear sends ONLY the clicked value (the engine patches the live row)', async () => {
+    renderSheet();
+    // The fixture sits at stress 2: a clear is the engine's live-row setStress; a mark goes through
+    // the stress→trauma path (covered above).
+    await userEvent.click(screen.getByRole('button', { name: 'Set stress to 1' }));
+    expect(updateCharData.mutate).toHaveBeenCalledWith(
+      { userId: 'u1', stress: 1 },
+      expect.anything()
+    );
+  });
+
+  it("the character name is the page's h1", () => {
+    renderSheet();
+    expect(screen.getByRole('heading', { level: 1, name: 'Silks' })).toBeInTheDocument();
+  });
+
+  it('offers the Roll panel to the owner but not to a read-only viewer (pixel #3)', () => {
+    characterQuery.data = { ...character, gameId: 'g1', game: { createdBy: 'gm' } } as never;
+    const { unmount } = renderSheet();
+    expect(screen.getByTestId('roll-panel')).toBeInTheDocument();
+    unmount();
+
+    characterQuery.data = {
+      ...character,
+      gameId: 'g1',
+      game: { createdBy: 'gm' },
+      createdBy: 'someone-else',
+    } as never;
+    renderSheet();
+    expect(screen.queryByTestId('roll-panel')).not.toBeInTheDocument();
+    // The stress pips render but are inert for a read-only viewer.
+    expect(screen.getByRole('button', { name: 'Set stress to 4' })).toBeDisabled();
   });
 });

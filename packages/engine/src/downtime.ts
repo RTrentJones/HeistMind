@@ -10,7 +10,7 @@ import {
   type Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { applyStress } from './characters';
+import { applyStress, type TraumaLogCopy } from './characters';
 import { notOwner } from './ownership';
 
 /** The vice-roll dice pool for a character: dice = the LOWEST attribute rating (0 → 2 take-lowest). */
@@ -51,7 +51,13 @@ export async function indulgeVice(
   const { character, userId, results, zeroDice } = input;
   const owned = notOwner(character, userId);
   if (owned) return owned;
-  const stress = character.characterData?.stress ?? 0;
+  // Clear from the LIVE stress and patch only `stress` — the caller's `character` may be a stale
+  // cached snapshot (spreading its characterData reverted harm/XP written since: review item 2).
+  const found = await repos.characters.findWithDetails(character.id);
+  if (!found.success) return found as Result<never>;
+  if (!found.data) return { success: false, error: { message: 'Character not found' } };
+  const live = found.data.characterData;
+  const stress = live?.stress ?? 0;
   const cleared = viceStressCleared(results, { zeroDice });
   const overindulged = isOverindulged(cleared, stress);
   const nextStress = Math.max(0, stress - cleared);
@@ -59,7 +65,7 @@ export async function indulgeVice(
   const updated = await repos.characterManagement.updateCharacterWithValidation(
     character.id,
     userId,
-    { characterData: { ...character.characterData, stress: nextStress } }
+    { characterData: { ...live, stress: nextStress } }
   );
   if (!updated.success) return updated as Result<never>;
 
@@ -86,6 +92,8 @@ export interface FlashbackInput {
   /** Campaign-log copy — the client owns the words. */
   logLabel: string;
   logNote: string;
+  /** Feed copy when the flashback's stress marks the last box (→ trauma). */
+  traumaLog?: TraumaLogCopy;
 }
 
 /**
@@ -103,11 +111,12 @@ export async function flashback(
   if (owned) return owned;
 
   if (input.stress > 0) {
-    // Through applyStress so the cost clamps into the ruleset's track like every stress write.
+    // Through applyStress so the cost follows the RAW track (overflow → trauma) like every stress write.
     const updated = await applyStress(repos, {
       characterId: character.id,
       userId,
       stress: input.stress,
+      ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
     if (!updated.success) return updated as Result<never>;
   }
