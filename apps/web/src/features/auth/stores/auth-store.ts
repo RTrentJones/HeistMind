@@ -6,6 +6,7 @@ import { type User } from '@heist-mind/database';
 import { type LoadingState } from '@/shared/types';
 import { captureError } from '@heist-mind/telemetry';
 import { getAuthService } from '@/lib/auth';
+import { callbackUrl, rememberNextPath, safeNextPath } from '@/lib/auth/next-path';
 import { getQueryClient } from '@/lib/query/client';
 // Profile reads go through the profiles data seam (its non-hook surface — this store's actions run
 // outside React); repositories are never touched here directly.
@@ -34,7 +35,10 @@ interface AuthState extends LoadingState {
   // Auth actions (Discord OAuth is the only sign-in method — see BRD; the profile row is created
   // by the DB trigger on first sign-in, so there is no client-side signup/profile-create path).
   signOut: () => Promise<void>;
-  signInWithProvider: (provider: 'google' | 'discord') => Promise<void>;
+  signInWithProvider: (
+    provider: 'google' | 'discord',
+    options?: { next?: string | null }
+  ) => Promise<void>;
 
   // Session management
   checkSession: () => Promise<void>;
@@ -92,11 +96,26 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
-        signInWithProvider: async (provider: 'google' | 'discord') => {
+        signInWithProvider: async (
+          provider: 'google' | 'discord',
+          options?: { next?: string | null }
+        ) => {
           set({ isLoading: true, error: null });
           try {
             const authService = getAuthService();
-            const result = await authService.signInWithOAuth({ provider });
+            // F94 — carry return-to intent (e.g. /join/<code>) through the OAuth round trip:
+            // validated `next` on the callback URL + a sessionStorage fallback.
+            rememberNextPath(options?.next);
+            const result = await authService.signInWithOAuth({
+              provider,
+              ...(typeof window !== 'undefined' && safeNextPath(options?.next)
+                ? {
+                    options: {
+                      redirectTo: callbackUrl(window.location.origin, provider, options?.next),
+                    },
+                  }
+                : {}),
+            });
 
             if (result.error) {
               throw new Error(result.error?.message || 'Provider sign in failed');

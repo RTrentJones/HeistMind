@@ -15,6 +15,10 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { SignInGate } from '@/features/auth/components/SignInGate';
 import { StarterCatalogInline } from '@/features/rulesets/components/StarterCatalogInline';
 import { useRulesetsByCreator } from '@/features/rulesets/data/queries';
+import { rulesetDeleteBlocked, useDeleteRuleset } from '@/features/rulesets/data/mutations';
+import { errorMessage } from '@/lib/query/result';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
+import { useNotificationStore } from '@/shared/stores/notification-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 export default function RulesetsPage() {
@@ -22,6 +26,26 @@ export default function RulesetsPage() {
   const { t } = useTranslation();
   const rulesetsQuery = useRulesetsByCreator(user?.id);
   const rulesets = rulesetsQuery.data ?? [];
+  const del = useDeleteRuleset();
+  // F94 — delete a ruleset you own; the database refuses while a campaign or character uses it,
+  // and we say exactly that (not a raw foreign-key error).
+  const remove = (id: string, name: string) =>
+    del.mutate(
+      { rulesetId: id },
+      {
+        onSuccess: () =>
+          useNotificationStore.getState().success(t('pages.rulesetsCatalog.deleted', { name })),
+        onError: err =>
+          useNotificationStore
+            .getState()
+            .error(
+              t('pages.rulesetsCatalog.deleteFailed', { name }),
+              rulesetDeleteBlocked(err)
+                ? t('pages.rulesetsCatalog.deleteBlocked')
+                : errorMessage(err) || undefined
+            ),
+      }
+    );
   const error = rulesetsQuery.isError
     ? (rulesetsQuery.error?.message ?? t('pages.rulesetsCatalog.loadFailed'))
     : null;
@@ -56,7 +80,7 @@ export default function RulesetsPage() {
           />
         )}
 
-        {/* Built-in catalog — load any system with one click (creates an editable copy you own). */}
+        {/* Built-in catalog — load any system with one click (adds a copy you own). */}
         <Card variant='outline'>
           <Stack direction='column' gap='sm'>
             <div>
@@ -69,6 +93,7 @@ export default function RulesetsPage() {
           </Stack>
         </Card>
 
+        <Heading level='h2'>{t('pages.rulesetsCatalog.yourRulesets')}</Heading>
         {rulesetsQuery.isLoading ? (
           <LoadingSpinner />
         ) : rulesetsQuery.isError ? null : rulesets.length === 0 ? (
@@ -89,11 +114,26 @@ export default function RulesetsPage() {
                       {rs.content?.metadata?.system ? ` · ${rs.content.metadata.system}` : ''}
                     </Text>
                   </div>
-                  <Button asChild variant='outline' size='sm'>
-                    <Link href={`/games/new?ruleset=${rs.id}`}>
-                      {t('pages.rulesetsCatalog.createGame')}
-                    </Link>
-                  </Button>
+                  <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+                    <Button asChild variant='outline' size='sm'>
+                      <Link href={`/games/new?ruleset=${rs.id}`}>
+                        {t('pages.rulesetsCatalog.createGame')}
+                      </Link>
+                    </Button>
+                    <ConfirmButton
+                      size='sm'
+                      variant='ghost'
+                      confirmLabel={t('pages.rulesetsCatalog.confirmDelete')}
+                      aria-label={t('pages.rulesetsCatalog.deleteAria', { name: rs.name })}
+                      confirmAriaLabel={t('pages.rulesetsCatalog.confirmDeleteAria', {
+                        name: rs.name,
+                      })}
+                      loading={del.isPending && del.variables?.rulesetId === rs.id}
+                      onConfirm={() => remove(rs.id, rs.name)}
+                    >
+                      {t('pages.rulesetsCatalog.delete')}
+                    </ConfirmButton>
+                  </Stack>
                 </Stack>
               </Card>
             ))}

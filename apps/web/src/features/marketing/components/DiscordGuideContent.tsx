@@ -5,6 +5,7 @@
    mirrors packages/discord/README.md's command reference and `/heist help`. */
 import Link from 'next/link';
 import { Card, Container, Heading, Stack, Text } from '@heist-mind/ui';
+import { DiscordInstallLinks } from '@/shared/components/DiscordInstallLinks';
 
 /**
  * The command reference as ONE responsive definition list (F93). It used to be a 3-column table in
@@ -38,9 +39,112 @@ function Row({ command, needs, does }: { command: string; needs: string; does: s
 }
 
 /**
- * The player-facing guide to the Discord bot (F67): what it is, the three-step start, and the
- * command reference — the page a GM sends their players. Content mirrors `/heist help` and
- * packages/discord/README.md's command table; update all three together.
+ * The command reference, row for row with packages/discord/README.md and `/heist help` (the
+ * manifest in packages/discord/src/commands/manifest.ts is the source of truth — update all four
+ * together; discord-page.spec.ts checks a few load-bearing rows).
+ */
+export const COMMANDS: Array<{ command: string; needs: string; does: string }> = [
+  {
+    command: '/roll dice:N · /fortune · /dice',
+    needs: 'nothing',
+    does: 'Manual FitD action/fortune rolls and plain NdM dice — no account, nothing stored',
+  },
+  {
+    command: '/resist dice:N',
+    needs: 'nothing',
+    does: 'Resistance roll — stress is 6 − highest die; a critical clears 1',
+  },
+  {
+    command: '/heist help · /heist about',
+    needs: 'nothing',
+    does: 'Every command, grouped by what it needs · what the bot is, privacy, and the deployed version',
+  },
+  {
+    command: '/heist account',
+    needs: 'signed in',
+    does: 'Your linked HeistMind account and active character',
+  },
+  {
+    command: '/character use|show|unset',
+    needs: 'signed in',
+    does: 'Pick, show (or share) and clear the character the bot acts as — one at a time',
+  },
+  {
+    command: '/roll action: [push|bargain] [assist]',
+    needs: 'active character',
+    does: 'Action roll from your sheet rating; push (+1d, 2 stress) OR a devil’s bargain (+1d), plus an assist (+1d, the helper marks 1 stress); moderate harm costs a die; persists in a linked channel',
+  },
+  {
+    command: '/resist attribute:',
+    needs: 'active character',
+    does: 'Resist with your sheet’s attribute rating (in a linked campaign); the stress cost lands on your sheet',
+  },
+  {
+    command: '/stress add|clear',
+    needs: 'active character',
+    does: 'Mark or clear stress on your sheet',
+  },
+  {
+    command: '/harm take|clear [armor]',
+    needs: 'active character',
+    does: 'Take harm (full tracks escalate, RAW; armor:true soaks a level) or clear a wound — logged',
+  },
+  {
+    command: '/vice indulge',
+    needs: 'active character',
+    does: 'Downtime: roll your vice, clear stress (overindulgence flagged)',
+  },
+  {
+    command: '/xp mark|advance',
+    needs: 'active character',
+    does: 'Mark XP (playbook or attribute track) and spend a full track on an advance',
+  },
+  {
+    command: '/heist link|unlink',
+    needs: 'GM, in a server',
+    does: 'Link one of your campaigns to this channel, its category, or the whole server (needs Manage Channels; Manage Server for server-wide) · remove the link',
+  },
+  {
+    command: '/heist status',
+    needs: 'member, linked channel',
+    does: 'The linked campaign at a glance: score, crew, clocks',
+  },
+  {
+    command: '/log text:',
+    needs: 'member, linked channel',
+    does: 'Record a settled result in the campaign log — attributed to you, tagged to the active score',
+  },
+  {
+    command: '/score start|end',
+    needs: 'GM, linked channel',
+    does: 'Operation lifecycle — log entries are tagged to the score',
+  },
+  {
+    command: '/crew heat|tier|incarcerate',
+    needs: 'GM, linked channel',
+    does: 'Add/reduce heat (→ wanted cascade) · full Rep: hold weak→strong, or pay new Tier × 8 coin · Wanted −1 + Heat cleared',
+  },
+  {
+    command: '/crew xp|advance',
+    needs: 'GM, linked channel',
+    does: 'Mark crew advancement XP · spend a full track on a new crew ability',
+  },
+  {
+    command: '/clock tick',
+    needs: 'GM, linked channel',
+    does: 'Advance or wind back a clock; filling it announces the milestone',
+  },
+  {
+    command: '/faction status',
+    needs: 'GM, linked channel',
+    does: 'Set a faction’s standing toward the crew (−3 war … +3 allies)',
+  },
+];
+
+/**
+ * The player-facing guide to the Discord bot (F67, F94): what it is, how to add it, the setup
+ * order (campaign + join on the web FIRST, then link the channel), and the command reference —
+ * the page a GM sends their players. Reachable from the signed-in nav and the campaign hub.
  */
 export function DiscordGuideContent() {
   return (
@@ -55,33 +159,48 @@ export function DiscordGuideContent() {
             live mechanical layer for async play-by-post, right in your server. The story stays in
             your channels; the mechanics and shared truth live in HeistMind.
           </Text>
+          <DiscordInstallLinks showUserInstall />
         </Stack>
 
         <Card variant='outline'>
           <Stack direction='column' gap='sm'>
             <Heading level='h2'>Getting started</Heading>
-            <ol className='list-decimal space-y-2 pl-5 text-sm'>
+            <ol className='list-decimal space-y-2 pl-5 text-sm' data-testid='discord-setup-steps'>
               <li>
                 <Text as='span'>
-                  <strong>Try the dice first — no account needed.</strong> In a server with the bot,{' '}
-                  <code>/roll dice:3</code> makes a FitD action roll; <code>/fortune</code> and{' '}
-                  <code>/dice 2d6+1</code> work too.
+                  <strong>Add the bot.</strong> Someone with Manage Server adds HeistMind to your
+                  Discord server (the button above). Then try the dice — no account needed:{' '}
+                  <code>/roll dice:3</code>, <code>/fortune</code>, <code>/dice 2d6+1</code>.
                 </Text>
               </li>
               <li>
                 <Text as='span'>
-                  <strong>Sign in with Discord on this site once</strong> — that sign-in IS the
-                  account link; there is no separate pairing step. Then build or claim a character
-                  and select it in Discord with <code>/character use</code>.
+                  <strong>GM: create the campaign on this site, then link it.</strong>{' '}
+                  <Link href='/games/new' className='underline'>
+                    Create a campaign
+                  </Link>
+                  , then in the channel you play in run <code>/heist link campaign:</code> and pick
+                  it (needs Manage Channels). Copy the campaign&rsquo;s invite link from its page
+                  for your players.
                 </Text>
               </li>
               <li>
                 <Text as='span'>
-                  <strong>Roll from your sheet.</strong> <code>/roll action:Skirmish</code> uses
-                  your character&rsquo;s real rating (moderate harm costs a die, pushing adds one
-                  and charges 2 stress). In a channel the GM has linked with{' '}
-                  <code>/heist link</code>, rolls and every mechanical change land in the shared
-                  campaign log.
+                  <strong>Players: sign in, join, build.</strong> Sign in with Discord on this site
+                  once — that sign-in IS the account link; there is no separate pairing step. Open
+                  the GM&rsquo;s invite link (or enter the join code on the{' '}
+                  <Link href='/games' className='underline'>
+                    Campaigns
+                  </Link>{' '}
+                  page), build a character in the campaign, and pick it in Discord with{' '}
+                  <code>/character use</code>.
+                </Text>
+              </li>
+              <li>
+                <Text as='span'>
+                  <strong>Play.</strong> <code>/roll action:Skirmish</code> rolls your
+                  character&rsquo;s real rating. In the linked channel, rolls and every mechanical
+                  change land in the shared campaign log — the same log the campaign page shows.
                 </Text>
               </li>
             </ol>
@@ -106,76 +225,9 @@ export function DiscordGuideContent() {
                 <span>Does</span>
               </div>
               <dl className='flex flex-col gap-2 md:gap-0'>
-                <Row
-                  command='/roll dice:N · /fortune · /dice'
-                  needs='nothing'
-                  does='Manual FitD rolls — no account, nothing stored'
-                />
-                <Row
-                  command='/character use|show|unset'
-                  needs='signed in'
-                  does='Pick which of your characters the bot acts as'
-                />
-                <Row
-                  command='/roll action: [push|bargain] [assist]'
-                  needs='active character'
-                  does='Action roll from your sheet rating; push OR a devil’s bargain (+1d), plus an assist; harm −1d applies; persists in a linked channel'
-                />
-                <Row
-                  command='/resist dice: [attribute]'
-                  needs='active character'
-                  does='Resistance roll — stress is 6 − highest die; a crit clears 1'
-                />
-                <Row
-                  command='/stress add|clear'
-                  needs='active character'
-                  does='Mark or clear stress on your sheet'
-                />
-                <Row
-                  command='/harm take|clear'
-                  needs='active character'
-                  does='Take harm (full tracks escalate, RAW) or clear a wound — feed-logged'
-                />
-                <Row
-                  command='/vice indulge'
-                  needs='active character'
-                  does='Downtime: roll your vice, clear stress (overindulgence flagged)'
-                />
-                <Row
-                  command='/xp mark|advance'
-                  needs='active character'
-                  does='Mark XP (playbook or attribute track) and spend a full track on an advance'
-                />
-                <Row
-                  command='/heist link|status|log'
-                  needs='member / GM, in a guild'
-                  does='Link a campaign to the channel · campaign at a glance · record a settled result'
-                />
-                <Row
-                  command='/score start|end'
-                  needs='GM, linked channel'
-                  does='Operation lifecycle — feed events tagged to the score'
-                />
-                <Row
-                  command='/crew heat|tier|incarcerate'
-                  needs='GM, linked channel'
-                  does='Add/reduce heat (→ wanted cascade) · full Rep: hold weak→strong, or pay new Tier × 8 coin · Wanted −1 + Heat cleared'
-                />
-                <Row
-                  command='/crew xp|advance'
-                  needs='GM, linked channel'
-                  does='Mark crew advancement XP · spend a full track on a new crew ability'
-                />
-                <Row
-                  command='/clock tick'
-                  needs='GM, linked channel'
-                  does='Advance or wind back a clock; filling it announces the milestone'
-                />
-                <Row
-                  command='/faction status'
-                  needs='GM, linked channel'
-                  does='Set a faction’s standing toward the crew (−3 war … +3 allies)'
-                />
+                {COMMANDS.map(row => (
+                  <Row key={row.command} {...row} />
+                ))}
               </dl>
             </div>
           </Stack>

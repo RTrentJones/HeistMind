@@ -20,7 +20,8 @@ import { usePageTranslation, useTranslation } from '@/lib/i18n/hooks';
 import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
-import { useCloneCharacter } from '@/features/characters/data/mutations';
+import { useCloneCharacter, useDeleteCharacter } from '@/features/characters/data/mutations';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 import { useGamesByPlayer } from '@/features/games/data/queries';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import { errorMessage } from '@/lib/query/result';
@@ -42,6 +43,7 @@ export default function MyCharactersPage() {
     [games.data]
   );
   const clone = useCloneCharacter();
+  const del = useDeleteCharacter();
   // Per-card spinner target: the mutation's isPending is global, the clicked card's id is not.
   const [cloning, setCloning] = useState<string | null>(null);
   const [cloneError, setCloneError] = useState<string | null>(null);
@@ -68,6 +70,20 @@ export default function MyCharactersPage() {
     }
   };
 
+  // F94 — the owner deletes a character for good (two-click). The campaign log keeps its entries.
+  const remove = (ch: Character) =>
+    del.mutate(
+      { characterId: ch.id },
+      {
+        onSuccess: () =>
+          useNotificationStore.getState().success(t('characters.deleted', { name: ch.name })),
+        onError: err =>
+          useNotificationStore
+            .getState()
+            .error(t('characters.deleteFailed', { name: ch.name }), errorMessage(err) || undefined),
+      }
+    );
+
   if (!isAuthenticated) {
     return <SignInGate prompt={t('characters.authPrompt')} />;
   }
@@ -76,6 +92,7 @@ export default function MyCharactersPage() {
     <CharacterCard
       key={ch.id}
       character={ch}
+      headingLevel='h2'
       standaloneLabel={t('characters.standalone')}
       meta={t('characters.meta', {
         playbook: playbookLabel(ch.playbookType),
@@ -98,6 +115,17 @@ export default function MyCharactersPage() {
               {t('characters.open')}
             </Link>
           </Button>
+          <ConfirmButton
+            size='sm'
+            variant='ghost'
+            confirmLabel={t('characters.confirmDelete')}
+            aria-label={t('characters.deleteAria', { name: ch.name })}
+            confirmAriaLabel={t('characters.confirmDeleteAria', { name: ch.name })}
+            loading={del.isPending && del.variables?.characterId === ch.id}
+            onConfirm={() => remove(ch)}
+          >
+            {t('characters.delete')}
+          </ConfirmButton>
         </>
       }
     />

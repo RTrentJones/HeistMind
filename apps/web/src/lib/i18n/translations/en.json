@@ -45,7 +45,6 @@
     "community": "Community",
     "documentation": "Documentation",
     "home": "Home",
-    "games": "Games",
     "campaigns": "Campaigns",
     "characters": "Characters",
     "rulesets": "Rulesets",
@@ -70,7 +69,8 @@
       "navLabel": "Main",
       "openMenu": "Open menu",
       "closeMenu": "Close menu"
-    }
+    },
+    "discord": "Discord"
   },
   "components": {
     "header": {
@@ -176,12 +176,19 @@
     },
     "inviteSection": {
       "title": "Invite players",
-      "description": "Share a join code so players can add themselves to this campaign.",
+      "description": "Send players an invite link (it works even if they haven't signed in yet), or the bare join code to type on the Campaigns page. Each code lets up to 20 players in; revoke it any time.",
       "generate": "Create a join code",
       "generateFailed": "Couldn't create a join code.",
-      "copy": "Copy",
+      "copy": "Copy code",
+      "copyLink": "Copy invite link",
       "copied": "Copied!",
-      "noCodes": "No active join codes yet."
+      "noCodes": "No active join codes yet.",
+      "listLabel": "Active join codes",
+      "revoke": "Revoke",
+      "confirmRevoke": "Confirm revoke",
+      "revokeAria": "Revoke join code {{code}}",
+      "revokeFailed": "Couldn't revoke that join code.",
+      "usesLeft": "{{count}} of {{max}} uses left"
     },
     "wizard": {
       "nameLabel": "Character name",
@@ -784,6 +791,57 @@
       "complete": "complete",
       "incomplete": "needs attention",
       "upcoming": "not started"
+    },
+    "members": {
+      "title": "Players",
+      "listLabel": "Campaign members",
+      "gm": "GM",
+      "player": "Player",
+      "you": "(you)",
+      "remove": "Remove",
+      "confirmRemove": "Remove {{name}}?",
+      "removeAria": "Remove {{name}} from the campaign",
+      "removedNote": "was removed from the campaign by the GM",
+      "removedToast": "{{name}} was removed from the campaign",
+      "removeFailed": "Couldn't remove {{name}}",
+      "removedList": "Removed: {{names}}",
+      "gmHint": "Removing a player hands their characters back to them as standalone characters, and their join codes stop working for them.",
+      "leave": "Leave campaign",
+      "confirmLeave": "Confirm: leave campaign",
+      "leaveHint": "Leaving keeps your characters — they move back to My Characters as standalone characters.",
+      "leftNote": "left the campaign",
+      "leftToast": "You left the campaign",
+      "leaveFailed": "Couldn't leave the campaign"
+    },
+    "discordLink": {
+      "title": "Play this campaign on Discord",
+      "intro": "Run the mechanics from your server's play-by-post channel — rolls, stress, harm, clocks and the campaign log stay in sync with this page.",
+      "step1": "Add the HeistMind bot to your Discord server (you need Manage Server).",
+      "step2Lead": "In the channel you play in, run",
+      "step2Tail": "(needs Manage Channels).",
+      "step3": "Players join here with your invite link, build a character, then pick it in Discord with /character use.",
+      "guide": "Read the full Discord guide"
+    },
+    "deleteCampaign": {
+      "title": "Delete campaign",
+      "explain": "Deleting is permanent. Characters in this campaign are not deleted — they go back to their owners as standalone characters. The crew, clocks, factions, scores, join codes and campaign log are deleted.",
+      "cta": "Delete campaign",
+      "confirm": "Delete “{{name}}” for good",
+      "done": "Deleted “{{name}}”",
+      "failed": "Couldn't delete the campaign"
+    },
+    "discordInstall": {
+      "server": "Add HeistMind to your Discord server",
+      "userLead": "Just want dice and your sheet in any server or DM?",
+      "user": "Add it to your Discord account instead"
+    },
+    "deleteCharacter": {
+      "title": "Delete character",
+      "explain": "Deleting is permanent and can't be undone. Entries this character made in a campaign log stay in the log.",
+      "cta": "Delete character",
+      "confirm": "Delete “{{name}}” for good",
+      "done": "Deleted “{{name}}”",
+      "failed": "Couldn't delete the character"
     }
   },
   "auth": {
@@ -865,13 +923,13 @@
       "welcomeUser": "Welcome, {{name}}"
     },
     "callback": {
-      "completingTitle": "Completing Sign In",
-      "waiting": "Waiting for Discord authentication to complete...",
-      "processing": "Supabase is processing your OAuth tokens automatically",
-      "failedTitle": "Authentication Failed",
+      "completingTitle": "Signing you in",
+      "waiting": "Finishing your Discord sign-in — this usually takes a second.",
+      "failedTitle": "Sign-in didn't finish",
       "redirecting": "Redirecting you back...",
-      "failed": "Authentication failed. Please try again.",
-      "timeout": "Authentication timeout. Please try again."
+      "failed": "Discord sign-in didn't complete. Please try again.",
+      "timeout": "Sign-in is taking too long. Please try again.",
+      "cancelled": "You cancelled the Discord sign-in. No problem — sign in again whenever you're ready."
     }
   },
   "pages": {
@@ -897,10 +955,18 @@
       "uploadCta": "Upload ruleset",
       "loadError": "Couldn't load rulesets",
       "starterHeading": "Starter rulesets",
-      "starterDescription": "New here? Add a ready-made system to start playing right away — each one becomes an editable copy in your rulesets that you can reskin freely.",
+      "starterDescription": "New here? Add a ready-made system to start playing right away — each one adds a copy you own to your rulesets. To customize a system, upload a modified ruleset JSON.",
       "empty": "No rulesets of your own yet. Add a starter above, or upload your own.",
-      "createGame": "Create game",
-      "versionPrefix": "v"
+      "createGame": "Create campaign",
+      "versionPrefix": "v",
+      "yourRulesets": "Your rulesets",
+      "delete": "Delete",
+      "confirmDelete": "Confirm delete",
+      "deleteAria": "Delete ruleset {{name}}",
+      "confirmDeleteAria": "Confirm: delete ruleset {{name}}",
+      "deleted": "Deleted “{{name}}”",
+      "deleteFailed": "Couldn't delete “{{name}}”",
+      "deleteBlocked": "A campaign or a character is still built on this ruleset, so it can't be deleted yet. Delete those campaigns and characters first."
     },
     "home": {
       "title": "HeistMind - Forged in the Dark Platform",
@@ -981,7 +1047,7 @@
       "subtitle": "Pick up where your crew left off.",
       "quickActions": "Quick actions",
       "recentActivity": "Recent activity",
-      "noActivity": "No recent activity yet — start a score or log a result.",
+      "noActivity": "No recent activity yet — rolls, results and changes in your campaigns show up here.",
       "activityIn": "in {{campaign}}",
       "yourCampaigns": "Your campaigns",
       "yourCharacters": "Your characters",
@@ -991,18 +1057,20 @@
       "standalone": "Standalone",
       "newCharacter": "New character",
       "manageCharacters": "My characters",
-      "noCampaigns": "No campaigns yet. Create one, or join with an invite code.",
+      "noCampaigns": "No campaigns yet. Create one, or join one with a join code or invite link.",
       "createFirstCampaign": "Create your first campaign",
-      "noCharacters": "No characters yet. Open a campaign to build your scoundrel.",
+      "noCharacters": "No characters yet. Build one — no campaign needed.",
       "startHere": {
         "title": "Start here",
-        "intro": "Three steps and your crew is on the board — take just the ones you need.",
+        "intro": "Take just the steps you need — a character works on its own, no campaign required.",
         "step1": "Build a character",
-        "step1Note": "— pick a built-in system (Blades in the Dark, Brackwater, Wicked Ones) and the wizard guides a rules-legal scoundrel.",
+        "step1Note": "— pick a built-in system (Blades in the Dark, Brackwater, Wicked Ones) and the wizard guides a rules-legal scoundrel you can bring to any table.",
         "step2": "Create a campaign",
-        "step2Note": "— you're the GM; share its join code with your players.",
-        "step3": "Join a game",
-        "step3Note": "— got an invite code from a GM? Redeem it here."
+        "step2Note": "— you're the GM; send your players its invite link.",
+        "step3": "Join a campaign",
+        "step3Note": "— got an invite link? Just open it. Got a join code? Enter it here.",
+        "step4": "Playing on Discord?",
+        "step4Note": "— add the bot to your server and roll from your sheet with slash commands."
       },
       "loadFailed": "Failed to load dashboard",
       "characterMeta": "{{playbook}} · {{campaign}}",
@@ -1011,10 +1079,13 @@
       "rulesets": "Rulesets",
       "actions": {
         "createGame": "Create campaign",
-        "joinGame": "Join a game",
+        "joinGame": "Join a campaign",
         "rulesets": "Rulesets",
-        "uploadRuleset": "Upload ruleset"
-      }
+        "uploadRuleset": "Upload ruleset",
+        "discord": "Discord guide"
+      },
+      "welcomeNew": "Welcome, {{name}}",
+      "subtitleNew": "Build a rules-legal scoundrel, run a campaign, or join your crew — pick any step below."
     },
     "characters": {
       "title": "My characters",
@@ -1046,7 +1117,13 @@
       "createdTitle": "Character created",
       "createdBody": "{{name}} is ready to play.",
       "createFailedTitle": "Could not create character",
-      "createFailed": "Failed to create character"
+      "createFailed": "Failed to create character",
+      "delete": "Delete",
+      "confirmDelete": "Confirm delete",
+      "deleteAria": "Delete {{name}}",
+      "confirmDeleteAria": "Confirm: delete {{name}} for good",
+      "deleted": "Deleted “{{name}}”",
+      "deleteFailed": "Couldn't delete “{{name}}”"
     },
     "rulesets": {
       "title": "Rulesets",
@@ -1112,6 +1189,28 @@
       "fortuneRoll": "Fortune roll — anyone at the table (the GM's odds die, but players roll gather-info and the like too):",
       "recordResult": "Record a result settled in person or on Discord:",
       "backToCampaign": "← Back to campaign"
+    },
+    "join": {
+      "invitedTitle": "You're invited to a campaign",
+      "invitedBody": "A GM shared this invite link so you can join their Forged in the Dark campaign on HeistMind. Sign in with Discord and you'll come straight back here to join.",
+      "codeLabel": "Join code:",
+      "signInCta": "Sign in with Discord to join",
+      "whatIs": "New here? HeistMind is a rules-driven character sheet and crew tracker for Blades in the Dark and other Forged in the Dark games.",
+      "learnMore": "What is HeistMind?",
+      "joining": "Joining the campaign…",
+      "joinedToast": "You joined the campaign",
+      "failedTitle": "Couldn't join this campaign",
+      "retry": "Try again",
+      "enterCode": "Enter a join code",
+      "backHome": "Back to your dashboard",
+      "errors": {
+        "notFound": "That join code doesn't exist. Check the invite link with your GM — join codes are 8 letters and numbers.",
+        "revoked": "The GM turned this join code off. Ask them for a new invite link.",
+        "expired": "This join code has expired. Ask your GM for a new invite link.",
+        "usedUp": "This join code has been used up. Ask your GM for a new invite link.",
+        "removed": "The GM removed you from this campaign, so this link can't add you back. Talk to your GM if that was a mistake.",
+        "generic": "Something went wrong joining. Try again in a moment."
+      }
     }
   },
   "forms": {

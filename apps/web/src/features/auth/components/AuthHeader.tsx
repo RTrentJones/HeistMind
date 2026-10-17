@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { href: '/games', key: 'navigation.campaigns' },
   { href: '/characters', key: 'navigation.characters' },
   { href: '/rulesets', key: 'navigation.rulesets' },
+  { href: '/discord', key: 'navigation.discord' },
   { href: '/settings', key: 'navigation.settings' },
 ] as const;
 
@@ -192,7 +193,7 @@ export function AuthHeader() {
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={handleDiscordSignIn}
+                    onClick={() => void handleDiscordSignIn()}
                     loading={isLoading}
                     className='max-sm:hidden'
                   >
@@ -203,7 +204,7 @@ export function AuthHeader() {
                   <Button
                     variant='default'
                     size='sm'
-                    onClick={handleDiscordSignIn}
+                    onClick={() => void handleDiscordSignIn()}
                     loading={isLoading}
                     className='whitespace-nowrap'
                   >

@@ -26,6 +26,9 @@ export interface CharacterCardProps {
   actions?: ReactNode;
   /** When provided, shows this label as a badge for standalone (no-campaign) characters. */
   standaloneLabel?: string;
+  /** The name's heading level: h3 under a section h2 (roster, dashboard), h2 straight under a
+   * page h1 (My Characters) — axe heading-order (F94). */
+  headingLevel?: 'h2' | 'h3';
 }
 
 /**
@@ -33,14 +36,22 @@ export interface CharacterCardProps {
  * Surface-specific bits (the meta line, the action buttons, the standalone badge) come in as props so
  * the card itself stays a single implementation.
  */
-export function CharacterCard({ character, meta, actions, standaloneLabel }: CharacterCardProps) {
+export function CharacterCard({
+  character,
+  meta,
+  actions,
+  standaloneLabel,
+  headingLevel = 'h3',
+}: CharacterCardProps) {
   const { t } = useTranslation();
   return (
     <Card variant='character'>
       <Stack direction='row' justify='between' align='center' className='flex-wrap'>
         <div>
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-            <Heading level='h3'>{character.name}</Heading>
+            <Heading level='h3' as={headingLevel}>
+              {character.name}
+            </Heading>
             {character.status !== 'active' && (
               <Badge variant={characterStatusVariant[character.status]}>
                 {characterStatusLabel(character.status, t)}
@@ -57,7 +68,7 @@ export function CharacterCard({ character, meta, actions, standaloneLabel }: Cha
           )}
         </div>
         {actions && (
-          <Stack direction='row' gap='sm' align='center'>
+          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             {actions}
           </Stack>
         )}

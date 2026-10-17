@@ -14,6 +14,7 @@ import {
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { Footer } from '@/shared/components/Footer';
+import { DiscordInstallLinks } from '@/shared/components/DiscordInstallLinks';
 import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
 import { rollKindLabel } from '@/features/rolls/lib/labels';
 import { playbookLabel } from '@/features/characters/lib/playbook-label';
@@ -56,6 +57,16 @@ export function Dashboard() {
   const gameNameById = new Map(campaigns.map(c => [c.game.id, c.game.name]));
   const charNameById = new Map(characters.map(c => [c.id, c.name]));
   const now = Date.now();
+  // First run = both lists loaded, no errors, nothing yet. "Welcome back" is only for people who
+  // have something to come back to (F94); a newcomer gets "Start here" INSTEAD of three empty
+  // sections that repeated it.
+  const loaded =
+    !campaignsStatus.loading &&
+    !charactersStatus.loading &&
+    !campaignsStatus.error &&
+    !charactersStatus.error;
+  const returning = campaigns.length > 0 || characters.length > 0;
+  const firstRun = loaded && !returning;
 
   const campaignCard = (c: DashboardCampaign) => (
     <GameCard key={c.game.id} game={c.game} role={c.role} />
@@ -125,9 +136,13 @@ export function Dashboard() {
             {/* Welcome */}
             <Stack direction='column' gap='xs'>
               <Heading level='h1' variant='hero'>
-                {t('pages.dashboard.welcome', { name })}
+                {returning
+                  ? t('pages.dashboard.welcome', { name })
+                  : t('pages.dashboard.welcomeNew', { name })}
               </Heading>
-              <Text variant='muted'>{t('pages.dashboard.subtitle')}</Text>
+              <Text variant='muted'>
+                {firstRun ? t('pages.dashboard.subtitleNew') : t('pages.dashboard.subtitle')}
+              </Text>
             </Stack>
 
             {/* Quick actions */}
@@ -147,140 +162,146 @@ export function Dashboard() {
               <Button asChild variant='outline'>
                 <Link href='/rulesets/new'>{t('pages.dashboard.actions.uploadRuleset')}</Link>
               </Button>
+              <Button asChild variant='outline'>
+                <Link href='/discord'>{t('pages.dashboard.actions.discord')}</Link>
+              </Button>
             </Stack>
 
             {/* Brand-new user (no campaigns, no characters): one guided "start here" instead of
-                three disconnected empty cards (F37). Each step is a real link. */}
-            {!campaignsStatus.loading &&
-              !charactersStatus.loading &&
-              !campaignsStatus.error &&
-              !charactersStatus.error &&
-              campaigns.length === 0 &&
-              characters.length === 0 && (
-                <Card variant='outline'>
-                  <Stack direction='column' gap='sm' align='start'>
-                    <Heading level='h2' variant='primary'>
-                      {t('pages.dashboard.startHere.title')}
-                    </Heading>
-                    <Text variant='muted' size='sm'>
-                      {t('pages.dashboard.startHere.intro')}
-                    </Text>
-                    <Stack direction='column' gap='xs' align='start'>
-                      <Text size='sm'>
-                        1.{' '}
-                        <Link href='/characters/new' className='underline'>
-                          {t('pages.dashboard.startHere.step1')}
-                        </Link>{' '}
-                        {t('pages.dashboard.startHere.step1Note')}
-                      </Text>
-                      <Text size='sm'>
-                        2.{' '}
-                        <Link href='/games/new' className='underline'>
-                          {t('pages.dashboard.startHere.step2')}
-                        </Link>{' '}
-                        {t('pages.dashboard.startHere.step2Note')}
-                      </Text>
-                      <Text size='sm'>
-                        3.{' '}
-                        <Link href='/games' className='underline'>
-                          {t('pages.dashboard.startHere.step3')}
-                        </Link>{' '}
-                        {t('pages.dashboard.startHere.step3Note')}
-                      </Text>
+                three disconnected empty cards (F37, F94). Each step is a real link. */}
+            {firstRun && (
+              <Card variant='outline' data-testid='dashboard-start-here'>
+                <Stack direction='column' gap='sm' align='start'>
+                  <Heading level='h2' variant='primary'>
+                    {t('pages.dashboard.startHere.title')}
+                  </Heading>
+                  <Text variant='muted' size='sm'>
+                    {t('pages.dashboard.startHere.intro')}
+                  </Text>
+                  <ol className='flex list-decimal flex-col gap-1 pl-5 text-sm'>
+                    <li>
+                      <Link href='/characters/new' className='underline'>
+                        {t('pages.dashboard.startHere.step1')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step1Note')}
+                    </li>
+                    <li>
+                      <Link href='/games/new' className='underline'>
+                        {t('pages.dashboard.startHere.step2')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step2Note')}
+                    </li>
+                    <li>
+                      <Link href='/games#join' className='underline'>
+                        {t('pages.dashboard.startHere.step3')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step3Note')}
+                    </li>
+                    <li>
+                      <Link href='/discord' className='underline'>
+                        {t('pages.dashboard.startHere.step4')}
+                      </Link>{' '}
+                      {t('pages.dashboard.startHere.step4Note')}
+                    </li>
+                  </ol>
+                  <DiscordInstallLinks size='sm' showUserInstall />
+                </Stack>
+              </Card>
+            )}
+
+            {!firstRun && (
+              <>
+                {/* Your campaigns */}
+                <Stack direction='row' justify='between' align='center'>
+                  <Heading level='h2' variant='primary'>
+                    {t('pages.dashboard.yourCampaigns')}
+                  </Heading>
+                  {campaigns.length > 0 && (
+                    <Button asChild variant='ghost' size='sm'>
+                      <Link href='/games'>{t('pages.dashboard.viewAll')}</Link>
+                    </Button>
+                  )}
+                </Stack>
+                {campaignsStatus.loading ? (
+                  <LoadingSpinner />
+                ) : campaignsStatus.error ? (
+                  <QueryError
+                    testId='dashboard-campaigns-error'
+                    title={t('components.asyncState.campaignsLoadFailed')}
+                    message={campaignsStatus.error}
+                    onRetry={campaignsStatus.retry}
+                  />
+                ) : campaigns.length === 0 ? (
+                  <Card variant='outline'>
+                    <Stack direction='column' gap='sm' align='start'>
+                      <Text variant='muted'>{t('pages.dashboard.noCampaigns')}</Text>
+                      <Button asChild variant='ember' size='sm'>
+                        <Link href='/games/new'>{t('pages.dashboard.createFirstCampaign')}</Link>
+                      </Button>
                     </Stack>
+                  </Card>
+                ) : (
+                  <Grid cols={2} gap='md'>
+                    {campaigns.slice(0, MAX_SHOWN).map(campaignCard)}
+                  </Grid>
+                )}
+
+                {/* Your characters */}
+                <Stack direction='row' justify='between' align='center'>
+                  <Heading level='h2' variant='primary'>
+                    {t('pages.dashboard.yourCharacters')}
+                  </Heading>
+                  <Button asChild variant='ghost' size='sm'>
+                    <Link href='/characters'>{t('pages.dashboard.manageCharacters')}</Link>
+                  </Button>
+                </Stack>
+                {charactersStatus.loading ? (
+                  <QueryLoading />
+                ) : charactersStatus.error ? (
+                  <QueryError
+                    testId='dashboard-characters-error'
+                    title={t('components.asyncState.charactersLoadFailed')}
+                    message={charactersStatus.error}
+                    onRetry={charactersStatus.retry}
+                  />
+                ) : characters.length === 0 ? (
+                  <Card variant='outline'>
+                    <Stack direction='column' gap='sm' align='start'>
+                      <Text variant='muted'>{t('pages.dashboard.noCharacters')}</Text>
+                      <Button asChild variant='ember' size='sm'>
+                        <Link href='/characters/new'>{t('pages.dashboard.newCharacter')}</Link>
+                      </Button>
+                    </Stack>
+                  </Card>
+                ) : (
+                  <Grid cols={2} gap='md'>
+                    {characters.slice(0, MAX_SHOWN).map(characterCard)}
+                  </Grid>
+                )}
+
+                {/* Recent activity */}
+                <Heading level='h2' variant='primary'>
+                  {t('pages.dashboard.recentActivity')}
+                </Heading>
+                {activityStatus.loading ? (
+                  <QueryLoading testId='dashboard-activity-loading' />
+                ) : activityStatus.error ? (
+                  <QueryError
+                    testId='dashboard-activity-error'
+                    title={t('components.asyncState.activityLoadFailed')}
+                    message={activityStatus.error}
+                    onRetry={activityStatus.retry}
+                  />
+                ) : activity.length === 0 ? (
+                  <Text variant='muted' data-testid='dashboard-activity-empty'>
+                    {t('pages.dashboard.noActivity')}
+                  </Text>
+                ) : (
+                  <Stack direction='column' gap='sm' data-testid='dashboard-activity-list'>
+                    {activity.map(activityRow)}
                   </Stack>
-                </Card>
-              )}
-
-            {/* Your campaigns */}
-            <Stack direction='row' justify='between' align='center'>
-              <Heading level='h2' variant='primary'>
-                {t('pages.dashboard.yourCampaigns')}
-              </Heading>
-              {campaigns.length > 0 && (
-                <Button asChild variant='ghost' size='sm'>
-                  <Link href='/games'>{t('pages.dashboard.viewAll')}</Link>
-                </Button>
-              )}
-            </Stack>
-            {campaignsStatus.loading ? (
-              <LoadingSpinner />
-            ) : campaignsStatus.error ? (
-              <QueryError
-                testId='dashboard-campaigns-error'
-                title={t('components.asyncState.campaignsLoadFailed')}
-                message={campaignsStatus.error}
-                onRetry={campaignsStatus.retry}
-              />
-            ) : campaigns.length === 0 ? (
-              <Card variant='outline'>
-                <Stack direction='column' gap='sm' align='start'>
-                  <Text variant='muted'>{t('pages.dashboard.noCampaigns')}</Text>
-                  <Button asChild variant='ember' size='sm'>
-                    <Link href='/games/new'>{t('pages.dashboard.createFirstCampaign')}</Link>
-                  </Button>
-                </Stack>
-              </Card>
-            ) : (
-              <Grid cols={2} gap='md'>
-                {campaigns.slice(0, MAX_SHOWN).map(campaignCard)}
-              </Grid>
-            )}
-
-            {/* Your characters */}
-            <Stack direction='row' justify='between' align='center'>
-              <Heading level='h2' variant='primary'>
-                {t('pages.dashboard.yourCharacters')}
-              </Heading>
-              <Button asChild variant='ghost' size='sm'>
-                <Link href='/characters'>{t('pages.dashboard.manageCharacters')}</Link>
-              </Button>
-            </Stack>
-            {charactersStatus.loading ? (
-              <QueryLoading />
-            ) : charactersStatus.error ? (
-              <QueryError
-                testId='dashboard-characters-error'
-                title={t('components.asyncState.charactersLoadFailed')}
-                message={charactersStatus.error}
-                onRetry={charactersStatus.retry}
-              />
-            ) : characters.length === 0 ? (
-              <Card variant='outline'>
-                <Stack direction='column' gap='sm' align='start'>
-                  <Text variant='muted'>{t('pages.dashboard.noCharacters')}</Text>
-                  <Button asChild variant='ember' size='sm'>
-                    <Link href='/characters/new'>{t('pages.dashboard.newCharacter')}</Link>
-                  </Button>
-                </Stack>
-              </Card>
-            ) : (
-              <Grid cols={2} gap='md'>
-                {characters.slice(0, MAX_SHOWN).map(characterCard)}
-              </Grid>
-            )}
-
-            {/* Recent activity */}
-            <Heading level='h2' variant='primary'>
-              {t('pages.dashboard.recentActivity')}
-            </Heading>
-            {activityStatus.loading ? (
-              <QueryLoading testId='dashboard-activity-loading' />
-            ) : activityStatus.error ? (
-              <QueryError
-                testId='dashboard-activity-error'
-                title={t('components.asyncState.activityLoadFailed')}
-                message={activityStatus.error}
-                onRetry={activityStatus.retry}
-              />
-            ) : activity.length === 0 ? (
-              <Text variant='muted' data-testid='dashboard-activity-empty'>
-                {t('pages.dashboard.noActivity')}
-              </Text>
-            ) : (
-              <Stack direction='column' gap='sm' data-testid='dashboard-activity-list'>
-                {activity.map(activityRow)}
-              </Stack>
+                )}
+              </>
             )}
           </Stack>
         </Container>

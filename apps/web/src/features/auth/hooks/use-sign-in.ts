@@ -15,9 +15,10 @@ export function useSignIn() {
   const { isLoading } = useAuth();
   const { signInWithProvider } = useAuthActions();
 
-  const signIn = async () => {
+  /** `next` — a same-origin path to land on after sign-in (validated; unsafe values are dropped). */
+  const signIn = async (options?: { next?: string | null }) => {
     try {
-      await signInWithProvider('discord');
+      await signInWithProvider('discord', options);
     } catch (err) {
       captureError(err, { 'error.surface': 'auth.sign-in' });
       useNotificationStore
