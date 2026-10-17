@@ -144,9 +144,9 @@ export function useTakeHarm(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: (appliedLevel: HarmLevel | null) => string;
     }) => unwrap(await takeHarm(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -162,9 +162,9 @@ export function useClearHarm(characterId: string, gameId: string | null) {
       logLabel: string;
       logNote: string;
     }): Promise<Character> => unwrap(await clearHarm(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -183,9 +183,9 @@ export function useFlashback(gameId: string | null) {
       logLabel: string;
       logNote: string;
     }) => unwrap(await flashback(getRepositories(), vars)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }

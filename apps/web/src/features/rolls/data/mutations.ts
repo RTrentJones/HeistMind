@@ -42,7 +42,7 @@ export function useActionRoll(gameId: string) {
       }
       // An assist may have charged the helper's stress (F10) — refresh their sheet too.
       if (input.assist !== undefined) {
-        void qc.invalidateQueries({ queryKey: characterKeys.detail(input.assist.characterId) });
+        await qc.invalidateQueries({ queryKey: characterKeys.detail(input.assist.characterId) });
       }
     },
   });

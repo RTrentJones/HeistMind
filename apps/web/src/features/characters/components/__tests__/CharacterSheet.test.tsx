@@ -158,6 +158,7 @@ describe('CharacterSheet writes + read-only gating', () => {
     } as never;
     renderSheet();
     expect(screen.queryByTestId('roll-panel')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Set stress to 4' })).not.toBeInTheDocument();
+    // The stress pips render but are inert for a read-only viewer.
+    expect(screen.getByRole('button', { name: 'Set stress to 4' })).toBeDisabled();
   });
 });
