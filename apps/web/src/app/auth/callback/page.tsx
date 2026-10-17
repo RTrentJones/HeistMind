@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Card,
@@ -17,7 +17,20 @@ import { captureError, logEvent } from '@heist-mind/telemetry';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAuthTranslation } from '@/lib/i18n/hooks';
 
-export default function AuthCallback() {
+/**
+ * The OAuth return page. useSearchParams() needs a Suspense boundary for the route to prerender
+ * (the page server-renders now that i18n no longer gates the tree); the fallback is the same
+ * "completing sign-in" card, so the static HTML and the hydrated page look identical.
+ */
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<CallbackShell />}>
+      <AuthCallback />
+    </Suspense>
+  );
+}
+
+function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -63,6 +76,11 @@ export default function AuthCallback() {
     }
   }, [isAuthenticated, router]);
 
+  return <CallbackShell error={error} />;
+}
+
+function CallbackShell({ error = null }: { error?: string | null }) {
+  const { t } = useAuthTranslation();
   return (
     <Section variant='hero' padding='none' width='full' className='min-h-screen'>
       <Stack justify='center' align='center' className='min-h-screen'>

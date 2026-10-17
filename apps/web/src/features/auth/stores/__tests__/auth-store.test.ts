@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Profile } from '@heist-mind/core';
 import { getAuthService } from '@/lib/auth';
 import { fetchProfile } from '@/features/profiles/data/api';
-import { initAuthListener, useAuthStore, type AuthUser } from '../auth-store';
+import { getQueryClient } from '@/lib/query/client';
+import { initAuthListener, rehydrateAuthStore, useAuthStore, type AuthUser } from '../auth-store';
 
 vi.mock('@/features/profiles/data/api', () => ({
   fetchProfile: vi.fn(),
@@ -75,6 +76,16 @@ describe('signOut', () => {
     expect(state().profile).toBeNull();
     expect(state().isAuthenticated).toBe(false);
     expect(state().sessionChecked).toBe(false);
+  });
+
+  it("drops the React Query cache so the next account never sees the last user's data", async () => {
+    mockAuthService();
+    state().setUser(USER);
+    getQueryClient().setQueryData(['characters', 'u1'], [{ id: 'c1' }]);
+
+    await state().signOut();
+
+    expect(getQueryClient().getQueryData(['characters', 'u1'])).toBeUndefined();
   });
 
   it('keeps the session and surfaces the error when the service fails', async () => {
@@ -196,5 +207,43 @@ describe('initAuthListener (single-install)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('rehydrateAuthStore (post-mount hydration of the persisted hint)', () => {
+  it('does not hydrate at store creation, so the first client render matches the server HTML', () => {
+    expect(useAuthStore.persist.getOptions().skipHydration).toBe(true);
+  });
+
+  it('restores the display hint but never a persisted sessionChecked flag', () => {
+    // (Reset the flag BEFORE seeding storage — every setState writes the persisted slice.)
+    useAuthStore.setState({ hasHydrated: false });
+    // A v1 entry from before this change also carried sessionChecked: true.
+    localStorage.setItem(
+      'auth-store',
+      JSON.stringify({
+        state: { user: USER, profile: PROFILE, isAuthenticated: true, sessionChecked: true },
+        version: 1,
+      })
+    );
+
+    rehydrateAuthStore();
+
+    expect(state().hasHydrated).toBe(true);
+    expect(state().user).toEqual(USER);
+    expect(state().isAuthenticated).toBe(true);
+    // The boot-time session check must still run against Supabase.
+    expect(state().sessionChecked).toBe(false);
+    localStorage.removeItem('auth-store');
+  });
+
+  it('still marks the store hydrated when nothing is persisted', () => {
+    localStorage.removeItem('auth-store');
+    useAuthStore.setState({ hasHydrated: false });
+
+    rehydrateAuthStore();
+
+    expect(state().hasHydrated).toBe(true);
+    expect(state().isAuthenticated).toBe(false);
   });
 });

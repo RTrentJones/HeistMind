@@ -1,11 +1,23 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAuthService } from '@/lib/auth';
 import '@/lib/i18n';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { SignInGate } from '../SignInGate';
 
 describe('SignInGate', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ hasHydrated: true });
+  });
+
+  it('holds a spinner (not a sign-in prompt) until the persisted auth hint has hydrated', () => {
+    useAuthStore.setState({ hasHydrated: false });
+    render(<SignInGate prompt='Sign in to view your characters.' />);
+    expect(screen.queryByText('Sign in to continue')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Sign In with Discord/i })).not.toBeInTheDocument();
+  });
+
   it('renders the default heading, page prompt, and a working sign-in button', async () => {
     const signInWithOAuth = vi.fn().mockResolvedValue({ data: {}, error: null });
     vi.mocked(getAuthService).mockReturnValue({

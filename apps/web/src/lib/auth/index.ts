@@ -2,8 +2,7 @@
 // Uses the abstracted database package for auth operations
 
 import {
-  createAuthService,
-  createRepositories,
+  createDatabaseProvider,
   type AuthService,
   type DatabaseRepositories,
 } from '@heist-mind/database';
@@ -12,13 +11,16 @@ import {
 let authService: AuthService | null = null;
 let repositories: DatabaseRepositories | null = null;
 
-// Initialize auth service and repositories
-export function initializeAuth() {
-  if (!authService) {
-    authService = createAuthService();
-  }
-  if (!repositories) {
-    repositories = createRepositories();
+// Initialize auth service and repositories from ONE provider → ONE Supabase client. Building them
+// separately (createAuthService() + createRepositories()) created two GoTrueClients on the same
+// storage key: both auto-refreshed the same refresh token (reuse races → random sign-outs) and
+// the browser logged "Multiple GoTrueClient instances detected". Sharing the client also means
+// repository queries always carry the session the auth listener sees.
+export function initializeAuth(): { authService: AuthService; repositories: DatabaseRepositories } {
+  if (!authService || !repositories) {
+    const provider = createDatabaseProvider();
+    authService = provider.createAuthService();
+    repositories = provider.createRepositories();
   }
   return { authService, repositories };
 }

@@ -1,9 +1,9 @@
 // Public surface — no backend or auth required. This is the floor of the deploy gate:
 // if these fail, the deployed artifact is broken for an anonymous visitor.
 //
-// On `main` (prod) the coming-soon gate is on, so `/` is the holding page; these specs stay green
-// in both states — the CI e2e job runs un-gated (NEXT_PUBLIC_COMING_SOON=off) and sees the real
-// landing, while greenlight-verify against gated prod sees the holding page.
+// On prod the coming-soon gate is on (until NEXT_PUBLIC_COMING_SOON=0 launches it), so `/` is the
+// holding page; these specs stay green in both states — the CI e2e job runs un-gated and sees the
+// real landing, while greenlight-verify against gated prod sees the holding page.
 
 import { test, expect } from '../support/fixtures';
 import { onComingSoon } from '../support/coming-soon';

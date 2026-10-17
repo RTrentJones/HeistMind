@@ -1,10 +1,11 @@
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * True when the page is the prod coming-soon holding page (the `main`-only gate). Public specs use
- * this to assert the holding page on gated prod and exercise the real app everywhere else. The CI
- * e2e job runs un-gated (`NEXT_PUBLIC_COMING_SOON=off`), so this is only ever true when the suite
- * runs against a gated deployment (greenlight-verify against prod).
+ * True when the page is the prod coming-soon holding page (lib/coming-soon.ts: on by default for
+ * the Vercel production deployment, `NEXT_PUBLIC_COMING_SOON` overrides). Public specs use this to
+ * assert the holding page on gated prod and exercise the real app everywhere else. The CI e2e job
+ * runs un-gated (no VERCEL_ENV, no override), so this is only ever true when the suite runs
+ * against a gated deployment (greenlight-verify against prod).
  *
  * The `/` route renders client-side after mount, so a bare `isVisible()` would race hydration.
  * Pass the locator that appears in the UN-gated state (e.g. the marketing hero heading) and this

@@ -42,7 +42,38 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 `/games/[id]/characters/new`, `/games/[id]/characters/[id]`, `/characters/new`,
 `/characters/[id]`, `/rulesets/new`) — renders `SignInGate` (heading + prompt + a working Discord
 sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
-`e2e/specs/signin-gates.spec.ts`.
+`e2e/specs/signin-gates.spec.ts`. Until the persisted auth hint has been read (post-mount — see
+below) the gate shows a neutral spinner, so a returning signed-in user never sees a sign-in flash.
+
+**Server rendering + hydration (F90, 2026-10-17):** every route server-renders its real content.
+i18next initializes **synchronously** with the bundled English catalog (`lib/i18n/index.ts`,
+`initAsync: false`), so `I18nProvider` renders children immediately — there is no client
+"preparing the shadows" gate any more (it used to hold every page, so the HTML of `/`, `/discord`,
+`/legal/*` and the 404 was just a raw `common.loading.preparingShadows` key). A saved non-English
+language is applied after hydration. The persisted auth store (`auth-store`) hydrates **after
+mount** (`skipHydration` + `rehydrateAuthStore()` in `AuthListener`'s layout effect): server HTML
+and the first client render are always signed-out (no hydration mismatch); the persisted slice is
+only a display hint (`sessionChecked` is no longer persisted, so every boot re-validates the
+session). Auth + repositories share **one** Supabase client (`lib/auth`, no more "Multiple
+GoTrueClient instances"), and sign-out clears the React Query cache. Pinned by
+`e2e/specs/ssr-hydration.spec.ts` (raw-HTML copy checks + no React hydration error, anonymous and
+for a returning signed-in GM).
+
+**Metadata, indexing, headers (F90):** root `layout.tsx` sets the brand title/description, a
+`%s · HeistMind` title template, `summary_large_image` Twitter card, and `metadataBase` from the
+deployment's own `SITE_URL` (`lib/site.ts`); there is **no root canonical** (it used to point every
+page at `/`). Public pages (`/`, `/discord`, `/legal/*`) set their own title/description/canonical
+and OG/Twitter text via `publicPageMetadata`; app sections get titles from per-segment server
+`layout.tsx` files (Campaigns, Characters, Rulesets, Settings, …) and are `noindex`. The link-preview
+card is `app/opengraph-image.tsx` / `app/twitter-image.tsx` (next/og, ember/crimson/gold on noir).
+`app/robots.ts` + `app/sitemap.ts`: production on its canonical host (`www.heistmind.com`) allows
+the public pages and lists them in the sitemap; **beta, previews, local and non-canonical prod
+hosts are `noindex`** (root `robots` metadata + `X-Robots-Tag` from middleware + disallow-all
+robots.txt, empty sitemap). `next.config.ts` sends nosniff, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, a minimal `Permissions-Policy`, and (prod
+builds) a CSP built from the env (self + Supabase https/wss + the Sentry ingest host; vercel.live on
+previews; `frame-ancestors 'none'`; `script-src` keeps `'unsafe-inline'` for Next's inline
+bootstrap).
 
 ---
 
@@ -50,26 +81,30 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 
 ### `/` — Home (marketing when logged out, dashboard when signed in)
 
-- **Coming-soon gate (prod holding page) — PRODUCTION deployment only, `main` only:** `COMING_SOON`
-  (`apps/web/src/lib/coming-soon.ts`) keys on `VERCEL_ENV === 'production'` and lives **only on
-  `main`**, never on `development` — so beta, Vercel previews, and local are always un-gated (their
-  e2e suites run the real app), and only the prod deployment is gated. No env var to set. When
+- **Coming-soon gate (prod holding page):** `COMING_SOON` (`apps/web/src/lib/coming-soon.ts`,
+  ships on **both** `development` and `main`) resolves `NEXT_PUBLIC_COMING_SOON` first (`1`/`true`/
+  `on` forces it on anywhere, `0`/`false`/`off` forces it off), else defaults to
+  `VERCEL_ENV === 'production'` — so with no flag set (today's infra) only the prod deployment is
+  gated and beta (a Vercel preview), previews, local and CI are un-gated. **Launch = set
+  `NEXT_PUBLIC_COMING_SOON=0` on the Vercel production target** (`RTrentJones.dev`
+  `infra/heistmind.tf`) and redeploy — no code revert, nothing for a later promote to undo. When
   gated: `page.tsx` renders `<ComingSoon/>` at `/`, `middleware.ts` redirects every route except
   `/`, `/legal/*` and `/__version` (the deploy-identity JSON the Greenlight verify gate reads,
   rewritten to `app/api/version`) back to `/`, and `AuthHeader` omits its signed-out sign-in buttons — so there
-  is no login anywhere on prod. Discord/API routes are excluded from the matcher and keep working;
+  is no login anywhere on prod. Discord/API routes and the static/metadata files (icons, webmanifest,
+  OG/Twitter images, robots/sitemap) are excluded from the matcher and keep working;
   legal pages stay live (registered DMCA agent page). `NEXT_PUBLIC_VERCEL_ENV` is mapped from
   `VERCEL_ENV` in `next.config.ts` so the client bundle agrees with the server/edge. The public
   specs (home, auth-discord, auth-callback) are gate-tolerant via `e2e/support/coming-soon.ts` so
-  the prod post-deploy verify stays green. To bring prod online for real: revert this on `main`
-  (or reconcile `main` with `development`). _`main`-only; `development` has no gate._
+  the prod post-deploy verify stays green.
 - **File:** `apps/web/src/app/page.tsx` — a **server component** (exports the per-route `metadata` —
   the real `<title>`/description for the one public URL) that renders
   `<HomeSwitch marketing={<HomePage/>}/>`; `HomeSwitch`
   (`features/marketing/components/HomeSwitch.tsx`, client) does the auth branch:
   `isAuthenticated ? <Dashboard/> : marketing`. Signed-out is the prerender state, so the marketing
-  page arrives as server-rendered HTML. `AppShell` steps aside on `/`, so each side renders its own
-  `AuthHeader` + `<main>`.
+  page arrives as server-rendered HTML (true since F90 — before, the i18n gate meant the HTML was
+  only a loading key). `AppShell` steps aside on `/`, so each side renders its own `AuthHeader` +
+  `<main>`. Metadata: absolute brand title + description, canonical `/`, OG/Twitter card.
 - **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
   two-mode landing. Hero _"The mechanical home for your Forged-in-the-Dark crew,"_ a **dual CTA**
   (_Run a campaign_ / _Join with a code_ — both kick off Discord OAuth), **two "how you'll use it"
@@ -106,7 +141,9 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 
 - **File:** `apps/web/src/app/auth/callback/page.tsx`
 - **Purpose:** handles the Discord OAuth redirect; waits for auth state, then redirects.
-- **Actions:** none (automatic). Shows a loading state, or an error on failure/timeout.
+- **Actions:** none (automatic). Shows a loading state, or an error on failure/timeout. The
+  `useSearchParams` reader sits in a `<Suspense>` whose fallback is the same "completing sign-in"
+  card, so the route prerenders (title "Signing in · HeistMind", noindex).
 - **Nav:** → `/` on success; → `/?error=auth_failed` on failure.
 
 ### `/games` — Campaign hub (created + joined)
@@ -344,7 +381,11 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   copyright.gov agent registration to actually exist** (the page claims it).
 - **Nav:** public, no auth gate; AppShell chrome is automatic (paths aren't `/` or `/auth/*`).
   Footer links (separate PR) are the discovery path.
-- _Last verified:_ 2026-07-05 (placeholders filled; previously feature introduction)
+- **Metadata (F90):** titles render as "Terms of Service · HeistMind" etc. (template), each with
+  its own canonical + OG/Twitter text + the shared card image; the document text is in the
+  server-rendered HTML.
+- _Last verified:_ 2026-10-17 (F90: server-rendered copy, per-page canonical/OG; previously
+  2026-07-05 placeholders filled)
 
 ### `/discord` — The bot guide (public, F67)
 
@@ -357,7 +398,10 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   `packages/discord/README.md`'s table — update the three together).
 - **Nav:** public, no auth gate; linked from the landing's play-by-post track ("How the bot
   works →"). On gated prod the route redirects home (only `/` + `/legal/*` stay reachable).
-- _Last verified:_ 2026-07-11 (feature introduction — bot-parity round, F67)
+- **Metadata (F90):** "The Discord play-by-post bot · HeistMind", own canonical + OG/Twitter text;
+  the guide is in the server-rendered HTML (link unfurls and crawlers see it).
+- _Last verified:_ 2026-10-17 (F90 SSR + metadata; previously 2026-07-11 feature introduction —
+  bot-parity round, F67)
 
 ### `/settings` — Account settings (self-service deletion)
 
@@ -386,9 +430,12 @@ sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
   the provider-free last resort for root-layout throws (own `<html>/<body>`, inline-styled, same
   copy via the bare i18n instance).
 - **404** (`not-found.tsx`): _"Lost in the shadows"_ + **Back to the lair** → `/`
-  (`errors.notFoundTitle` / `errors.backHome`).
+  (`errors.notFoundTitle` / `errors.backHome`) — server-rendered with a 404 status and `noindex`
+  since F90 (it used to SSR the raw loading key under the stale root title).
 
-_Last verified:_ 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
+_Last verified:_ 2026-10-17 (F90: every route server-renders real content — i18n gate removed,
+post-mount auth-store hydration, per-page metadata + OG card, robots/sitemap, security headers,
+env-flag coming-soon gate). Previously 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
 surfaces auth errors as a dismissible banner (F40); faction WAR callout at −3 (F47); zero-dice
 rolls annotated in the log (F7 closed); wizard playbook-switch + cancel are two-click with
 draft-saved reassurance (F27/F28); catalog flags owned copies, picker blurbs, standalone-sheet
