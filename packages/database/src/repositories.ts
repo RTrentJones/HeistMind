@@ -149,6 +149,10 @@ export interface CharacterRepository {
   /** Link a standalone character into a campaign (single active campaign). The DB RPC enforces
    * ownership + active membership + ruleset match server-side. (Phase 5 — portable characters.) */
   attachToGame(characterId: string, gameId: string): Promise<Result<Character>>;
+  /** Ids of the caller's active campaigns this character can attach to (excluding its current
+   * one) — the same predicate `attachToGame` enforces, including content-identical copies of a
+   * ruleset (00025). Empty for a character the caller doesn't own. */
+  findAttachableGameIds(characterId: string): Promise<Result<string[]>>;
   /** Return a character to standalone ("My Characters"). Owner-only, enforced by the DB RPC. */
   detachFromGame(characterId: string): Promise<Result<Character>>;
   /** Owner-only delete (the web only offers it to the owner). The feed keeps its entries. */

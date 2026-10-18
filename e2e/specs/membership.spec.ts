@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Page } from '@playwright/test';
 import { expect, test } from '../support/fixtures';
 import { getE2EEnv, hasAdminAuth, isLocalStack } from '../support/env';
-import { campaignWithJoinCode, joinViaLink } from '../support/campaign';
+import { campaignWithJoinCode, joinViaLink, openCampaignSetup } from '../support/campaign';
 import { buildCampaignBrackwater, characterCard } from '../support/characters';
 import { throwawayPage } from '../support/personas';
 import { uniqueName } from '../support/rulesets';
@@ -42,6 +42,7 @@ test.describe('membership controls', () => {
 
       // GM: the Players panel lists the player; Remove is a two-click confirm.
       await gm.page.goto(campaign.hubUrl);
+      await openCampaignSetup(gm.page);
       const name = player.user.username;
       const members = gm.page.getByRole('list', { name: 'Campaign members' });
       await expect(members.getByText(name, { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -91,6 +92,7 @@ test.describe('membership controls', () => {
       await expect(player.page.getByRole('heading', { name: campaign.name })).toHaveCount(0);
 
       await gm.page.goto(campaign.hubUrl);
+      await openCampaignSetup(gm.page);
       const members = gm.page.getByRole('list', { name: 'Campaign members' });
       await expect(members.getByText(player.user.username, { exact: true })).toHaveCount(0, {
         timeout: 15_000,
@@ -133,6 +135,7 @@ test.describe('membership controls', () => {
       // Open the sheet from My Characters, return it to standalone, then bring it straight back.
       await player.page.goto('/characters');
       await characterCard(player.page, charName).getByRole('link', { name: 'Open' }).click();
+      await expect(player.page.getByTestId('attach-resolving')).toHaveCount(0, { timeout: 15_000 });
       await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
       await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
       await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
@@ -147,6 +150,9 @@ test.describe('membership controls', () => {
 
       // Returned again and THEN leaving: the already-standalone character still opens (its
       // owner gets their own copy of the ruleset once they can no longer read the GM's).
+      // The membership card re-renders once its campaign lookup resolves (F98) — let it settle
+      // first, or the click can arm the confirm on a node that is being replaced.
+      await expect(player.page.getByTestId('attach-resolving')).toHaveCount(0, { timeout: 15_000 });
       await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
       await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
       await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });

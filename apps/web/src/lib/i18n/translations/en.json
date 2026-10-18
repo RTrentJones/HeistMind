@@ -429,7 +429,11 @@
       "help": "Link this character into one of your campaigns that uses the same ruleset. Its loadout and the campaign log then follow that campaign.",
       "moveTitle": "Move to another campaign",
       "moveHelp": "Re-home this character to a different campaign of yours that uses the same ruleset, or return it to My Characters.",
-      "none": "None of your campaigns use this ruleset yet. Create one, or join with a code.",
+      "none": "None of your campaigns can take this character yet — they need {{ruleset}} with the same rules (a campaign on an older or customised copy can't).",
+      "thisRuleset": "this ruleset",
+      "createCampaign": "Start a campaign with it",
+      "or": "or",
+      "joinWithCode": "join one with a code",
       "select": "Campaign",
       "attach": "Attach",
       "move": "Move",
@@ -724,6 +728,7 @@
       "you": "(you)",
       "remove": "Remove",
       "confirmRemove": "Remove {{name}}?",
+      "confirmRemoveShort": "Remove?",
       "removeAria": "Remove {{name}} from the campaign",
       "removedNote": "was removed from the campaign by the GM",
       "removedToast": "{{name}} was removed from the campaign",
@@ -752,6 +757,7 @@
       "explain": "Deleting is permanent. Characters in this campaign are not deleted — they go back to their owners as standalone characters. The crew, clocks, factions, scores, join codes and campaign log are deleted.",
       "cta": "Delete campaign",
       "confirm": "Delete “{{name}}” for good",
+      "confirmShort": "Delete for good",
       "done": "Deleted “{{name}}”",
       "failed": "Couldn't delete the campaign"
     },
@@ -765,6 +771,7 @@
       "explain": "Deleting is permanent and can't be undone. Entries this character made in a campaign log stay in the log.",
       "cta": "Delete character",
       "confirm": "Delete “{{name}}” for good",
+      "confirmShort": "Delete for good",
       "done": "Deleted “{{name}}”",
       "failed": "Couldn't delete the character"
     }
@@ -789,7 +796,8 @@
       "signIn": "Sign In",
       "signUpDiscord": "Sign Up with Discord",
       "signOut": "Sign Out",
-      "welcomeUser": "Welcome, {{name}}"
+      "welcomeUser": "Welcome, {{name}}",
+      "welcome": "Welcome"
     },
     "callback": {
       "completingTitle": "Signing you in",
@@ -1001,7 +1009,15 @@
       "stateLabel": "Campaign state",
       "fortuneRoll": "Fortune roll — anyone at the table (the GM's odds die, but players roll gather-info and the like too):",
       "recordResult": "Record a result settled in person or on Discord:",
-      "backToCampaign": "← Back to campaign"
+      "backToCampaign": "← Back to campaign",
+      "joinedTitle": "You're in — welcome to {{name}}",
+      "joinedBody": "Build your character for this campaign, or bring one you already have from My Characters.",
+      "joinedBuild": "Build your character",
+      "joinedBring": "Bring an existing character",
+      "joinedDismiss": "Dismiss",
+      "setupTitle": "Campaign setup",
+      "setupSummary": "Invite players, see who's in, and put the campaign on Discord.",
+      "peopleTitle": "People"
     },
     "join": {
       "invitedTitle": "You're invited to a campaign",
@@ -1012,6 +1028,8 @@
       "learnMore": "What is HeistMind?",
       "joining": "Joining the campaign…",
       "joinedToast": "You joined the campaign",
+      "invalidTitle": "This invite link looks broken",
+      "invalidBody": "Join codes are 8 letters and numbers, and this link doesn't contain one. Ask your GM to send the invite link again, or type the code in yourself.",
       "failedTitle": "Couldn't join this campaign",
       "retry": "Try again",
       "enterCode": "Enter a join code",

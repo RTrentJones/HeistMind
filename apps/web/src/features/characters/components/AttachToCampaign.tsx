@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { CharacterWithDetails } from '@heist-mind/core';
 import { Alert, Button, Card, Heading, Select, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAttachCharacter, useDetachCharacter } from '@/features/characters/data/mutations';
+import { useAttachableGameIds } from '@/features/characters/data/queries';
 import { useGamesByPlayer } from '@/features/games/data/queries';
 import { errorMessage } from '@/lib/query/result';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -33,19 +35,21 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   const [error, setError] = useState<string | null>(null);
   const busy = attachMutation.isPending || detachMutation.isPending;
 
-  // Eligible targets: the owner's campaigns on this character's ruleset, minus the current one.
-  // A character that left a campaign runs on the owner's COPY of its ruleset (00023), which
-  // remembers its source — that campaign stays eligible and the RPC rebinds on attach.
+  // Eligible targets come from the server (`attachable_games_for_character`, 00025) — the same
+  // rule the attach RPC enforces: the same ruleset row, the owner's copy of it (00023
+  // `copiedFrom`), or a content-identical copy (a catalog built-in each user loaded separately).
+  // If that lookup fails (e.g. an older DB), fall back to the strict exact-row match.
+  const attachable = useAttachableGameIds(character.id);
   const copiedFrom = character.ruleset?.compatibilityFlags?.copiedFrom;
-  const games = useMemo(
-    () =>
-      (allGames.data ?? []).filter(
-        g =>
-          (g.rulesetId === character.originalRulesetId || g.rulesetId === copiedFrom) &&
+  const games = useMemo(() => {
+    const allowed = attachable.data ? new Set(attachable.data) : null;
+    return (allGames.data ?? []).filter(g =>
+      allowed
+        ? allowed.has(g.id)
+        : (g.rulesetId === character.originalRulesetId || g.rulesetId === copiedFrom) &&
           g.id !== character.gameId
-      ),
-    [allGames.data, character.originalRulesetId, character.gameId, copiedFrom]
-  );
+    );
+  }, [allGames.data, attachable.data, character.originalRulesetId, character.gameId, copiedFrom]);
 
   // Default the picker to the first eligible target (keep the selection if it's still valid).
   useEffect(() => {
@@ -74,6 +78,9 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   };
 
   const hasTargets = games.length > 0;
+  // Until both lookups answer, hold the picker's height instead of flashing the "none" copy and
+  // then swapping in the picker (a layout shift on every standalone sheet).
+  const resolving = allGames.isPending || attachable.isPending;
 
   return (
     <Card variant='outline'>
@@ -95,7 +102,9 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
         )}
 
         {/* The move/attach picker — only when there's an eligible target. */}
-        {hasTargets ? (
+        {resolving ? (
+          <div aria-hidden='true' className='h-16' data-testid='attach-resolving' />
+        ) : hasTargets ? (
           <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
             <Select
               label={t('components.attachToCampaign.select')}
@@ -122,8 +131,25 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
           </Stack>
         ) : (
           !inCampaign && (
-            <Text variant='muted' size='sm'>
-              {t('components.attachToCampaign.none')}
+            <Text variant='muted' size='sm' data-testid='attach-none'>
+              {t('components.attachToCampaign.none', {
+                ruleset: character.ruleset?.name ?? t('components.attachToCampaign.thisRuleset'),
+              })}{' '}
+              <Link
+                href={
+                  character.originalRulesetId
+                    ? `/games/new?ruleset=${encodeURIComponent(character.originalRulesetId)}`
+                    : '/games/new'
+                }
+                className='underline'
+              >
+                {t('components.attachToCampaign.createCampaign')}
+              </Link>{' '}
+              {t('components.attachToCampaign.or')}{' '}
+              <Link href='/games#join' className='underline'>
+                {t('components.attachToCampaign.joinWithCode')}
+              </Link>
+              .
             </Text>
           )
         )}

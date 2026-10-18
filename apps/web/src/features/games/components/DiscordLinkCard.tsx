@@ -26,8 +26,7 @@ export function DiscordLinkCard({ campaignName }: { campaignName: string }) {
         <ol className='list-decimal space-y-1 pl-5 text-sm'>
           <li>{discordAppId() ? t('discordLink.step1') : t('discordLink.step1NoInstall')}</li>
           <li>
-            {t('discordLink.step2Lead')}{' '}
-            <code className='break-words'>/heist link campaign:{campaignName}</code>{' '}
+            {t('discordLink.step2Lead')} <code>/heist link campaign:{campaignName}</code>{' '}
             {t('discordLink.step2Tail')}
           </li>
           <li>

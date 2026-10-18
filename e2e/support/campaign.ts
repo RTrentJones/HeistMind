@@ -22,10 +22,27 @@ export async function campaignWithJoinCode(page: Page, prefix = 'Crew'): Promise
   return { name, hubUrl, gameId: hubUrl.split('/games/')[1] ?? '', code };
 }
 
+/**
+ * GM hub: open the "Campaign setup" disclosure (Invite / Players / Discord). It starts open only
+ * while the GM is alone in the campaign (UX r3), so specs that revisit a hub after someone joined
+ * open it first. No-op when already open.
+ */
+export async function openCampaignSetup(page: Page) {
+  const setup = page.getByTestId('campaign-setup');
+  await expect(setup).toBeVisible({ timeout: 15_000 });
+  if ((await setup.getAttribute('open')) === null) {
+    await setup.locator('summary').click();
+  }
+  await expect(setup).toHaveAttribute('open', '');
+}
+
 /** Open an invite link as a signed-in user and land on the campaign hub. */
 export async function joinViaLink(page: Page, campaign: Campaign, code = campaign.code) {
   await page.goto(`/join/${code}`);
-  await page.waitForURL(new RegExp(`/games/${campaign.gameId}$`), { timeout: 20_000 });
+  // A fresh redeem lands on `?joined=1` (the hub's "You're in" banner); a repeat visit may not.
+  await page.waitForURL(new RegExp(`/games/${campaign.gameId}(\\?joined=1)?$`), {
+    timeout: 20_000,
+  });
   await expect(page.getByRole('heading', { level: 1, name: campaign.name })).toBeVisible({
     timeout: 15_000,
   });

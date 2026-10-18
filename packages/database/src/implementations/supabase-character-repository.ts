@@ -204,6 +204,26 @@ export class SupabaseCharacterRepository
     });
   }
 
+  // Which of the caller's campaigns can take this character (00025 RPC — the same compatibility
+  // predicate attach enforces, so the picker and the server never disagree).
+  async findAttachableGameIds(characterId: string): Promise<Result<string[]>> {
+    return this.run(async () => {
+      const { data, error } = await this.rpcUntyped('attachable_games_for_character', {
+        p_character_id: characterId,
+      });
+      if (error) return failFromError(error);
+      const rows = Array.isArray(data) ? data : [];
+      return {
+        success: true,
+        data: rows.map(row =>
+          typeof row === 'string'
+            ? row
+            : String((row as Record<string, unknown>).attachable_games_for_character ?? '')
+        ),
+      };
+    });
+  }
+
   // Return a character to standalone ("My Characters"). Owner-only, enforced by the RPC.
   async detachFromGame(characterId: string): Promise<Result<Character>> {
     return this.run(async () => {

@@ -10,10 +10,11 @@ import { useTranslation } from '@/lib/i18n/hooks';
  * The signed-in page chrome: skip-to-main link (F41), the persistent header, breadcrumb wayfinding
  * (F22; renders nothing on a top-level route), the `<main>` landmark and the footer.
  *
- * Layout (F93): a full-viewport flex column so the footer sits at the bottom of short pages (404,
- * gates) instead of floating mid-screen, and one consistent gap under the header (the page h1 used
- * to sit ~8px under the header rule). Shared by `AppShell` (every inner route) and the signed-in
- * dashboard at `/` (F96 — it used to hand-roll its own wrapper and missed both).
+ * Layout (F93): a full-viewport flex column so the footer never floats mid-screen on short pages
+ * (404, gates), and one consistent gap under the header (the page h1 used to sit ~8px under the
+ * header rule). Shared by `AppShell` (every inner route) and the signed-in dashboard at `/` (F96 —
+ * it used to hand-roll its own wrapper and missed both). UX r3: `main` is at least a viewport
+ * tall, so the footer sits just below the fold and loading → content swaps don't move it.
  */
 export function PageShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -27,7 +28,10 @@ export function PageShell({ children }: { children: React.ReactNode }) {
       </a>
       <AuthHeader />
       <Breadcrumbs />
-      <main id='main-content' className='flex-1 pt-6 sm:pt-10'>
+      {/* UX r3 (CLS): main is at least a viewport tall, so the footer starts just below the fold.
+          Pages pass through short states (auth check → spinner → content) and every swap used to
+          drag a mid-screen footer up and down (sheet/hub/post-join CLS 0.2–1.0). */}
+      <main id='main-content' className='min-h-[calc(100dvh-4rem)] flex-1 pt-6 sm:pt-10'>
         {children}
       </main>
       <Footer />

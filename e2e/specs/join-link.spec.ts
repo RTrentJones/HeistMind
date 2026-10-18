@@ -4,7 +4,7 @@
 // case-insensitive. Throwaway personas only (membership state is consumed).
 import { expect, test } from '../support/fixtures';
 import { getE2EEnv, hasAdminAuth, isLocalStack } from '../support/env';
-import { campaignWithJoinCode, joinViaLink } from '../support/campaign';
+import { campaignWithJoinCode, joinViaLink, openCampaignSetup } from '../support/campaign';
 import { throwawayPage } from '../support/personas';
 import { dataClient } from '../support/supabase-admin';
 
@@ -32,6 +32,7 @@ test.describe('invite link /join/<code>', () => {
 
       // The use is counted on the GM's invite card.
       await gm.page.reload();
+      await openCampaignSetup(gm.page);
       await expect(
         gm.page.getByTestId('join-code-row').getByText('19 of 20 uses left')
       ).toBeVisible({ timeout: 15_000 });
@@ -39,6 +40,7 @@ test.describe('invite link /join/<code>', () => {
       // Re-opening the link is idempotent (no second use consumed, still lands on the hub).
       await joinViaLink(player.page, campaign);
       await gm.page.reload();
+      await openCampaignSetup(gm.page);
       await expect(
         gm.page.getByTestId('join-code-row').getByText('19 of 20 uses left')
       ).toBeVisible({ timeout: 15_000 });
@@ -98,7 +100,7 @@ test.describe('invite link /join/<code>', () => {
       await expect(reason).toHaveAttribute('data-reason', 'notFound', { timeout: 20_000 });
       await expect(reason).toContainText(/doesn't exist/i);
       await player.page.goto('/join/%20%21%21');
-      await expect(reason).toHaveAttribute('data-reason', 'notFound', { timeout: 20_000 });
+      await expect(player.page.getByTestId('join-invalid')).toBeVisible({ timeout: 20_000 });
 
       // Revoked — through the GM's real two-click revoke on the hub.
       const row = gm.page.getByTestId('join-code-row');

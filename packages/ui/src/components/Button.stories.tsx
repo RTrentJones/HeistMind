@@ -24,6 +24,8 @@ const meta: Meta<typeof Button> = {
         'outline',
         'secondary',
         'ghost',
+        'danger-outline',
+        'danger-ghost',
         'link',
         'ember',
         'steel',
@@ -97,6 +99,8 @@ export const GameThemed: Story = {
       </Button>
       <Button variant='glass'>Glass</Button>
       <Button variant='neon'>Neon</Button>
+      <Button variant='danger-outline'>Delete campaign</Button>
+      <Button variant='danger-ghost'>Revoke</Button>
     </div>
   ),
   parameters: {

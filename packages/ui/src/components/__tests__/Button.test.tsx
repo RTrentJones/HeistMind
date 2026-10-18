@@ -52,6 +52,14 @@ describe('Button Component', () => {
         props: { variant: 'outline' as const, children: 'Outline' },
         expectedClasses: ['border-2', 'border-brand-primary/50'],
       },
+      {
+        props: { variant: 'danger-outline' as const, children: 'Delete' },
+        expectedClasses: ['border-2', 'border-semantic-error/60', 'text-semantic-error-fg'],
+      },
+      {
+        props: { variant: 'danger-ghost' as const, children: 'Revoke' },
+        expectedClasses: ['bg-transparent', 'text-semantic-error-fg'],
+      },
     ];
 
     it('renders all variants correctly', () => {
@@ -66,7 +74,7 @@ describe('Button Component', () => {
         },
         {
           props: { size: 'default' as const, children: 'Default' },
-          expectedClasses: ['min-h-10', 'px-4', 'py-2'],
+          expectedClasses: ['min-h-10', 'max-sm:min-h-11', 'px-4', 'py-2'],
         },
         {
           props: { size: 'lg' as const, children: 'Large' },

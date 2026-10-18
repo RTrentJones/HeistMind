@@ -81,20 +81,31 @@ export function MembersPanel({
             const pIsGm = p.playerId === game.createdBy;
             return (
               <li key={p.id} data-testid='member-row'>
-                <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-                  <Text as='span'>{name}</Text>
-                  <Badge variant='outline'>{pIsGm ? t('members.gm') : t('members.player')}</Badge>
-                  {p.playerId === userId && (
-                    <Text as='span' variant='muted' size='sm'>
-                      {t('members.you')}
+                {/* Who on the left (wraps within itself), Remove pinned right: the row never
+                    re-flows Remove onto a line of its own at 360px. */}
+                <div className='flex items-center gap-2'>
+                  <div className='flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1'>
+                    <Text as='span' className='min-w-0 break-words'>
+                      {name}
                     </Text>
-                  )}
+                    <Badge variant='outline'>{pIsGm ? t('members.gm') : t('members.player')}</Badge>
+                    {p.playerId === userId && (
+                      <Text as='span' variant='muted' size='sm'>
+                        {t('members.you')}
+                      </Text>
+                    )}
+                  </div>
                   {isGm && !pIsGm && (
                     <ConfirmButton
                       size='sm'
-                      variant='ghost'
-                      className='ml-auto'
-                      confirmLabel={t('members.confirmRemove', { name })}
+                      variant='danger-ghost'
+                      className='shrink-0'
+                      // Short visible confirm + reserved width: "Remove Nyx Player?" used to
+                      // widen the button onto its own row at 360px. The name stays in the
+                      // accessible label.
+                      confirmLabel={t('members.confirmRemoveShort')}
+                      confirmAriaLabel={t('members.confirmRemove', { name })}
+                      reserveWidth
                       loading={removeMut.isPending && removeMut.variables?.playerId === p.playerId}
                       aria-label={t('members.removeAria', { name })}
                       onConfirm={() => remove(p)}
@@ -102,7 +113,7 @@ export function MembersPanel({
                       {t('members.remove')}
                     </ConfirmButton>
                   )}
-                </Stack>
+                </div>
               </li>
             );
           })}
@@ -124,6 +135,7 @@ export function MembersPanel({
               </Text>
               <ConfirmButton
                 size='sm'
+                variant='danger-outline'
                 confirmLabel={t('members.confirmLeave')}
                 loading={leaveMut.isPending}
                 onConfirm={leave}
