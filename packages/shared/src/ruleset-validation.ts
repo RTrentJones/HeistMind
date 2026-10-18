@@ -168,6 +168,34 @@ export function validateRulesetContent(input: unknown): RulesetValidationResult 
   )
     errors.push('traumaConditions must be an array of strings when present.');
 
+  // XP triggers: `kind`, when present, is one the engine understands.
+  if (isObject(content.advancement) && Array.isArray(content.advancement.xpTriggers)) {
+    content.advancement.xpTriggers.forEach((t: unknown, i: number) => {
+      const kind = isObject(t) ? t.kind : undefined;
+      if (kind !== undefined && kind !== 'desperate-roll' && kind !== 'end-of-session')
+        errors.push(
+          `advancement.xpTriggers[${i}].kind must be "desperate-roll" or "end-of-session".`
+        );
+    });
+  }
+
+  // Crew abilities: an upgrade's box count is a positive whole number, and a prerequisite names
+  // another crew ability (the crew rules gate takes on it).
+  if (isObject(content.crew) && Array.isArray(content.crew.abilities)) {
+    const crewIds = idsOf(content.crew.abilities);
+    content.crew.abilities.forEach((a: unknown, i: number) => {
+      if (!isObject(a)) return;
+      const boxes = a.upgradeBoxes;
+      if (
+        boxes !== undefined &&
+        (typeof boxes !== 'number' || !Number.isInteger(boxes) || boxes < 1)
+      )
+        errors.push(`crew.abilities[${i}].upgradeBoxes must be a whole number ≥ 1.`);
+      if (typeof a.prerequisite === 'string' && !crewIds.has(a.prerequisite))
+        errors.push(`crew.abilities[${i}].prerequisite references unknown crew ability.`);
+    });
+  }
+
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, content: input as unknown as RulesetContent };
 }

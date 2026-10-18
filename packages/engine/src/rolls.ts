@@ -2,9 +2,16 @@
 // consequences. Dice are REALIZED by the caller (each client owns its randomness; the repository
 // recomputes the outcome from the faces so results can't be forged) — the engine stays
 // deterministic and unit-testable.
-import { resistanceStress, type Result, type Roll } from '@heist-mind/core';
+import {
+  desperateRollXp,
+  markXpTrack,
+  resistanceStress,
+  type Result,
+  type Roll,
+} from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
 import { applyStress, type StressOutcome, type TraumaLogCopy } from './characters';
+import { notOwnerOrGm } from './ownership';
 
 export interface ActionRollInput {
   gameId: string;
@@ -32,6 +39,21 @@ export interface ActionRollInput {
   assist?: { characterId: string };
   /** Feed copy when a push/assist cost marks someone's last stress box (→ trauma). */
   traumaLog?: TraumaLogCopy;
+  /**
+   * The ACTION rolled (a name from the ruleset's `attributes[].skills`). With `position:
+   * 'desperate'` on an action roll, the engine marks the ruleset's desperate-roll XP in that
+   * action's attribute track (BitD RAW) — pass it whenever the roll is an action roll.
+   */
+  action?: string;
+}
+
+/** The desperate-roll XP the engine marked with a roll. */
+export interface DesperateXpMark {
+  /** The attribute track marked (null on a flat-pool ruleset — the marks went to the pool). */
+  track: string | null;
+  amount: number;
+  /** Marks in that track after the roll (the pool total on a flat-pool ruleset). */
+  marks: number;
 }
 
 const PUSH_STRESS_COST = 2;
@@ -41,7 +63,55 @@ const ASSIST_STRESS_COST = 1;
 export type ActionRollOutcome = Roll & {
   /** The applied push-stress change (null when not pushed / nothing written) — never a prediction. */
   pushStress: StressOutcome | null;
+  /** The desperate-roll XP marked with this roll (null when none applied). */
+  desperateXp: DesperateXpMark | null;
 };
+
+/**
+ * RAW ([SRD, Advancement](https://bladesinthedark.com/advancement)): "Every time you make a
+ * desperate action roll, mark 1 xp in the attribute for the action you rolled." Marks it through
+ * the validated write path. Silently skips (null) when the ruleset has no desperate-roll trigger,
+ * the track is already full, or the roller may not write the character — the roll itself stands.
+ */
+async function markDesperateXp(
+  repos: DatabaseRepositories,
+  input: ActionRollInput
+): Promise<Result<DesperateXpMark | null>> {
+  if (input.kind !== 'action' || input.position !== 'desperate')
+    return { success: true, data: null };
+  if (input.characterId === undefined || !input.action) return { success: true, data: null };
+  const found = await repos.characters.findWithDetails(input.characterId);
+  if (!found.success) return found as Result<never>;
+  const char = found.data;
+  if (!char || notOwnerOrGm(char, input.userId)) return { success: true, data: null };
+  const content = char.ruleset.content;
+  const earned = desperateRollXp(content, char.characterData, input.action);
+  if (!earned) return { success: true, data: null };
+  if (earned.track === null) {
+    const added = await repos.characters.addExperience(
+      char.id,
+      input.userId,
+      earned.amount,
+      'Desperate action roll'
+    );
+    if (!added.success) return added as Result<never>;
+    return {
+      success: true,
+      data: { track: null, amount: earned.amount, marks: added.data.experiencePoints },
+    };
+  }
+  const xp = markXpTrack(content, char.characterData, earned.track, earned.amount);
+  const updated = await repos.characterManagement.updateCharacterWithValidation(
+    char.id,
+    input.userId,
+    { characterData: { ...char.characterData, xp } }
+  );
+  if (!updated.success) return updated as Result<never>;
+  return {
+    success: true,
+    data: { track: earned.track, amount: earned.amount, marks: xp.attributes[earned.track] ?? 0 },
+  };
+}
 
 /** Persist an action/fortune roll, then charge the push + assist stress costs taken with it. */
 export async function rollAction(
@@ -85,7 +155,10 @@ export async function rollAction(
       return assisted as Result<never>;
     }
   }
-  return { success: true, data: { ...created.data, pushStress } };
+  // Desperate-roll XP lands AFTER the stress costs, so it is marked on the freshest row.
+  const desperate = await markDesperateXp(repos, input);
+  if (!desperate.success) return desperate as Result<never>;
+  return { success: true, data: { ...created.data, pushStress, desperateXp: desperate.data } };
 }
 
 export interface ResistanceRollInput {

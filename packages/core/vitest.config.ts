@@ -9,6 +9,7 @@ const base = createBaseConfig(__dirname, { environment: 'node' });
 (base as any).test.coverage.thresholds = {
   '**/character-rules.ts': { lines: 100, functions: 100, statements: 100, branches: 88 },
   '**/clocks.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
+  '**/crew-abilities.ts': { lines: 100, functions: 100, statements: 100, branches: 87 },
   '**/crews.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/factions.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/dice.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },

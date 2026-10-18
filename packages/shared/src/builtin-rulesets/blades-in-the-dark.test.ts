@@ -3,6 +3,17 @@
 import { describe, it, expect } from 'vitest';
 import {
   advanceTier,
+  checkCrewProgression,
+  crewAbilityTypes,
+  desperateRollTrigger,
+  desperateRollXp,
+  identityOptions,
+  isCrewAbilityUnlocked,
+  isCrewUpgrade,
+  planCrewAdvance,
+  sessionXpTriggers,
+  takeableCrewAbilities,
+  type CrewAbilityState,
   crewHalvesTierCost,
   grandfatherHeldAbilities,
   isAbilityAdvanceable,
@@ -137,7 +148,8 @@ describe('BitD builtin — crew abilities', () => {
   it('Patron halves the Tier cost; No Traces is the SRD rep rule; crew Veteran grants no PC slot', () => {
     expect(crewHalvesTierCost(BITD, ['crew-patron'])).toBe(true);
     expect(crewAbility('crew-no-traces')?.description).toMatch(/half the rep value/);
-    expect(crewAbility('crew-veteran')?.effects).toBeUndefined();
+    // The crew Veteran opens another CREW type's ability — never a member's playbook slot.
+    expect(crewAbility('crew-veteran')?.effects).toEqual({ crewVeteran: 1 });
     const out = advanceTier({
       tier: 1,
       rep: 12,
@@ -194,5 +206,149 @@ describe('BitD legality — the review probes now fail validation', () => {
     // reachable build.)
     const viaHunt = cutter({ skills: { Skirmish: 2, Command: 1, Hunt: 2, Prowl: 2, Sway: 1 } });
     expect(validateCharacter(BITD, viaHunt, { mode: 'creation', crew }).isValid).toBe(true);
+  });
+});
+
+// ----- round 3 (launch review) -------------------------------------------------------------------
+
+const crewDef = (id: string) => BITD.crew?.abilities.find(a => a.id === id);
+
+describe('BitD crew abilities follow RAW (round-3 #1)', () => {
+  const shadows = (o: Partial<CrewAbilityState> = {}): CrewAbilityState => ({
+    crewType: 'shadows',
+    crewAbilities: ['crew-second-story'],
+    resources: { 'crew-xp': 8 },
+    ...o,
+  });
+
+  it('every crew ability is typed (or shared: Veteran); Patron sits on four crew sheets', () => {
+    const types = new Set((BITD.crew?.types ?? []).map(t => t.id));
+    for (const a of BITD.crew?.abilities ?? []) {
+      if (a.retired) continue;
+      for (const t of crewAbilityTypes(a)) expect(types.has(t), `${a.id} → ${t}`).toBe(true);
+    }
+    expect(crewAbilityTypes(crewDef('crew-patron')!)).toEqual([
+      'assassins',
+      'bravos',
+      'hawkers',
+      'shadows',
+    ]);
+    expect(crewAbilityTypes(crewDef('crew-veteran')!)).toEqual([]);
+  });
+
+  it('a Shadows crew is offered its own list + Veteran routes — never every crew type freely', () => {
+    const fresh = shadows({ crewAbilities: [], resources: {} });
+    // Starting pick: Shadows' own abilities, Patron, and Veteran (which opens ONE other-type pick).
+    const own = takeableCrewAbilities(BITD, fresh)
+      .filter(a => isCrewAbilityUnlocked(BITD, fresh, a.id))
+      .map(a => a.id);
+    expect(own).toEqual(
+      expect.arrayContaining([
+        'crew-network',
+        'crew-second-story',
+        'crew-synchronized',
+        'crew-patron',
+        'crew-veteran',
+      ])
+    );
+    expect(own).not.toContain('crew-deadly');
+    expect(own).not.toContain('crew-mastery');
+    expect(isCrewAbilityUnlocked(BITD, fresh, 'crew-fiends')).toBe(false);
+  });
+
+  it('Mastery is an upgrade: two advances of upgrade boxes, never a ticked ability', () => {
+    expect(isCrewUpgrade(crewDef('crew-mastery'))).toBe(true);
+    expect(
+      planCrewAdvance(BITD, shadows(), { kind: 'ability', abilityId: 'crew-mastery' })
+    ).toEqual({ ok: false, code: 'ABILITY_LOCKED' });
+    const first = planCrewAdvance(BITD, shadows(), { kind: 'upgrades', upgradeId: 'crew-mastery' });
+    expect(first).toMatchObject({ ok: true, upgrade: { boxes: 2, size: 4, completed: false } });
+  });
+
+  it('the old “tick everything” crew is grandfathered for everyday writes but can’t add more', () => {
+    const all = (BITD.crew?.abilities ?? []).map(a => a.id);
+    const legacy = shadows({ crewAbilities: all, resources: {} });
+    expect(checkCrewProgression(BITD, legacy, { ...legacy, resources: { 'crew-xp': 2 } })).toEqual({
+      ok: true,
+    });
+    const ticked = checkCrewProgression(BITD, shadows({ resources: {} }), {
+      crewAbilities: ['crew-second-story', 'crew-deadly'],
+      resources: {},
+    });
+    expect(ticked.ok).toBe(false);
+  });
+});
+
+describe('BitD XP triggers (F92 deferred, round-3 #3)', () => {
+  it('the desperate trigger marks the rolled action’s ATTRIBUTE, every time', () => {
+    const trigger = desperateRollTrigger(BITD);
+    expect(trigger?.kind).toBe('desperate-roll');
+    expect(trigger?.description).toMatch(/every time/i);
+    expect(trigger?.description).toMatch(/attribute/);
+    expect(desperateRollXp(BITD, cutter(), 'Skirmish')).toEqual({ track: 'prowess', amount: 1 });
+    expect(desperateRollXp(BITD, cutter(), 'Hunt')).toEqual({ track: 'insight', amount: 1 });
+    expect(desperateRollXp(BITD, cutter(), 'Sway')).toEqual({ track: 'resolve', amount: 1 });
+  });
+
+  it('every playbook has its own "addressed a challenge with…" trigger, listed first', () => {
+    for (const pb of BITD.playbooks) {
+      expect(pb.xpTrigger, pb.id).toMatch(/^You addressed a challenge with /);
+      const list = sessionXpTriggers(BITD, pb.id);
+      expect(list[0]?.description).toBe(pb.xpTrigger);
+      expect(list.map(t => t.description)).toEqual([
+        pb.xpTrigger,
+        'You expressed your beliefs, drives, heritage, or background.',
+        'You struggled with issues from your vice or traumas during the session.',
+      ]);
+    }
+    expect(BITD.playbooks.find(p => p.id === 'cutter')?.xpTrigger).toBe(
+      'You addressed a challenge with violence or coercion.'
+    );
+  });
+});
+
+describe('BitD vices + backgrounds (round-3 #4)', () => {
+  it('lists the seven vices and seven backgrounds as identity options', () => {
+    expect(identityOptions(BITD, 'vice').map(o => o.name)).toEqual([
+      'Faith',
+      'Gambling',
+      'Luxury',
+      'Obligation',
+      'Pleasure',
+      'Stupor',
+      'Weird',
+    ]);
+    expect(identityOptions(BITD, 'background').map(o => o.name)).toEqual([
+      'Academic',
+      'Labor',
+      'Law',
+      'Trade',
+      'Military',
+      'Noble',
+      'Underworld',
+    ]);
+    // Heritage stays free text (BitD's heritages are setting content).
+    expect(identityOptions(BITD, 'heritage')).toEqual([]);
+  });
+
+  it('a new scoundrel picks a listed vice; the details/purveyor ride alongside', () => {
+    const ok = cutter({ vice: 'Gambling', viceDetail: 'Cards at the Silver Gull — Old Mags' });
+    expect(validateCharacter(BITD, ok, { mode: 'creation' }).isValid).toBe(true);
+    expect(
+      codes(validateCharacter(BITD, cutter({ vice: 'cards' }), { mode: 'creation' }))
+    ).toContain('IDENTITY_UNKNOWN');
+  });
+});
+
+describe('BitD creation assigns all seven action dots (round-3 #2)', () => {
+  it('3 placed + 4 assigned is legal; 3 placed + 0 assigned is refused with the count', () => {
+    expect(validateCharacter(BITD, cutter(), { mode: 'creation' }).isValid).toBe(true);
+    const r = validateCharacter(BITD, cutter({ skills: { Skirmish: 2, Command: 1 } }), {
+      mode: 'creation',
+    });
+    expect(codes(r)).toContain('ACTION_POINTS_UNSPENT');
+    expect(r.errors.find(e => e.code === 'ACTION_POINTS_UNSPENT')?.message).toBe(
+      'Assign all 7 action dots — 4 left to place.'
+    );
   });
 });

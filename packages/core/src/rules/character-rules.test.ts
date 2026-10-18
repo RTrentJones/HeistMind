@@ -42,6 +42,13 @@ import {
   mustRetireFromTrauma,
   ownVeteranGrants,
   pendingTrauma,
+  abilityName,
+  desperateRollTrigger,
+  desperateRollXp,
+  sessionXpTriggers,
+  identityOptions,
+  matchIdentityOption,
+  hasVice,
 } from './character-rules';
 
 /** An action-rating ruleset: two attributes with 2 actions each; playbook seeds one dot. */
@@ -824,11 +831,18 @@ describe('action ratings', () => {
     expect(r.errors).toHaveLength(0);
   });
 
-  it('warns (does not block) when action dots are unspent', () => {
+  it('BLOCKS creation while action dots are unspent (RAW: all seven are assigned)', () => {
     const rs = actionRuleset();
     const r = validateCharacter(rs, character({ skills: { Clash: 1 } }), { mode: 'creation' });
-    expect(r.isValid).toBe(true);
-    expect(r.warnings.length).toBeGreaterThan(0);
+    expect(r.isValid).toBe(false);
+    expect(codes(r)).toContain('ACTION_POINTS_UNSPENT');
+    expect(r.errors.find(e => e.code === 'ACTION_POINTS_UNSPENT')?.message).toBe(
+      'Assign all 3 action dots — 2 left to place.'
+    );
+    // A played sheet isn't re-judged against the creation budget.
+    expect(
+      codes(validateCharacter(rs, character({ skills: { Clash: 1 } }), { mode: 'live' }))
+    ).not.toContain('ACTION_POINTS_UNSPENT');
   });
 
   it('blocks an over-budget action spread', () => {
@@ -1276,6 +1290,17 @@ describe('creation: pre-placed playbook dots + restricted bonus dots (Deadly)', 
     ).toBe(true);
   });
 
+  it('an unspent OPTIONAL Deadly dot only warns ("each PC may add"); unspent base dots block', () => {
+    const baseOnly = character({ skills: { Clash: 1, Track: 2 } });
+    const r = validateCharacter(deadlyRs(), baseOnly, { mode: 'creation', crew });
+    expect(r.isValid).toBe(true);
+    expect(r.warnings.map(w => w.field)).toContain('skills');
+    const short = character({ skills: { Clash: 1, Track: 1 } });
+    expect(codes(validateCharacter(deadlyRs(), short, { mode: 'creation', crew }))).toContain(
+      'ACTION_POINTS_UNSPENT'
+    );
+  });
+
   it('an unrestricted bonus dot (custom rulesets) keeps the old any-action behaviour', () => {
     const anywhere = character({ skills: { Clash: 1, Track: 2, Rig: 1 } });
     expect(validateCharacter(deadlyRs(false), anywhere, { mode: 'creation', crew }).isValid).toBe(
@@ -1334,5 +1359,129 @@ describe('reconcileTraumaPending', () => {
     expect(reconcileTraumaPending(prev, { trauma: ['Cold'], traumaPending: 1 }).traumaPending).toBe(
       1
     );
+  });
+});
+
+describe('prerequisites read as ability NAMES (round-3 #5)', () => {
+  it('abilityName resolves an id; the validator message names the prerequisite', () => {
+    const rs = ruleset();
+    expect(abilityName(rs, 'battle-born')).toBe('Battle-Born');
+    expect(abilityName(rs, 'free text note')).toBe('free text note');
+    const r = validateCharacter(rs, character({ specialAbilities: ['menace'] }), { mode: 'live' });
+    expect(r.errors.find(e => e.field === 'specialAbilities.menace')?.message).toBe(
+      'Menace requires Battle-Born.'
+    );
+  });
+});
+
+describe('XP triggers (F92 deferred — desperate roll → the action’s attribute; playbook trigger)', () => {
+  const trackRs = (triggers: RulesetContent['advancement']['xpTriggers']) =>
+    actionRuleset({
+      playbooks: [
+        {
+          id: 'razor',
+          name: 'The Razor',
+          description: '',
+          startingAbilities: [],
+          specialAbilities: [],
+          contacts: [],
+          equipment: [],
+          attributes: {},
+          skills: { Clash: 1 },
+          xpTrigger: 'You addressed a challenge with violence.',
+        },
+      ],
+      advancement: {
+        xpTriggers: triggers,
+        advancementOptions: [],
+        xpTracks: { playbook: 8, attribute: 6 },
+      },
+    });
+  const desperate = {
+    id: 'desperate',
+    name: 'Desperate',
+    description: 'd',
+    value: 1,
+    kind: 'desperate-roll' as const,
+  };
+  const beliefs = { id: 'beliefs', name: 'Beliefs', description: 'b', value: 1 };
+
+  it('desperateRollXp marks the attribute that owns the rolled action', () => {
+    const rs = trackRs([desperate, beliefs]);
+    expect(desperateRollTrigger(rs)?.id).toBe('desperate');
+    expect(desperateRollXp(rs, character(), 'Skulk')).toEqual({ track: 'force', amount: 1 });
+    expect(desperateRollXp(rs, character(), 'Rig')).toEqual({ track: 'cunning', amount: 1 });
+    expect(desperateRollXp(rs, character(), 'Nope')).toBeNull();
+    // A full attribute track can't take more.
+    const full = character({ xp: { playbook: 0, attributes: { force: 6 } } });
+    expect(desperateRollXp(rs, full, 'Clash')).toBeNull();
+  });
+
+  it('no desperate-roll trigger (custom ruleset) → nothing auto-marked; flat pool → the pool', () => {
+    expect(desperateRollXp(trackRs([beliefs]), character(), 'Clash')).toBeNull();
+    const flat = ruleset({
+      advancement: { xpTriggers: [desperate], advancementOptions: [] },
+      attributes: [{ id: 'grit', name: 'Grit', description: '', skills: ['Clash'] }],
+    });
+    expect(desperateRollXp(flat, character(), 'Clash')).toEqual({ track: null, amount: 1 });
+  });
+
+  it("sessionXpTriggers leads with the playbook's own trigger and drops the desperate one", () => {
+    const list = sessionXpTriggers(trackRs([desperate, beliefs]), 'razor');
+    expect(list.map(t => t.description)).toEqual(['You addressed a challenge with violence.', 'b']);
+    expect(sessionXpTriggers(trackRs([beliefs]), 'unknown').map(t => t.id)).toEqual(['beliefs']);
+  });
+});
+
+describe('identity options (vice / background)', () => {
+  const idRs = () =>
+    ruleset({
+      characterCreation: {
+        steps: [
+          { id: 'playbook', name: 'Playbook', description: '', order: 1, required: true },
+          {
+            id: 'vice',
+            name: 'Vice',
+            description: '',
+            order: 2,
+            required: false,
+            options: [
+              { id: 'faith', name: 'Faith', description: '' },
+              { id: 'stupor', name: 'Stupor', description: '' },
+            ],
+          },
+        ],
+      },
+    });
+
+  it('identityOptions reads the step whose id is the field; matches by name or id', () => {
+    expect(identityOptions(idRs(), 'vice').map(o => o.id)).toEqual(['faith', 'stupor']);
+    expect(identityOptions(idRs(), 'background')).toEqual([]);
+    expect(matchIdentityOption(idRs(), 'vice', 'faith')?.name).toBe('Faith');
+    expect(matchIdentityOption(idRs(), 'vice', ' STUPOR ')?.id).toBe('stupor');
+    expect(matchIdentityOption(idRs(), 'vice', 'Cards')).toBeNull();
+  });
+
+  it('a new character must pick a listed vice; a played sheet with legacy free text only warns', () => {
+    const legacy = character({ vice: 'Cards at the docks' });
+    expect(codes(validateCharacter(idRs(), legacy, { mode: 'creation' }))).toContain(
+      'IDENTITY_UNKNOWN'
+    );
+    const live = validateCharacter(idRs(), legacy, { mode: 'live' });
+    expect(codes(live)).not.toContain('IDENTITY_UNKNOWN');
+    expect(live.warnings.map(w => w.field)).toContain('vice');
+    expect(
+      codes(validateCharacter(idRs(), character({ vice: 'Faith' }), { mode: 'creation' }))
+    ).not.toContain('IDENTITY_UNKNOWN');
+    // Free-text fields (no options) are never judged.
+    expect(
+      codes(validateCharacter(idRs(), character({ background: 'Anything' }), { mode: 'creation' }))
+    ).not.toContain('IDENTITY_UNKNOWN');
+  });
+
+  it('hasVice: indulging needs a vice set', () => {
+    expect(hasVice({ vice: 'Faith' })).toBe(true);
+    expect(hasVice({ vice: '   ' })).toBe(false);
+    expect(hasVice({})).toBe(false);
   });
 });

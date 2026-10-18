@@ -33,7 +33,11 @@ export interface CharacterData {
   playbook: string;
   heritage?: string;
   background?: string;
+  /** Specifics of the background (BitD: "Labor: Hunter, mutineer"). Free text. */
+  backgroundDetail?: string;
   vice?: string;
+  /** The vice's specifics and its purveyor's name + location (BitD vice step). Free text. */
+  viceDetail?: string;
   attributes: Record<string, number>;
   skills: Record<string, number>;
   specialAbilities: string[];
