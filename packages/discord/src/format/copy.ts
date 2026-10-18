@@ -87,6 +87,7 @@ export const copy = {
   notLoggedNotMember: 'Not logged — you’re not a member of the linked campaign.',
   notLoggedWrongCampaign: 'Not logged — your active character isn’t in the linked campaign.',
   pushedCharged: 'Pushed (+1d) — 2 stress marked on your sheet',
+  resistBonusNote: (bonus: number) => `Includes +${bonus}d bonus (from an ability or upgrade).`,
   resistCharged: (character: string, stress: number) =>
     stress < 0
       ? `Critical — **1 stress cleared** on ${character}’s sheet.`

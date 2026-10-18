@@ -122,9 +122,9 @@ export function DiscordGuideContent() {
                   does='Action roll from your sheet rating; push OR a devil’s bargain (+1d), plus an assist; harm −1d applies; persists in a linked channel'
                 />
                 <Row
-                  command='/resist dice: [attribute]'
+                  command='/resist dice: [attribute] [bonus]'
                   needs='active character'
-                  does='Resistance roll — stress is 6 − highest die; a crit clears 1'
+                  does='Resistance roll — stress is 6 − highest die; a crit clears 1; bonus adds an ability’s +1d (e.g. Iron Will)'
                 />
                 <Row
                   command='/stress add|clear'

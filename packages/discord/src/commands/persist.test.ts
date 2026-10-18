@@ -212,6 +212,32 @@ describe('/resist — persisted (Phase 2)', () => {
     expect(embed.footer?.text).toBe('Logged to The Docks Job');
   });
 
+  it('bonus: adds an ability’s resistance dice (Iron Will +1d) to the sheet rating', async () => {
+    const r = repos();
+    const calls = await run(
+      await handleResist(
+        ctx(r, [4, 2, 6, 6]),
+        guildCmd('resist', [
+          { name: 'attribute', type: 3, value: ATTRIBUTE },
+          { name: 'bonus', type: 4, value: 1 },
+        ])
+      )
+    );
+    // Rating 1 + bonus 1 = 2 dice; the highest (4) costs 2 stress.
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance', dice: 2, results: [4, 2] })
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({ characterData: expect.objectContaining({ stress: 2 }) })
+    );
+    const embed = firstEmbed(calls);
+    expect(embed.title).toContain('2d');
+    expect(embed.description).toContain('+1d bonus');
+  });
+
   it('a point-buy ruleset rolls the STORED attribute rating (nothing to derive from)', async () => {
     // The shipped ruleset with action ratings switched off = the legacy point-buy shape: attributes
     // are bought directly, so the sheet (and the bot) read them as stored.

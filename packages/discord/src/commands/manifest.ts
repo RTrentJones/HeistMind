@@ -121,6 +121,13 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
         description: 'Which attribute resists (e.g. Prowess) — your sheet’s rating sets the dice',
         max_length: 40,
       },
+      {
+        type: ApplicationCommandOptionType.Integer,
+        name: 'bonus',
+        description: 'Bonus dice an ability or upgrade grants this resistance (e.g. Iron Will: +1)',
+        min_value: 0,
+        max_value: 3,
+      },
     ],
   },
   {
