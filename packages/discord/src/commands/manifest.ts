@@ -84,6 +84,13 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
         description: 'A teammate assists: +1d (they mark 1 stress)',
       },
       {
+        type: ApplicationCommandOptionType.Integer,
+        name: 'bonus',
+        description: 'Dice an ability adds or removes on your sheet roll (e.g. Ambush +1)',
+        min_value: -3,
+        max_value: 3,
+      },
+      {
         type: ApplicationCommandOptionType.String,
         name: 'position',
         description: 'The position you act from',
@@ -124,8 +131,8 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       {
         type: ApplicationCommandOptionType.Integer,
         name: 'bonus',
-        description: 'Bonus dice an ability or upgrade grants this resistance (e.g. Iron Will: +1)',
-        min_value: 0,
+        description: 'Dice an ability adds or removes here (Iron Will +1, Daredevil −1)',
+        min_value: -3,
         max_value: 3,
       },
     ],

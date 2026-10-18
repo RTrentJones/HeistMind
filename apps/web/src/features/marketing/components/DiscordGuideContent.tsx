@@ -117,14 +117,14 @@ export function DiscordGuideContent() {
                   does='Pick which of your characters the bot acts as'
                 />
                 <Row
-                  command='/roll action: [push|bargain] [assist]'
+                  command='/roll action: [push|bargain] [assist] [bonus]'
                   needs='active character'
-                  does='Action roll from your sheet rating; push OR a devil’s bargain (+1d), plus an assist; harm −1d applies; persists in a linked channel'
+                  does='Action roll from your sheet rating; push OR a devil’s bargain (+1d), plus an assist; bonus adds or removes an ability’s dice (Ambush +1); harm −1d applies; persists in a linked channel'
                 />
                 <Row
                   command='/resist dice: [attribute] [bonus]'
                   needs='active character'
-                  does='Resistance roll — stress is 6 − highest die; a crit clears 1; bonus adds an ability’s +1d (e.g. Iron Will)'
+                  does='Resistance roll — stress is 6 − highest die; a crit clears 1; bonus adds or removes an ability’s dice (Iron Will +1, Daredevil −1)'
                 />
                 <Row
                   command='/stress add|clear'

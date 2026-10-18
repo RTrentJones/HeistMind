@@ -235,7 +235,26 @@ describe('/resist — persisted (Phase 2)', () => {
     );
     const embed = firstEmbed(calls);
     expect(embed.title).toContain('2d');
-    expect(embed.description).toContain('+1d bonus');
+    expect(embed.description).toContain('+1d from an ability');
+  });
+
+  it('bonus: also takes a penalty (Daredevil −1d) — never below a 0d pool', async () => {
+    const r = repos({}, ratedTwo());
+    const calls = await run(
+      await handleResist(
+        ctx(r, [5, 6, 6]),
+        guildCmd('resist', [
+          { name: 'attribute', type: 3, value: ATTRIBUTE },
+          { name: 'bonus', type: 4, value: -1 },
+        ])
+      )
+    );
+    // Rating 2 − 1 = 1 die.
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance', dice: 1, results: [5] })
+    );
+    expect(firstEmbed(calls).description).toContain('−1d from an ability');
   });
 
   it('a point-buy ruleset rolls the STORED attribute rating (nothing to derive from)', async () => {

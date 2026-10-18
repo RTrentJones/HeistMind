@@ -61,6 +61,25 @@ describe('/roll action (sheet form)', () => {
     expect(embed?.description).toContain('Assisted');
   });
 
+  it('bonus: adds an ability’s die beside push + assist (Ambush: 2 + 1 + 1 + 1 = 5d)', async () => {
+    const calls = await run(
+      await handleRoll(
+        ctx(repos(), [6, 5, 4, 3, 2]),
+        cmd([
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+          { name: 'assist', type: 5, value: true },
+          { name: 'bonus', type: 4, value: 1 },
+        ])
+      )
+    );
+    const embed = (calls[0]?.payload as { embeds: { title: string; description: string }[] })
+      .embeds[0];
+    expect(embed?.title).toBe(`Silks — ${RATED_ACTION} 2d +3d`);
+    expect(embed?.description).toContain('[6, 5, 4, 3, 2]');
+    expect(embed?.description).toContain('+1d from an ability');
+  });
+
   it('defers PUBLICLY and rolls rating + assist + push with the reminder note', async () => {
     const result = await handleRoll(
       ctx(repos(), [6, 5, 4, 3]),

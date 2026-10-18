@@ -587,8 +587,8 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   `/roll action:`+`/resist` PERSIST when the roller is a member and their active character crews
   that campaign (embed footer says "Logged to …" or exactly why not); a persisted `/resist` rolls
   the named attribute's rating **from the sheet** (`attribute:` required there; a typed `dice:` only
-  drives the display-only form — F92; `bonus:` 0–3 adds a claimed ability/upgrade +Nd such as
-  Iron Will, shown on the embed); `/log` (attributed,
+  drives the display-only form — F92; `bonus:` −3…+3 applies a claimed ability/upgrade ±Nd such as
+  Iron Will or Daredevil, shown on the embed; `/roll action:` takes the same `bonus:` for e.g. Ambush); `/log` (attributed,
   score-tagged); `/heist status` (member snapshot).
 - **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
   (`heat` takes −9..+9 — negative reduces heat; `tier` develops RAW: weak hold → strong, or pay
@@ -604,7 +604,7 @@ category link) closed via the app's first bot-token fetch — a thread whose par
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-10-18 (`/resist bonus:` for ability resistance dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
+_Last verified:_ 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
 creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only
 `/xp advance`, RAW `/crew tier`, negative `/crew heat`, trauma replies);
 previously 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
