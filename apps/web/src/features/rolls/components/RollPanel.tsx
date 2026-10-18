@@ -10,7 +10,7 @@ import {
 } from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useApplyStress } from '@/features/characters/data/mutations';
+import { useApplyStress, useMarkDesperateRollXp } from '@/features/characters/data/mutations';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
 import { rollPool } from '@/features/rolls/lib/roll-pool';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -92,6 +92,7 @@ export function RollPanel({
   const actionRoll = useActionRoll(gameId ?? '');
   const resistanceRoll = useResistanceRoll(gameId ?? '');
   const applyStress = useApplyStress(characterId ?? '', null);
+  const markDesperateXp = useMarkDesperateRollXp(characterId ?? '');
   const hasActions = !!actions?.length;
   const canResist = !!characterId;
   // Resistance rolls the character's ATTRIBUTES when provided (RAW; derived on action-rating
@@ -194,6 +195,19 @@ export function RollPanel({
       // Pushing yourself costs 2 stress, win or lose (RAW).
       await chargeStress(userId, 2);
     }
+    // A desperate action roll marks 1 xp in that action's attribute (RAW), log or no log.
+    const xp =
+      mode === 'action' && position === 'desperate' && characterId !== undefined
+        ? await markDesperateXp.mutateAsync({ userId, action })
+        : null;
+    setDesperateNote(
+      xp?.track
+        ? t('components.rollPanel.desperateXpNote', {
+            attribute: attributeName(xp.track),
+            marks: xp.marks,
+          })
+        : null
+    );
     setLast({ outcome, results, kind, ...(stress !== undefined ? { stress } : {}) });
     setHistory(h =>
       [{ id: ++historySeq.current, label, outcome, results }, ...h].slice(0, LOCAL_HISTORY)

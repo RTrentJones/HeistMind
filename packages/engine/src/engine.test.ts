@@ -33,7 +33,7 @@ import {
 import { flashback, indulgeVice, viceDicePool } from './downtime';
 import { setFactionStatus } from './factions';
 import { saveLoadout } from './loadout';
-import { rollAction, rollResistance } from './rolls';
+import { markDesperateRollXp, rollAction, rollResistance } from './rolls';
 import { endScore, startScore } from './scores';
 
 const ok = <T>(data: T): Result<T> => ({ success: true, data });
@@ -650,6 +650,26 @@ describe('rollAction — desperate-roll XP (BitD: the rolled action’s attribut
       characterData: expect.objectContaining({
         xp: { playbook: 0, attributes: { prowess: 1 } },
       }),
+    });
+  });
+
+  it('markDesperateRollXp marks the same attribute XP with no roll persisted (standalone, F96)', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn();
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(bitdChar())) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await markDesperateRollXp(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      action: 'Skirmish',
+    });
+    expect(out.success && out.data).toEqual({ track: 'prowess', amount: 1, marks: 1 });
+    expect(create).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ xp: { playbook: 0, attributes: { prowess: 1 } } }),
     });
   });
 

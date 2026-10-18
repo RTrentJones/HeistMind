@@ -22,6 +22,7 @@ vi.mock('@/features/rolls/data/mutations', () => ({
 // RollPanel also wires the standalone sheet's stress write (F96); campaign rolls never call it.
 vi.mock('@/features/characters/data/mutations', () => ({
   useApplyStress: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useMarkDesperateRollXp: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock('@/features/auth/stores/auth-store', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 

@@ -44,6 +44,7 @@ vi.mock('@/features/characters/data/mutations', () => ({
   useClearHarm: () => noopMutation,
   useFlashback: () => noopMutation,
   useApplyStress: () => applyStress,
+  useMarkDesperateRollXp: () => noopMutation,
   useChooseTrauma: () => chooseTrauma,
 }));
 const applyStress = { mutate: vi.fn(), isPending: false };

@@ -75,7 +75,7 @@ export type ActionRollOutcome = Roll & {
  */
 async function markDesperateXp(
   repos: DatabaseRepositories,
-  input: ActionRollInput
+  input: Pick<ActionRollInput, 'kind' | 'position' | 'characterId' | 'action' | 'userId'>
 ): Promise<Result<DesperateXpMark | null>> {
   if (input.kind !== 'action' || input.position !== 'desperate')
     return { success: true, data: null };
@@ -111,6 +111,24 @@ async function markDesperateXp(
     success: true,
     data: { track: earned.track, amount: earned.amount, marks: xp.attributes[earned.track] ?? 0 },
   };
+}
+
+export interface DesperateRollXpInput {
+  characterId: string;
+  userId: string;
+  /** The action rolled (a name from the ruleset's `attributes[].skills`). */
+  action: string;
+}
+
+/**
+ * The same desperate-roll XP as `rollAction`, for a roll with no campaign log to persist into —
+ * a standalone sheet's display-only action roll (F96) still earns its RAW attribute XP.
+ */
+export function markDesperateRollXp(
+  repos: DatabaseRepositories,
+  input: DesperateRollXpInput
+): Promise<Result<DesperateXpMark | null>> {
+  return markDesperateXp(repos, { ...input, kind: 'action', position: 'desperate' });
 }
 
 /** Persist an action/fortune roll, then charge the push + assist stress costs taken with it. */

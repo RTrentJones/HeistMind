@@ -35,7 +35,7 @@ export type {
 } from './characters';
 export { saveCharacterBuild, sameJson, setStress } from './character-data';
 export type { SaveCharacterBuildInput, SetStressInput } from './character-data';
-export { rollAction, rollResistance } from './rolls';
+export { markDesperateRollXp, rollAction, rollResistance } from './rolls';
 export type {
   ActionRollInput,
   ActionRollOutcome,
