@@ -15,6 +15,9 @@ concurrency:
 env:
   NODE_VERSION: '20.19.0' # keep in lockstep with .nvmrc
   PNPM_VERSION: '9.15.0'
+  # Exact Supabase CLI pin (never `latest` — resolving it hits the GitHub API and a rate limit
+  # killed the E2E run on f46b6b4). Lockstep with supabase-ci.yml's SUPABASE_CLI_VERSION.
+  SUPABASE_CLI_VERSION: '2.121.0'
 
 jobs:
   validate:
@@ -116,7 +119,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
 
       # Boots Postgres + Auth via Docker and applies supabase/migrations (incl. the profiles
       # trigger), so admin-created users get a real profile row — the same state a Discord

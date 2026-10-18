@@ -25,10 +25,12 @@ env:
   # Pin versions for reproducibility
   PNPM_VERSION: '9.15.0'
   NODE_VERSION: '20.19.0' # Use latest LTS version
-  # `latest` to match ci.yml's working E2E job. The old 1.142.2 pin predates
-  # config.toml's `db.major_version = 17` (and many modern config fields), so it died with
-  # "Failed reading config: Invalid db.major_version: 17" on every `supabase start`.
-  SUPABASE_CLI_VERSION: 'latest'
+  # An EXACT pin, never `latest`: resolving `latest` calls the GitHub releases API, and a rate
+  # limit there killed an E2E run outright (f46b6b4). 2.121.0 is what `latest` resolved to on the
+  # last green runs (gotrue v2.197.0 / postgres 17.11). Keep in lockstep with ci.yml's
+  # SUPABASE_CLI_VERSION; bump deliberately. (The old 1.142.2 pin predated config.toml's
+  # `db.major_version = 17` and died with "Invalid db.major_version: 17".)
+  SUPABASE_CLI_VERSION: '2.121.0'
 
 jobs:
   # Detect what actually changed to optimize CI time
