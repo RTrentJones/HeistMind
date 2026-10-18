@@ -61,9 +61,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   }
   if (gameQuery.isLoading) {
     return (
-      // UX r3 (CLS): hold the viewport while the hub loads so the footer isn't painted mid-screen
-      // and then shoved down by ~1000px of panels.
-      <Container maxWidth='md' padding='lg' className='min-h-dvh'>
+      <Container maxWidth='md' padding='lg'>
         <LoadingSpinner />
       </Container>
     );
@@ -100,9 +98,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   const hasPlayers = game.players.some(p => p.status === 'active' && p.playerId !== game.createdBy);
 
   return (
-    // min-h-dvh: panels resolve at different heights; keeping the footer below the fold while they
-    // do stops it (and everything after a panel) from jumping (UX r3 — CLS 0.35 → see FINDINGS).
-    <Container maxWidth='4xl' padding='lg' className='min-h-dvh'>
+    <Container maxWidth='4xl' padding='lg'>
       <Stack direction='column' gap='lg'>
         <Stack direction='column' gap='xs'>
           <Heading level='h1' variant='hero'>

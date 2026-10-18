@@ -78,6 +78,9 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   };
 
   const hasTargets = games.length > 0;
+  // Until both lookups answer, hold the picker's height instead of flashing the "none" copy and
+  // then swapping in the picker (a layout shift on every standalone sheet).
+  const resolving = allGames.isPending || attachable.isPending;
 
   return (
     <Card variant='outline'>
@@ -99,7 +102,9 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
         )}
 
         {/* The move/attach picker — only when there's an eligible target. */}
-        {hasTargets ? (
+        {resolving ? (
+          <div aria-hidden='true' className='h-16' data-testid='attach-resolving' />
+        ) : hasTargets ? (
           <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
             <Select
               label={t('components.attachToCampaign.select')}

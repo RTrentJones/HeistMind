@@ -36,9 +36,7 @@ export function SignInGate({
 
   if (pending) {
     return (
-      // min-h-dvh: a likely-signed-in visitor is about to get the real page (usually long); keep
-      // the footer below the fold meanwhile so it isn't shoved down when the page lands (CLS).
-      <Container maxWidth='md' padding='lg' className='min-h-dvh'>
+      <Container maxWidth='md' padding='lg'>
         <LoadingSpinner />
       </Container>
     );
