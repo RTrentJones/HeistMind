@@ -36,10 +36,15 @@ function admin(schema?: string): SupabaseClient {
   });
 }
 
-/** A fresh user born through handle_new_user (createUser fires the trigger). */
+/**
+ * A fresh user born through handle_new_user (createUser fires the trigger). `appMeta` is the
+ * GoTrue-controlled app_metadata — `DISCORD_APP_META` marks the signup as a verified Discord one,
+ * the only way user-metadata `provider_id` becomes `profiles.discord_id` (00024, F95).
+ */
 async function provision(
   meta: Record<string, unknown>,
-  emailTag = 'rls'
+  emailTag = 'rls',
+  appMeta?: Record<string, unknown>
 ): Promise<{
   id: string;
   email: string;
@@ -52,6 +57,7 @@ async function provision(
     password,
     email_confirm: true,
     user_metadata: meta,
+    ...(appMeta ? { app_metadata: appMeta } : {}),
   });
   if (error || !data.user) throw new Error(`provision failed: ${error?.message ?? 'unknown'}`);
   return { id: data.user.id, email, password };
@@ -76,6 +82,14 @@ async function signIn(u: { id: string; email: string; password: string }): Promi
     global: { headers },
   });
   return { ...u, db, pub };
+}
+
+const DISCORD_APP_META = { provider: 'discord', providers: ['discord'] } as const;
+
+async function discordIdOf(userId: string): Promise<string | null | undefined> {
+  const row = await admin().from('profiles').select('discord_id').eq('id', userId).maybeSingle();
+  expect(row.error).toBeNull();
+  return row.data?.discord_id;
 }
 
 const created: string[] = [];
@@ -462,12 +476,13 @@ test.describe('RLS at the API level (F89)', () => {
       sub: snowflake,
       email_verified: true,
     };
-    const first = await provision(discordMeta, 'rls-name');
+    const first = await provision(discordMeta, 'rls-name', DISCORD_APP_META);
     created.push(first.id);
     // Same display name, different Discord account → must still sign up (no 23505).
     const second = await provision(
       { ...discordMeta, provider_id: `${snowflake}1`, sub: `${snowflake}1` },
-      'rls-name'
+      'rls-name',
+      DISCORD_APP_META
     );
     created.push(second.id);
     // Nothing but an email → a generated handle, never the address.
@@ -485,5 +500,57 @@ test.describe('RLS at the API level (F89)', () => {
     expect(byId.get(second.id)?.username).toMatch(new RegExp(`^Silks ${tag}-`));
     expect(byId.get(bare.id)?.username).toMatch(/^player-[0-9a-f]{8}$/);
     for (const r of rows.data ?? []) expect(r.username).not.toContain('@');
+  });
+  test('discord_id comes only from a verified Discord identity — an email signup cannot squat it (F95)', async () => {
+    const victimSnowflake = `8${Date.now()}`;
+    const spoofMeta = {
+      provider_id: victimSnowflake,
+      sub: victimSnowflake,
+      full_name: 'not-silks',
+    };
+
+    // The attack, exactly as an outsider would run it: the PUBLIC signup endpoint (anon key),
+    // carrying the victim's Discord snowflake in user metadata.
+    const email = `e2e-rls-squat-${randomUUID().slice(0, 8)}@heistmind.test`;
+    const password = `E2e-${randomUUID()}`;
+    const outsider = createClient(env.supabaseUrl!, env.supabaseAnonKey!, opts);
+    const signup = await outsider.auth.signUp({ email, password, options: { data: spoofMeta } });
+    if (signup.error) {
+      // A project with email self-signup turned off (the optional before-user-created hook,
+      // 00024 §6) refuses outright — also a pass: no account, no link.
+      expect(signup.error.status ?? 0).toBeGreaterThanOrEqual(400);
+    }
+    const squatterId = signup.data.user?.id;
+    if (squatterId) {
+      created.push(squatterId);
+      expect(
+        await discordIdOf(squatterId),
+        'user metadata alone must never link Discord'
+      ).toBeNull();
+    }
+
+    // Signed in, the squatter can't promote themselves either: app_metadata isn't user-writable,
+    // and re-asserting the user metadata changes nothing.
+    if (squatterId && signup.data.session) {
+      const self = createClient(env.supabaseUrl!, env.supabaseAnonKey!, {
+        ...opts,
+        global: { headers: { Authorization: `Bearer ${signup.data.session.access_token}` } },
+      });
+      await self.auth.updateUser({ data: spoofMeta });
+      expect(await discordIdOf(squatterId)).toBeNull();
+    }
+
+    // The real owner signs in with Discord afterwards (GoTrue marks the signup provider=discord)
+    // and still gets their link — previously the squatter held it and the victim got NULL.
+    const victim = await provision(spoofMeta, 'rls-victim', DISCORD_APP_META);
+    created.push(victim.id);
+    expect(await discordIdOf(victim.id), 'the verified Discord signup gets its discord_id').toBe(
+      victimSnowflake
+    );
+    // And a second "verified" claimant can't steal a held snowflake.
+    const thief = await provision(spoofMeta, 'rls-thief', DISCORD_APP_META);
+    created.push(thief.id);
+    expect(await discordIdOf(thief.id)).toBeNull();
+    expect(await discordIdOf(victim.id)).toBe(victimSnowflake);
   });
 });

@@ -18,16 +18,24 @@ BEGIN
   FROM auth.identities i
   WHERE i.user_id = p.id
     AND i.provider = 'discord'
-    AND p.discord_id IS NULL;
+    AND p.discord_id IS NULL
+    -- Never collide with a snowflake another profile holds (a pre-00024 squat would otherwise
+    -- 23505 this UPDATE and abort the deploy; 00024 remediates squats and relinks the victim).
+    AND NOT EXISTS (
+      SELECT 1 FROM public.profiles q
+      WHERE q.discord_id = COALESCE(i.provider_id, i.identity_data->>'provider_id', i.identity_data->>'sub')
+    );
   GET DIAGNOSTICS backfilled = ROW_COUNT;
   RAISE NOTICE 'Backfilled discord_id on % profile(s)', backfilled;
 END
 $do$;
 
 -- 2) Future signups: capture the Discord user id at profile creation. Discord OAuth puts the
---    provider id in raw_user_meta_data (provider_id, with sub as its alias); email-created test
---    users have neither and stay NULL (the UNIQUE constraint permits any number of NULLs).
---    Same body as 00001 plus discord_id; on conflict it fills only when currently NULL.
+--    provider id in raw_user_meta_data (provider_id, with sub as its alias) — but that column is
+--    USER-CONTROLLED on an email signup (F95), so it only counts when GoTrue marked the signup as
+--    Discord in raw_app_meta_data (not user-writable). 00024 is the final, authoritative version
+--    (verified identities + later-linked Discord); CI re-runs this file first, so it must never
+--    re-create the insecure body even transiently. On conflict it fills only when currently NULL.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
@@ -38,7 +46,9 @@ BEGIN
     -- function with the derived, collision-safe display name; CI re-runs this file first.
     new.raw_user_meta_data->>'username',
     new.raw_user_meta_data->>'avatar_url',
-    COALESCE(new.raw_user_meta_data->>'provider_id', new.raw_user_meta_data->>'sub')
+    CASE WHEN new.raw_app_meta_data->>'provider' = 'discord'
+         THEN COALESCE(new.raw_user_meta_data->>'provider_id', new.raw_user_meta_data->>'sub')
+    END
   )
   ON CONFLICT (id) DO UPDATE SET
     username = COALESCE(EXCLUDED.username, profiles.username),

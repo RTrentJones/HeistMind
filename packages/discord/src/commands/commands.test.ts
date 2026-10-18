@@ -1,7 +1,11 @@
 // Handler behavior spec: pure interaction→response functions driven by a fake context with
 // SCRIPTED dice (ctx.realize is the injection seam — same philosophy as the engine's
 // caller-realized dice).
-import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
+import {
+  ApplicationCommandOptionType,
+  type APIApplicationCommandInteraction,
+  type APIEmbed,
+} from 'discord-api-types/v10';
 import { describe, expect, it } from 'vitest';
 import { ctx as baseCtx } from '../test/helpers';
 import type { BotContext, HandlerResult } from '../types';
@@ -10,6 +14,7 @@ import { handleResist } from './resist';
 import { handleFortune } from './fortune';
 import { makeDiceHandler, parseNotation } from './dice';
 import { handleHeist } from './heist';
+import { COMMAND_MANIFEST } from './manifest';
 
 // Repo-less compute context; /heist about pins the deployed SHA, so override the helper's.
 const ctx = (faces: number[]): BotContext => ({ ...baseCtx(null, faces), deploySha: 'abc1234' });
@@ -150,5 +155,29 @@ describe('/heist help', () => {
       expect(embed.description).toContain(name);
     }
     expect(embed.description).toContain('https://heistmind.example');
+  });
+
+  it('covers EVERY command and subcommand in COMMAND_MANIFEST (derived, so a new one must be added)', async () => {
+    const res = await handleHeist(ctx([]), cmd('heist', [{ name: 'help', type: 1, options: [] }]));
+    const help = embedOf(res).description ?? '';
+    // What the help text mentions: `/name` alone, `/name sub`, or `/name a|b|c`.
+    const mentioned = new Map<string, Set<string>>();
+    for (const m of help.matchAll(/\/([a-z]+)(?: ([a-z|]+))?/g)) {
+      const subs = mentioned.get(m[1]!) ?? new Set<string>();
+      for (const sub of (m[2] ?? '').split('|').filter(Boolean)) subs.add(sub);
+      mentioned.set(m[1]!, subs);
+    }
+    const missing: string[] = [];
+    for (const command of COMMAND_MANIFEST) {
+      const subs = (command.options ?? []).filter(
+        o => o.type === ApplicationCommandOptionType.Subcommand
+      );
+      if (!mentioned.has(command.name)) missing.push(`/${command.name}`);
+      for (const sub of subs) {
+        if (!mentioned.get(command.name)?.has(sub.name))
+          missing.push(`/${command.name} ${sub.name}`);
+      }
+    }
+    expect(missing, 'commands /heist help leaves out').toEqual([]);
   });
 });

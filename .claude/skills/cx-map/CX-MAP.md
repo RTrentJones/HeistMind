@@ -658,8 +658,12 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
 `packages/discord/README.md`; in Discord, `/heist help`. The tiers, by what they need:
 
 - **No account (works in any server/DM via user-install):** `/roll dice:` · `/resist` · `/fortune`
-  · `/dice` · `/heist about|help`. Pure compute, nothing stored.
-- **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
+  · `/dice` · `/heist about|help`. Pure compute, nothing stored. `/heist help` lists EVERY
+  manifest command + subcommand (unit-tested against `COMMAND_MANIFEST`), incl. an "Account & info"
+  group (`/heist account|about|help`), `/character use|show|unset` and `/heist unlink`.
+- **Linked account (web sign-in IS the link — `profiles.discord_id`, set ONLY from a verified
+  Discord identity: a Discord sign-in, or Discord linked to an existing account — never from
+  user-supplied signup metadata, F95):** `/character use|show|unset`
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
   the character's own ruleset, `push` **or** `bargain` (never both — RAW) plus `assist`, so at most
   +2d (F92, replacing the old 0–3 `extra`); **moderate harm auto-applies −1d** — the title shows
@@ -700,7 +704,7 @@ category link) closed via the app's first bot-token fetch — a thread whose par
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
+_Last verified:_ 2026-10-18 (F95: complete `/heist help`, verified-only Discord link); 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
 creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only
 `/xp advance`, RAW `/crew tier`, negative `/crew heat`, trauma replies);
 previously 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`

@@ -22,9 +22,11 @@ export interface TestUser {
   password: string;
   username: string;
   /**
-   * A Discord snowflake to carry in the signup metadata (`provider_id`/`sub`) so the
-   * `handle_new_user` trigger writes `profiles.discord_id` — the PRODUCTION link path
-   * (migration 00019). Never hand-seed that column in a spec: the trigger owns it, and
+   * A Discord snowflake. The persona is born the way a real Discord sign-in is: the snowflake in
+   * user metadata (`provider_id`/`sub`, as Discord's claims land there) AND app_metadata
+   * `provider: 'discord'` — the GoTrue-controlled marker 00024 requires (user metadata alone is
+   * attacker-controlled on an email signup, F95). The auth triggers then write
+   * `profiles.discord_id`. Never hand-seed that column in a spec: the triggers own it, and
    * hand-seeding is exactly how F68 shipped invisible.
    */
   discordId?: string;
@@ -66,6 +68,32 @@ export const TEST_USERS = {
     discordId: `e2e-discord-424242${SUFFIX}`,
   } satisfies TestUser,
 } as const;
+
+/** The app_metadata GoTrue writes for a Discord OAuth signup (what 00024 keys on). */
+export const DISCORD_APP_METADATA = { provider: 'discord', providers: ['discord'] } as const;
+
+/**
+ * F68: create the upstream event, then ASSERT the trigger-owned row appeared — a persona whose
+ * link silently failed would make every bot spec fail far from the cause.
+ */
+async function assertDiscordLinked(
+  admin: SupabaseClient,
+  userId: string,
+  discordId: string
+): Promise<void> {
+  const { data, error } = await admin
+    .from('profiles')
+    .select('discord_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error || data?.discord_id !== discordId) {
+    throw new Error(
+      `Discord persona ${userId} was not linked by the auth triggers (discord_id=${
+        data?.discord_id ?? 'null'
+      }, want ${discordId}): ${error?.message ?? 'is migration 00024 applied?'}`
+    );
+  }
+}
 
 function adminClient(env: E2EEnv): SupabaseClient {
   return createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!, {
@@ -119,13 +147,17 @@ export async function ensureTestUser(env: E2EEnv, user: TestUser): Promise<TestU
     user_metadata: {
       username: user.username,
       avatar_url: null,
-      // Discord OAuth carries the snowflake here; handle_new_user copies it to
-      // profiles.discord_id (00019).
+      // Discord OAuth carries the snowflake here…
       ...(user.discordId ? { provider_id: user.discordId, sub: user.discordId } : {}),
     },
+    // …and GoTrue marks the signup as Discord in app_metadata (not user-writable). Only with both
+    // does the trigger link profiles.discord_id (00024; admin createUser applies app_metadata as
+    // a follow-up UPDATE, which the app-metadata trigger picks up).
+    ...(user.discordId ? { app_metadata: DISCORD_APP_METADATA } : {}),
   });
 
   if (!error && created.user) {
+    if (user.discordId) await assertDiscordLinked(admin, created.user.id, user.discordId);
     return { ...user, id: created.user.id };
   }
 
@@ -133,10 +165,15 @@ export async function ensureTestUser(env: E2EEnv, user: TestUser): Promise<TestU
   const existing = await findUserByEmail(admin, user.email);
   if (existing) {
     // Re-assert the password so signInWithPassword is guaranteed to work.
+    // A Discord persona created before 00024 carried the snowflake in user metadata only, which
+    // 00024 no longer trusts (and its remediation released). Re-mark it the way a Discord sign-in
+    // is, so the app-metadata trigger re-links it, then assert as for a fresh persona.
     await admin.auth.admin.updateUserById(existing.id, {
       password: user.password,
       email_confirm: true,
+      ...(user.discordId ? { app_metadata: DISCORD_APP_METADATA } : {}),
     });
+    if (user.discordId) await assertDiscordLinked(admin, existing.id, user.discordId);
     return { ...user, id: existing.id };
   }
 
