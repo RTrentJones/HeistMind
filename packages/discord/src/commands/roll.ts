@@ -7,7 +7,6 @@
 //             anti-forge — and push charges its real 2 stress). Otherwise display-only with a
 //             footer saying why.
 import {
-  applyStressChange,
   diceForRating,
   harmDicePenalty,
   rollOutcome,
@@ -139,10 +138,9 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
         footer = copy.loggedFooter(game.name);
         if (push) {
           pushNote = copy.pushedCharged; // the engine really charged the 2 stress
-          // The push cost follows the RAW track; predict from the sheet we just read (the engine
-          // applied exactly this change) so the reply can say "trauma — pick it on the sheet".
-          const change = applyStressChange(character.ruleset.content, character.characterData, 2);
-          if (change.trauma) traumaLine = traumaReply(ctx, character, change.mustRetire);
+          // Announce what the engine APPLIED (live row + crew boxes), never a local prediction.
+          const applied = logged.data.pushStress;
+          if (applied?.trauma) traumaLine = traumaReply(ctx, character, applied.mustRetire);
         }
       }
 

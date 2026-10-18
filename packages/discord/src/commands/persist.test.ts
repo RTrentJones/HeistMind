@@ -132,6 +132,44 @@ describe('/roll action — persisted (Phase 2)', () => {
   });
 });
 
+describe('/roll push — the trauma reply reports the APPLIED outcome', () => {
+  // The shipped ruleset with one crew ability that grants a stress box: max 9 → 10 for members.
+  const withCrewBox = structuredClone(DEFAULT_RULESET);
+  withCrewBox.crew = {
+    ...(withCrewBox.crew ?? { types: [] }),
+    abilities: [
+      ...(withCrewBox.crew?.abilities ?? []),
+      { id: 'hardy', name: 'Hardy', description: '', effects: { stressBoxes: 1 } },
+    ],
+  } as typeof withCrewBox.crew;
+
+  it('a push to 9 on a crew-lengthened track announces no trauma', async () => {
+    const r = repos(
+      {
+        crews: {
+          findByGame: vi.fn().mockResolvedValue(ok({ id: 'cr1', crewAbilities: ['hardy'] })),
+        },
+      },
+      characterOn(withCrewBox, { characterData: { stress: 7, skills: { [RATED_ACTION]: 2 } } })
+    );
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [6, 5, 4]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+        ])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({ characterData: expect.objectContaining({ stress: 9 }) })
+    );
+    expect(JSON.stringify(calls)).not.toMatch(/trauma/i);
+  });
+});
+
 describe('/resist — persisted (Phase 2)', () => {
   // ATTRIBUTE's rating is DERIVED from the sheet: the fixture rates one of its actions (RATED_ACTION)
   // so the rating is 1; rating a second of its actions makes it 2.

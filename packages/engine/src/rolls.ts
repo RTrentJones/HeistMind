@@ -4,7 +4,7 @@
 // deterministic and unit-testable.
 import { resistanceStress, type Result, type Roll } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { applyStress, type TraumaLogCopy } from './characters';
+import { applyStress, type StressOutcome, type TraumaLogCopy } from './characters';
 
 export interface ActionRollInput {
   gameId: string;
@@ -37,11 +37,17 @@ export interface ActionRollInput {
 const PUSH_STRESS_COST = 2;
 const ASSIST_STRESS_COST = 1;
 
+/** A persisted action roll plus what its push cost actually did to the roller's stress. */
+export type ActionRollOutcome = Roll & {
+  /** The applied push-stress change (null when not pushed / nothing written) — never a prediction. */
+  pushStress: StressOutcome | null;
+};
+
 /** Persist an action/fortune roll, then charge the push + assist stress costs taken with it. */
 export async function rollAction(
   repos: DatabaseRepositories,
   input: ActionRollInput
-): Promise<Result<Roll>> {
+): Promise<Result<ActionRollOutcome>> {
   const created = await repos.rolls.create(input.userId, {
     gameId: input.gameId,
     ...(input.characterId !== undefined ? { characterId: input.characterId } : {}),
@@ -54,7 +60,8 @@ export async function rollAction(
     ...(input.effect !== undefined ? { effect: input.effect } : {}),
     ...(input.note !== undefined ? { note: input.note } : {}),
   });
-  if (!created.success) return created;
+  if (!created.success) return created as Result<never>;
+  let pushStress: StressOutcome | null = null;
   if (input.pushed === true && input.characterId !== undefined) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
@@ -63,6 +70,7 @@ export async function rollAction(
       ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
     if (!stressed.success) return stressed as Result<never>;
+    pushStress = stressed.data;
   }
   if (input.assist !== undefined) {
     const assisted = await applyStress(repos, {
@@ -77,7 +85,7 @@ export async function rollAction(
       return assisted as Result<never>;
     }
   }
-  return created;
+  return { success: true, data: { ...created.data, pushStress } };
 }
 
 export interface ResistanceRollInput {
