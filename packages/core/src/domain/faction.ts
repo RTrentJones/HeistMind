@@ -19,6 +19,8 @@ export interface CreateFactionData {
   factionType?: string;
   tier?: number;
   status?: number;
+  /** Free-text GM notes (who they are, what they want). */
+  notes?: string;
 }
 
 export interface UpdateFactionData {
