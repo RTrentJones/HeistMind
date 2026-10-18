@@ -5,6 +5,7 @@ import {
   isAbilityAdvanceable,
   veteranGatewayFor,
   clampStress,
+  reconcileTraumaPending,
   validateCharacter,
   pointBuySpent,
   abilityChoiceLimit,
@@ -1309,6 +1310,29 @@ describe('creation: a Veteran pick opens exactly one cross-playbook slot', () =>
     const data = character({ specialAbilities: ['veteran', 'battle-born'] });
     expect(codes(validateCharacter(vetRs(), data, { mode: 'creation' }))).toContain(
       'ABILITY_LIMIT'
+    );
+  });
+});
+
+describe('reconcileTraumaPending', () => {
+  it('each newly marked condition pays down one owed trauma (never below 0)', () => {
+    const prev = { trauma: ['Cold'] };
+    expect(
+      reconcileTraumaPending(prev, { trauma: ['Cold', 'Haunted'], traumaPending: 1 }).traumaPending
+    ).toBe(0);
+    expect(
+      reconcileTraumaPending(prev, { trauma: ['Cold', 'Haunted', 'Obsessed'], traumaPending: 1 })
+        .traumaPending
+    ).toBe(0);
+    // Nothing owed, or no new condition → unchanged.
+    expect(
+      reconcileTraumaPending(prev, { trauma: ['Cold', 'Haunted'] } as {
+        trauma: string[];
+        traumaPending?: number;
+      }).traumaPending
+    ).toBeUndefined();
+    expect(reconcileTraumaPending(prev, { trauma: ['Cold'], traumaPending: 1 }).traumaPending).toBe(
+      1
     );
   });
 });

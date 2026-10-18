@@ -150,6 +150,18 @@ describe('saveCharacterBuild — patches only the fields the player changed', ()
     expect(written()).toMatchObject({ stress: 0, traumaPending: 1 });
   });
 
+  it('marking an owed trauma condition in the editor pays the debt down on the live row', async () => {
+    const owing = { ...LIVE_DATA, stress: 0, trauma: [], traumaPending: 1 } as CharacterData;
+    const { r, written } = reposWithLive(character(owing));
+    const condition = DEFAULT_RULESET.traumaConditions![0]!;
+    // A draft that predates the overflow (no traumaPending) still settles the live debt.
+    const base = { ...owing, traumaPending: undefined } as unknown as CharacterData;
+    const draft = { ...base, trauma: [condition] } as CharacterData;
+    const out = await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base, draft });
+    expect(out.success).toBe(true);
+    expect(written()).toMatchObject({ trauma: [condition], traumaPending: 0 });
+  });
+
   it("lets the campaign's GM save (mirrors RLS) and rejects anyone else", async () => {
     const { r } = reposWithLive(character(LIVE_DATA));
     const input = { characterId: 'c1', base: BASE_DATA, draft: { ...BASE_DATA, vice: 'Weird' } };

@@ -328,6 +328,22 @@ export function pendingTrauma(data: Pick<CharacterData, 'traumaPending'>): numbe
 }
 
 /**
+ * Marking trauma conditions pays down an owed trauma (a stress overflow): every condition `next`
+ * holds beyond `prev` resolves one pending trauma. Returns `next` with `traumaPending` reconciled —
+ * however the condition was picked (the sheet prompt, the editor's trauma controls), the same
+ * overflow is never counted twice toward retirement.
+ */
+export function reconcileTraumaPending<T extends Pick<CharacterData, 'trauma' | 'traumaPending'>>(
+  prev: Pick<CharacterData, 'trauma'>,
+  next: T
+): T {
+  const owed = next.traumaPending ?? 0;
+  const added = (next.trauma ?? []).length - (prev.trauma ?? []).length;
+  if (owed === 0 || added <= 0) return next;
+  return { ...next, traumaPending: Math.max(0, owed - added) };
+}
+
+/**
  * Whether the character has reached the trauma limit (marked, plus any still owed) — RAW: "When you
  * mark your fourth trauma condition… you must retire them." Surfaces the retirement prompt; it never
  * changes status on its own (the player chooses retire vs. taking the fall).

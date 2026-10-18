@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   deriveAttributes,
   effectiveStressMax,
+  reconcileTraumaPending,
   usesActionRatings,
   usesXpTracks,
   xpTrackSize,
@@ -108,7 +109,9 @@ export function CharacterEditor({
     setRebase(false);
   }, [rebase, character.characterData]);
 
-  const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
+  // Picking a trauma condition here pays down an owed trauma, exactly like the sheet's prompt.
+  const patch = (p: Partial<CharacterData>) =>
+    setDraft(d => reconcileTraumaPending(d, { ...d, ...p }));
 
   // Saves are a PATCH of only the fields this draft changed vs the snapshot it started from,
   // merged server-side onto the LIVE row (engine `saveCharacterBuild`). So everything the editor

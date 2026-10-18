@@ -9,6 +9,7 @@
 import {
   applyStressChange,
   clampStress,
+  reconcileTraumaPending,
   type Character,
   type CharacterData,
   type CharacterWithDetails,
@@ -148,6 +149,15 @@ export function saveCharacterBuild(
       );
       patch.stress = change.stress;
       if (change.traumaPending > 0) patch.traumaPending = change.traumaPending;
+    }
+    // Conditions marked in the editor pay down what the LIVE row owes (the draft's count may be stale).
+    if (patch.trauma !== undefined) {
+      const owed = patch.traumaPending ?? fresh.characterData.traumaPending;
+      const settled = reconcileTraumaPending(fresh.characterData, {
+        trauma: patch.trauma,
+        ...(owed !== undefined ? { traumaPending: owed } : {}),
+      });
+      if (settled.traumaPending !== undefined) patch.traumaPending = settled.traumaPending;
     }
     return patch;
   });
