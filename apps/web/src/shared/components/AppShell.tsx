@@ -7,21 +7,16 @@ import { Footer } from '@/shared/components/Footer';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
- * App shell for the authenticated surface: a persistent header (the inner pages previously had no
- * nav chrome at all), breadcrumb wayfinding (F22), a skip-to-main link (F41), and the `<main>`
- * landmark. The marketing landing (`/`) and the transient auth callback (`/auth/*`) own their own
- * full-screen layouts and headers, so the shell steps aside there.
+ * The signed-in page chrome: skip-to-main link (F41), the persistent header, breadcrumb wayfinding
+ * (F22; renders nothing on a top-level route), the `<main>` landmark and the footer.
  *
  * Layout (F93): a full-viewport flex column so the footer sits at the bottom of short pages (404,
  * gates) instead of floating mid-screen, and one consistent gap under the header (the page h1 used
- * to sit ~8px under the header rule).
+ * to sit ~8px under the header rule). Shared by `AppShell` (every inner route) and the signed-in
+ * dashboard at `/` (F95 — it used to hand-roll its own wrapper and missed both).
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+export function PageShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-
-  if (pathname === '/' || pathname.startsWith('/auth')) return <>{children}</>;
-
   return (
     <div className='flex min-h-dvh flex-col'>
       <a
@@ -38,4 +33,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Footer />
     </div>
   );
+}
+
+/**
+ * App shell for the authenticated surface. The landing (`/` — marketing when signed out, the
+ * dashboard when signed in, which renders `PageShell` itself) and the transient auth callback
+ * (`/auth/*`) own their own layouts, so the shell steps aside there.
+ */
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === '/' || pathname.startsWith('/auth')) return <>{children}</>;
+  return <PageShell>{children}</PageShell>;
 }
