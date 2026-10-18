@@ -181,7 +181,7 @@
       "noneChosen": "None chosen.",
       "condition": "Condition",
       "harm": "Harm",
-      "trauma": "Trauma",
+      "traumaCount": "Trauma {{count}} / {{max}}",
       "experience": "Experience",
       "markXpPre": "Mark XP as you play. When a track fills, hit ",
       "markXpBold": "Take advance",

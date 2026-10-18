@@ -16,7 +16,7 @@ import { useAuth } from '@/features/auth/stores/auth-store';
 import { Footer } from '@/shared/components/Footer';
 import { DiscordInstallLinks } from '@/shared/components/DiscordInstallLinks';
 import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
-import { rollKindLabel } from '@/features/rolls/lib/labels';
+import { entryWho, rollKindLabel } from '@/features/rolls/lib/labels';
 import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
@@ -94,11 +94,14 @@ export function Dashboard() {
   );
 
   const activityRow = (a: DashboardActivity) => {
-    const who = a.roll.characterId
-      ? (charNameById.get(a.roll.characterId) ?? '')
-      : a.roll.kind === 'fortune'
-        ? t('components.rollLog.fortune')
-        : t('components.rollLog.gm');
+    const who = entryWho(
+      a.roll.label,
+      a.roll.characterId
+        ? (charNameById.get(a.roll.characterId) ?? '')
+        : a.roll.kind === 'fortune'
+          ? t('components.rollLog.fortune')
+          : t('components.rollLog.gm')
+    );
     const inCampaign = t('pages.dashboard.activityIn', { campaign: a.gameName });
     const meta = who ? `${inCampaign} · ${who}` : inCampaign;
     return (

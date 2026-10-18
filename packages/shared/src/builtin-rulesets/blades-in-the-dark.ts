@@ -79,7 +79,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
     description:
       'A daring crew of scoundrels seeking their fortunes in a haunted, industrial-fantasy city. ' +
       'The reference Forged-in-the-Dark system: rate your actions, push your luck on ' +
-      'the dice, run your crew, and weather the consequences. Licensed under CC BY 3.0 — edit freely.',
+      'the dice, run your crew, and weather the consequences. Licensed under CC BY 3.0.',
     system: 'Forged in the Dark',
   },
 

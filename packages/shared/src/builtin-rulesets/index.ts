@@ -1,5 +1,5 @@
 // The catalog of built-in rulesets HeistMind ships. A GM loads any entry with one click (it's copied
-// into a user-owned `rulesets` row via the same path as the uploader, then editable freely).
+// into a user-owned `rulesets` row via the same path as the uploader; there is no in-app editor).
 //
 // Built-ins are TS constants (not JSON) so they're type-checked against `RulesetContent` at compile
 // time — a shape change fails the build on every entry rather than rotting silently. The e2e upload
@@ -35,7 +35,7 @@ export const BUILTIN_RULESETS: BuiltinRuleset[] = [
     license: 'Original',
     blurb:
       'HeistMind’s original starter: a crew of scoundrels in a drowned, lantern-lit canal city. ' +
-      'Full Forged-in-the-Dark mechanics, ready to play or to copy and reskin.',
+      'Full Forged-in-the-Dark mechanics, ready to play.',
   },
   {
     id: 'blades-in-the-dark',

@@ -35,6 +35,15 @@ describe('HarmCard', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
+  // F95 — the sheet face shows trauma as marked / max (the last box retires), even at zero.
+  it('view mode shows the trauma count as marked / max', () => {
+    const { unmount } = render(<HarmCard content={CONTENT} data={DATA} />);
+    expect(screen.getByTestId('sheet-trauma')).toHaveTextContent('Trauma 1 / 4');
+    unmount();
+    render(<HarmCard content={CONTENT} data={{ ...DATA, trauma: [] }} />);
+    expect(screen.getByTestId('sheet-trauma')).toHaveTextContent('Trauma 0 / 4');
+  });
+
   it('edit mode toggles a named trauma through onPatch', async () => {
     const onPatch = vi.fn();
     render(<HarmCard content={CONTENT} data={DATA} edit={{ onPatch }} />);

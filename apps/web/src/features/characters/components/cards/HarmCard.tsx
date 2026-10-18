@@ -123,18 +123,29 @@ export function HarmCard({
             )}
           </Stack>
         )}
-        {trauma.length > 0 && (
-          <div>
-            <Text as='strong'>{t('components.characterSheet.trauma')}</Text>
-            <Stack direction='row' gap='sm' className='flex-wrap'>
-              {trauma.map(condition => (
+        {/* F95 — the count is the mechanic (the last box retires the character), so it's always
+            shown as marked / max, even at zero. */}
+        <div data-testid='sheet-trauma'>
+          <Text as='strong'>
+            {t('components.characterSheet.traumaCount', {
+              count: trauma.length,
+              max: stressBounds(content).traumaMax,
+            })}
+          </Text>
+          <Stack direction='row' gap='sm' className='flex-wrap'>
+            {trauma.length === 0 ? (
+              <Text variant='muted' size='sm'>
+                {t('components.characterEditor.none')}
+              </Text>
+            ) : (
+              trauma.map(condition => (
                 <Badge key={condition} variant='stress-critical'>
                   {condition}
                 </Badge>
-              ))}
-            </Stack>
-          </div>
-        )}
+              ))
+            )}
+          </Stack>
+        </div>
       </>
     );
   }

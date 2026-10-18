@@ -18,7 +18,7 @@ export const WICKED_ONES: RulesetContent = {
     description:
       'Play the monsters. A band of wicked ones digs out a dungeon lair, hoards plunder, raids the ' +
       'soft surface world, and slaughters the so-called heroes who come to "cleanse" them. An ' +
-      'original Forged-in-the-Dark adaptation of the public-domain dungeon-keeper game. Edit freely.',
+      'original Forged-in-the-Dark adaptation of the public-domain dungeon-keeper game.',
     system: 'Forged in the Dark',
   },
 

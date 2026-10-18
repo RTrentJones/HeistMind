@@ -81,3 +81,13 @@ export const gameStateLabel = (s: GameState, t: TranslationFunction) =>
   lookup(GAME_STATE_KEY, s, t);
 export const characterStatusLabel = (s: CharacterStatus, t: TranslationFunction) =>
   lookup(CHARACTER_STATUS_KEY, s, t);
+
+/**
+ * The "who" segment of a log / activity entry. Character events (harm, XP, stress → trauma,
+ * flashbacks) are TITLED with the character's name, so repeating it in the meta line read
+ * "Mara" / "Mara · …" (F95). Omit it when the title already is that name.
+ */
+export function entryWho(label: string | null | undefined, who: string): string {
+  if (!label || !who) return who;
+  return label.trim().toLowerCase() === who.trim().toLowerCase() ? '' : who;
+}
