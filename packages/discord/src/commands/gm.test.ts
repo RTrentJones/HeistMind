@@ -9,8 +9,10 @@ import type {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clearActorCache } from '../authz';
 import { content, CREW, ctx, ok, repos, run } from '../test/helpers';
+import { getBuiltinById } from '@heist-mind/shared';
 import {
   clockAutocomplete,
+  crewAutocomplete,
   factionAutocomplete,
   handleClock,
   handleCrew,
@@ -221,30 +223,130 @@ describe('/crew', () => {
     });
     const full = await run(await handleCrew(ctx(nearFull), guildCmd('crew', 'xp')));
     expect(nearFull.crews.update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 8 } });
-    expect(content(full)).toContain('/crew advance');
+    expect(content(full)).toContain('/crew advance pick:');
   });
 
-  it('advance spends a FULL track and logs; a non-full track refuses BEFORE any write', async () => {
-    const full = repos({
+  // Round-3 #1 — `/crew advance pick:` on the real BitD content (fixture provenance, F69).
+  const BITD = getBuiltinById('blades-in-the-dark')?.content;
+  const bitdCrew = (crewAbilities: string[], resources: Record<string, number>) =>
+    repos({
       crews: {
-        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, resources: { 'crew-xp': 8 } })),
+        findByGame: vi
+          .fn()
+          .mockResolvedValue(ok({ ...CREW, crewType: 'shadows', crewAbilities, resources })),
         update: vi.fn().mockResolvedValue(ok(CREW)),
       },
+      rulesets: { findById: vi.fn().mockResolvedValue(ok({ id: 'rs1', content: BITD })) },
     });
-    const calls = await run(await handleCrew(ctx(full), guildCmd('crew', 'advance')));
-    expect(full.crews.update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 0 } });
-    expect(full.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'crew' }));
-    expect(content(calls)).toContain('Advance taken');
+  const pick = (value: string) => [{ name: 'pick', type: 3, value }];
 
-    const grinding = repos({
-      crews: {
-        findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, resources: { 'crew-xp': 6 } })),
-        update: vi.fn(),
-      },
+  it('advance spends a FULL track on an own-list ability in ONE write and logs what was gained', async () => {
+    const full = bitdCrew(['crew-second-story'], { 'crew-xp': 8 });
+    const calls = await run(
+      await handleCrew(ctx(full), guildCmd('crew', 'advance', pick('ability:crew-network')))
+    );
+    expect(full.crews.update).toHaveBeenCalledWith('cr1', {
+      crewAbilities: ['crew-second-story', 'crew-network'],
+      resources: { 'crew-xp': 0 },
     });
-    const refusal = await run(await handleCrew(ctx(grinding), guildCmd('crew', 'advance')));
+    expect(full.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'crew', note: expect.stringContaining('Pack Rats') })
+    );
+    expect(content(calls)).toContain('new special ability: **Pack Rats**');
+  });
+
+  it('advance refuses BEFORE any write: a non-full track, another type’s ability, a bad pick', async () => {
+    const grinding = bitdCrew(['crew-second-story'], { 'crew-xp': 6 });
+    const refusal = await run(
+      await handleCrew(ctx(grinding), guildCmd('crew', 'advance', pick('ability:crew-network')))
+    );
     expect(grinding.crews.update).not.toHaveBeenCalled();
     expect(String(refusal[1]?.payload)).toContain('6/8');
+
+    clearActorCache();
+    const spent = bitdCrew(
+      ['crew-second-story', 'crew-veteran', 'crew-death-veil', 'crew-veteran-2', 'crew-predators'],
+      { 'crew-xp': 8 }
+    );
+    // Mastery is an upgrade — never takeable as a special ability.
+    const mastery = await run(
+      await handleCrew(ctx(spent), guildCmd('crew', 'advance', pick('ability:crew-mastery')))
+    );
+    expect(spent.crews.update).not.toHaveBeenCalled();
+    expect(String(mastery[1]?.payload)).toContain('isn’t on offer');
+
+    clearActorCache();
+    const bad = bitdCrew([], {});
+    const nonsense = await run(
+      await handleCrew(ctx(bad), guildCmd('crew', 'advance', pick('ability:not-a-thing')))
+    );
+    expect(bad.crews.update).not.toHaveBeenCalled();
+    expect(String(nonsense[1]?.payload)).toContain('suggestions');
+  });
+
+  it('advance marks two Mastery boxes (an upgrade, never an ability)', async () => {
+    const full = bitdCrew(['crew-second-story'], { 'crew-xp': 8 });
+    const calls = await run(
+      await handleCrew(ctx(full), guildCmd('crew', 'advance', pick('upgrade:crew-mastery')))
+    );
+    expect(full.crews.update).toHaveBeenCalledWith('cr1', {
+      crewAbilities: ['crew-second-story'],
+      resources: { 'crew-xp': 0, 'crew-upgrade:crew-mastery': 2 },
+    });
+    expect(content(calls)).toContain('**Mastery** (2/4)');
+  });
+});
+
+describe('/crew advance autocomplete', () => {
+  const BITD = getBuiltinById('blades-in-the-dark')?.content;
+  const auto = (value: string): APIApplicationCommandAutocompleteInteraction =>
+    ({
+      type: 4,
+      guild_id: 'guild-1',
+      channel: { id: 'chan-1', parent_id: null },
+      member: { user: { id: 'discord-1' } },
+      data: {
+        name: 'crew',
+        type: 1,
+        options: [{ name: 'advance', type: 1, options: [{ name: 'pick', type: 3, value }] }],
+      },
+    }) as unknown as APIApplicationCommandAutocompleteInteraction;
+  const withCrew = (crewAbilities: string[], resources: Record<string, number>) =>
+    repos({
+      crews: {
+        findByGame: vi
+          .fn()
+          .mockResolvedValue(ok({ ...CREW, crewType: 'shadows', crewAbilities, resources })),
+      },
+      rulesets: { findById: vi.fn().mockResolvedValue(ok({ id: 'rs1', content: BITD })) },
+    });
+
+  it('offers only legal picks: own list + Veteran routes; upgrade boxes only on a full track', async () => {
+    const starting = await crewAutocomplete(ctx(withCrew([], {})), auto(''));
+    const values = starting.map(c => c.value);
+    expect(values).toContain('ability:crew-network');
+    expect(values).toContain('ability:crew-veteran');
+    expect(values).not.toContain('ability:crew-mastery');
+    expect(values).not.toContain('upgrades');
+    expect(starting.find(c => c.value === 'ability:crew-deadly')?.name).toBe(
+      'Deadly (via Veteran)'
+    );
+    clearActorCache();
+    const full = await crewAutocomplete(
+      ctx(withCrew(['crew-second-story'], { 'crew-xp': 8 })),
+      auto('mark')
+    );
+    expect(full.map(c => c.value)).toEqual(['upgrade:crew-mastery', 'upgrades']);
+    clearActorCache();
+    expect(
+      await crewAutocomplete(ctx(withCrew(['crew-second-story'], { 'crew-xp': 3 })), auto(''))
+    ).toEqual([]);
+  });
+
+  it('a non-GM gets nothing', async () => {
+    const notGm = repos({ gamePlayers: { isGameMaster: vi.fn().mockResolvedValue(ok(false)) } });
+    expect(await crewAutocomplete(ctx(notGm), auto(''))).toEqual([]);
   });
 });
 

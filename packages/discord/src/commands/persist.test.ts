@@ -6,7 +6,7 @@
 // RATED_ACTION at 2 and ATTRIBUTE as the resistance label.
 import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_RULESET } from '@heist-mind/shared';
+import { DEFAULT_RULESET, getBuiltinById } from '@heist-mind/shared';
 import { clearActorCache } from '../authz';
 import {
   ATTRIBUTE,
@@ -355,5 +355,46 @@ describe('/resist — persisted (Phase 2)', () => {
     );
     expect(r.rolls.create).not.toHaveBeenCalled();
     expect(firstEmbed(calls).footer?.text).toContain('no active character');
+  });
+});
+
+describe('/roll position:desperate — desperate-roll XP (F92 deferred, round-3 #3)', () => {
+  // The real BitD builtin (F69): Skirmish belongs to Prowess; its desperate trigger is RAW.
+  const BITD = getBuiltinById('blades-in-the-dark')!.content;
+  const bitdCutter = characterOn(BITD, { characterData: { skills: { Skirmish: 2 } } });
+
+  it('marks 1 xp in the rolled action’s ATTRIBUTE track and says so', async () => {
+    const r = repos({}, bitdCutter);
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [3, 2]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: 'Skirmish' },
+          { name: 'position', type: 3, value: 'desperate' },
+        ])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({
+        characterData: expect.objectContaining({ xp: { playbook: 0, attributes: { prowess: 1 } } }),
+      })
+    );
+    expect(firstEmbed(calls).description).toContain('marked 1 xp in **Prowess** (1/6)');
+  });
+
+  it('a risky roll marks nothing', async () => {
+    const r = repos({}, bitdCutter);
+    await run(
+      await handleRoll(
+        ctx(r, [3, 2]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: 'Skirmish' },
+          { name: 'position', type: 3, value: 'risky' },
+        ])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).not.toHaveBeenCalled();
   });
 });

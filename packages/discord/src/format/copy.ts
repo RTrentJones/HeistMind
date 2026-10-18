@@ -144,11 +144,26 @@ export const copy = {
   severeHarmNote: 'Severe harm — acting needs help or a push',
   crewLogXp: (xp: number, total: number) => `Crew XP ${xp}/${total}`,
   crewXpMarked: (xp: number, total: number, ready: boolean) =>
-    `Crew XP **${xp}/${total}**${ready ? ' — full! Take it with `/crew advance`.' : '.'}`,
+    `Crew XP **${xp}/${total}**${ready ? ' — full! Spend it with `/crew advance pick:`.' : '.'}`,
   crewAdvanceNotReady: (xp: number, total: number) =>
     `The advancement track isn’t full — ${xp}/${total}.`,
-  crewLogAdvance: 'Crew advance taken — new crew ability unlocked',
-  crewAdvanceTaken: 'Advance taken — the track resets. Pick a new crew ability on the crew sheet.',
+  crewLogAdvance: 'Crew advance taken',
+  crewPickInvalid:
+    'Pick the advance from the suggestions — a crew ability, or 2 upgrade boxes (`/crew advance pick:`).',
+  crewAbilityNotOffered:
+    'That ability isn’t on offer — a crew takes abilities from its own crew type’s list (another type’s only through Veteran). Use the suggestions.',
+  crewUpgradeComplete: 'That upgrade is already fully marked.',
+  crewPickViaVeteran: (name: string) => `${name} (via Veteran)`,
+  crewPickUpgrade: (name: string, boxes: number, size: number) =>
+    `Mark 2 upgrade boxes: ${name} (${boxes}/${size})`,
+  crewPickOtherUpgrades: 'Mark 2 boxes on other upgrades (record them on the crew sheet)',
+  crewStartingAbility: (names: string) => `Starting crew ability: **${names}**`,
+  crewNewAbility: (names: string) => `Crew advance — new special ability: **${names}**`,
+  crewUpgradeBoxes: (name: string, boxes: number, size: number) =>
+    `Crew advance — marked 2 upgrade boxes on **${name}** (${boxes}/${size})`,
+  crewUpgradeUnlocked: (name: string) =>
+    `Crew advance — **${name}** unlocked (all upgrade boxes marked)`,
+  crewOtherUpgrades: 'Crew advance — two upgrade boxes marked (record them on the crew sheet)',
   clockNotFound: (name: string) => `No clock “${name}”. Try the autocomplete suggestions.`,
   clockTicked: (name: string, filled: number, segments: number) =>
     `**${name}** — ${filled}/${segments}.`,
@@ -189,6 +204,10 @@ export const copy = {
   viceOverindulged:
     'Overindulged — you cleared more than was marked. The GM narrates the complication (RAW).',
   viceLog: 'Indulged their vice',
+  viceNotSet: (sheetUrl: string) =>
+    `Set a vice on your sheet first — you indulge YOUR vice at your purveyor. Pick one here: ${sheetUrl}`,
+  desperateXp: (attribute: string, marks: number, size: number) =>
+    `Desperate roll — marked 1 xp in **${attribute}** (${marks}/${size})`,
   xpMarked: (name: string, amount: number, total: number) =>
     `**${name}** marks ${amount} XP — **${total}** banked.`,
   xpMarkedTrack: (name: string, amount: number, trackLabel: string, marks: number, size: number) =>
@@ -217,7 +236,7 @@ export const copy = {
       'Sheet rolls and `/resist` there land in the campaign log. `/log` records a settled result · `/heist status` shows score/crew/clocks.',
       '',
       '**GM controls — in the linked channel**',
-      '`/score start|end` · `/crew heat|tier|incarcerate|xp|advance` · `/clock tick` · `/faction status`',
+      '`/score start|end` · `/crew heat|tier|incarcerate|xp` · `/crew advance pick:` (crew ability or 2 upgrade boxes) · `/clock tick` · `/faction status`',
       '',
       `Build characters, campaigns, and rulesets at ${siteUrl}.`,
     ].join('\n'),

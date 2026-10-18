@@ -18,6 +18,7 @@ import { handleResist } from './commands/resist';
 import { handleRoll, rollAutocomplete } from './commands/roll';
 import {
   clockAutocomplete,
+  crewAutocomplete,
   factionAutocomplete,
   handleClock,
   handleCrew,
@@ -68,6 +69,7 @@ const AUTOCOMPLETES: Record<
   harm: harmAutocomplete,
   xp: xpAutocomplete,
   clock: clockAutocomplete,
+  crew: crewAutocomplete,
   faction: factionAutocomplete,
 };
 
