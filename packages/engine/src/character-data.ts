@@ -82,12 +82,9 @@ export function setStress(
   input: SetStressInput
 ): Promise<Result<Character | null>> {
   return patchLive(repos, input.characterId, input.userId, async fresh => {
-    const next = clampStress(
-      fresh.ruleset.content,
-      input.stress,
-      fresh.characterData,
-      await crewContextFor(repos, fresh.gameId)
-    );
+    const crew = await crewContextFor(repos, fresh.gameId);
+    if (!crew.success) return crew as Result<never>;
+    const next = clampStress(fresh.ruleset.content, input.stress, fresh.characterData, crew.data);
     return next === (fresh.characterData?.stress ?? 0) ? null : { stress: next };
   });
 }
@@ -141,11 +138,13 @@ export function saveCharacterBuild(
     // marking the last box resets stress to 0 and owes a trauma (never a full track kept as-is).
     const liveStress = fresh.characterData.stress ?? 0;
     if (typeof patch.stress === 'number' && patch.stress > liveStress) {
+      const crew = await crewContextFor(repos, fresh.gameId);
+      if (!crew.success) return crew as Result<never>;
       const change = applyStressChange(
         fresh.ruleset.content,
         { ...fresh.characterData, ...patch, stress: liveStress },
         patch.stress - liveStress,
-        await crewContextFor(repos, fresh.gameId)
+        crew.data
       );
       patch.stress = change.stress;
       if (change.traumaPending > 0) patch.traumaPending = change.traumaPending;

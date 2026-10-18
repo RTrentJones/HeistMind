@@ -29,14 +29,17 @@ export function notOwnerOrGm(
 }
 
 /**
- * The crew context a character's rules are judged in: its campaign crew's abilities, or none.
- * (Crew abilities can grant stress boxes, action caps and Veteran slots.)
+ * The crew context a character's rules are judged in: its campaign crew's abilities, or none (a
+ * standalone character, or a campaign that hasn't started its crew). Crew abilities can grant
+ * stress boxes, action caps and Veteran slots, so a FAILED lookup is returned as a failure — a
+ * caller must refuse the write rather than judge it against a track that may be too short.
  */
 export async function crewContextFor(
   repos: DatabaseRepositories,
   gameId: string | null
-): Promise<CrewContext | null> {
-  if (gameId === null) return null;
+): Promise<Result<CrewContext | null>> {
+  if (gameId === null) return { success: true, data: null };
   const crew = await repos.crews.findByGame(gameId);
-  return crew.success && crew.data ? { crewAbilities: crew.data.crewAbilities } : null;
+  if (!crew.success) return crew as Result<never>;
+  return { success: true, data: crew.data ? { crewAbilities: crew.data.crewAbilities } : null };
 }

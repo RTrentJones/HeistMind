@@ -99,6 +99,20 @@ describe('applyStress', () => {
     });
   });
 
+  it('refuses (writes nothing) when the crew lookup fails — never judges a possibly-short track', async () => {
+    const update = vi.fn();
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      crews: {
+        findByGame: vi.fn().mockResolvedValue({ success: false, error: { message: 'db down' } }),
+      },
+    });
+    const out = await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 });
+    expect(out.success).toBe(false);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("counts the campaign crew's stress boxes before calling an overflow", async () => {
     const update = vi.fn().mockResolvedValue(ok({} as Character));
     const content = structuredClone(CHARACTER.ruleset.content);

@@ -73,12 +73,9 @@ export async function applyStress(
   const data = char.characterData;
   // The campaign crew's abilities can grant stress boxes (`effects.stressBoxes`); the overflow
   // point must match the repository's validation, which counts them.
-  const change = applyStressChange(
-    char.ruleset.content,
-    data,
-    input.stress,
-    await crewContextFor(repos, char.gameId)
-  );
+  const crew = await crewContextFor(repos, char.gameId);
+  if (!crew.success) return crew as Result<never>;
+  const change = applyStressChange(char.ruleset.content, data, input.stress, crew.data);
   if (!change.trauma && change.stress === (data?.stress ?? 0)) return { success: true, data: null };
   const updated = await repos.characterManagement.updateCharacterWithValidation(
     input.characterId,
