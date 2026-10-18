@@ -135,6 +135,7 @@ test.describe('membership controls', () => {
       // Open the sheet from My Characters, return it to standalone, then bring it straight back.
       await player.page.goto('/characters');
       await characterCard(player.page, charName).getByRole('link', { name: 'Open' }).click();
+      await expect(player.page.getByTestId('attach-resolving')).toHaveCount(0, { timeout: 15_000 });
       await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
       await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
       await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
@@ -149,6 +150,9 @@ test.describe('membership controls', () => {
 
       // Returned again and THEN leaving: the already-standalone character still opens (its
       // owner gets their own copy of the ruleset once they can no longer read the GM's).
+      // The membership card re-renders once its campaign lookup resolves (F98) — let it settle
+      // first, or the click can arm the confirm on a node that is being replaced.
+      await expect(player.page.getByTestId('attach-resolving')).toHaveCount(0, { timeout: 15_000 });
       await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
       await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
       await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });

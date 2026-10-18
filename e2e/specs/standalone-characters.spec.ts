@@ -122,6 +122,8 @@ test.describe('Phase 5: portable characters', () => {
     await gmPage.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/);
 
     // Return it to My Characters (two-click confirm) → it becomes standalone.
+    // Let the membership card's campaign lookup settle (it re-renders once it answers, F98).
+    await expect(gmPage.getByTestId('attach-resolving')).toHaveCount(0, { timeout: 15_000 });
     await gmPage.getByRole('button', { name: 'Return to My Characters' }).click();
     await gmPage.getByRole('button', { name: /remove from campaign/i }).click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
