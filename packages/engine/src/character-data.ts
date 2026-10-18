@@ -7,14 +7,16 @@
 // player edited ALSO changed underneath their draft, it refuses with `CHARACTER_CONFLICT` instead of
 // overwriting the other writer.
 import {
+  applyStressChange,
   clampStress,
+  reconcileTraumaPending,
   type Character,
   type CharacterData,
   type CharacterWithDetails,
   type Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { notOwnerOrGm } from './ownership';
+import { crewContextFor, notOwnerOrGm } from './ownership';
 
 /** Order-insensitive structural equality for JSON-shaped data (JSONB reorders object keys). */
 export function sameJson(a: unknown, b: unknown): boolean {
@@ -42,7 +44,13 @@ async function patchLive(
   repos: DatabaseRepositories,
   characterId: string,
   userId: string,
-  build: (fresh: CharacterWithDetails) => Partial<CharacterData> | Result<never> | null
+  build: (
+    fresh: CharacterWithDetails
+  ) =>
+    | Partial<CharacterData>
+    | Result<never>
+    | null
+    | Promise<Partial<CharacterData> | Result<never> | null>
 ): Promise<Result<Character | null>> {
   const found = await repos.characters.findWithDetails(characterId);
   if (!found.success) return found as Result<never>;
@@ -50,7 +58,7 @@ async function patchLive(
   const fresh = found.data;
   const denied = notOwnerOrGm(fresh, userId);
   if (denied) return denied;
-  const patch = build(fresh);
+  const patch = await build(fresh);
   if (patch === null) return { success: true, data: null };
   if ('success' in patch) return patch;
   return repos.characterManagement.updateCharacterWithValidation(characterId, userId, {
@@ -73,8 +81,10 @@ export function setStress(
   repos: DatabaseRepositories,
   input: SetStressInput
 ): Promise<Result<Character | null>> {
-  return patchLive(repos, input.characterId, input.userId, fresh => {
-    const next = clampStress(fresh.ruleset.content, input.stress);
+  return patchLive(repos, input.characterId, input.userId, async fresh => {
+    const crew = await crewContextFor(repos, fresh.gameId);
+    if (!crew.success) return crew as Result<never>;
+    const next = clampStress(fresh.ruleset.content, input.stress, fresh.characterData, crew.data);
     return next === (fresh.characterData?.stress ?? 0) ? null : { stress: next };
   });
 }
@@ -103,7 +113,7 @@ export function saveCharacterBuild(
   repos: DatabaseRepositories,
   input: SaveCharacterBuildInput
 ): Promise<Result<Character | null>> {
-  return patchLive(repos, input.characterId, input.userId, fresh => {
+  return patchLive(repos, input.characterId, input.userId, async fresh => {
     const { base, draft } = input;
     const live = fresh.characterData as unknown as Record<string, unknown>;
     const from = base as unknown as Record<string, unknown>;
@@ -123,6 +133,33 @@ export function saveCharacterBuild(
         },
       };
     }
-    return Object.fromEntries(changed.map(k => [k, to[k]])) as Partial<CharacterData>;
+    const patch = Object.fromEntries(changed.map(k => [k, to[k]])) as Partial<CharacterData>;
+    // 1) Conditions marked in the editor pay down what the LIVE row owes — the single place this
+    //    happens (the editor draft never edits the debt). Settled FIRST, so a stress overflow in
+    //    the same save is capped against the debt that actually remains.
+    if (patch.trauma !== undefined) {
+      const owed = fresh.characterData.traumaPending;
+      const settled = reconcileTraumaPending(fresh.characterData, {
+        trauma: patch.trauma,
+        ...(owed !== undefined ? { traumaPending: owed } : {}),
+      });
+      if (settled.traumaPending !== undefined) patch.traumaPending = settled.traumaPending;
+    }
+    // 2) Raising stress follows the same RAW overflow as every other stress path: marking the last
+    //    box resets stress to 0 and owes a trauma (never a full track kept as-is).
+    const liveStress = fresh.characterData.stress ?? 0;
+    if (typeof patch.stress === 'number' && patch.stress > liveStress) {
+      const crew = await crewContextFor(repos, fresh.gameId);
+      if (!crew.success) return crew as Result<never>;
+      const change = applyStressChange(
+        fresh.ruleset.content,
+        { ...fresh.characterData, ...patch, stress: liveStress },
+        patch.stress - liveStress,
+        crew.data
+      );
+      patch.stress = change.stress;
+      if (change.trauma) patch.traumaPending = change.traumaPending;
+    }
+    return patch;
   });
 }

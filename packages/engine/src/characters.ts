@@ -20,7 +20,7 @@ import {
   type Roll,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { notOwner } from './ownership';
+import { crewContextFor, notOwner, notOwnerOrGm } from './ownership';
 
 /**
  * Campaign-feed copy for a stress overflow (RAW: marking the last stress box = trauma). Functions of
@@ -68,10 +68,14 @@ export async function applyStress(
   if (!found.success) return found as Result<never>;
   if (!found.data) return { success: true, data: null };
   const char = found.data;
-  const owned = notOwner(char, input.userId);
+  const owned = notOwnerOrGm(char, input.userId);
   if (owned) return owned;
   const data = char.characterData;
-  const change = applyStressChange(char.ruleset.content, data, input.stress);
+  // The campaign crew's abilities can grant stress boxes (`effects.stressBoxes`); the overflow
+  // point must match the repository's validation, which counts them.
+  const crew = await crewContextFor(repos, char.gameId);
+  if (!crew.success) return crew as Result<never>;
+  const change = applyStressChange(char.ruleset.content, data, input.stress, crew.data);
   if (!change.trauma && change.stress === (data?.stress ?? 0)) return { success: true, data: null };
   const updated = await repos.characterManagement.updateCharacterWithValidation(
     input.characterId,
@@ -131,7 +135,7 @@ export async function chooseTrauma(
   if (!found.success) return found as Result<never>;
   if (!found.data) return { success: false, error: { message: 'Character not found' } };
   const char = found.data;
-  const owned = notOwner(char, input.userId);
+  const owned = notOwnerOrGm(char, input.userId);
   if (owned) return owned;
   const content = char.ruleset.content;
   if (pendingTrauma(char.characterData) === 0) {

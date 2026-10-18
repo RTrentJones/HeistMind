@@ -60,7 +60,11 @@ const CHARACTER = {
 } as unknown as CharacterWithDetails;
 
 function repos(overrides: Record<string, unknown>): DatabaseRepositories {
-  return overrides as unknown as DatabaseRepositories;
+  // Default: the campaign has no crew yet (no crew-granted stress boxes); suites override `crews`.
+  return {
+    crews: { findByGame: vi.fn().mockResolvedValue(ok(null)) },
+    ...overrides,
+  } as unknown as DatabaseRepositories;
 }
 
 describe('applyStress', () => {
@@ -75,6 +79,61 @@ describe('applyStress', () => {
       characterData: expect.objectContaining({ stress: 8 }),
     });
     expect(out.success && out.data?.trauma).toBe(false);
+  });
+
+  it("lets the campaign's GM mark stress on a player's character (owner-or-GM, like the RLS write)", async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const asGmGame = {
+      ...CHARACTER,
+      createdBy: 'player-1',
+      game: { createdBy: 'gm-1' },
+    } as unknown as CharacterWithDetails;
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(asGmGame)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await applyStress(r, { characterId: 'c1', userId: 'gm-1', stress: 2 });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('c1', 'gm-1', {
+      characterData: expect.objectContaining({ stress: 8 }),
+    });
+  });
+
+  it('refuses (writes nothing) when the crew lookup fails — never judges a possibly-short track', async () => {
+    const update = vi.fn();
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      crews: {
+        findByGame: vi.fn().mockResolvedValue({ success: false, error: { message: 'db down' } }),
+      },
+    });
+    const out = await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 });
+    expect(out.success).toBe(false);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("counts the campaign crew's stress boxes before calling an overflow", async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const content = structuredClone(CHARACTER.ruleset.content);
+    content.crew = {
+      ...(content.crew ?? { types: [] }),
+      abilities: [
+        { id: 'crew-hardened', name: 'Hardened', description: '', effects: { stressBoxes: 1 } },
+      ],
+    } as typeof content.crew;
+    const onCrew = { ...CHARACTER, ruleset: { ...CHARACTER.ruleset, content } };
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(onCrew)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      crews: { findByGame: vi.fn().mockResolvedValue(ok({ crewAbilities: ['crew-hardened'] })) },
+    });
+    // 6 + 3 = 9: the base track would overflow here, but the crew box makes the max 10.
+    const out = await applyStress(r, { characterId: 'c1', userId: 'u1', stress: 3 });
+    expect(out.success && out.data?.trauma).toBe(false);
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 9 }),
+    });
   });
 
   it('marking the LAST stress box → stress 0, one trauma owed, and a feed note (RAW)', async () => {
@@ -326,6 +385,25 @@ describe('chooseTrauma', () => {
       characterData: expect.objectContaining({ trauma: [condition], traumaPending: 0 }),
     });
     expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'picked' }));
+  });
+
+  it("lets the campaign's GM pick the condition on a player's sheet (owner-or-GM)", async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const asGm = { ...owing, createdBy: 'player-1', game: { createdBy: 'gm-1' } };
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'n1' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(asGm)) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await chooseTrauma(r, {
+      characterId: 'c1',
+      userId: 'gm-1',
+      condition,
+      logNote: 'picked',
+      retireNote: 'retire',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalled();
   });
 
   it('refuses when nothing is owed, or the condition is not in the ruleset list', async () => {

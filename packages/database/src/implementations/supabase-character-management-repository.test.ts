@@ -462,11 +462,32 @@ describe('advanceCharacter', () => {
 
   // --- rules-accuracy round (review #1 / #13) ------------------------------------------------
 
-  it('refuses a cross-playbook ability without a Veteran slot (ABILITY_LOCKED)', async () => {
-    const { repo } = repoWith({
+  it('taking a cross-playbook ability takes the playbook Veteran with it — ONE advance (RAW)', async () => {
+    const { repo, lastUpdate } = repoWith({
       characters: { data: charRow({ experience_points: 5 }), error: null },
       games: { data: gameRow, error: null },
       rulesets: { data: rulesetRow(content()), error: null },
+    });
+    const r = await repo.advanceCharacter('c1', 'u1', {
+      type: 'ability',
+      target: 'ghost-step',
+      cost: 2,
+      description: 'x',
+    });
+    expect(r.success).toBe(true);
+    const learned = lastUpdate()?.data.character_data.specialAbilities;
+    expect(learned).toEqual(expect.arrayContaining(['veteran', 'ghost-step']));
+    // One advance's price, not two.
+    expect(lastUpdate()?.data.experience_points).toBe(3);
+  });
+
+  it('refuses a cross-playbook ability when no Veteran slot can open (ABILITY_LOCKED)', async () => {
+    const c = content();
+    c.playbooks[0]!.specialAbilities = ['battle-born', 'sharpshot']; // no Veteran on this roster
+    const { repo } = repoWith({
+      characters: { data: charRow({ experience_points: 5 }), error: null },
+      games: { data: gameRow, error: null },
+      rulesets: { data: rulesetRow(c), error: null },
     });
     const r = await repo.advanceCharacter('c1', 'u1', {
       type: 'ability',

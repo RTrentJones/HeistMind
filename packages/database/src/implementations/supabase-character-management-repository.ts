@@ -22,9 +22,11 @@ import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
 import { toJson, parseSupabaseJson } from '../adapters/profile-adapter';
 import { SupabaseCharacterRepository } from './supabase-character-repository';
 import {
+  grandfatherHeldAbilities,
   validateCharacter,
   advancementCost,
   isAbilityUnlocked,
+  veteranGatewayFor,
   usesXpTracks,
   xpTrackFull,
   advanceTrack,
@@ -177,19 +179,14 @@ export class SupabaseCharacterManagementRepository
       if (!ruleset.success) return ruleset as Result<Character>;
 
       const crew = current.data.gameId ? await this.crewForGame(current.data.gameId) : null;
-      const result = validateCharacter(ruleset.data, nextData, { mode: 'live', crew });
-      // Grandfathering: a sheet saved before the live veteran budget existed may hold cross-playbook
-      // abilities without a slot. Don't brick its everyday writes (stress, XP, harm) — refuse only
-      // when THIS write adds an ability. New illegal picks are still blocked here and on advance.
-      const prior = new Set(current.data.characterData.specialAbilities);
-      const addsAbility = nextData.specialAbilities.some(id => !prior.has(id));
-      const errors = addsAbility
-        ? result.errors
-        : result.errors.filter(
-            e => !(e.code === 'ABILITY_LOCKED' && e.field.startsWith('specialAbilities.'))
-          );
-      if (errors.length > 0)
-        return failValidation<Character>({ ...result, errors, isValid: false });
+      // Grandfathering (core `grandfatherHeldAbilities`): refuse a held-but-unslotted
+      // cross-playbook ability only when THIS write adds an ability.
+      const result = grandfatherHeldAbilities(
+        validateCharacter(ruleset.data, nextData, { mode: 'live', crew }),
+        current.data.characterData.specialAbilities,
+        nextData.specialAbilities
+      );
+      if (!result.isValid) return failValidation<Character>(result);
 
       return this.characters.update(characterId, userId, data);
     });
@@ -291,12 +288,16 @@ export class SupabaseCharacterManagementRepository
         // RAW: a playbook advance takes an ability from YOUR playbook; anything else needs a free
         // Veteran slot (the character's own Veteran ability, or a crew grant). Same predicate the
         // wizard, the editor and the bot's suggestions use.
-        if (!isAbilityUnlocked(ruleset, character.characterData, adv.target, crew)) {
+        // Taking Veteran IS taking the other playbook's ability (one advance): when only a slot is
+        // missing and the playbook has an untaken Veteran, both land together.
+        const gateway = veteranGatewayFor(ruleset, character.characterData, adv.target, crew);
+        if (gateway) next.specialAbilities = [...next.specialAbilities, gateway];
+        else if (!isAbilityUnlocked(ruleset, character.characterData, adv.target, crew)) {
           return {
             success: false,
             error: {
               message:
-                'That ability comes from another playbook — take Veteran first to open a slot.',
+                'That ability comes from another playbook and no Veteran slot can open for it.',
               code: 'ABILITY_LOCKED',
             },
           };

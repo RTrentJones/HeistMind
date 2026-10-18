@@ -5,10 +5,10 @@
 import {
   effectiveStressMax,
   HARM_LEVELS,
-  isAbilityUnlocked,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   PLAYBOOK_TRACK,
   rulesetActions,
-  stressBounds,
   usesXpTracks,
   xpMarks,
   xpTrackSize,
@@ -180,7 +180,7 @@ export const handleVice: CommandHandler = (ctx, interaction) => {
       logLabel: copy.viceLog,
     });
     if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
-    const max = stressBounds(character.ruleset.content).max;
+    const max = effectiveStressMax(character.ruleset.content, character.characterData);
     const embed = rollEmbed({
       title: copy.viceTitle(character.name, pool.zeroDice ? 0 : pool.count),
       results,
@@ -378,8 +378,13 @@ export async function xpAutocomplete(
     const crew = await crewContextFor(ctx, character);
     const abilities = content.specialAbilities
       .filter(a => !owned.includes(a.id))
-      .filter(a => isAbilityUnlocked(content, character.characterData, a.id, crew))
-      .map(a => ({ name: `Learn ${a.name}`, value: `ability:${a.id}` }));
+      .filter(a => isAbilityAdvanceable(content, character.characterData, a.id, crew))
+      .map(a => ({
+        name: veteranGatewayFor(content, character.characterData, a.id, crew)
+          ? `Learn ${a.name} (takes Veteran)`
+          : `Learn ${a.name}`,
+        value: `ability:${a.id}`,
+      }));
     const dots = rulesetActions(content).map(name => {
       const rating = character.characterData.skills[name] ?? 0;
       return { name: `+1 ${name} dot (${rating}→${rating + 1})`, value: `skill:${name}` };

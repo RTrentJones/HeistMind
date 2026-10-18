@@ -163,6 +163,18 @@ describe('/crew', () => {
     expect(String(short[1]?.payload)).toContain('16 coin');
   });
 
+  it('tier refuses (no write, no charge) when the ruleset that prices it cannot be read', async () => {
+    const r = repos({
+      crews: { findByGame: vi.fn().mockResolvedValue(ok(CREW)), update: vi.fn() },
+      rulesets: {
+        findById: vi.fn().mockResolvedValue({ success: false, error: { message: 'db down' } }),
+      },
+    });
+    const calls = await run(await handleCrew(ctx(r), guildCmd('crew', 'tier')));
+    expect(r.crews.update).not.toHaveBeenCalled();
+    expect(calls.map(c => c.method)).toContain('ephemeral');
+  });
+
   it('heat accepts a negative amount (reduce heat) — never below 0, Wanted untouched', async () => {
     const r = repos();
     await run(

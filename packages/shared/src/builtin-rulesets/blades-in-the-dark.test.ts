@@ -4,6 +4,8 @@ import { describe, it, expect } from 'vitest';
 import {
   advanceTier,
   crewHalvesTierCost,
+  grandfatherHeldAbilities,
+  isAbilityAdvanceable,
   isAbilityUnlocked,
   validateCharacter,
   type CharacterData,
@@ -49,7 +51,36 @@ describe('BitD builtin — playbooks', () => {
         expect(seen.get(id), id).toBeUndefined();
         seen.set(id, pb.id);
       }
-    expect(BITD.specialAbilities.filter(a => a.name === 'Vigorous')).toHaveLength(1);
+    expect(BITD.specialAbilities.filter(a => a.name === 'Vigorous' && !a.retired)).toHaveLength(1);
+  });
+
+  it('keeps retired definitions readable for held sheets but never offers them', () => {
+    const retired = BITD.specialAbilities.filter(a => a.retired).map(a => a.id);
+    expect(retired).toEqual(
+      expect.arrayContaining([
+        'hound-tracker',
+        'hound-vigorous',
+        'slide-coverid',
+        'slide-acalculating',
+      ])
+    );
+    const rostered = new Set(BITD.playbooks.flatMap(pb => pb.specialAbilities));
+    for (const id of retired) expect(rostered.has(id), id).toBe(false);
+    // A Hound can't newly take one (not even through Veteran)…
+    const hound = cutter({ playbook: 'hound', specialAbilities: ['veteran'] });
+    expect(isAbilityUnlocked(BITD, hound, 'hound-tracker')).toBe(false);
+    expect(isAbilityAdvanceable(BITD, hound, 'hound-tracker')).toBe(false);
+    // …but a sheet that already holds one still validates its everyday writes (grandfathered).
+    const held = cutter({ playbook: 'hound', specialAbilities: ['hound-tracker'] });
+    const r = grandfatherHeldAbilities(
+      validateCharacter(BITD, held, { mode: 'live', crew: { crewAbilities: [] } }),
+      held.specialAbilities,
+      held.specialAbilities
+    );
+    expect(r.errors.filter(e => e.field === 'specialAbilities.hound-tracker')).toEqual([]);
+    expect(BITD.crew?.abilities?.filter(a => a.retired).map(a => a.id)).toEqual(
+      expect.arrayContaining(['crew-deadly-friends', 'crew-fortified'])
+    );
   });
 
   it('fixes the Hound name swap (ids stable): Sharpshooter is Sharpshooter, Scout is Scout', () => {

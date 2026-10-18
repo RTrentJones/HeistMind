@@ -5,8 +5,11 @@
 // persisted form rolls the character's OWN attribute rating from the sheet (RAW: "1d for each
 // Attribute rating" — review #6), never a typed count, so the stress written to the sheet comes
 // from dice the sheet actually grants. Anything less rolls display-only with a footer saying why.
+// `bonus:` adds the +Nd an ability or crew upgrade grants a resistance (Iron Will, Bodyguard…):
+// those bonuses are situational prose, so the player claims them, and the embed shows the claim.
 import {
   deriveAttributes,
+  usesActionRatings,
   diceForRating,
   resistanceStress,
   rollOutcome,
@@ -47,6 +50,7 @@ function rollPool(ctx: BotContext, rating: number) {
 export const handleResist: CommandHandler = (ctx, interaction) => {
   const dice = integerOption(interaction, 'dice');
   const attribute = stringOption(interaction, 'attribute');
+  const bonus = integerOption(interaction, 'bonus') ?? 0;
 
   const embed = (
     rating: number,
@@ -60,6 +64,7 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
       results: roll.results,
       outcome: rollOutcome(roll.results, { zeroDice: roll.zeroDice }),
       detail,
+      ...(bonus > 0 ? { note: copy.resistBonusNote(bonus) } : {}),
       ...(footer ? { footer } : {}),
     });
 
@@ -67,17 +72,17 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
   const guildId = 'guild_id' in interaction ? interaction.guild_id : undefined;
   if (!guildId || !ctx.repos) {
     if (dice === null) return inline(reply(copy.resistNeedsDice, { ephemeral: true }));
-    const roll = rollPool(ctx, dice);
-    return inline(replyEmbed(embed(dice, attribute, roll, copy.resistCost(roll.stress))));
+    const roll = rollPool(ctx, dice + bonus);
+    return inline(replyEmbed(embed(dice + bonus, attribute, roll, copy.resistCost(roll.stress))));
   }
 
   const repos = ctx.repos;
   return deferred(async followUp => {
     const displayOnly = async (footer: string) => {
       if (dice === null) return failEphemeral(followUp, copy.resistNeedsDice);
-      const roll = rollPool(ctx, dice);
+      const roll = rollPool(ctx, dice + bonus);
       return followUp.editOriginal({
-        embeds: [embed(dice, attribute, roll, copy.resistCost(roll.stress), footer)],
+        embeds: [embed(dice + bonus, attribute, roll, copy.resistCost(roll.stress), footer)],
       });
     };
 
@@ -96,9 +101,15 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
       const names = (character.ruleset.content.attributes ?? []).map(a => a.name);
       return failEphemeral(followUp, copy.resistNeedsAttribute(names));
     }
+    // Same rating the sheet shows: derived from action dots in an action-ratings ruleset, the stored
+    // attribute in a point-buy one (where no rated actions exist to derive from).
+    const content = character.ruleset.content;
     const rating =
-      deriveAttributes(character.ruleset.content, character.characterData)[attr.id] ?? 0;
-    const roll = rollPool(ctx, rating);
+      (usesActionRatings(content)
+        ? deriveAttributes(content, character.characterData)[attr.id]
+        : character.characterData.attributes[attr.id]) ?? 0;
+    const pool = rating + bonus;
+    const roll = rollPool(ctx, pool);
 
     const logged = await rollResistance(repos, {
       gameId: game.id,
@@ -114,7 +125,7 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
     return followUp.editOriginal({
       embeds: [
         embed(
-          rating,
+          pool,
           attr.name,
           roll,
           copy.resistCharged(character.name, logged.data.stress),

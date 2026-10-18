@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import type { RulesetContent, CharacterData } from '../domain';
 import {
+  grandfatherHeldAbilities,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   clampStress,
+  reconcileTraumaPending,
   validateCharacter,
   pointBuySpent,
   abilityChoiceLimit,
@@ -358,6 +362,36 @@ describe('validateCharacter — creation mode', () => {
       crew: { crewAbilities: ['crew-vet'] },
     });
     expect(covered.errors.some(e => e.code === 'ABILITY_LOCKED')).toBe(false);
+  });
+
+  it('veteranGatewayFor: a locked cross-playbook pick is reachable by taking the playbook Veteran', () => {
+    const rs = ruleset({ characterCreation: { steps: [], abilityChoices: 5 } });
+    // Without a Veteran on the roster there is no gateway, so the pick is not advanceable.
+    expect(veteranGatewayFor(rs, character(), 'ghost-step')).toBeNull();
+    expect(isAbilityAdvanceable(rs, character(), 'ghost-step')).toBe(false);
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'pb-veteran', name: 'Veteran', description: '', effects: { veteran: 1 } },
+    ];
+    rs.playbooks[0]!.specialAbilities = [...rs.playbooks[0]!.specialAbilities, 'pb-veteran'];
+    expect(veteranGatewayFor(rs, character(), 'ghost-step')).toBe('pb-veteran');
+    expect(isAbilityAdvanceable(rs, character(), 'ghost-step')).toBe(true);
+    // Once Veteran is held and its slot used, no second gateway exists.
+    const used = character({ specialAbilities: ['pb-veteran', 'ghost-step'] });
+    rs.specialAbilities.push({ id: 'shadow-form', name: 'Shadow Form', description: '' });
+    expect(veteranGatewayFor(rs, used, 'shadow-form')).toBeNull();
+    // A prerequisite lock is never bypassed by Veteran.
+    expect(veteranGatewayFor(rs, character(), 'menace')).toBeNull();
+  });
+
+  it('grandfatherHeldAbilities drops ABILITY_LOCKED only when the write adds no ability', () => {
+    const locked = {
+      isValid: false,
+      errors: [{ field: 'specialAbilities.ghost-step', code: 'ABILITY_LOCKED', message: 'x' }],
+      warnings: [],
+    } as ReturnType<typeof validateCharacter>;
+    expect(grandfatherHeldAbilities(locked, ['ghost-step'], ['ghost-step']).isValid).toBe(true);
+    expect(grandfatherHeldAbilities(locked, ['ghost-step'], ['ghost-step', 'menace'])).toBe(locked);
   });
 
   it('isAbilityUnlocked offers a candidate only while a veteran slot is free', () => {
@@ -1082,6 +1116,23 @@ describe('clampStress', () => {
     expect(clampStress(content, 4)).toBe(4);
     expect(clampStress(content, 99)).toBe(9);
   });
+
+  it('with the character, clamps into the EFFECTIVE track (ability + crew stress boxes)', () => {
+    const rs = ruleset({});
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'tough', name: 'Tough', description: '', effects: { stressBoxes: 2 } },
+    ];
+    rs.crew = {
+      types: [],
+      abilities: [{ id: 'hardy', name: 'Hardy', description: '', effects: { stressBoxes: 1 } }],
+    };
+    const data = character({ specialAbilities: ['tough'] });
+    const base = stressBounds(rs).max;
+    expect(clampStress(rs, 99, data)).toBe(base + 2);
+    expect(clampStress(rs, base + 1, data)).toBe(base + 1); // a clear on the long track keeps its value
+    expect(clampStress(rs, 99, data, { crewAbilities: ['hardy'] })).toBe(base + 3);
+  });
 });
 
 // ----- rules-accuracy round (review-rules #1/#3/#8/#9) -----------------------------------------
@@ -1259,6 +1310,29 @@ describe('creation: a Veteran pick opens exactly one cross-playbook slot', () =>
     const data = character({ specialAbilities: ['veteran', 'battle-born'] });
     expect(codes(validateCharacter(vetRs(), data, { mode: 'creation' }))).toContain(
       'ABILITY_LIMIT'
+    );
+  });
+});
+
+describe('reconcileTraumaPending', () => {
+  it('each newly marked condition pays down one owed trauma (never below 0)', () => {
+    const prev = { trauma: ['Cold'] };
+    expect(
+      reconcileTraumaPending(prev, { trauma: ['Cold', 'Haunted'], traumaPending: 1 }).traumaPending
+    ).toBe(0);
+    expect(
+      reconcileTraumaPending(prev, { trauma: ['Cold', 'Haunted', 'Obsessed'], traumaPending: 1 })
+        .traumaPending
+    ).toBe(0);
+    // Nothing owed, or no new condition → unchanged.
+    expect(
+      reconcileTraumaPending(prev, { trauma: ['Cold', 'Haunted'] } as {
+        trauma: string[];
+        traumaPending?: number;
+      }).traumaPending
+    ).toBeUndefined();
+    expect(reconcileTraumaPending(prev, { trauma: ['Cold'], traumaPending: 1 }).traumaPending).toBe(
+      1
     );
   });
 });

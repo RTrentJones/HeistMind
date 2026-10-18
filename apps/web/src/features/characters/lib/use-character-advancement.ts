@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import {
+  grandfatherHeldAbilities,
+  reconcileTraumaPending,
   validateCharacter,
   type CharacterAdvancement,
   type CharacterData,
@@ -48,7 +50,15 @@ export function useCharacterAdvancement(character: CharacterWithDetails, crew: C
   ): Promise<SaveBuildOutcome> => {
     const userId = user?.id;
     if (!userId) return { status: 'failed' };
-    const result = validateCharacter(content, draft, { mode: 'live', crew });
+    // Same grandfathering as the server: an unslotted cross-playbook ability the sheet already held
+    // doesn't block an unrelated save (gear, harm) — only a newly added one does.
+    // Validate the build as it will be stored: conditions picked since the snapshot pay down owed
+    // trauma on save, so a fourth condition resolving the last debt isn't "trauma over the limit".
+    const result = grandfatherHeldAbilities(
+      validateCharacter(content, reconcileTraumaPending(base, draft), { mode: 'live', crew }),
+      base.specialAbilities,
+      draft.specialAbilities
+    );
     if (!result.isValid) {
       setError(result.errors.map(e => e.message).join(' '));
       return { status: 'failed' };

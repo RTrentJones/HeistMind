@@ -2,7 +2,8 @@
 
 import {
   consumesVeteranSlot,
-  isAbilityUnlocked,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   usesXpTracks,
   xpTrackFull,
   PLAYBOOK_TRACK,
@@ -40,10 +41,11 @@ export function AdvancementOptions({
   // RAW (review #1): an advance takes an ability from YOUR playbook; another playbook's ability
   // needs a free Veteran slot (your own Veteran, or a crew grant) — the same gate the repository
   // runs. Other playbooks' abilities with no slot free are hidden behind a count, not offered.
-  const unowned = content.specialAbilities.filter(a => !owned.includes(a.id));
+  const unowned = content.specialAbilities.filter(a => !owned.includes(a.id) && !a.retired);
   const data = character.characterData;
   const crossLocked = unowned.filter(
-    a => consumesVeteranSlot(content, data, a.id) && !isAbilityUnlocked(content, data, a.id, crew)
+    a =>
+      consumesVeteranSlot(content, data, a.id) && !isAbilityAdvanceable(content, data, a.id, crew)
   );
   const buyable = unowned
     .filter(a => !crossLocked.includes(a))
@@ -102,6 +104,11 @@ export function AdvancementOptions({
             <Stack direction='row' justify='between' align='center' gap='sm'>
               <div>
                 <Text as='strong'>{ability.name}</Text>
+                {veteranGatewayFor(content, data, ability.id, crew) && (
+                  <Badge variant='outline' size='sm' className='ml-2'>
+                    {t('components.characterEditor.viaVeteran')}
+                  </Badge>
+                )}
                 {ability.tier != null && (
                   <Badge variant='gold' size='sm' className='ml-2'>
                     {t('components.characterEditor.tier', { tier: ability.tier })}

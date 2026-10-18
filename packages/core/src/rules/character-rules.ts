@@ -236,6 +236,8 @@ export function isAbilityUnlocked(
 ): boolean {
   const ability = findAbility(ruleset, abilityId);
   if (!ability) return true;
+  // A retired definition stays legal for a sheet that already holds it, never as a new pick.
+  if (ability.retired && !data.specialAbilities.includes(abilityId)) return false;
   if (!prerequisiteSatisfied(ruleset, data, ability)) return false;
   if (consumesVeteranSlot(ruleset, data, abilityId)) {
     const granted = collectAbilityEffects(ruleset, data, crew).veteran;
@@ -246,9 +248,63 @@ export function isAbilityUnlocked(
   return true;
 }
 
-/** Clamp a stress value into the ruleset's track (0..max). */
-export function clampStress(content: RulesetContent, value: number): number {
-  return Math.max(0, Math.min(value, stressBounds(content).max));
+/**
+ * RAW: taking Veteran IS taking an ability from another playbook — one advance, not two. When a
+ * cross-playbook `abilityId` is locked only for want of a slot, returns the id of an unheld,
+ * takeable Veteran-granting ability from the character's OWN roster that would open it, so the
+ * advance can add both together. Null when the ability is already unlocked, is locked for another
+ * reason (prerequisite), or no such Veteran ability exists.
+ */
+export function veteranGatewayFor(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  abilityId: string,
+  crew?: CrewContext | null
+): string | null {
+  const ability = findAbility(ruleset, abilityId);
+  if (!ability || !prerequisiteSatisfied(ruleset, data, ability)) return null;
+  if (isAbilityUnlocked(ruleset, data, abilityId, crew)) return null;
+  const roster = findPlaybook(ruleset, data.playbook)?.specialAbilities ?? [];
+  for (const id of roster) {
+    if (data.specialAbilities.includes(id)) continue;
+    if ((findAbility(ruleset, id)?.effects?.veteran ?? 0) <= 0) continue;
+    if (!isAbilityUnlocked(ruleset, data, id, crew)) continue;
+    const withVeteran = { ...data, specialAbilities: [...data.specialAbilities, id] };
+    if (isAbilityUnlocked(ruleset, withVeteran, abilityId, crew)) return id;
+  }
+  return null;
+}
+
+/**
+ * Whether an advance may take this ability: it is unlocked now, or it is a cross-playbook pick the
+ * advance can reach by taking the playbook's Veteran with it ({@link veteranGatewayFor}). The one
+ * predicate the editor, the bot's suggestions and the repository's advance gate share.
+ */
+export function isAbilityAdvanceable(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  abilityId: string,
+  crew?: CrewContext | null
+): boolean {
+  return (
+    isAbilityUnlocked(ruleset, data, abilityId, crew) ||
+    veteranGatewayFor(ruleset, data, abilityId, crew) !== null
+  );
+}
+
+/**
+ * Clamp a stress value into the track (0..max). With the character (and its campaign crew) the max
+ * is the EFFECTIVE track — ability and crew stress boxes included — so a clear on a lengthened track
+ * never drops more than asked; without them it is the ruleset's base track.
+ */
+export function clampStress(
+  content: RulesetContent,
+  value: number,
+  data?: CharacterData,
+  crew?: CrewContext | null
+): number {
+  const max = data ? effectiveStressMax(content, data, crew) : stressBounds(content).max;
+  return Math.max(0, Math.min(value, max));
 }
 
 /** Stress/trauma bounds, defaulting to BitD values when the ruleset omits `stress`. */
@@ -269,6 +325,22 @@ export function effectiveStressMax(
 export function pendingTrauma(data: Pick<CharacterData, 'traumaPending'>): number {
   const n = data.traumaPending ?? 0;
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/**
+ * Marking trauma conditions pays down an owed trauma (a stress overflow): every condition `next`
+ * holds beyond `prev` resolves one pending trauma. Returns `next` with `traumaPending` reconciled —
+ * however the condition was picked (the sheet prompt, the editor's trauma controls), the same
+ * overflow is never counted twice toward retirement.
+ */
+export function reconcileTraumaPending<T extends Pick<CharacterData, 'trauma' | 'traumaPending'>>(
+  prev: Pick<CharacterData, 'trauma'>,
+  next: T
+): T {
+  const owed = next.traumaPending ?? 0;
+  const added = (next.trauma ?? []).length - (prev.trauma ?? []).length;
+  if (owed === 0 || added <= 0) return next;
+  return { ...next, traumaPending: Math.max(0, owed - added) };
 }
 
 /**
@@ -613,6 +685,25 @@ const warn = (field: string, message: string, suggestion?: string): ValidationWa
   message,
   suggestion,
 });
+
+/**
+ * Grandfathering for the live veteran budget: a sheet saved before that budget existed may hold
+ * cross-playbook abilities without a slot. Don't brick its everyday writes (gear, harm, stress) —
+ * an `ABILITY_LOCKED` error only stands when the write ADDS an ability the prior sheet didn't hold.
+ * Shared by the repository's server-side gate and the editor's client-side save gate so they agree.
+ */
+export function grandfatherHeldAbilities(
+  result: ValidationResult,
+  priorAbilities: readonly string[],
+  nextAbilities: readonly string[]
+): ValidationResult {
+  const prior = new Set(priorAbilities);
+  if (nextAbilities.some(id => !prior.has(id))) return result;
+  const errors = result.errors.filter(
+    e => !(e.code === 'ABILITY_LOCKED' && e.field.startsWith('specialAbilities.'))
+  );
+  return { ...result, errors, isValid: errors.length === 0 };
+}
 
 /**
  * Validate a character build against its ruleset. `errors` block (isValid=false); `warnings`

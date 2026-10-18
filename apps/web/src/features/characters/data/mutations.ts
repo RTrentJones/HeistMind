@@ -193,9 +193,11 @@ export function useApplyStress(characterId: string, gameId: string | null) {
   return useMutation({
     mutationFn: async (vars: { userId: string; stress: number; traumaLog: TraumaLogCopy }) =>
       unwrap(await applyStress(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    // Awaited so `isPending` holds until the tracker has the fresh value — a second click on a
+    // stale cache would otherwise send a delta computed from the old stress.
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }
@@ -210,9 +212,11 @@ export function useChooseTrauma(characterId: string, gameId: string | null) {
       logNote: string;
       retireNote: string;
     }) => unwrap(await chooseTrauma(getRepositories(), { characterId, ...vars })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: characterKeys.all });
-      if (gameId !== null) void qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    // Awaited so `isPending` holds until the tracker has the fresh value — a second click on a
+    // stale cache would otherwise send a delta computed from the old stress.
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
+      if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
     },
   });
 }

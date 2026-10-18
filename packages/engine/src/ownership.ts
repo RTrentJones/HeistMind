@@ -2,7 +2,8 @@
 // and the repository write paths key on the row id alone — so every character-mutating use-case
 // asserts creator-is-actor HERE, closing the hole for every present and future service-role
 // caller (the RLS'd web client gets the same check for free).
-import type { Character, Result } from '@heist-mind/core';
+import type { Character, CrewContext, Result } from '@heist-mind/core';
+import type { DatabaseRepositories } from '@heist-mind/database';
 
 /** Null when the actor owns the character; the ready-to-return failure otherwise. */
 export function notOwner(
@@ -25,4 +26,20 @@ export function notOwnerOrGm(
   if (character.createdBy === userId) return null;
   if (character.game?.createdBy === userId) return null;
   return notOwner(character, userId);
+}
+
+/**
+ * The crew context a character's rules are judged in: its campaign crew's abilities, or none (a
+ * standalone character, or a campaign that hasn't started its crew). Crew abilities can grant
+ * stress boxes, action caps and Veteran slots, so a FAILED lookup is returned as a failure — a
+ * caller must refuse the write rather than judge it against a track that may be too short.
+ */
+export async function crewContextFor(
+  repos: DatabaseRepositories,
+  gameId: string | null
+): Promise<Result<CrewContext | null>> {
+  if (gameId === null) return { success: true, data: null };
+  const crew = await repos.crews.findByGame(gameId);
+  if (!crew.success) return crew as Result<never>;
+  return { success: true, data: crew.data ? { crewAbilities: crew.data.crewAbilities } : null };
 }

@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  clampStress,
   deriveAttributes,
-  stressBounds,
+  effectiveStressMax,
   usesActionRatings,
   usesXpTracks,
   xpTrackSize,
@@ -54,7 +53,6 @@ export function CharacterEditor({
 }) {
   const { t } = useTranslation();
   const content = character.ruleset.content;
-  const bounds = stressBounds(content);
 
   const [section, setSection] = useState<Section>(initialSection);
   // Follow a changed request from the opener (e.g. editor open on Build, then "Take advance").
@@ -68,6 +66,9 @@ export function CharacterEditor({
   const crew: CrewContext | null = crewQuery.data
     ? { crewAbilities: crewQuery.data.crewAbilities }
     : null;
+
+  // Ability and crew stress boxes lengthen the track (the same max the engine overflows at).
+  const stressMax = effectiveStressMax(content, draft, crew);
 
   const { saving, error, saveBuild, buyAbility, advanceAction } = useCharacterAdvancement(
     character,
@@ -107,6 +108,8 @@ export function CharacterEditor({
     setRebase(false);
   }, [rebase, character.characterData]);
 
+  // The draft never touches `traumaPending`: a condition picked here pays down owed trauma on SAVE
+  // (server-side, against the live row), so undoing an unsaved pick simply leaves the debt intact.
   const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
 
   // Saves are a PATCH of only the fields this draft changed vs the snapshot it started from,
@@ -225,13 +228,13 @@ export function CharacterEditor({
             <Heading level='h3'>{t('components.characterEditor.stress')}</Heading>
             <StressTracker
               current={draft.stress}
-              max={bounds.max}
+              max={stressMax}
               interactive
               showNumbers
               size='lg'
-              onChange={v => patch({ stress: clampStress(content, v) })}
+              onChange={v => patch({ stress: Math.max(0, Math.min(v, stressMax)) })}
             />
-            {draft.stress >= bounds.max && (
+            {draft.stress >= stressMax && (
               <Alert variant='warning' size='sm'>
                 {t('components.characterEditor.stressMaxed')}
               </Alert>

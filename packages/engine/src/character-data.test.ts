@@ -52,6 +52,7 @@ function reposWithLive(live: CharacterWithDetails) {
     characters: { findWithDetails: vi.fn().mockResolvedValue(ok(live)) },
     characterManagement: { updateCharacterWithValidation: update },
     rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+    crews: { findByGame: vi.fn().mockResolvedValue(ok(null)) },
   } as unknown as DatabaseRepositories;
   const written = () => update.mock.calls.at(-1)?.[2].characterData as CharacterData;
   return { r, update, written };
@@ -137,6 +138,66 @@ describe('saveCharacterBuild — patches only the fields the player changed', ()
     });
     expect(out).toEqual(ok(null));
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('filling the stress track in the editor follows RAW overflow (stress 0, one trauma owed)', async () => {
+    const max = DEFAULT_RULESET.stress?.max ?? 9;
+    const { r, written } = reposWithLive(character(LIVE_DATA));
+    const base = { ...LIVE_DATA };
+    const draft = { ...LIVE_DATA, stress: max };
+    const out = await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base, draft });
+    expect(out.success).toBe(true);
+    expect(written()).toMatchObject({ stress: 0, traumaPending: 1 });
+  });
+
+  it('marking an owed trauma condition in the editor pays the debt down on the live row', async () => {
+    const owing = { ...LIVE_DATA, stress: 0, trauma: [], traumaPending: 1 } as CharacterData;
+    const { r, written } = reposWithLive(character(owing));
+    const condition = DEFAULT_RULESET.traumaConditions![0]!;
+    // A draft that predates the overflow (no traumaPending) still settles the live debt.
+    const base = { ...owing, traumaPending: undefined } as unknown as CharacterData;
+    const draft = { ...base, trauma: [condition] } as CharacterData;
+    const out = await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base, draft });
+    expect(out.success).toBe(true);
+    expect(written()).toMatchObject({ trauma: [condition], traumaPending: 0 });
+  });
+
+  it('owing two and marking one leaves exactly one owed (reconciled once, against the live row)', async () => {
+    const owing = { ...LIVE_DATA, stress: 0, trauma: [], traumaPending: 2 } as CharacterData;
+    const { r, written } = reposWithLive(character(owing));
+    const condition = DEFAULT_RULESET.traumaConditions![0]!;
+    const draft = { ...owing, trauma: [condition] } as CharacterData;
+    await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base: owing, draft });
+    expect(written()).toMatchObject({ trauma: [condition], traumaPending: 1 });
+  });
+
+  it('a pick undone before saving leaves the debt untouched (nothing to write)', async () => {
+    const owing = { ...LIVE_DATA, stress: 0, trauma: [], traumaPending: 1 } as CharacterData;
+    const { r, update } = reposWithLive(character(owing));
+    const out = await saveCharacterBuild(r, {
+      characterId: 'c1',
+      userId: 'player',
+      base: owing,
+      draft: { ...owing },
+    });
+    expect(out).toEqual({ success: true, data: null });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('a save that both marks a condition and overflows stress settles the pick before the overflow', async () => {
+    const [c1, c2, c3] = DEFAULT_RULESET.traumaConditions!;
+    const max = DEFAULT_RULESET.stress?.max ?? 9;
+    const live = {
+      ...LIVE_DATA,
+      stress: max - 1,
+      trauma: [c1, c2],
+      traumaPending: 1,
+    } as CharacterData;
+    const { r, written } = reposWithLive(character(live));
+    const draft = { ...live, trauma: [c1, c2, c3], stress: max } as CharacterData;
+    await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base: live, draft });
+    // The pick pays the old debt; the overflow owes a fresh one (3 marked + 1 owed = the limit).
+    expect(written()).toMatchObject({ stress: 0, trauma: [c1, c2, c3], traumaPending: 1 });
   });
 
   it("lets the campaign's GM save (mirrors RLS) and rejects anyone else", async () => {
