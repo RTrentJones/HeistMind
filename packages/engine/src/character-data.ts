@@ -134,8 +134,19 @@ export function saveCharacterBuild(
       };
     }
     const patch = Object.fromEntries(changed.map(k => [k, to[k]])) as Partial<CharacterData>;
-    // Raising stress in the editor follows the same RAW overflow as every other stress path:
-    // marking the last box resets stress to 0 and owes a trauma (never a full track kept as-is).
+    // 1) Conditions marked in the editor pay down what the LIVE row owes — the single place this
+    //    happens (the editor draft never edits the debt). Settled FIRST, so a stress overflow in
+    //    the same save is capped against the debt that actually remains.
+    if (patch.trauma !== undefined) {
+      const owed = fresh.characterData.traumaPending;
+      const settled = reconcileTraumaPending(fresh.characterData, {
+        trauma: patch.trauma,
+        ...(owed !== undefined ? { traumaPending: owed } : {}),
+      });
+      if (settled.traumaPending !== undefined) patch.traumaPending = settled.traumaPending;
+    }
+    // 2) Raising stress follows the same RAW overflow as every other stress path: marking the last
+    //    box resets stress to 0 and owes a trauma (never a full track kept as-is).
     const liveStress = fresh.characterData.stress ?? 0;
     if (typeof patch.stress === 'number' && patch.stress > liveStress) {
       const crew = await crewContextFor(repos, fresh.gameId);
@@ -147,18 +158,7 @@ export function saveCharacterBuild(
         crew.data
       );
       patch.stress = change.stress;
-      if (change.traumaPending > 0) patch.traumaPending = change.traumaPending;
-    }
-    // Conditions marked in the editor pay down what the LIVE row owes — the single place this
-    // happens (the editor draft never edits the debt). `patch.traumaPending` is only set above,
-    // by a stress overflow in this same save, which is then part of what is owed.
-    if (patch.trauma !== undefined) {
-      const owed = patch.traumaPending ?? fresh.characterData.traumaPending;
-      const settled = reconcileTraumaPending(fresh.characterData, {
-        trauma: patch.trauma,
-        ...(owed !== undefined ? { traumaPending: owed } : {}),
-      });
-      if (settled.traumaPending !== undefined) patch.traumaPending = settled.traumaPending;
+      if (change.trauma) patch.traumaPending = change.traumaPending;
     }
     return patch;
   });

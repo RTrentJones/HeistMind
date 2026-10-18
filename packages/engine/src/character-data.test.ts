@@ -184,6 +184,22 @@ describe('saveCharacterBuild — patches only the fields the player changed', ()
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('a save that both marks a condition and overflows stress settles the pick before the overflow', async () => {
+    const [c1, c2, c3] = DEFAULT_RULESET.traumaConditions!;
+    const max = DEFAULT_RULESET.stress?.max ?? 9;
+    const live = {
+      ...LIVE_DATA,
+      stress: max - 1,
+      trauma: [c1, c2],
+      traumaPending: 1,
+    } as CharacterData;
+    const { r, written } = reposWithLive(character(live));
+    const draft = { ...live, trauma: [c1, c2, c3], stress: max } as CharacterData;
+    await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base: live, draft });
+    // The pick pays the old debt; the overflow owes a fresh one (3 marked + 1 owed = the limit).
+    expect(written()).toMatchObject({ stress: 0, trauma: [c1, c2, c3], traumaPending: 1 });
+  });
+
   it("lets the campaign's GM save (mirrors RLS) and rejects anyone else", async () => {
     const { r } = reposWithLive(character(LIVE_DATA));
     const input = { characterId: 'c1', base: BASE_DATA, draft: { ...BASE_DATA, vice: 'Weird' } };

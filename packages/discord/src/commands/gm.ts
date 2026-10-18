@@ -143,8 +143,11 @@ export const handleCrew: CommandHandler = (ctx, interaction) => {
     if (sub === 'tier') {
       // RAW development (core advanceTier): weak hold → strong for free; strong hold → pay new
       // Tier × 8 coin (Patron halves it). The engine refuses without writing or logging; phrase it.
+      // The ruleset decides the cost (Patron halves it): an unreadable ruleset refuses rather than
+      // charging the full price as if no discount existed.
       const ruleset = await gm.repos.rulesets.findById(gm.game.rulesetId);
-      const content = ruleset.success ? (ruleset.data?.content ?? null) : null;
+      if (!ruleset.success || !ruleset.data) return failEphemeral(followUp, copy.somethingBroke);
+      const content = ruleset.data.content;
       const out = await advanceCrewTier(gm.repos, {
         crew,
         content,
