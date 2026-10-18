@@ -32,6 +32,51 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F95 — Discord identity squatting through the signup trigger (launch security round 3)
+
+- **severity:** S1 · **type:** security — **(verified: reproduced on the local stack through the
+  public `/auth/v1/signup` endpoint with the anon key, 2026-10-18)**
+- **what was wrong:** `handle_new_user` (00019 → 00022) copied `profiles.discord_id` from
+  `raw_user_meta_data ->> 'provider_id' | 'sub'` — USER-CONTROLLED on an email/password signup
+  (`signUp({ options: { data } })` writes `data` there verbatim; GoTrue even merges it into the email
+  identity's `identity_data`). Email signup is on in hosted Supabase Auth, so anyone could sign up
+  carrying a victim's Discord snowflake, claim that `discord_id`, and the victim's later real Discord
+  sign-in got `discord_id = NULL` (the trigger leaves a held snowflake unset) — the bot would then
+  route the victim's slash commands to the attacker's account. Also latent: 00019's backfill would
+  23505 (aborting the deploy) on any profile already squatting a real identity's snowflake.
+- **fix:** migration `00024_verified_discord_identity.sql` (authoritative; idempotent) + source edits
+  to `00019`/`00022` so the insecure body is never re-created mid-deploy. `discord_id` now comes ONLY
+  from a verified Discord identity (`heistmind_verified_discord_id`): an `auth.identities` row with
+  `provider = 'discord'` (GoTrue-written from Discord's response), or — before that row exists, i.e.
+  inside the first OAuth signup's INSERT — `raw_app_meta_data.provider = 'discord'` (not
+  user-writable; GoTrue sets it at INSERT for a Discord OAuth signup; otherwise only the service role).
+  Three triggers: `handle_new_user` (first Discord sign-in); `AFTER INSERT/DELETE ON auth.identities`
+  (Discord linked to an existing account — manual link or GoTrue's same-email automatic linking —
+  fills a NULL, never steals; unlink releases it, skipped during account deletion); `AFTER UPDATE OF
+raw_app_meta_data ON auth.users` (service-role `app_metadata` — admin `createUser` applies it as a
+  follow-up UPDATE). Logic lives in the functions; triggers are create-if-missing (no DROP on auth
+  tables). Remediation on every deploy: NULL every `discord_id` not backed by its own user's verified
+  identity (RAISE NOTICE count), then relink verified identities whose snowflake is now free (the
+  squatted victim gets their link back on deploy). Privileges: REVOKE PUBLIC/anon/authenticated,
+  service_role EXECUTE, pinned `search_path`. Also ships an INERT `heistmind_before_user_created`
+  Auth-hook function that refuses email/phone self-signup (GoTrue skips the hook for the admin API, so
+  admin-provisioned personas + password logins keep working) — enable it on the hosted project to
+  close email self-signup entirely (see "hosted follow-up").
+- **tests:** `e2e/specs/rls-api.spec.ts` "discord_id comes only from a verified Discord identity" —
+  public `signUp` carrying a victim's `provider_id` → `discord_id` NULL (also after `updateUser`);
+  the verified Discord signup afterwards gets it; a second claimant can't steal it (fails against the
+  old trigger, passes now). e2e Discord personas are born like a real Discord sign-in
+  (`app_metadata: { provider: 'discord', providers: ['discord'] }` + snowflake in user metadata) and
+  provisioning ASSERTS the trigger-owned `discord_id` appeared (F68). SQL walkthrough on stack2:
+  OAuth-shape signup, later link, unlink, no-steal, account deletion, double-apply idempotence.
+- **hosted follow-up (RTrentJones.dev `infra/heistmind.tf` + the greenlight `supabase` module):**
+  enable the Before-User-Created hook in `/config/auth` — `hook_before_user_created_enabled = true`,
+  `hook_before_user_created_uri = "pg-functions://postgres/public/heistmind_before_user_created"`.
+  Do NOT use `external_email_enabled = false` (GoTrue gates password LOGIN on it too — the hosted
+  deploy-gate's personas sign in with a password) nor `disable_signup = true` (blocks new Discord
+  users). The DB fix stands on its own; the hook is defense in depth.
+- **status:** fixed (branch `feat/launch-security-r3`)
+
 ### F94 — Launch product round: no bot install, no invite link, no deletes or membership controls, untrue copy
 
 - **severity:** S1 (Mode 2 couldn't start; nobody could delete anything) · **type:** CX-flaw —

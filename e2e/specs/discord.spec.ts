@@ -64,8 +64,9 @@ test.describe('Discord interactions endpoint', () => {
       'Needs the local Supabase stack (service-role provisioning).'
     );
 
-    // Arrange: the DISCORD persona — created with Discord-shaped signup metadata so the
-    // handle_new_user trigger writes profiles.discord_id (the PRODUCTION link path, 00019).
+    // Arrange: the DISCORD persona — born like a real Discord sign-in (Discord-shaped user
+    // metadata + GoTrue's app_metadata provider=discord) so the auth triggers write
+    // profiles.discord_id (the PRODUCTION link path, 00024 — user metadata alone never links, F95).
     // Never hand-seed that column here: the trigger owns it, and hand-seeding is exactly how
     // F68 shipped through green tests. The assert below IS the F68 regression.
     const gm = await ensureTestUser(env, TEST_USERS.discord);

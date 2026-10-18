@@ -115,7 +115,11 @@ DECLARE
   v_meta     JSONB := COALESCE(new.raw_user_meta_data, '{}'::jsonb);
   v_username TEXT;
   v_avatar   TEXT := COALESCE(v_meta ->> 'avatar_url', v_meta ->> 'picture');
-  v_discord  TEXT := NULLIF(COALESCE(v_meta ->> 'provider_id', v_meta ->> 'sub'), '');
+  -- Only a GoTrue-marked Discord signup (raw_app_meta_data is not user-writable): user metadata
+  -- alone is attacker-controlled on an email signup (F95). 00024 is the final definition.
+  v_discord  TEXT := CASE WHEN new.raw_app_meta_data ->> 'provider' = 'discord'
+                          THEN NULLIF(COALESCE(v_meta ->> 'provider_id', v_meta ->> 'sub'), '')
+                     END;
 BEGIN
   v_username := public.heistmind_derive_username(v_meta, new.id);
   IF v_discord IS NOT NULL
