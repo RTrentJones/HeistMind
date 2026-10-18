@@ -32,12 +32,14 @@ export function makeDiceHandler(
 
     const results = realizeDice(parsed.count, parsed.sides);
     const total = results.reduce((sum, r) => sum + r, 0) + parsed.modifier;
-    return inline(replyEmbed(
-      rollEmbed({
-        title: copy.diceTitle(notation.trim()),
-        results,
-        detail: copy.diceTotal(total),
-      })
-    ));
+    return inline(
+      replyEmbed(
+        rollEmbed({
+          title: copy.diceTitle(notation.trim()),
+          results,
+          detail: copy.diceTotal(total),
+        })
+      )
+    );
   };
 }

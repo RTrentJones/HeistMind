@@ -4,12 +4,23 @@
 // are ephemeral and leak nothing to non-GMs.
 import {
   advanceTier,
+  crewAbilityName,
   crewAdvanceReady,
   crewHalvesTierCost,
+  crewStartingPickAvailable,
+  crewUpgradeBoxes,
+  crewVeteranGatewayFor,
   crewXp,
   CREW_XP_TRACK,
+  findCrewAbility,
+  isCrewUpgrade,
+  openCrewUpgrades,
   repToDevelop,
+  takeableCrewAbilities,
+  type CrewAdvanceChoice,
+  type CrewAdvancePlan,
   type Game,
+  type RulesetContent,
 } from '@heist-mind/core';
 import {
   advanceCrewTier,
@@ -218,26 +229,77 @@ export const handleCrew: CommandHandler = (ctx, interaction) => {
     }
 
     if (sub === 'advance') {
-      // The rule refuses a non-full track — refuse HERE so no misleading feed event lands.
-      if (!crewAdvanceReady(crew.resources)) {
-        return failEphemeral(
-          followUp,
-          copy.crewAdvanceNotReady(crewXp(crew.resources), CREW_XP_TRACK)
-        );
-      }
+      // RAW crew advance (core planCrewAdvance via the engine): the starting pick for a new crew,
+      // else a FULL track spent on a new special ability from the crew's list OR two upgrade
+      // boxes. The pick comes from the autocomplete (legal choices only); the engine + repository
+      // refuse anything else, so phrase the refusal and log nothing.
+      const ruleset = await gm.repos.rulesets.findById(gm.game.rulesetId);
+      if (!ruleset.success || !ruleset.data) return failEphemeral(followUp, copy.somethingBroke);
+      const content = ruleset.data.content;
+      const choice = decodeCrewPick(content, stringOption(interaction, 'pick') ?? '');
+      if (!choice) return failEphemeral(followUp, copy.crewPickInvalid);
+      let gained = '';
       const out = await takeCrewAdvance(gm.repos, {
         crew,
+        content,
+        choice,
         userId: gm.actorId,
         logLabel: crewName,
-        logNote: copy.crewLogAdvance,
+        logNote: plan => (gained = crewAdvanceNote(content, plan)),
       });
-      if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
-      return followUp.editOriginal({ content: `**${crewName}** — ${copy.crewAdvanceTaken}` });
+      if (!out.success) {
+        const code = out.error.code;
+        if (code === 'TRACK_NOT_FULL')
+          return failEphemeral(
+            followUp,
+            copy.crewAdvanceNotReady(crewXp(crew.resources), CREW_XP_TRACK)
+          );
+        if (code === 'ABILITY_LOCKED' || code === 'ABILITY_HELD' || code === 'UNKNOWN_ABILITY')
+          return failEphemeral(followUp, copy.crewAbilityNotOffered);
+        if (code === 'UPGRADE_COMPLETE') return failEphemeral(followUp, copy.crewUpgradeComplete);
+        return failEphemeral(followUp, copy.gmActionFailed(out.error.message));
+      }
+      return followUp.editOriginal({ content: `**${crewName}** — ${gained}` });
     }
 
     return failEphemeral(followUp, copy.unknownCommand);
   });
 };
+
+/** Decode a `/crew advance pick:` value (`ability:<id>` / `upgrade:<id>` / `upgrades`), or a typed name. */
+function decodeCrewPick(content: RulesetContent, raw: string): CrewAdvanceChoice | null {
+  const pick = raw.trim();
+  if (pick === 'upgrades') return { kind: 'upgrades' };
+  const known = (id: string) => findCrewAbility(content, id);
+  if (pick.startsWith('ability:') && known(pick.slice(8)))
+    return { kind: 'ability', abilityId: pick.slice(8) };
+  if (pick.startsWith('upgrade:') && known(pick.slice(8)))
+    return { kind: 'upgrades', upgradeId: pick.slice(8) };
+  // A hand-typed name (no autocomplete): match a crew ability or upgrade by name.
+  const byName = (content.crew?.abilities ?? []).find(
+    a => a.name.toLowerCase() === pick.toLowerCase()
+  );
+  if (!byName) return null;
+  return isCrewUpgrade(byName)
+    ? { kind: 'upgrades', upgradeId: byName.id }
+    : { kind: 'ability', abilityId: byName.id };
+}
+
+/** Feed/reply copy for what a crew advance actually gained. */
+function crewAdvanceNote(
+  content: RulesetContent,
+  plan: Extract<CrewAdvancePlan, { ok: true }>
+): string {
+  if (plan.upgrade) {
+    const name = crewAbilityName(content, plan.upgrade.id);
+    return plan.upgrade.completed
+      ? copy.crewUpgradeUnlocked(name)
+      : copy.crewUpgradeBoxes(name, plan.upgrade.boxes, plan.upgrade.size);
+  }
+  if (plan.added.length === 0) return copy.crewOtherUpgrades;
+  const names = plan.added.map(id => crewAbilityName(content, id)).join(' + ');
+  return plan.startingPick ? copy.crewStartingAbility(names) : copy.crewNewAbility(names);
+}
 
 /** Match an autocomplete-submitted id first, a hand-typed name second. */
 function pickByIdOrName<T extends { id: string; name: string }>(
@@ -366,6 +428,56 @@ export async function factionAutocomplete(
       .filter(f => f.name.toLowerCase().includes(typed))
       .slice(0, 25)
       .map(f => ({ name: `${f.name} (${copy.factionStatusFmt(f.status)})`, value: f.id }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Suggest the legal `/crew advance pick:` choices for the linked crew (GM-gated): the starting
+ * pick from the crew's own list for a new crew; with a full track, its takeable abilities (another
+ * type's only via Veteran) plus "2 upgrade boxes" options. Nothing between advances.
+ */
+export async function crewAutocomplete(
+  ctx: BotContext,
+  interaction: APIApplicationCommandAutocompleteInteraction
+): Promise<APIApplicationCommandOptionChoice[]> {
+  try {
+    const gm = await gmGame(ctx, interaction);
+    if (!gm) return [];
+    const [crew, ruleset] = await Promise.all([
+      gm.repos.crews.findByGame(gm.game.id),
+      gm.repos.rulesets.findById(gm.game.rulesetId),
+    ]);
+    if (!crew.success || !crew.data || !ruleset.success || !ruleset.data) return [];
+    const content = ruleset.data.content;
+    const c = crew.data;
+    const starting = crewStartingPickAvailable(content, c);
+    const ready = crewAdvanceReady(c.resources);
+    if (!starting && !ready) return [];
+    const typed = typedOptionValue(
+      interaction as unknown as APIApplicationCommandInteraction,
+      'pick'
+    );
+    const choices: APIApplicationCommandOptionChoice[] = takeableCrewAbilities(content, c).map(
+      a => ({
+        name: crewVeteranGatewayFor(content, c, a.id) ? copy.crewPickViaVeteran(a.name) : a.name,
+        value: `ability:${a.id}`,
+      })
+    );
+    if (ready) {
+      for (const u of openCrewUpgrades(content, c))
+        choices.push({
+          name: copy.crewPickUpgrade(
+            u.name,
+            crewUpgradeBoxes(content, c, u.id),
+            u.upgradeBoxes ?? 0
+          ),
+          value: `upgrade:${u.id}`,
+        });
+      choices.push({ name: copy.crewPickOtherUpgrades, value: 'upgrades' });
+    }
+    return choices.filter(ch => ch.name.toLowerCase().includes(typed)).slice(0, 25);
   } catch {
     return [];
   }

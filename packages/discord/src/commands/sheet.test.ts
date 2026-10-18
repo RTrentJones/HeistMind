@@ -61,6 +61,7 @@ const details = (over: Record<string, unknown> = {}) => ({
     specialAbilities: [],
     stress: 4,
     trauma: [],
+    vice: 'Gambling',
     contacts: [],
     custom: {},
     harm: { lesser: ['Bruised'], moderate: [], severe: [] },
@@ -282,11 +283,21 @@ describe('/vice indulge', () => {
   });
 
   it('clearing more than was marked flags overindulgence', async () => {
-    const rested = details({ characterData: { stress: 1 } });
+    const rested = details({ characterData: { stress: 1, vice: 'Gambling' } });
     const r = repos({}, rested);
     const calls = await run(await handleVice(ctx(r, [4, 6]), cmd('vice', 'indulge')));
     const embed = (calls[0]?.payload as { embeds: APIEmbed[] }).embeds[0];
     expect(embed?.description).toContain('Overindulged');
+  });
+
+  it('refuses (no roll, no write, no log) until a vice is set — and links the sheet', async () => {
+    const noVice = details({ characterData: { vice: '' } });
+    const r = repos({}, noVice);
+    const calls = await run(await handleVice(ctx(r, [4]), cmd('vice', 'indulge')));
+    expect(r.characterManagement.updateCharacterWithValidation).not.toHaveBeenCalled();
+    expect(r.rolls.create).not.toHaveBeenCalled();
+    expect(String(calls[1]?.payload)).toContain('Set a vice on your sheet first');
+    expect(String(calls[1]?.payload)).toContain('/characters/c1');
   });
 });
 

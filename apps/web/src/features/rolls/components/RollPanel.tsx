@@ -17,6 +17,8 @@ import { useTranslation } from '@/lib/i18n/hooks';
 import { OUTCOME_KEY, OUTCOME_VARIANT } from '@/features/rolls/lib/labels';
 
 interface ActionOption {
+  /** The attribute id (attribute options only) — names the XP track a desperate roll marked. */
+  id?: string;
   name: string;
   rating: number;
 }
@@ -139,6 +141,9 @@ export function RollPanel({
     { id: number; label: string; outcome: keyof typeof OUTCOME_KEY; results: number[] }[]
   >([]);
   const historySeq = useRef(0);
+  // RAW feedback: what the desperate roll just marked (the attribute XP track).
+  const [desperateNote, setDesperateNote] = useState<string | null>(null);
+  const attributeName = (id: string) => attributes?.find(a => a.id === id)?.name ?? id;
 
   // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
   const traumaLog = {
@@ -257,6 +262,8 @@ export function RollPanel({
         ...(characterId !== undefined ? { characterId } : {}),
         kind: isActionRoll ? 'action' : 'fortune',
         label: isActionRoll ? action : t(FORTUNE_TYPE_KEY[fortuneType]),
+        // RAW: a desperate action roll marks XP in this action's attribute (engine-applied).
+        ...(isActionRoll ? { action } : {}),
         dice: count,
         results,
         zeroDice,
@@ -270,6 +277,15 @@ export function RollPanel({
         traumaLog,
       });
       setLast({ outcome: created.outcome, results: created.results, kind: mode });
+      const xp = created.desperateXp;
+      setDesperateNote(
+        xp?.track
+          ? t('components.rollPanel.desperateXpNote', {
+              attribute: attributeName(xp.track),
+              marks: xp.marks,
+            })
+          : null
+      );
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
     } finally {
@@ -548,6 +564,11 @@ export function RollPanel({
       )}
       {/* F52 — a partial/bad ACTION result is where consequences land; scaffold the next moves
           instead of leaving the roller at a dead end. */}
+      {desperateNote && last?.kind === 'action' && (
+        <Alert variant='info' size='sm' data-testid='desperate-xp-note'>
+          {desperateNote}
+        </Alert>
+      )}
       {last?.kind === 'action' && (last.outcome === 'partial' || last.outcome === 'bad') && (
         <Alert variant='warning' size='sm'>
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>

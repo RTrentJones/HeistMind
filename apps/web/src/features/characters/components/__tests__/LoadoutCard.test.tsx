@@ -21,7 +21,11 @@ vi.mock('@/features/auth/stores/auth-store', () => ({
   useAuth: () => ({ user: { id: 'u1' } }),
 }));
 
-const character = (loadout?: { level: 'light' | 'normal' | 'heavy'; items: string[]; scoreId?: string }) =>
+const character = (loadout?: {
+  level: 'light' | 'normal' | 'heavy';
+  items: string[];
+  scoreId?: string;
+}) =>
   ({
     id: 'c1',
     name: 'Silks',
@@ -65,14 +69,22 @@ beforeEach(() => {
 describe('LoadoutCard', () => {
   it('shows the load gauge for the saved loadout', () => {
     render(
-      <LoadoutCard character={character({ level: 'normal', items: ['blade', 'armor'] })} activeScore={null} canEdit />
+      <LoadoutCard
+        character={character({ level: 'normal', items: ['blade', 'armor'] })}
+        activeScore={null}
+        canEdit
+      />
     );
     expect(screen.getByText('Load 5/5')).toBeInTheDocument();
   });
 
   it('over capacity: warns and REFUSES to offer the save (rules-driven validity)', async () => {
     render(
-      <LoadoutCard character={character({ level: 'light', items: ['blade'] })} activeScore={null} canEdit />
+      <LoadoutCard
+        character={character({ level: 'light', items: ['blade'] })}
+        activeScore={null}
+        canEdit
+      />
     );
     // 2/3 so far; adding Heavy Armor (3) goes to 5/3.
     await userEvent.click(screen.getByRole('checkbox', { name: /Heavy Armor/ }));
@@ -84,7 +96,11 @@ describe('LoadoutCard', () => {
   it('save stays disabled while clean, enables when dirty, and sends the tagged loadout', async () => {
     const score = { id: 's1', status: 'active' } as unknown as Score;
     render(
-      <LoadoutCard character={character({ level: 'normal', items: ['blade'], scoreId: 's1' })} activeScore={score} canEdit />
+      <LoadoutCard
+        character={character({ level: 'normal', items: ['blade'], scoreId: 's1' })}
+        activeScore={score}
+        canEdit
+      />
     );
     const save = screen.getByRole('button', { name: 'Save loadout' });
     expect(save).toBeDisabled(); // draft == saved
@@ -104,7 +120,11 @@ describe('LoadoutCard', () => {
   it('flags a loadout from a previous score as stale', () => {
     const score = { id: 's2', status: 'active' } as unknown as Score;
     render(
-      <LoadoutCard character={character({ level: 'normal', items: ['blade'], scoreId: 's1' })} activeScore={score} canEdit />
+      <LoadoutCard
+        character={character({ level: 'normal', items: ['blade'], scoreId: 's1' })}
+        activeScore={score}
+        canEdit
+      />
     );
     expect(screen.getByText(/previous score/)).toBeInTheDocument();
   });
@@ -113,7 +133,11 @@ describe('LoadoutCard', () => {
     saveMutation.isError = true;
     saveMutation.error = { message: 'RLS says no' };
     render(
-      <LoadoutCard character={character({ level: 'normal', items: ['blade'] })} activeScore={null} canEdit />
+      <LoadoutCard
+        character={character({ level: 'normal', items: ['blade'] })}
+        activeScore={null}
+        canEdit
+      />
     );
     expect(screen.getByText(/Couldn't save the loadout/)).toBeInTheDocument();
     expect(screen.getByText(/RLS says no/)).toBeInTheDocument();

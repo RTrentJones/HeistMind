@@ -13,12 +13,14 @@ export const handleFortune: CommandHandler = (ctx, interaction) => {
   const { count, zeroDice } = diceForRating(dice);
   const results = ctx.realize(count);
 
-  return inline(replyEmbed(
-    rollEmbed({
-      title: copy.fortuneTitle(dice),
-      results,
-      outcome: rollOutcome(results, { zeroDice }),
-      ...(note ? { note } : {}),
-    })
-  ));
+  return inline(
+    replyEmbed(
+      rollEmbed({
+        title: copy.fortuneTitle(dice),
+        results,
+        outcome: rollOutcome(results, { zeroDice }),
+        ...(note ? { note } : {}),
+      })
+    )
+  );
 };

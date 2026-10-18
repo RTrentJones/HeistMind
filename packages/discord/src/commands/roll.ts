@@ -12,6 +12,7 @@ import {
   rollOutcome,
   rulesetActions,
   worstHarmLevel,
+  xpTrackSize,
   type CharacterWithDetails,
 } from '@heist-mind/core';
 import { rollAction } from '@heist-mind/engine';
@@ -117,6 +118,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       let footer: string;
       let pushNote: string | null = push ? copy.pushedReminder : null;
       let traumaLine: string | null = null;
+      let desperateNote: string | null = null;
       const persistedNote = [...moveNotes, ...(note ? [note] : [])].join(' · ');
       const game = await resolveLinkedGame(repos, interaction, ctx.fetchChannelParent);
       if (!game) {
@@ -132,6 +134,8 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
           characterId: character.id,
           kind: 'action',
           label: resolved,
+          // A desperate action roll marks XP in this action's attribute (the engine does it, RAW).
+          action: resolved,
           dice: count,
           results,
           zeroDice,
@@ -143,6 +147,16 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
         });
         if (!logged.success) return failEphemeral(followUp, copy.somethingBroke);
         footer = copy.loggedFooter(game.name);
+        const xp = logged.data.desperateXp;
+        if (xp?.track) {
+          const content = character.ruleset.content;
+          const attr = content.attributes.find(a => a.id === xp.track);
+          desperateNote = copy.desperateXp(
+            attr?.name ?? xp.track,
+            xp.marks,
+            xpTrackSize(content, xp.track)
+          );
+        }
         if (push) {
           pushNote = copy.pushedCharged; // the engine really charged the 2 stress
           // Announce what the engine APPLIED (live row + crew boxes), never a local prediction.
@@ -158,6 +172,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
       const noteParts = [
         ...harmNotes,
         ...(pushNote ? [pushNote] : []),
+        ...(desperateNote ? [desperateNote] : []),
         ...moveNotes,
         ...(note ? [note] : []),
       ];

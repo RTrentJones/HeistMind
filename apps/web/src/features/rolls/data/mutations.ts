@@ -9,6 +9,7 @@ import {
   rollAction,
   rollResistance,
   type ActionRollInput,
+  type ActionRollOutcome,
   type ResistanceRollInput,
 } from '@heist-mind/engine';
 import { getRepositories } from '@/lib/auth';
@@ -33,11 +34,12 @@ export function useCreateRoll(gameId: string) {
 export function useActionRoll(gameId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Omit<ActionRollInput, 'gameId'>): Promise<Roll> =>
+    mutationFn: async (input: Omit<ActionRollInput, 'gameId'>): Promise<ActionRollOutcome> =>
       unwrap(await rollAction(getRepositories(), { ...input, gameId })),
-    onSuccess: async (_roll, input) => {
+    onSuccess: async (roll, input) => {
       await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
-      if (input.pushed === true && input.characterId !== undefined) {
+      // A push charged stress, or a desperate roll marked attribute XP — refresh the sheet.
+      if ((input.pushed === true || roll.desperateXp) && input.characterId !== undefined) {
         await qc.invalidateQueries({ queryKey: characterKeys.detail(input.characterId) });
       }
       // An assist may have charged the helper's stress (F10) — refresh their sheet too.

@@ -24,19 +24,28 @@ describe('handleInteraction', () => {
   it('dispatches a known command', async () => {
     const { response } = await handleInteraction(
       ctx,
-      as({ type: 2, data: { name: 'roll', type: 1, options: [{ name: 'dice', type: 4, value: 2 }] } })
+      as({
+        type: 2,
+        data: { name: 'roll', type: 1, options: [{ name: 'dice', type: 4, value: 2 }] },
+      })
     );
     expect(response.type).toBe(4);
   });
 
   it('answers an unknown command ephemerally instead of timing out', async () => {
-    const { response } = await handleInteraction(ctx, as({ type: 2, data: { name: 'nope', type: 1 } }));
+    const { response } = await handleInteraction(
+      ctx,
+      as({ type: 2, data: { name: 'nope', type: 1 } })
+    );
     expect(response.type).toBe(4);
     expect((response as { data?: { flags?: number } }).data?.flags).toBe(64);
   });
 
   it('answers autocomplete with an empty choice list when nothing can suggest', async () => {
-    const { response } = await handleInteraction(ctx, as({ type: 4, data: { name: 'roll', type: 1 } }));
+    const { response } = await handleInteraction(
+      ctx,
+      as({ type: 4, data: { name: 'roll', type: 1 } })
+    );
     expect(response).toEqual({ type: 8, data: { choices: [] } });
     const char = await handleInteraction(
       ctx,

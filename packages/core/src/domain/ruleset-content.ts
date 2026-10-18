@@ -76,6 +76,20 @@ export interface CrewAbilityDefinition {
   /** Which crew type this ability belongs to (optional — shared abilities omit it). */
   crewType?: string;
   /**
+   * Several crew types that list this ability (BitD "Patron" sits on more than one crew sheet).
+   * Unioned with `crewType`; omit both for an ability every crew type offers (e.g. "Veteran").
+   */
+  crewTypes?: string[];
+  /** Id of a crew ability that must already be held (e.g. a second Veteran take needs the first). */
+  prerequisite?: string;
+  /**
+   * Marks this definition as a crew UPGRADE bought in upgrade boxes rather than taken as a special
+   * ability (BitD "Mastery": "This costs four upgrade boxes to unlock"). A crew advance may mark two
+   * upgrade boxes instead of taking an ability; once all boxes are marked the upgrade is held (its id
+   * joins `crew.crewAbilities`, so its `effects` apply like any held ability).
+   */
+  upgradeBoxes?: number;
+  /**
    * Optional structured effects this crew ability grants to EVERY member (see {@link AbilityEffects}):
    * "Deadly" → `{ bonusActionDots: 1 }`, "Mastery" → `{ actionMax: 4 }`, a veteran-granting upgrade →
    * `{ veteran: 1 }`. Applied by `validateCharacter` when crew context is supplied.
@@ -109,6 +123,11 @@ export interface PlaybookDefinition {
   equipment: string[];
   attributes: Record<string, number>;
   skills: Record<string, number>;
+  /**
+   * The playbook's own end-of-session XP trigger (BitD: "You addressed a challenge with violence or
+   * coercion." for the Cutter). Shown alongside the ruleset's common `xpTriggers`.
+   */
+  xpTrigger?: string;
 }
 
 export interface AttributeDefinition {
@@ -160,6 +179,11 @@ export interface AbilityEffects {
   stressBoxes?: number;
   /** Crew ability: advancing Tier costs half the coin (BitD crew "Patron"). */
   halfTierCost?: boolean;
+  /**
+   * Crew ability: grant N crew veteran slots — each lets the CREW take one special ability from
+   * another crew type (BitD crew-sheet "Veteran"). Never affects members' playbook abilities.
+   */
+  crewVeteran?: number;
 }
 
 export interface AbilityDefinition {
@@ -233,6 +257,12 @@ export interface XPTrigger {
   name: string;
   description: string;
   value: number;
+  /**
+   * When the trigger fires. `desperate-roll` (BitD): every desperate ACTION roll marks `value` XP
+   * in the attribute track of the action rolled — the engine marks it with the roll. Omitted =
+   * an end-of-session trigger (1 XP, or 2 if it happened a lot), marked on any track.
+   */
+  kind?: 'desperate-roll' | 'end-of-session';
 }
 
 export interface AdvancementOption {
@@ -266,6 +296,9 @@ export interface CreationRules {
    */
   actionRatings?: ActionRatingRules;
 }
+
+/** The identity fields whose choices a ruleset may list (as `options` on a step with that id). */
+export type IdentityField = 'heritage' | 'background' | 'vice';
 
 export interface ActionRatingRules {
   /** Action dots to assign at creation, on top of the playbook's seeded starting dots. */

@@ -244,3 +244,22 @@ describe('CharacterSheet writes + read-only gating', () => {
     expect(screen.queryByTestId('delete-character')).not.toBeInTheDocument();
   });
 });
+
+describe('Indulge vice needs a vice (round-3 #4)', () => {
+  it('is disabled with a reason until a vice is set; enabled (and labelled) once it is', () => {
+    const { unmount } = renderSheet();
+    const button = screen.getByRole('button', { name: /Indulge vice/ });
+    expect(button).toBeDisabled();
+    expect(screen.getByTestId('indulge-vice-reason')).toHaveTextContent('Set a vice');
+    unmount();
+
+    characterQuery.data = {
+      ...character,
+      characterData: { ...character.characterData, vice: 'Wager', viceDetail: 'Dice at the Gull' },
+    } as never;
+    renderSheet();
+    expect(screen.getByRole('button', { name: /Indulge vice/ })).toBeEnabled();
+    expect(screen.queryByTestId('indulge-vice-reason')).not.toBeInTheDocument();
+    expect(screen.getByText('Vice: Wager — Dice at the Gull')).toBeInTheDocument();
+  });
+});

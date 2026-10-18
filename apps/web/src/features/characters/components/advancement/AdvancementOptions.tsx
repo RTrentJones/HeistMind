@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  abilityName,
   consumesVeteranSlot,
   isAbilityAdvanceable,
   veteranGatewayFor,
@@ -93,10 +94,15 @@ export function AdvancementOptions({
             ? t('components.characterEditor.fillTrack')
             : t('components.characterEditor.needXp', { cost: option.cost })
           : !prereqMet
-            ? t('components.characterEditor.requires', { prerequisite: ability.prerequisite ?? '' })
+            ? t('components.characterEditor.requires', {
+                // Prerequisites are stored as ids — show the ability's NAME ("Veteran (second)").
+                prerequisite: abilityName(content, ability.prerequisite ?? ''),
+              })
             : !requirementsMet
               ? t('components.characterEditor.requiresAll', {
-                  requirements: option.requirements?.join(', ') ?? '',
+                  requirements: (option.requirements ?? [])
+                    .map(r => abilityName(content, r))
+                    .join(', '),
                 })
               : null;
         return (

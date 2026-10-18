@@ -4,6 +4,7 @@
 import {
   deriveAttributes,
   diceForRating,
+  hasVice,
   isOverindulged,
   viceStressCleared,
   type CharacterWithDetails,
@@ -40,7 +41,8 @@ export interface IndulgeViceOutcome {
 }
 
 /**
- * Clear stress from a vice roll through the validated write path, then log the downtime to the
+ * Clear stress from a vice roll through the validated write path (refused `NO_VICE` until the
+ * character has a vice), then log the downtime to the
  * campaign feed (only when the character is in a campaign — a standalone character still clears
  * stress, it just has no shared log to write to).
  */
@@ -57,6 +59,13 @@ export async function indulgeVice(
   if (!found.success) return found as Result<never>;
   if (!found.data) return { success: false, error: { message: 'Character not found' } };
   const live = found.data.characterData;
+  // RAW: you indulge YOUR vice at your purveyor — no vice set, nothing to indulge.
+  if (!hasVice(live ?? {})) {
+    return {
+      success: false,
+      error: { message: 'Set a vice on the sheet before indulging it', code: 'NO_VICE' },
+    };
+  }
   const stress = live?.stress ?? 0;
   const cleared = viceStressCleared(results, { zeroDice });
   const overindulged = isOverindulged(cleared, stress);

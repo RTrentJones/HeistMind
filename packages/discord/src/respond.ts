@@ -82,8 +82,7 @@ export function makeFollowUpClient(
   return {
     editOriginal: payload => send(`${webhook}/messages/@original`, 'PATCH', payload),
     deleteOriginal: () => send(`${webhook}/messages/@original`, 'DELETE'),
-    sendEphemeral: content =>
-      send(webhook, 'POST', { content, flags: MessageFlags.Ephemeral }),
+    sendEphemeral: content => send(webhook, 'POST', { content, flags: MessageFlags.Ephemeral }),
   };
 }
 

@@ -3,6 +3,7 @@
 // the character sheet shows them in an expandable detail per owned ability. This drives both.
 
 import { isLocalStack } from '../support/env';
+import { assignKnifeDots } from '../support/characters';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName } from '../support/rulesets';
 
@@ -34,6 +35,7 @@ test.describe('GM: ability rules text (Brackwater)', () => {
     await gmPage.getByRole('button', { name: 'The Knife' }).click();
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
     await next.click(); // → action ratings
+    await assignKnifeDots(gmPage);
     await next.click(); // → special abilities
 
     // The wizard shows the full rules text inline on each ability card (Bulwark's exact effect),

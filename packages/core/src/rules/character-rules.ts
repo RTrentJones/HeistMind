@@ -17,8 +17,11 @@ import type {
   CreationRestriction,
   StressRules,
   HarmRules,
+  IdentityField,
+  CreationOption,
   LoadLevel,
   ValidationError,
+  XPTrigger,
 } from '../domain';
 import { HARM_LEVELS } from '../domain';
 
@@ -150,6 +153,15 @@ export function abilityChoiceLimit(ruleset: RulesetContent, playbookId: string):
 
 function findAbility(ruleset: RulesetContent, abilityId: string): AbilityDefinition | undefined {
   return ruleset.specialAbilities?.find(a => a.id === abilityId);
+}
+
+/**
+ * A special ability's display NAME for an id (prerequisites and requirements are stored as ids —
+ * "Requires veteran-2" must read "Requires Veteran (second)"). Unknown ids (free-text notes) are
+ * returned unchanged.
+ */
+export function abilityName(ruleset: RulesetContent, abilityId: string): string {
+  return findAbility(ruleset, abilityId)?.name ?? abilityId;
 }
 
 /** Whether the prerequisite ability (if it names a known ability) is currently held. */
@@ -627,6 +639,93 @@ export function clearXpTrack(data: CharacterData, track: string): CharacterXp {
   return { playbook: xp.playbook, attributes: { ...xp.attributes, [track]: 0 } };
 }
 
+// ----- XP triggers ---------------------------------------------------------------------------
+
+/** The ruleset's desperate-roll trigger (`kind: 'desperate-roll'`), if it defines one. */
+export function desperateRollTrigger(ruleset: RulesetContent): XPTrigger | null {
+  return ruleset.advancement?.xpTriggers?.find(t => t.kind === 'desperate-roll') ?? null;
+}
+
+/**
+ * The XP a desperate ACTION roll earns — RAW ([SRD, Advancement](https://bladesinthedark.com/advancement)):
+ * "Every time you make a desperate action roll, mark 1 xp in the attribute for the action you
+ * rolled." Returns the track (the attribute that owns `action`) and the marks, or null when the
+ * ruleset defines no desperate-roll trigger, the action belongs to no attribute, or (on a
+ * track-mode ruleset) that track is already full. On a flat-pool ruleset `track` is null and the
+ * marks go to the pool.
+ */
+export function desperateRollXp(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  action: string
+): { track: string | null; amount: number } | null {
+  const trigger = desperateRollTrigger(ruleset);
+  if (!trigger || trigger.value <= 0) return null;
+  if (!usesXpTracks(ruleset)) return { track: null, amount: trigger.value };
+  const owner = (ruleset.attributes ?? []).find(a => (a.skills ?? []).includes(action));
+  if (!owner) return null;
+  if (xpTrackFull(ruleset, data, owner.id)) return null;
+  return { track: owner.id, amount: trigger.value };
+}
+
+/**
+ * The END-OF-SESSION XP triggers for a character: the playbook's own trigger first (BitD: "You
+ * addressed a challenge with violence or coercion."), then the ruleset's common ones. Desperate-
+ * roll triggers are excluded — they fire with the roll, not at session end. RAW: each is worth 1
+ * xp, or 2 if it happened a lot, on any track you want.
+ */
+export function sessionXpTriggers(ruleset: RulesetContent, playbookId: string): XPTrigger[] {
+  const playbook = findPlaybook(ruleset, playbookId);
+  const own: XPTrigger[] = playbook?.xpTrigger
+    ? [
+        {
+          id: `playbook:${playbook.id}`,
+          name: playbook.name,
+          description: playbook.xpTrigger,
+          value: 1,
+          kind: 'end-of-session',
+        },
+      ]
+    : [];
+  const common = (ruleset.advancement?.xpTriggers ?? []).filter(t => t.kind !== 'desperate-roll');
+  return [...own, ...common];
+}
+
+// ----- identity (heritage / background / vice) -----------------------------------------------
+
+/**
+ * The choices a ruleset lists for an identity field: the `options` of the creation step whose id
+ * IS that field (the schema's existing home for them — Brackwater's heritage/background/vice steps,
+ * BitD's background/vice steps). Empty = the field is free text.
+ */
+export function identityOptions(ruleset: RulesetContent, field: IdentityField): CreationOption[] {
+  return ruleset.characterCreation?.steps?.find(s => s.id === field)?.options ?? [];
+}
+
+/** The listed option an identity value names (by name or id, case-insensitive), if any. */
+export function matchIdentityOption(
+  ruleset: RulesetContent,
+  field: IdentityField,
+  value: string | undefined
+): CreationOption | null {
+  const v = value?.trim().toLowerCase();
+  if (!v) return null;
+  return (
+    identityOptions(ruleset, field).find(
+      o => o.name.toLowerCase() === v || o.id.toLowerCase() === v
+    ) ?? null
+  );
+}
+
+/**
+ * Whether the character has a vice to indulge. RAW ([SRD, Downtime → Indulge vice](
+ * https://bladesinthedark.com/downtime-activities)): you "visit your vice purveyor" to indulge your
+ * vice — with no vice there is nothing to indulge, so the move is unavailable until one is set.
+ */
+export function hasVice(data: Pick<CharacterData, 'vice'>): boolean {
+  return (data.vice ?? '').trim().length > 0;
+}
+
 // ----- restriction evaluation ----------------------------------------------------------------
 
 /** Resolve a dot-path (e.g. `attributes.grit`, `custom.crew-ties`, `playbook`) against the build. */
@@ -784,7 +883,7 @@ export function validateCharacter(
         err(
           `specialAbilities.${abilityId}`,
           'ABILITY_LOCKED',
-          `${ability.name} requires ${ability.prerequisite}.`
+          `${ability.name} requires ${abilityName(ruleset, ability.prerequisite ?? '')}.`
         )
       );
     } else if (!isAbilityUnlocked(ruleset, data, abilityId, opts.crew)) {
@@ -876,6 +975,21 @@ export function validateCharacter(
       );
   }
 
+  // Identity picks come from the ruleset's listed options when it lists them (BitD vices and
+  // backgrounds). A new character must pick one of them; a played sheet saved with legacy free text
+  // keeps working (warning only) so its everyday writes aren't bricked.
+  for (const field of ['heritage', 'background', 'vice'] as const) {
+    const value = data[field];
+    const options = identityOptions(ruleset, field);
+    if (!value?.trim() || options.length === 0 || matchIdentityOption(ruleset, field, value))
+      continue;
+    const message = `"${value}" isn't one of this ruleset's ${field} choices (${options
+      .map(o => o.name)
+      .join(', ')}).`;
+    if (mode === 'creation') errors.push(err(field, 'IDENTITY_UNKNOWN', message));
+    else warnings.push(warn(field, message));
+  }
+
   if (mode === 'creation') {
     if (actionMode) {
       // Action-dot budget: the playbook's seeded dots + the ruleset's creation `points` + any crew
@@ -911,8 +1025,20 @@ export function validateCharacter(
               `Bonus action dots can only go in ${effects.bonusActionDotsIn.join(', ')}.`
             )
           );
+        else if (spent < base)
+          // RAW ([SRD, Character creation](https://bladesinthedark.com/character-creation)): "Your
+          // playbook begins with three action dots already placed. You get to add four more dots
+          // (so you'll have seven total)." Every creation dot is assigned before play. Optional
+          // bonus dots (a crew's Deadly — "each PC MAY add +1") are not owed.
+          errors.push(
+            err(
+              'skills',
+              'ACTION_POINTS_UNSPENT',
+              `Assign all ${base} action dots — ${base - spent} left to place.`
+            )
+          );
         else if (spent < budget)
-          warnings.push(warn('skills', `${budget - spent} action dot(s) unspent.`));
+          warnings.push(warn('skills', `${budget - spent} optional bonus action dot(s) unspent.`));
       }
     } else {
       // Point-buy budget.

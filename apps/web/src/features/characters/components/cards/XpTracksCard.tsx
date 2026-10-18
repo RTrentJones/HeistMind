@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import {
+  desperateRollTrigger,
+  sessionXpTriggers,
   usesXpTracks,
   xpMarks,
   xpTrackFull,
@@ -9,7 +12,7 @@ import {
   type CharacterData,
   type RulesetContent,
 } from '@heist-mind/core';
-import { Button, Card, Heading, Stack, Text, XpTrack } from '@heist-mind/ui';
+import { Button, Card, Heading, Select, Stack, Text, XpTrack } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -36,9 +39,18 @@ export function XpTracksCard({
   onAdvance?: () => void;
 }) {
   const { t } = useTranslation();
+  // RAW: end-of-session XP goes on ANY track the player wants (playbook or an attribute).
+  const [sessionTrack, setSessionTrack] = useState<string>(PLAYBOOK_TRACK);
   if (!usesXpTracks(content)) return null;
-  const triggers = content.advancement?.xpTriggers ?? [];
-  const pbFull = xpTrackFull(content, data, PLAYBOOK_TRACK);
+  // The playbook's own trigger first, then the common ones; the desperate-roll trigger is not a
+  // session trigger — the engine marks it with the roll, in the rolled action's attribute.
+  const triggers = sessionXpTriggers(content, data.playbook);
+  const desperate = desperateRollTrigger(content);
+  const targetFull = xpTrackFull(content, data, sessionTrack);
+  const trackName = (id: string) =>
+    id === PLAYBOOK_TRACK
+      ? t('components.characterSheet.playbook')
+      : (content.attributes.find(a => a.id === id)?.name ?? id);
 
   const advanceCta =
     canEdit && onAdvance ? (
@@ -79,27 +91,65 @@ export function XpTracksCard({
         {track(PLAYBOOK_TRACK, t('components.characterSheet.playbook'))}
 
         {triggers.length > 0 && (
-          <Stack direction='column' gap='xs'>
+          <Stack direction='column' gap='xs' data-testid='xp-session-triggers'>
+            <Text as='strong' size='sm'>
+              {t('components.characterSheet.sessionTriggersHeading')}
+            </Text>
+            {canEdit && (
+              <Select
+                label={t('components.characterSheet.sessionTrackLabel')}
+                selectSize='sm'
+                value={sessionTrack}
+                onChange={e => setSessionTrack(e.target.value)}
+              >
+                {[PLAYBOOK_TRACK, ...content.attributes.map(a => a.id)].map(id => (
+                  <option key={id} value={id}>
+                    {trackName(id)}
+                  </option>
+                ))}
+              </Select>
+            )}
             {triggers.map(trigger => (
               <Stack key={trigger.id} direction='row' gap='sm' align='center' justify='between'>
                 <Text variant='muted' size='sm'>
                   {trigger.description}
                 </Text>
                 {canEdit && (
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    disabled={busy || pbFull}
-                    onClick={() =>
-                      void onMarkXp(PLAYBOOK_TRACK, xpMarks(data, PLAYBOOK_TRACK) + trigger.value)
-                    }
-                  >
-                    +{trigger.value}
-                  </Button>
+                  <Stack direction='row' gap='xs'>
+                    {[1, 2].map(times => (
+                      <Button
+                        key={times}
+                        variant='outline'
+                        size='sm'
+                        disabled={busy || targetFull}
+                        aria-label={t('components.characterSheet.markTriggerAria', {
+                          count: trigger.value * times,
+                          track: trackName(sessionTrack),
+                          trigger: trigger.description,
+                        })}
+                        onClick={() =>
+                          void onMarkXp(
+                            sessionTrack,
+                            xpMarks(data, sessionTrack) + trigger.value * times
+                          )
+                        }
+                      >
+                        +{trigger.value * times}
+                      </Button>
+                    ))}
+                  </Stack>
                 )}
               </Stack>
             ))}
+            <Text variant='muted' size='sm'>
+              {t('components.characterSheet.sessionTriggersHelp')}
+            </Text>
           </Stack>
+        )}
+        {desperate && (
+          <Text variant='muted' size='sm' data-testid='xp-desperate-trigger'>
+            {desperate.description} {t('components.characterSheet.desperateAuto')}
+          </Text>
         )}
 
         {content.attributes.map(attr => track(attr.id, attr.name))}
