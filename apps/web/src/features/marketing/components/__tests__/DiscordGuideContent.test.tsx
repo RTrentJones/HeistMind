@@ -54,6 +54,18 @@ describe('/discord guide ↔ command manifest', () => {
   });
 });
 
+describe('/discord guide copy is translated (F95)', () => {
+  it('every row resolves its needs/does through en.json — no raw keys render', () => {
+    render(<DiscordGuideContent />);
+    for (const row of COMMANDS) {
+      expect(row.needs.startsWith('pages.discordGuide.needs.')).toBe(true);
+      expect(row.does.startsWith('pages.discordGuide.does.')).toBe(true);
+    }
+    expect(document.body.textContent).not.toMatch(/pages\.discordGuide\./);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('HeistMind on Discord');
+  });
+});
+
 describe('DiscordGuideContent', () => {
   afterEach(() => vi.unstubAllEnvs());
 
@@ -63,6 +75,20 @@ describe('DiscordGuideContent', () => {
     expect(steps.textContent).toMatch(/create the campaign on this site/i);
     expect(steps.textContent).toMatch(/invite link/i);
     expect(document.body.textContent).not.toMatch(/claim a character/i);
+  });
+
+  // F95 — step 1 must not point at "the button above" when no button renders.
+  it('only mentions the install button when the deployment renders one', () => {
+    vi.stubEnv('NEXT_PUBLIC_DISCORD_APP_ID', '');
+    const { unmount } = render(<DiscordGuideContent />);
+    const steps = () => screen.getByTestId('discord-setup-steps').textContent ?? '';
+    expect(steps()).not.toMatch(/button above/i);
+    expect(steps()).toMatch(/install link isn't available on this site yet/i);
+    unmount();
+
+    vi.stubEnv('NEXT_PUBLIC_DISCORD_APP_ID', '123456789012345678');
+    render(<DiscordGuideContent />);
+    expect(steps()).toMatch(/the button above/i);
   });
 
   it('shows the install links only when the Discord app id is configured', () => {
