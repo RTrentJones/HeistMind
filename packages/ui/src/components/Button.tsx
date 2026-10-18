@@ -61,6 +61,18 @@ const buttonVariants = cva(
           'hover:shadow-lg hover:shadow-black/20',
         ],
         ghost: ['bg-transparent text-brand-fg hover:bg-brand-primary/10', 'hover:shadow-md'],
+        // Destructive triggers BEFORE they're armed (delete / remove / revoke): they must read as
+        // dangerous at rest, not like "Copy code" (UX r3). `-fg` is the AA text shade of the
+        // error hue in each theme.
+        'danger-outline': [
+          'border-2 border-semantic-error/60 bg-transparent text-semantic-error-fg',
+          'hover:bg-semantic-error/10 hover:border-semantic-error',
+          'hover:shadow-lg hover:shadow-semantic-error/20',
+        ],
+        'danger-ghost': [
+          'bg-transparent text-semantic-error-fg hover:bg-semantic-error/10',
+          'hover:shadow-md',
+        ],
         link: ['text-brand-fg underline-offset-4 hover:underline'],
         // Game-specific variants
         ember: [
@@ -104,7 +116,9 @@ const buttonVariants = cva(
         ],
       },
       size: {
-        default: 'min-h-10 px-4 py-2',
+        // 40px on desktop; 44px on phones like `sm` (a primary action was SMALLER than a
+        // secondary one on mobile — UX r3 / WCAG 2.5.5).
+        default: 'min-h-10 max-sm:min-h-11 px-4 py-2',
         // 32px on desktop density; a 44px tap target on phones (F93 / WCAG 2.5.5).
         sm: 'min-h-8 max-sm:min-h-11 rounded-md px-3 py-1 text-xs',
         lg: 'min-h-12 rounded-lg px-8 py-2 text-base',
