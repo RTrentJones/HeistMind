@@ -41,6 +41,7 @@ import {
 } from '@/features/characters/data/mutations';
 import type { HarmLevel } from '@heist-mind/core';
 import { viceDicePool } from '@heist-mind/engine';
+import { useCrewByGame } from '@/features/crews/data/queries';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
@@ -65,6 +66,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   // standalone character has no campaign, so the scores query stays disabled and there's no active one.
   const scoresQuery = useScoresByGame(character?.gameId ?? undefined);
   const activeScore = (scoresQuery.data ?? []).find(s => s.status === 'active') ?? null;
+  // The campaign crew's abilities can add stress boxes; the tracker shows the same track the engine
+  // overflows at (a standalone character has no crew).
+  const crewQuery = useCrewByGame(character?.gameId ?? undefined);
+  const crewContext = crewQuery.data ? { crewAbilities: crewQuery.data.crewAbilities } : null;
 
   const updateChar = useUpdateCharacter(characterId);
   const setStressMut = useSetCharacterStress(characterId);
@@ -530,7 +535,11 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           </Heading>
           <StressTracker
             current={character.characterData?.stress ?? 0}
-            max={effectiveStressMax(character.ruleset.content, character.characterData)}
+            max={effectiveStressMax(
+              character.ruleset.content,
+              character.characterData,
+              crewContext
+            )}
             interactive={canEdit && !busy}
             showNumbers
             size='lg'

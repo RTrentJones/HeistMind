@@ -31,6 +31,10 @@ const updateCharData = {
   isPending: false,
 };
 const noopMutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false };
+// No campaign crew in these fixtures (no crew-granted stress boxes).
+vi.mock('@/features/crews/data/queries', () => ({
+  useCrewByGame: () => ({ data: null }),
+}));
 vi.mock('@/features/characters/data/mutations', () => ({
   useUpdateCharacter: () => noopMutation,
   useSetCharacterStress: () => updateCharData,
