@@ -173,19 +173,24 @@ import type { Profile } from './domain-types';
 
 ## CI/CD Integration
 
-### Database Types Workflow
+`.github/workflows/supabase-ci.yml` ("Supabase CI/CD") validates and applies migrations:
 
-- **Trigger**: Changes to `supabase/migrations/**`
-- **Action**: Generates fresh Supabase types
-- **Result**: Auto-commits `supabase-types.ts`
+- **Validate Database Changes**: migration naming, then a local stack (`supabase start`, which
+  applies every migration), SQL syntax in a rolled-back transaction, the schema-targeting test, and
+  `db:types-local` + a strict compile. Image pulls go through `scripts/ci/supabase-retry.sh`
+  (backoff + ghcr.io / ECR / Docker Hub rotation). If no registry serves the images, the run is
+  **degraded**: docker checks are skipped with a warning and the deploy still runs. A real
+  failure (bad SQL, types that don't compile) blocks it (F101).
+- **Security Scan**: dangerous-SQL patterns plus `greenlight migrations scan` (pinned version).
+- **Deploy to development | production**: applies every migration file, in order, to the env
+  schema over the session pooler. It runs on `development` pushes that touch a DB file and on
+  every `main` push. The migrations are idempotent.
+- **Migrations applied**: the stable gate check, reported on every main/development push. The
+  Vercel **production** build waits for it on the same commit (`scripts/vercel-migration-gate.mjs`
+  via `vercel.json` `ignoreCommand`), so prod web code never goes live ahead of its schema.
 
-### Validation Workflow
-
-- **Trigger**: All PRs and pushes
-- **Checks**:
-  - Type separation is maintained
-  - Domain types are not corrupted
-  - All types compile correctly
+Generated types are **not** auto-committed: regenerate them with `pnpm db:types` (or
+`db:types-local`) and commit them through the normal PR flow.
 
 ## Best Practices
 

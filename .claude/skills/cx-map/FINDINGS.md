@@ -32,6 +32,73 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F101 — Ops: migration deploy skipped on registry rate limits; prod web not ordered after its schema; double-run deploy gate
+
+- **severity:** S1 (a flaky migration job on the first `main` promotion would put prod web code
+  live against a schema missing its RPCs, e.g. 00025's `attachable_games_for_character`) · S2 (a
+  flaky deploy gate) · **type:** ops — round-4 review P1-N2, P1-N3, TPM checklist #4–#6
+- **what was wrong:**
+  - **Migration deploy skipped** (P1-N2): "Supabase CI/CD" failed on f1a8534 and e9e9ffb at
+    "Validate Database Changes → Generate and validate types": `supabase gen types --local` pulls
+    `public.ecr.aws/supabase/postgres-meta`, which returned `toomanyrequests: Data limit exceeded`.
+    `deploy` needs `validate`, so **"Deploy to development" was skipped**, and Vercel shipped the
+    web code anyway. Neither commit carried a migration, so no harm this time.
+  - **No prod ordering:** prod web deploys ride Vercel's git integration on `main`; the
+    `production` migrations are a separate Actions job. Nothing held the web deploy until the
+    migrations applied.
+  - **Double-run gate** (P1-N3): greenlight-verify ran once per Vercel deployment of 1d40c00 (two
+    `development` deployments), concurrently, sharing the same personas in the project-global
+    `auth.users`. A sign-out in one invalidated the other's session, so 1 of 2 failed
+    (`auth-session.spec.ts:27`). It also ran `npx @rtrentjones/greenlight@latest` (unpinned).
+  - **Bot links** (TPM #5): `api/discord/route.ts` fell back to `http://localhost:3000` for the
+    bot's site URL whenever `SITE_URL` was unset on a deployment.
+- **fix:**
+  - `scripts/ci/supabase-retry.sh`: backoff plus image-registry rotation
+    (`SUPABASE_INTERNAL_IMAGE_REGISTRY`, which CLI 2.121.0 reads: ghcr.io → ECR → Docker Hub →
+    ghcr.io) around `supabase start` and `gen types --local` (supabase-ci) and the E2E `supabase
+start` (ci.yml). It exits 75 only when every attempt died pulling images.
+  - **Validation-infra policy:** a real validation failure (bad SQL, a migration that won't apply
+    during `supabase start`, types that don't compile) still fails `validate` and blocks the
+    deploy. A registry outage (exit 75) marks `validate` **degraded**: docker-backed checks are
+    skipped with a warning, and the deploy **still runs**. It stays gated on the static checks and
+    the dangerous-SQL scan; the hosted apply is `ON_ERROR_STOP`; and on `main` the same files have
+    already applied to `development`.
+  - **"Migrations applied"**: a stable, always-reported job in supabase-ci. The push trigger lost
+    its `paths` filter (the `changes` job decides): always on `main`, which re-asserts the
+    idempotent `production` schema, and on `development` when a DB file changed.
+  - **Prod ordering:** `vercel.json` `ignoreCommand` → `scripts/vercel-migration-gate.mjs`. A
+    **production** build waits for "Migrations applied" on the same commit. Green → build. Red or
+    still unresolved after 25 min → the build is cancelled (fail closed), and prod stays on the
+    previous deployment. Previews are never gated. There's a break-glass switch,
+    `HEISTMIND_MIGRATION_GATE=off`. greenlight-verify re-asserts the check on Production
+    deployments as a backstop.
+  - **Gate:** greenlight-verify runs only for the `development` Preview (beta) and the `main`
+    Production deployment, one run per target at a time (a concurrency group, never cancelled).
+    It skips an (env, sha) that already passed, and it pins `@rtrentjones/greenlight@0.10.0`
+    (also in supabase-ci's migration scan and the root `greenlight` script). Feature-branch
+    previews are no longer gated; PR CI's local-stack E2E covers them. Per-run
+    `E2E_PERSONA_SUFFIX` was **not** adopted: serialization removes the collision, and a suffixed
+    run that gets cancelled before teardown would leak personas into the prod `auth.users`.
+  - **Bot URL:** the route uses `lib/site.ts`'s `SITE_URL`
+    (`SITE_URL` → canonical on production → `VERCEL_URL` on preview).
+- **tests:** `scripts/vercel-migration-gate.test.mjs` (`pnpm test:scripts`, in `pnpm validate` +
+  ci.yml); `lib/__tests__/site.test.ts`; `api/discord/__tests__/route.test.ts`. Workflows were
+  actionlint-clean apart from pre-existing notes. The retry script was exercised with stub
+  commands (infra → 75, rotation success, real failure → its own exit code).
+- **owner steps (not enforceable in-repo):**
+  - Vercel: confirm which `vercel.json` the project reads (root vs `apps/web`, per its Root
+    Directory; both carry the gate) and that the first production build log shows
+    `[migration-gate]`.
+  - Vercel: add `GITHUB_CHECKS_TOKEN` (fine-grained, this repo, Checks: read) to the
+    **Production** env, and keep "Automatically expose System Environment Variables" on.
+  - GitHub: mark **"Migrations applied"** a required status check on `main`. Optionally, Vercel
+    Deployment Checks on "Migrations applied" as a second lock.
+- **residue:** none of this has run in real CI yet. Unverified until then: Vercel's
+  `deployment.ref` is the branch name (the run history's `head_branch` says so); the ghcr.io
+  mirror carries every image tag the CLI pins; there is no time limit on Vercel's
+  ignored-build-step beyond the build limit.
+- **status:** fixed (branch `feat/ops-r4`), pending the owner steps above
+
 ### F98 — Round-3 pixel UX: signed-out flash, "Bring to a campaign" dead end, quiet danger, top-heavy hub
 
 _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
@@ -93,6 +160,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
   ~300ms while the profile loads and picks "Welcome"/"Welcome back" before lists load (P2-18,
   P1-8); card-title hierarchy (P2-17) and the `/discord` grid (P2-22) not touched.
 - **status:** fixed (branch `feat/ux-r3`)
+
 ### F97 — Round-3 rules: free crew-ability ticking, unspent creation dots, desperate XP on the wrong track, no vice/background choices
 
 - **severity:** S1 (crew abilities / creation dots broke "every action offered is legal") · S2
@@ -180,6 +248,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
   re-verified here) and Brackwater keeps its own playbook-track desperate trigger (original
   content — neither sets `kind`, so neither auto-marks).
 - **status:** fixed (branch `feat/rules-r3`)
+
 ### F96 — Round-3 launch review: no way to add a faction on BitD; standalone sheets can't roll; copy polish
 
 - **severity:** S1 (a BitD GM could never add a faction) · **type:** CX-flaw + FitD-gap — from the
@@ -234,6 +303,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
     from `discordAppId()`; unit tests cover both states. (Operator follow-up still open: set
     `NEXT_PUBLIC_DISCORD_APP_ID` on the Vercel beta/prod targets.)
 - **status:** fixed @feat/product-r3 (pending merge)
+
 ### F95 — Discord identity squatting through the signup trigger (launch security round 3)
 
 - **severity:** S1 · **type:** security — **(verified: reproduced on the local stack through the

@@ -194,6 +194,23 @@ issue you find in `FINDINGS.md`. It's the guide for user validation and for deci
   verify/run skill) and update `CX-MAP.md` in the same PR (the live-update rule above).
 - Full policy + history: `.claude/skills/cx-map/CODE-QUALITY.md` ("Testing discipline" section).
 
+## CI/CD ordering (F101)
+
+- **Migrations:** `supabase-ci.yml` applies `supabase/migrations/*` to the env schema: on
+  `development` pushes that touch a DB file, and on **every** `main` push. Image pulls retry with
+  registry rotation (`scripts/ci/supabase-retry.sh`). A registry outage runs the deploy on
+  **degraded** validation (static checks + the dangerous-SQL scan). A real validation failure
+  blocks it.
+- **"Migrations applied"** is the stable gate check. Keep the job name: the Vercel production
+  build waits for it on the same commit (`vercel.json` `ignoreCommand` →
+  `scripts/vercel-migration-gate.mjs`, which fails closed), and greenlight-verify re-asserts it for
+  Production. Break-glass: Vercel env `HEISTMIND_MIGRATION_GATE=off`.
+- **Deploy gate:** `greenlight-verify.yml` gates only the `development` Preview (beta) and the
+  `main` Production deployment. It runs once per (env, sha), serialized, and pins
+  `GREENLIGHT_VERSION` (bump it with supabase-ci's, in lockstep with the RTrentJones.dev wrapper).
+- **Owner settings** (outside the repo): mark "Migrations applied" a required check on `main`, and
+  set `GITHUB_CHECKS_TOKEN` (Checks: read) in Vercel's Production env.
+
 ## Greenlight loop (deploy → verify → promote)
 
 This repo uses Greenlight. Ship changes through the deploy-verify-promote skill:
