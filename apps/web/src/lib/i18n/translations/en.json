@@ -181,7 +181,7 @@
       "noneChosen": "None chosen.",
       "condition": "Condition",
       "harm": "Harm",
-      "trauma": "Trauma",
+      "traumaCount": "Trauma {{count}} / {{max}}",
       "experience": "Experience",
       "markXpPre": "Mark XP as you play. When a track fills, hit ",
       "markXpBold": "Take advance",
@@ -362,7 +362,9 @@
       "harmModerateHint": "Moderate harm — this roll loses 1 die.",
       "harmWaivedHint": "Harm penalty waived — the GM ruled the wound doesn't hinder this action.",
       "harmLesserHint": "Lesser harm — expect reduced effect.",
-      "harmSevereHint": "Severe harm — you can't act without help or pushing yourself."
+      "harmSevereHint": "Severe harm — you can't act without help or pushing yourself.",
+      "localNote": "Rolls here aren't saved anywhere — this character isn't in a campaign, so there's no campaign log. The stress a roll costs (pushing, resisting) is marked on this sheet.",
+      "localHistory": "This session's rolls"
     },
     "rollLog": {
       "empty": "No rolls yet.",
@@ -534,8 +536,20 @@
       "addFailed": "Failed to add faction",
       "updateFailed": "Update failed",
       "empty": "No factions yet.",
-      "emptyGmHint": " Seed one of the city powers below.",
+      "emptyGmHint": "Add the powers your crew will deal with — gangs, the law, rivals, patrons — with the form below.",
+      "emptyGmHintSuggested": "Seed one of this ruleset's suggested powers below, or add your own.",
+      "emptyPlayerHint": "Your GM adds the powers your crew deals with here.",
       "addFaction": "Add faction",
+      "addSuggested": "Add suggested faction",
+      "suggestedLabel": "Suggested faction",
+      "newHeading": "Add a faction",
+      "nameLabel": "Faction name",
+      "namePlaceholder": "e.g. The Lampblacks",
+      "duplicateName": "This campaign already has a faction with that name.",
+      "tierLabel": "Tier",
+      "statusLabel": "Starting status",
+      "notesLabel": "Notes (optional)",
+      "notesPlaceholder": "Who they are, what they want, where they operate",
       "tierOption": "Tier {{tier}}",
       "remove": "Remove",
       "removeAria": "Remove {{name}}",
@@ -689,10 +703,11 @@
     "discordLink": {
       "title": "Play this campaign on Discord",
       "intro": "Run the mechanics from your server's play-by-post channel — rolls, stress, harm, clocks and the campaign log stay in sync with this page.",
-      "step1": "Add the HeistMind bot to your Discord server (you need Manage Server).",
+      "step1": "Add the HeistMind bot to your Discord server with the button below (you need Manage Server).",
+      "step1NoInstall": "Get the HeistMind bot into your Discord server — someone with Manage Server adds it (the install link isn't available on this site yet; the guide below explains the rest).",
       "step2Lead": "In the channel you play in, run",
       "step2Tail": "(needs Manage Channels).",
-      "step3": "Players join here with your invite link, build a character, then pick it in Discord with /character use.",
+      "step3Lead": "Players join here with your invite link, build a character, then pick it in Discord with",
       "guide": "Read the full Discord guide"
     },
     "deleteCampaign": {
@@ -824,7 +839,7 @@
       }
     },
     "dashboard": {
-      "welcome": "Welcome back, {{name}}",
+      "title": "Your dashboard",
       "subtitle": "Pick up where your crew left off.",
       "recentActivity": "Recent activity",
       "noActivity": "No recent activity yet — rolls, results and changes in your campaigns show up here.",
@@ -849,7 +864,8 @@
         "step3": "Join a campaign",
         "step3Note": "— got an invite link? Just open it. Got a join code? Enter it here.",
         "step4": "Playing on Discord?",
-        "step4Note": "— add the bot to your server and roll from your sheet with slash commands."
+        "step4Note": "— add the bot to your server with the button below, then roll from your sheet with slash commands.",
+        "step4NoteNoInstall": "— see how the bot works: rolls, stress and the campaign log as slash commands in your server."
       },
       "loadFailed": "Failed to load dashboard",
       "characterMeta": "{{playbook}} · {{campaign}}",
@@ -860,7 +876,6 @@
         "uploadRuleset": "Upload ruleset",
         "discord": "Discord guide"
       },
-      "welcomeNew": "Welcome, {{name}}",
       "subtitleNew": "Build a rules-legal scoundrel, run a campaign, or join your crew — pick any step below."
     },
     "characters": {
@@ -971,6 +986,63 @@
         "usedUp": "This join code has been used up. Ask your GM for a new invite link.",
         "removed": "The GM removed you from this campaign, so this link can't add you back. Talk to your GM if that was a mistake.",
         "generic": "Something went wrong joining. Try again in a moment."
+      }
+    },
+    "discordGuide": {
+      "title": "HeistMind on Discord",
+      "intro": "Sheet-rated rolls, stress, harm, XP, clocks, and GM controls as slash commands — the live mechanical layer for async play-by-post, right in your server. The story stays in your channels; the mechanics and shared truth live in HeistMind.",
+      "setupTitle": "Getting started",
+      "step1Title": "Add the bot.",
+      "step1Body": "Someone with Manage Server adds HeistMind to your Discord server (the button above). Then try the dice — no account needed:",
+      "step1BodyNoInstall": "Someone with Manage Server adds HeistMind to your Discord server (the install link isn't available on this site yet). Once it's in, try the dice — no account needed:",
+      "step2Title": "GM: create the campaign on this site, then link it.",
+      "step2Link": "Create a campaign",
+      "step2Mid": ", then in the channel you play in run",
+      "step2Tail": "and pick it (needs Manage Channels). Copy the campaign’s invite link from its page for your players.",
+      "step3Title": "Players: sign in, join, build.",
+      "step3Lead": "Sign in with Discord on this site once — that sign-in IS the account link; there is no separate pairing step. Open the GM’s invite link (or enter the join code on the",
+      "step3Link": "Campaigns",
+      "step3Mid": "page), build a character in the campaign, and pick it in Discord with",
+      "step4Title": "Play.",
+      "step4Body": "rolls your character’s real rating. In the linked channel, rolls and every mechanical change land in the shared campaign log — the same log the campaign page shows.",
+      "referenceTitle": "Command reference",
+      "referenceHint": "shows this in Discord, grouped by what each command needs.",
+      "colCommand": "Command",
+      "colNeeds": "Needs",
+      "colDoes": "Does",
+      "needsLabel": "Needs:",
+      "doesLabel": "Does:",
+      "footerLead": "Build characters, campaigns, and rulesets on",
+      "footerLink": "the web app",
+      "footerTail": "; every mechanical change — from either side — lands in the same campaign log.",
+      "needs": {
+        "nothing": "nothing",
+        "signedIn": "signed in",
+        "activeCharacter": "active character",
+        "gmServer": "GM, in a server",
+        "memberLinked": "member, linked channel",
+        "gmLinked": "GM, linked channel"
+      },
+      "does": {
+        "manualDice": "Manual FitD action/fortune rolls and plain NdM dice — no account, nothing stored",
+        "resist": "Resistance roll — stress is 6 − highest die; a critical clears 1",
+        "help": "Every command, grouped by what it needs · what the bot is, privacy, and the deployed version",
+        "account": "Your linked HeistMind account and active character",
+        "character": "Pick, show (or share) and clear the character the bot acts as — one at a time",
+        "rollAction": "Action roll from your sheet rating; push (+1d, 2 stress) OR a devil’s bargain (+1d), plus an assist (+1d, the helper marks 1 stress); bonus adds or removes an ability’s dice (Ambush +1); moderate harm costs a die; persists in a linked channel",
+        "resistAttribute": "Resist with your sheet’s attribute rating (in a linked campaign), plus any ability dice (bonus:1 for Iron Will, bonus:-1 for Daredevil); the stress cost lands on your sheet",
+        "stress": "Mark or clear stress on your sheet",
+        "harm": "Take harm (full tracks escalate, RAW; armor:true soaks a level) or clear a wound — logged",
+        "vice": "Downtime: roll your vice, clear stress (overindulgence flagged)",
+        "xp": "Mark XP (playbook or attribute track) and spend a full track on an advance",
+        "link": "Link one of your campaigns to this channel, its category, or the whole server (needs Manage Channels; Manage Server for server-wide) · remove the link",
+        "status": "The linked campaign at a glance: score, crew, clocks",
+        "log": "Record a settled result in the campaign log — attributed to you, tagged to the active score",
+        "score": "Operation lifecycle — log entries are tagged to the score",
+        "crewHeat": "Add/reduce heat (→ wanted cascade) · full Rep: hold weak→strong, or pay new Tier × 8 coin · Wanted −1 + Heat cleared",
+        "crewXp": "Mark crew advancement XP · spend a full track on a new crew ability",
+        "clock": "Advance or wind back a clock; filling it announces the milestone",
+        "faction": "Set a faction’s standing toward the crew (−3 war … +3 allies)"
       }
     }
   },

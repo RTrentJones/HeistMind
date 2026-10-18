@@ -26,7 +26,8 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 ## App shell
 
 Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
-mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand,
+mounted in the root layout inside `Providers`; its chrome is the exported `PageShell`, which the
+signed-in dashboard at `/` also renders since F96): a persistent `AuthHeader` (brand,
 Campaigns/Characters/Rulesets/Discord/Settings nav (Discord → the `/discord` guide, F94) — the Characters link is the Mode-1 "My characters"
 home, F81 — `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
 focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
@@ -124,9 +125,14 @@ bootstrap).
   from anywhere · take what you want). Copy lives in `pages.landing.*`.
 - **Signed in — `Dashboard`** (`apps/web/src/features/dashboard/components/Dashboard.tsx` +
   `features/dashboard/hooks/use-dashboard-data.ts`): the personal home (the OAuth callback redirects
-  to `/` unless a `next` intent says otherwise). Header _"Welcome back, {name}"_ **only for a
-  returning user** (any campaign or character); a newcomer gets _"Welcome, {name}"_ (F94).
-  **Quick actions** (create campaign · join a campaign · new character · rulesets · upload ruleset ·
+  to `/` unless a `next` intent says otherwise). **Since F96** the page h1 is _"Your dashboard"_
+  (the greeting lives only in the header — the name used to appear twice, header text + a
+  "Welcome, {name}" h1, and the h1 fell back to the user's **email** before the profile loaded);
+  the subtitle ("Pick up where your crew left off." / the first-run line) renders only once both
+  lists have loaded, so it never flips. The dashboard renders the shared **`PageShell`** (the
+  `AppShell` chrome: skip link, header, breadcrumbs, `main` with the `pt-6 sm:pt-10` gap, pinned
+  footer) instead of a hand-rolled wrapper.
+  **Quick actions** — returning users only, after load (create campaign · join a campaign · new character · rulesets · upload ruleset ·
   **Discord guide**); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
   state); **Your characters** (`characters.findByPlayer`, name · playbook · campaign · status, →
   sheet); **Recent activity** (a merged, newest-first feed over `rolls.findByGame` across the
@@ -136,7 +142,10 @@ bootstrap).
   false "Open a campaign to build your scoundrel"): 1. Build a character (works on its own) · 2. Create a campaign (send players its invite link) · 3. Join a campaign (open an invite link, or
   enter a join code at `/games#join`) · 4. **Playing on Discord?** → `/discord`, plus the **Add
   HeistMind to your Discord server** / user-install links (`DiscordInstallLinks`, hidden when
-  `NEXT_PUBLIC_DISCORD_APP_ID` is unset). Returning users' empty state reads "No characters yet.
+  `NEXT_PUBLIC_DISCORD_APP_ID` is unset — step 4's note only says "with the button below" when the
+  button renders, F96). **F96:** first run leads with Start here directly under the title — the
+  six quick-action buttons that repeated its steps (and pushed it below the fold at 360px) are not
+  rendered in that state. Returning users' empty state reads "No characters yet.
   Build one — no campaign needed."
 - **Legal touchpoints (2026-07-05):** every sign-in affordance carries the **clickwrap** line
   ("By signing in, you agree to the Terms of Service and Privacy Policy" — `ClickwrapNotice`,
@@ -153,8 +162,10 @@ bootstrap).
   has its own loading → error (Try again) → empty; Recent activity stays loading across the
   per-campaign fan-out, so "No recent activity" never flashes before the rows (the F79 residue);
   activity titles and playbooks are translated/named.
-- _Last verified:_ 2026-10-17 (F94: Welcome vs Welcome back, single Start here with a Discord
-  step, CTA intents; previously F91)
+- **Activity rows (F96):** a character event titled with the character's name (harm, XP, stress →
+  trauma) no longer repeats the name in its meta line (shared `entryWho()` in `rolls/lib/labels.ts`).
+- _Last verified:_ 2026-10-18 (F96: "Your dashboard" title, PageShell, Start here first without
+  quick actions, load-gated subtitle, no email; previously F94 Start here / CTA intents, F91)
 
 ### `/auth/callback` — OAuth return
 
@@ -266,6 +277,16 @@ bootstrap).
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
     status (−3..+3, labelled per the SRD: War · Hostile · Interfering · Neutral · Helpful · Friendly
     · Allies — F92) and their project clocks. GM-editable.
+    **Add a faction (F96):** the GM always gets a free-text **"Add a faction"** form
+    (`NewFactionForm`): faction name (required; a name the campaign already has is refused inline,
+    case-insensitive), **Tier** 0–6, **Starting status** on the SRD scale (+3 Allies … −3 War,
+    default 0 Neutral), optional **Notes** (shown on the faction card). On rulesets that suggest
+    factions (Brackwater, Wicked Ones) a **"Suggested faction"** picker + "Add suggested faction"
+    sits above it; Blades in the Dark ships none (setting IP), which used to leave the GM with no
+    way to add a faction under "Seed one of the city powers below." with nothing below. Empty
+    state: GM → "…with the form below" (or "Seed one of this ruleset's suggested powers below, or
+    add your own"); player → "Your GM adds the powers your crew deals with here." No migration —
+    `factions.notes` and the GM-write RLS policy already existed. e2e: `gm-factions-bitd.spec.ts`.
   - `ScorePanel` (`apps/web/src/features/scores/components/ScorePanel.tsx`) — the **score / operation
     lifecycle**. A campaign runs as a series of scores (the per-operation unit per-score loadout hangs
     off); the GM **starts** one (at most one active at a time) and **ends** it, with the most recent
@@ -291,7 +312,8 @@ bootstrap).
       mark now logs an `xp` event ("Marked N XP — <track>"), and crew XP marks/advances log
       `crew` events._
       Entries are **grouped by score** (newest operation first, under its name); with no scores in
-      play it falls back to a flat feed.
+      play it falls back to a flat feed. A character event titled with the character's name no
+      longer repeats the name in the meta line (F96, `entryWho()`).
 - **Launch-review round (F91, 2026-10-17):** the roster, invite codes and campaign log each show
   **loading → error (Try again) → empty** distinctly (no "No characters yet"/"No codes" flash, no
   vanishing log); "game not found" links back to `/games`; the GM state select is translated and
@@ -303,8 +325,12 @@ bootstrap).
   (who · dice · position/effect) on its own line without a leading "·", and roster playbooks show
   their names, not ids.
 - The log heading reads **"Campaign log"** (was "Roll Log" — F94 terminology).
-- _Last verified:_ 2026-10-17 (F94: invite link/revoke, Players remove/leave, Discord card, delete
-  campaign; previously F91)
+- **Discord card (F96):** step 1 only says "with the button below" when the install button renders
+  (`NEXT_PUBLIC_DISCORD_APP_ID` set); otherwise it says the install link isn't available on this
+  site yet. `/character use` is code-formatted.
+- _Last verified:_ 2026-10-18 (F96: GM "Add a faction" form on every ruleset, honest Discord-card
+  step 1, log names a character once; previously F94 invite link/revoke, Players remove/leave,
+  Discord card, delete campaign; F91)
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -403,12 +429,16 @@ bootstrap).
   flight. Clearing a wound (sheet box or editor ×) is a **two-click confirm**. The **Roll panel is
   only offered to someone who can edit** the character (owner/GM); read-only viewers keep the log.
   The newest roll result is announced via an `aria-live` region; the rename row is a real form.
-- _Last verified:_ 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire banner,
-  Veteran-gated advances; F91 launch-review frontend round; previously 2026-07-11 backlog rounds E+F)
+- **Trauma count (F96):** the Condition card always shows **"Trauma n / max"** (e.g. "Trauma 2 /
+  4", "None." at zero) — the count is the mechanic (the last box retires the character).
+- _Last verified:_ 2026-10-18 (F96: trauma marked/max, standalone dice; previously rules-accuracy
+  round F92: stress→trauma prompt + retire banner, Veteran-gated advances; F91 launch-review
+  frontend round; 2026-07-11 backlog rounds E+F)
 - **Delete (F94):** the owner (only — not the GM) gets a **Delete character** card at the bottom of
   the sheet: two-click confirm → `/characters`; log entries stay in the log.
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
-  for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
+  for a character with no campaign: the score/shared-log sections hide (the **Dice** card stays —
+  display-only, F96; see `/characters/[characterId]` below), and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
   routes below.
 
@@ -426,6 +456,10 @@ bootstrap).
   dungeon as the crew type and uses crew **resource pools** (hoard + threat).
 - **Copy truth (F94):** there is **no ruleset editor** — no more "editable copy you can reskin
   freely"; each built-in adds **a copy you own**; to customize, upload a modified ruleset JSON.
+  **F96:** the Brackwater card's blurb no longer says "ready to play or to copy and reskin" (now
+  "…ready to play."), and the three built-ins' descriptions lost "Edit freely." — guarded by
+  `packages/shared/src/builtin-rulesets/copy.test.ts`. (Copies added before F96 keep the old
+  description until refreshed.)
 - **Delete (F94):** owner-only. Refused while a campaign or one of your own characters is built on
   it — the toast says so plainly, not a raw FK error. Other players' characters bound to it get their
   own copy first (00023).
@@ -438,7 +472,8 @@ bootstrap).
 - **360px (F91, 2026-10-17):** the long "Add … to my rulesets" CTAs and the list rows wrap instead
   of running past a phone viewport (also on `/characters/new` and `/games/new`, which embed the
   catalog); a load error offers Try again. `e2e/specs/mobile-overflow.spec.ts` checks every route at 360px.
-- _Last verified:_ 2026-10-17 (F94: delete, copy truth, "Create campaign"; previously F91)
+- _Last verified:_ 2026-10-18 (F96: Brackwater blurb + descriptions; previously F94 delete, copy
+  truth, "Create campaign"; F91)
 
 ### `/rulesets/new` — Upload ruleset
 
@@ -483,8 +518,18 @@ bootstrap).
 
 ### `/characters/[characterId]` — Standalone character sheet
 
+- _Last verified:_ 2026-10-18 (F96: display-only dice)
+
 - **File:** `apps/web/src/app/characters/[characterId]/page.tsx` — reuses `CharacterSheet`. With no
-  campaign, the active-score + shared dice/roll-log sections hide. The **`AttachToCampaign`** card is
+  campaign, the active-score + shared roll-log sections (and flashback, a feed beat) hide.
+  **Dice (F96, "sheet anywhere"):** the owner still gets the **Dice** card — `RollPanel` with
+  `gameId: null`: fortune + resistance (+ action on action-rating rulesets, with push / devil's
+  bargain / harm penalty), the same pool math and outcome classification, **display-only** (a
+  "Rolls here aren't saved anywhere…" note and a short "This session's rolls" list; nothing is
+  written to any log). The stress the rules charge — push +2, a resistance's 6 − highest (a crit
+  clears 1) — is marked on the sheet through engine `applyStress` (the tracker's path), so an
+  overflow owes trauma and the sheet prompts for it. The thumb bar's Dice jump shows too.
+  e2e: `standalone-dice.spec.ts`. The **`AttachToCampaign`** card is
   the **owner's campaign-membership control** (shown on both standalone _and_ in-campaign sheets):
   standalone → **"Bring to a campaign"**; in-campaign (Phase 5b) → **"Move to another campaign"**
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
@@ -528,13 +573,16 @@ bootstrap).
 ### `/discord` — The bot guide (public, F67)
 
 - **Files:** `apps/web/src/app/discord/page.tsx` (server component + `metadata`) →
-  `DiscordGuideContent` (`apps/web/src/features/marketing/components/`) — the legal-page pattern;
-  command names/syntax are deliberately literal (they must match the registered commands).
+  `DiscordGuideContent` (`apps/web/src/features/marketing/components/`). **Since F96 all copy is
+  in i18n** (`pages.discordGuide.*` in `en.json` — prose, column headings and each row's
+  Needs/Does); only the command names/syntax stay literal in code (they must match the registered
+  commands, and the guide↔manifest unit test reads them).
 - **Purpose:** the page a GM sends players — what the bot is; **Add HeistMind to your Discord
   server** + "add it to your Discord account" (user install) under the hero (`DiscordInstallLinks`:
   `bot applications.commands` permissions=0 / `applications.commands` user install, from
   `NEXT_PUBLIC_DISCORD_APP_ID`, hidden when unset); the **real setup order** (F94): 1. add the bot
-  (+ try the dice) · 2. GM creates the campaign **on this site**, runs `/heist link campaign:`
+  (+ try the dice) — says "(the button above)" only when the button renders, else "the install link
+  isn't available on this site yet" (F96) · 2. GM creates the campaign **on this site**, runs `/heist link campaign:`
   (Manage Channels) and copies the invite link · 3. players sign in once (the account link), open
   the invite link (or enter the join code on `/games`), build a character, `/character use` · 4. play. The command reference renders from one `COMMANDS` array that a **unit test checks
   against the real slash-command manifest both ways** — it had drifted (`/heist log` for `/log`,
@@ -547,7 +595,7 @@ help` and `packages/discord/README.md`.
   the guide is in the server-rendered HTML (link unfurls and crawlers see it).
 - **Layout (F93):** the command reference is a single `<dl>` — stacked cards (command, then
   labelled Needs / Does) below `md`, a 3-column table-like grid from `md`; nothing scrolls sideways.
-- _Last verified:_ 2026-10-17 (F94: install links, real setup order, manifest-checked reference,
+- _Last verified:_ 2026-10-18 (F96: copy moved to i18n, install-aware step 1); 2026-10-17 (F94: install links, real setup order, manifest-checked reference,
   signed-in reachability; F90 SSR + metadata; F93 responsive command reference; previously
   2026-07-11 feature introduction — bot-parity round, F67)
 

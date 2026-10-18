@@ -24,7 +24,7 @@ export const DEFAULT_RULESET: RulesetContent = {
     description:
       'A starter Forged-in-the-Dark ruleset. Play a crew of scoundrels in the drowned canal ' +
       'city of Brackwater — heists, rivalries, the restless Tide-touched, and fortunes made in ' +
-      'smuggled saltglass. Original setting; FitD-compatible mechanics. Edit freely.',
+      'smuggled saltglass. Original setting; FitD-compatible mechanics.',
     system: 'Forged in the Dark',
   },
 

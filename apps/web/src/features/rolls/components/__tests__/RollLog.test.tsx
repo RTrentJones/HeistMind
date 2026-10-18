@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Roll } from '@heist-mind/core';
 import { TooltipProvider } from '@heist-mind/ui';
 import '@/lib/i18n';
+import { entryWho } from '@/features/rolls/lib/labels';
 import { RollLog } from '../RollLog';
 
 const refetch = vi.fn();
@@ -102,5 +103,42 @@ describe('RollLog', () => {
     expect(screen.queryByText('bad')).not.toBeInTheDocument();
     // The meta line is its own line with no leading separator (pixel review #13).
     expect(screen.getByText('Silks · [6, 3] · Risky/Standard')).toBeInTheDocument();
+  });
+
+  // F96 — character events are TITLED with the character's name; the meta line must not repeat it.
+  it('names the character once on an event titled with that name', () => {
+    rollsState = {
+      isPending: false,
+      isError: false,
+      data: [
+        roll({
+          kind: 'harm',
+          label: 'Silks',
+          dice: 0,
+          results: [],
+          position: null,
+          effect: null,
+          note: 'Took moderate harm: Broken arm',
+        }),
+      ],
+      refetch,
+    };
+    render(
+      <TooltipProvider>
+        <RollLog gameId='g1' />
+      </TooltipProvider>
+    );
+    expect(screen.getAllByText('Silks')).toHaveLength(1);
+    expect(screen.getByText('Took moderate harm: Broken arm')).toBeInTheDocument();
+  });
+});
+
+describe('entryWho', () => {
+  it('drops the who segment only when the title already is that name', () => {
+    expect(entryWho('Silks', 'Silks')).toBe('');
+    expect(entryWho(' silks ', 'Silks')).toBe('');
+    expect(entryWho('Prowl', 'Silks')).toBe('Silks');
+    expect(entryWho(null, 'Silks')).toBe('Silks');
+    expect(entryWho('Silks', '')).toBe('');
   });
 });

@@ -32,12 +32,15 @@ test.describe('GM: factions + status', () => {
 
     // Seed a suggested faction.
     await expect(gmPage.getByRole('heading', { name: 'Factions', exact: true })).toBeVisible();
-    await gmPage.getByLabel('Add faction').selectOption('The Tidewatch');
-    await gmPage.getByRole('button', { name: 'Add faction', exact: true }).click();
+    await gmPage.getByLabel('Suggested faction').selectOption('The Tidewatch');
+    await gmPage.getByRole('button', { name: 'Add suggested faction', exact: true }).click();
     await expect(gmPage.getByText('The Tidewatch', { exact: true })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(gmPage.getByText('Neutral')).toBeVisible();
+    // Scoped to the status badge: the add-a-faction form's status select also lists "0 Neutral".
+    await expect(
+      gmPage.locator('[data-testid^="faction-status-"]').locator('xpath=..')
+    ).toContainText('Neutral');
 
     // Shift status one step toward allies → Helpful (SRD +1). The badge is the status of record; the
     // shift ALSO lands in the campaign feed (round-3 PR-3), so bare getByText("Helpful") would

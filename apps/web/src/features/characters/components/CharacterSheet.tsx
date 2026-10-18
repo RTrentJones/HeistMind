@@ -342,6 +342,8 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   // sheet instead of controls that render and then fail server-side.
   const canEdit =
     user?.id != null && (user.id === character.createdBy || user.id === character.game?.createdBy);
+  // A campaign sheet always shows the shared log; a standalone one shows dice only to its editor.
+  const showDice = character.gameId != null || canEdit;
 
   return (
     // max-sm:pb-16 clears the fixed thumb bar (below) so the last card is never hidden under it.
@@ -628,9 +630,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         <GearCard data={character.characterData} />
       </Stack>
 
-      {/* Dice + shared campaign log: only in a campaign. A standalone character (Phase 5) has no
-          shared feed — its sheet is the rules-valid build, brought to a table when you attach it. */}
-      {character.gameId && (
+      {/* Dice: everywhere the viewer may roll. In a campaign the rolls land in the shared log (shown
+          below); a standalone sheet (F96, "sheet anywhere") rolls display-only — nothing is
+          logged, only the stress the rules charge is marked on the sheet. */}
+      {showDice && (
         <Card variant='outline' id='sheet-dice' className='scroll-mt-4'>
           <Stack direction='column' gap='md'>
             <Heading level='h3' as='h2'>
@@ -643,7 +646,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 read-only viewer still sees the shared log. */}
             {!canEdit ? null : derivedMode ? (
               <RollPanel
-                gameId={character.gameId}
+                gameId={character.gameId ?? null}
                 characterId={character.id}
                 actions={rulesetActions(sheetContent).map(name => ({
                   name,
@@ -658,7 +661,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               />
             ) : (
               <RollPanel
-                gameId={character.gameId}
+                gameId={character.gameId ?? null}
                 characterId={character.id}
                 attributes={sheetContent.attributes.map(a => ({
                   name: a.name,
@@ -667,8 +670,9 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 teammates={teammates}
               />
             )}
-            {/* Flashback (F16) — spend stress to retro-establish; the feed carries the beat. */}
-            {canEdit && (
+            {/* Flashback (F16) — spend stress to retro-establish; the feed carries the beat (so it's
+                campaign-only: on a standalone sheet there is no feed to carry it). */}
+            {canEdit && character.gameId && (
               <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
                 <Input
                   size='sm'
@@ -699,7 +703,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 </Button>
               </Stack>
             )}
-            <RollLog gameId={character.gameId} />
+            {character.gameId && <RollLog gameId={character.gameId} />}
           </Stack>
         </Card>
       )}
@@ -724,7 +728,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-condition')}>
           {t('components.characterSheet.quickCondition')}
         </Button>
-        {character.gameId && (
+        {showDice && (
           <Button variant='ghost' size='sm' onClick={() => jumpTo('sheet-dice')}>
             {t('components.characterSheet.quickDice')}
           </Button>

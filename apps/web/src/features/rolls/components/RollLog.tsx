@@ -13,6 +13,7 @@ import {
   effectLabel,
   outcomeLabel,
   positionLabel,
+  entryWho,
   rollKindLabel,
 } from '@/features/rolls/lib/labels';
 
@@ -121,7 +122,7 @@ export function RollLog({ gameId }: { gameId: string }) {
             {/* Its own line, joined without a leading separator (pixel review #13). */}
             <Text variant='muted' size='sm' className='block'>
               {[
-                who,
+                entryWho(r.label, who),
                 r.results.length > 0 ? `[${r.results.join(', ')}]` : '',
                 // F7 — a zero-pool roll shows why two dice appear: 2d, take the lowest.
                 r.zeroDice || (r.dice === 0 && r.results.length > 0)

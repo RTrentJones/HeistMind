@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { harmDicePenalty, worstHarmLevel, type CharacterHarm } from '@heist-mind/core';
+import { useRef, useState } from 'react';
+import {
+  harmDicePenalty,
+  resistanceStress,
+  rollOutcome,
+  worstHarmLevel,
+  type CharacterHarm,
+} from '@heist-mind/core';
 import { Alert, Badge, Button, Input, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
+import { useApplyStress } from '@/features/characters/data/mutations';
 import { useActionRoll, useResistanceRoll } from '@/features/rolls/data/mutations';
 import { rollPool } from '@/features/rolls/lib/roll-pool';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -31,6 +38,12 @@ const MODE_KEY = {
  * Roll dice for a character action, a GM fortune roll, or a resistance roll, and persist it to the
  * campaign's log. Dice are realized client-side; the repository recomputes the outcome from the
  * faces. A resistance roll also applies the stress it costs to the resisting character.
+ *
+ * `gameId: null` is the STANDALONE sheet (F96, "character sheet anywhere"): the same dice, pool
+ * math and outcome classification, but nothing is written to any log — there is no campaign. The
+ * stress the rules charge (push +2, a resistance's 6 − highest, a crit clearing 1) still lands on
+ * the sheet through the same engine `applyStress` path the stress tracker uses, so the portable
+ * sheet stays true to what was rolled (overflow → trauma owed, prompted on the sheet).
  */
 // Fortune-roll flavors (F46): all fortune mechanically, but the LABEL tells the table what was
 // asked, and the readout interprets the tiers the way the SRD phrases them.
@@ -41,6 +54,9 @@ const FORTUNE_TYPE_KEY = {
   engagement: 'components.rollPanel.fortuneType.engagement',
   gatherInfo: 'components.rollPanel.fortuneType.gatherInfo',
 } as const;
+/** How many display-only rolls the standalone panel keeps on screen. */
+const LOCAL_HISTORY = 5;
+
 const FORTUNE_READING_KEY = {
   crit: 'components.rollPanel.fortuneReading.crit',
   success: 'components.rollPanel.fortuneReading.success',
@@ -56,7 +72,8 @@ export function RollPanel({
   harm,
   teammates,
 }: {
-  gameId: string;
+  /** The campaign whose log the roll lands in; `null` = standalone, display-only (F96). */
+  gameId: string | null;
   characterId?: string;
   actions?: ActionOption[];
   /** The character's ATTRIBUTE ratings — RAW, resistance rolls the attribute, not an action (F23). */
@@ -68,8 +85,11 @@ export function RollPanel({
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const actionRoll = useActionRoll(gameId);
-  const resistanceRoll = useResistanceRoll(gameId);
+  const local = gameId === null;
+  // Hooks are unconditional; the campaign writers are simply never called in local mode.
+  const actionRoll = useActionRoll(gameId ?? '');
+  const resistanceRoll = useResistanceRoll(gameId ?? '');
+  const applyStress = useApplyStress(characterId ?? '', null);
   const hasActions = !!actions?.length;
   const canResist = !!characterId;
   // Resistance rolls the character's ATTRIBUTES when provided (RAW; derived on action-rating
@@ -114,6 +134,11 @@ export function RollPanel({
     kind?: RollMode;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Standalone (display-only) rolls: the last few, newest first — there's no log to read them in.
+  const [history, setHistory] = useState<
+    { id: number; label: string; outcome: keyof typeof OUTCOME_KEY; results: number[] }[]
+  >([]);
+  const historySeq = useRef(0);
 
   // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
   const traumaLog = {
@@ -124,6 +149,52 @@ export function RollPanel({
   const realize = (count: number) =>
     Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
 
+  /** Charge a stress delta to the rolling character's sheet (standalone mode; no log). */
+  const chargeStress = async (userId: string, stress: number) => {
+    if (characterId === undefined || stress === 0) return;
+    await applyStress.mutateAsync({ userId, stress, traumaLog });
+  };
+
+  // F96 — standalone sheet: realize, classify and show; apply only the stress the rules charge.
+  const rollLocally = async (userId: string) => {
+    let label: string;
+    let count: number;
+    let zeroDice: boolean;
+    let stress: number | undefined;
+    let kind: RollMode = mode;
+    if (mode === 'resistance') {
+      const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
+      ({ count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0 }));
+      label = opt?.name ?? t(MODE_KEY.resistance);
+    } else {
+      const isActionRoll = mode === 'action';
+      const rating = isActionRoll ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune;
+      ({ count, zeroDice } = rollPool({
+        mode,
+        rating,
+        push,
+        bargain,
+        harmPenalty: isActionRoll ? appliedHarmPenalty : 0,
+        fortune,
+      }));
+      label = isActionRoll ? action : t(FORTUNE_TYPE_KEY[fortuneType]);
+      kind = isActionRoll ? 'action' : 'fortune';
+    }
+    const results = realize(count);
+    const outcome = rollOutcome(results, { zeroDice });
+    if (mode === 'resistance') {
+      stress = resistanceStress(results, { zeroDice });
+      await chargeStress(userId, stress);
+    } else if (mode === 'action' && push) {
+      // Pushing yourself costs 2 stress, win or lose (RAW).
+      await chargeStress(userId, 2);
+    }
+    setLast({ outcome, results, kind, ...(stress !== undefined ? { stress } : {}) });
+    setHistory(h =>
+      [{ id: ++historySeq.current, label, outcome, results }, ...h].slice(0, LOCAL_HISTORY)
+    );
+  };
+
   const roll = async () => {
     const userId = user?.id;
     if (!userId) return;
@@ -131,6 +202,10 @@ export function RollPanel({
     setError(null);
 
     try {
+      if (local) {
+        await rollLocally(userId);
+        return;
+      }
       // The sequenced parts (persist + stress consequences) are ENGINE use-cases; the panel
       // realizes the dice and phrases the feed copy.
       if (mode === 'resistance') {
@@ -446,6 +521,25 @@ export function RollPanel({
           </Stack>
         )}
       </div>
+      {local && (
+        <Text size='sm' variant='muted' data-testid='roll-local-note'>
+          {t('components.rollPanel.localNote')}
+        </Text>
+      )}
+      {local && history.length > 1 && (
+        <div>
+          <Text as='strong' size='sm'>
+            {t('components.rollPanel.localHistory')}
+          </Text>
+          <ol className='mt-1 space-y-0.5 text-sm text-foreground-muted' data-testid='roll-history'>
+            {history.map(h => (
+              <li key={h.id}>
+                {h.label} · {t(OUTCOME_KEY[h.outcome])} [{h.results.join(', ')}]
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {/* F46 — the tiered fortune reading, phrased the way the SRD grades fortune results. */}
       {last?.kind === 'fortune' && (
         <Text variant='muted' size='sm'>

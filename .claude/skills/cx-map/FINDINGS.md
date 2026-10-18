@@ -32,6 +32,60 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F96 — Round-3 launch review: no way to add a faction on BitD; standalone sheets can't roll; copy polish
+
+- **severity:** S1 (a BitD GM could never add a faction) · **type:** CX-flaw + FitD-gap — from the
+  round-3 launch review and the round-3 pixel audit (`round3-pixel.md` P0-1, P1-4, P1-8, P2 email)
+- **where / root cause:**
+  - **P0 — factions on Blades in the Dark** (`features/factions/components/FactionsPanel.tsx`): the
+    panel could only add factions from `ruleset.factions` suggestions; the BitD built-in ships none
+    on purpose (setting IP), so the GM saw "No factions yet. Seed one of the city powers below." with
+    nothing below. `gm-factions.spec` only exercised Brackwater (which suggests), so it never showed.
+  - **P1 — a standalone sheet had no dice** (`CharacterSheet.tsx` gated the whole Dice card on
+    `character.gameId`), contradicting BRD Mode 1 ("sheet anywhere").
+  - **P2 — the character's name twice** in campaign-log and dashboard-activity rows: character
+    events are titled with the name (`label: character.name`) and the meta line's "who" repeated it.
+  - **P2 — untrue catalog copy:** Brackwater's blurb said "ready to play or to copy and reskin", and
+    all three built-in descriptions said "Edit freely" — there is no ruleset editor or download.
+  - **P2 — "Welcome, <name>" twice on the dashboard** (header text + the page h1), the h1 fell back
+    to the user's email before the profile loaded, and "Welcome"/"Welcome back" flipped while the
+    lists loaded. The first-run Start here card sat under six quick-action buttons repeating its
+    steps (below the fold at 360px), and the dashboard hand-rolled its page wrapper (h1 ~8px under
+    the header, footer not pinned — the F93 shell fix never reached `/`).
+  - **P2 — trauma card had no count** (`cards/HarmCard.tsx` listed conditions only, hidden at 0).
+  - **P2 — `/discord` guide copy hard-coded English** outside i18n (`DiscordGuideContent.tsx`).
+  - **P0 (pixel) — "the button above" with no button:** `DiscordInstallLinks` renders nothing when
+    `NEXT_PUBLIC_DISCORD_APP_ID` is unset (beta today), but the guide's step 1, the hub's Discord card
+    and the dashboard Start here step still pointed at it.
+- **fix:**
+  - **Factions:** `NewFactionForm` — GM free-text add (name; tier 0–6; starting status on the SRD
+    −3…+3 scale, default Neutral; optional notes; duplicate names refused inline) through the
+    existing `useCreateFaction` seam + repository; `CreateFactionData.notes` added (adapter trims /
+    nulls it). No migration: `factions.notes` and the GM-write RLS policy existed. Suggestions kept as
+    a "Suggested faction" picker; honest GM/player empty states; notes on the card. e2e
+    `gm-factions-bitd.spec.ts` on the real BitD built-in + unit tests (panel/form, adapter).
+    _Not built (noted):_ a Discord `/faction create` would be small (a GM-gated subcommand over the
+    same `factions.create`, plus manifest + help + guide rows), but creation is web-only by BRD
+    decision ("Discord parity is gameplay only") — left for a scope call.
+  - **Standalone dice:** `RollPanel` accepts `gameId: null` — display-only (core `rollOutcome` /
+    `resistanceStress`, nothing logged, a "not saved" note + an on-screen history of the session's
+    rolls). The stress the rules charge (push +2, resistance 6 − highest, crit clears 1) is applied
+    to the sheet through engine `applyStress` — the sheet stays true to what was rolled and an
+    overflow owes trauma (CV: the app charges the cost for you). Flashback + log stay campaign-only.
+    e2e `standalone-dice.spec.ts`.
+  - **Name once:** shared `entryWho()` (`rolls/lib/labels.ts`) used by `RollLog` and the dashboard.
+  - **Catalog copy:** blurb/descriptions now say only what's true; `copy.test.ts` guards it.
+  - **Dashboard:** h1 "Your dashboard" (the greeting stays in the header; no name or email on the
+    page); subtitle + quick actions wait for the lists; first run = Start here first, no quick
+    actions; `AppShell`'s chrome extracted as `PageShell` and rendered by the dashboard. e2e
+    assertions updated (dashboard / auth-session / signin-gates); `Dashboard.test.tsx`.
+  - **Trauma:** the sheet shows "Trauma n / max" always.
+  - **`/discord` i18n:** all prose + the reference's Needs/Does in `pages.discordGuide.*`; command
+    literals stay in code so the guide↔manifest test still checks every row both ways.
+  - **Install-aware copy:** guide step 1, hub card step 1 and Start here step 4 pick their wording
+    from `discordAppId()`; unit tests cover both states. (Operator follow-up still open: set
+    `NEXT_PUBLIC_DISCORD_APP_ID` on the Vercel beta/prod targets.)
+- **status:** fixed @feat/product-r3 (pending merge)
 ### F95 — Discord identity squatting through the signup trigger (launch security round 3)
 
 - **severity:** S1 · **type:** security — **(verified: reproduced on the local stack through the
