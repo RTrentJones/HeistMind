@@ -489,6 +489,9 @@ bootstrap).
   standalone → **"Bring to a campaign"**; in-campaign (Phase 5b) → **"Move to another campaign"**
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
+  Returning while still a member keeps the campaign's ruleset (so it can come back); leaving, being
+  removed or the campaign's deletion gives the owner a readable copy that remembers its source, so
+  after rejoining the campaign is offered again and attach rebinds to its ruleset (00023).
 
 ### `/legal/*` — Legal documents (public, six routes)
 

@@ -193,6 +193,10 @@ BEGIN
                   0, '{}', 'bad', left(btrim(p_note), 500));
       END IF;
 
+      -- Membership ends BEFORE the characters detach, so characters_keep_ruleset sees the
+      -- leaver can no longer read the GM's ruleset and gives them their own copy.
+      DELETE FROM game_players WHERE id = v_gp.id;
+
       FOR r IN SELECT id, created_by, name FROM characters
                WHERE game_id = p_game_id AND created_by = v_user FOR UPDATE LOOP
         v_name := r.name; n := 1;
@@ -203,7 +207,6 @@ BEGIN
         UPDATE characters SET game_id = NULL, name = v_name, updated_at = NOW() WHERE id = r.id;
       END LOOP;
 
-      DELETE FROM game_players WHERE id = v_gp.id;
     END;
     $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
   $create$;
@@ -221,6 +224,8 @@ BEGIN
       v_name TEXT;
       n      INTEGER;
     BEGIN
+      -- Its memberships still exist until the cascade; tell characters_keep_ruleset they're ending.
+      PERFORM set_config('heistmind.deleting_game', OLD.id::text, true);
       FOR r IN SELECT id, created_by, name FROM characters WHERE game_id = OLD.id FOR UPDATE LOOP
         v_name := r.name; n := 1;
         WHILE EXISTS (SELECT 1 FROM characters
@@ -296,6 +301,7 @@ BEGIN
       rs     rulesets%ROWTYPE;
       v_id   UUID;
       v_name TEXT;
+      v_deleting TEXT;
       n      INTEGER;
     BEGIN
       IF OLD.game_id IS NULL OR NEW.game_id IS NOT NULL OR NEW.original_ruleset_id IS NULL THEN
@@ -305,8 +311,18 @@ BEGIN
       IF NOT FOUND OR rs.created_by = NEW.created_by OR COALESCE(rs.is_public, false) THEN
         RETURN NEW;
       END IF;
+      -- Still readable (an active member of a campaign on it — e.g. "Return to My Characters"
+      -- without leaving)? Keep the binding, so the character can reattach to that campaign.
+      v_deleting := NULLIF(current_setting('heistmind.deleting_game', true), '');
+      IF EXISTS (SELECT 1 FROM games g JOIN game_players gp ON gp.game_id = g.id
+                 WHERE g.ruleset_id = rs.id AND gp.player_id = NEW.created_by
+                   AND gp.status = 'active'
+                   AND (v_deleting IS NULL OR g.id::text <> v_deleting)) THEN
+        RETURN NEW;
+      END IF;
       SELECT id INTO v_id FROM rulesets
-        WHERE created_by = NEW.created_by AND name = rs.name AND content = rs.content
+        WHERE created_by = NEW.created_by AND content = rs.content
+          AND compatibility_flags->>'copiedFrom' = rs.id::text
         LIMIT 1;
       IF v_id IS NULL THEN
         v_name := rs.name; n := 1;
@@ -316,7 +332,9 @@ BEGIN
         INSERT INTO rulesets (created_by, name, description, version, content, schema_version,
                               status, is_public, tags, compatibility_flags)
           VALUES (NEW.created_by, v_name, rs.description, rs.version, rs.content,
-                  rs.schema_version, rs.status, false, rs.tags, rs.compatibility_flags)
+                  rs.schema_version, rs.status, false, rs.tags,
+                  COALESCE(rs.compatibility_flags, '{}'::jsonb)
+                    || jsonb_build_object('copiedFrom', rs.id::text))
           RETURNING id INTO v_id;
       END IF;
       NEW.original_ruleset_id := v_id;
@@ -329,12 +347,62 @@ BEGIN
        || 'FOR EACH ROW EXECUTE FUNCTION characters_keep_ruleset()';
 
   -- ---------------------------------------------------------------------------------------
+  -- 6b. attach_character_to_game (00014) also accepts the owner's COPY of the campaign's ruleset
+  --     (made when the character left, was removed, or its campaign was deleted — tagged
+  --     `compatibility_flags.copiedFrom`), rebinding it to the campaign's ruleset. Leaving and
+  --     rejoining therefore never strands a character outside its campaign.
+  -- ---------------------------------------------------------------------------------------
+  EXECUTE $create$
+    CREATE OR REPLACE FUNCTION attach_character_to_game(p_character_id UUID, p_game_id UUID)
+    RETURNS characters AS $fnbody$
+    DECLARE
+      v_user UUID := auth.uid();
+      v_char characters%ROWTYPE;
+      v_game_ruleset UUID;
+    BEGIN
+      IF v_user IS NULL THEN
+        RAISE EXCEPTION 'Not authenticated' USING ERRCODE = '28000';
+      END IF;
+
+      SELECT * INTO v_char FROM characters WHERE id = p_character_id FOR UPDATE;
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'Character not found' USING ERRCODE = 'P0002';
+      END IF;
+      IF v_char.created_by <> v_user THEN
+        RAISE EXCEPTION 'Not your character' USING ERRCODE = '42501';
+      END IF;
+      IF NOT is_active_game_member(v_user, p_game_id) THEN
+        RAISE EXCEPTION 'Not an active member of that campaign' USING ERRCODE = '42501';
+      END IF;
+
+      SELECT ruleset_id INTO v_game_ruleset FROM games WHERE id = p_game_id;
+      IF v_game_ruleset IS NULL THEN
+        RAISE EXCEPTION 'Campaign not found' USING ERRCODE = 'P0002';
+      END IF;
+      IF v_char.original_ruleset_id IS DISTINCT FROM v_game_ruleset
+         AND NOT EXISTS (SELECT 1 FROM rulesets r
+                         WHERE r.id = v_char.original_ruleset_id AND r.created_by = v_user
+                           AND r.compatibility_flags->>'copiedFrom' = v_game_ruleset::text) THEN
+        RAISE EXCEPTION 'Character ruleset does not match the campaign' USING ERRCODE = 'P0001';
+      END IF;
+
+      UPDATE characters SET game_id = p_game_id, original_ruleset_id = v_game_ruleset,
+                            updated_at = NOW()
+        WHERE id = p_character_id
+        RETURNING * INTO v_char;
+      RETURN v_char;
+    END;
+    $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
+  $create$;
+
+  -- ---------------------------------------------------------------------------------------
   -- 7. Privileges (00022 B7 discipline): no PUBLIC/anon EXECUTE, authenticated + service_role
   --    for the RPCs, service_role only for the trigger function; pinned search_path everywhere.
   -- ---------------------------------------------------------------------------------------
   FOREACH fn IN ARRAY ARRAY['redeem_invite_code(text)', 'remove_game_player(uuid, uuid, text)',
                             'leave_game(uuid, text)', 'games_detach_characters()',
-                            'rulesets_rehome_characters()', 'characters_keep_ruleset()'] LOOP
+                            'rulesets_rehome_characters()', 'characters_keep_ruleset()',
+                            'attach_character_to_game(uuid, uuid)'] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM PUBLIC, anon', target_schema, fn);
     IF fn IN ('games_detach_characters()', 'rulesets_rehome_characters()',
               'characters_keep_ruleset()') THEN

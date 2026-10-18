@@ -100,8 +100,50 @@ test.describe('membership controls', () => {
       });
 
       await expectStandaloneAndOpens(player.page, charName);
-      // Leaving isn't a kick: the link works again.
+      // Leaving isn't a kick: the link works again…
       await joinViaLink(player.page, campaign);
+      // …and the character (now on the player's own copy of the ruleset) can come back to it.
+      await expectStandaloneAndOpens(player.page, charName);
+      await expect(player.page.getByRole('heading', { name: 'Bring to a campaign' })).toBeVisible();
+      await player.page.getByLabel('Campaign').selectOption({ label: campaign.name });
+      await player.page.getByRole('button', { name: 'Attach' }).click();
+      await player.page.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, {
+        timeout: 15_000,
+      });
+      await expect(player.page.getByRole('heading', { level: 1, name: charName })).toBeVisible({
+        timeout: 15_000,
+      });
+    } finally {
+      await player.dispose();
+      await gm.dispose();
+    }
+  });
+
+  test('Return to My Characters keeps the campaign attachable while still a member', async ({
+    browser,
+  }) => {
+    const gm = await throwawayPage(browser);
+    const player = await throwawayPage(browser);
+    try {
+      const campaign = await campaignWithJoinCode(gm.page, 'Return Job');
+      await joinViaLink(player.page, campaign);
+      const charName = uniqueName('Roaming Rook');
+      await buildCampaignBrackwater(player.page, campaign.hubUrl, charName);
+
+      // Open the sheet from My Characters, return it to standalone, then bring it straight back.
+      await player.page.goto('/characters');
+      await characterCard(player.page, charName).getByRole('link', { name: 'Open' }).click();
+      await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
+      await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
+      await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
+      await expect(player.page.getByRole('heading', { name: 'Bring to a campaign' })).toBeVisible({
+        timeout: 15_000,
+      });
+      await player.page.getByLabel('Campaign').selectOption({ label: campaign.name });
+      await player.page.getByRole('button', { name: 'Attach' }).click();
+      await player.page.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, {
+        timeout: 15_000,
+      });
     } finally {
       await player.dispose();
       await gm.dispose();
