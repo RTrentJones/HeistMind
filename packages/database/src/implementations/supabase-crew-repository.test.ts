@@ -17,6 +17,7 @@ const CREW_RULES: CrewRules = {
     { id: 'crew-second-story', name: 'Second Story', description: '', crewType: 'shadows' },
     { id: 'crew-network', name: 'Pack Rats', description: '', crewType: 'shadows' },
     { id: 'crew-deadly', name: 'Deadly', description: '', crewType: 'assassins' },
+    { id: 'crew-mastery', name: 'Mastery', description: '', upgradeBoxes: 4 },
   ],
 };
 
@@ -44,7 +45,7 @@ function crewRow(abilities: string[], resources: Record<string, number>) {
 }
 
 /** A table-dispatching stub: reads return the given rows; an update echoes the stored crew. */
-function client(stored: ReturnType<typeof crewRow>) {
+function client(stored: ReturnType<typeof crewRow>, failTable?: string) {
   const update = vi.fn().mockReturnValue({
     eq: () => ({
       select: () => ({ single: () => Promise.resolve({ data: stored, error: null }) }),
@@ -71,7 +72,14 @@ function client(stored: ReturnType<typeof crewRow>) {
   };
   const from = vi.fn((table: string) => ({
     select: () => ({
-      eq: () => ({ single: () => Promise.resolve({ data: rows[table], error: null }) }),
+      eq: () => ({
+        single: () =>
+          Promise.resolve(
+            table === failTable
+              ? { data: null, error: { message: `${table} unreadable` } }
+              : { data: rows[table], error: null }
+          ),
+      }),
     }),
     update,
   }));
@@ -121,5 +129,36 @@ describe('SupabaseCrewRepository.update — crew ability gate', () => {
     // Non-ability writes skip the gate entirely.
     await new SupabaseCrewRepository(c, 'development').update('cr1', { heat: 2 });
     expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  it('gates upgrade boxes too: a mark without a spent track is refused', async () => {
+    const free = client(crewRow(['crew-second-story'], {}));
+    const refused = await new SupabaseCrewRepository(free.c, 'development').update('cr1', {
+      resources: { 'crew-upgrade:crew-mastery': 2 },
+    });
+    expect(refused.success).toBe(false);
+    expect(free.update).not.toHaveBeenCalled();
+  });
+
+  it('a stored crew or ruleset it cannot read refuses the write (never judged blind)', async () => {
+    for (const table of ['crews', 'games', 'rulesets']) {
+      const { c, update } = client(crewRow(['crew-second-story'], { 'crew-xp': 8 }), table);
+      const out = await new SupabaseCrewRepository(c, 'development').update('cr1', {
+        crewAbilities: ['crew-second-story', 'crew-network'],
+        resources: { 'crew-xp': 0 },
+      });
+      expect(out.success, table).toBe(false);
+      expect(update).not.toHaveBeenCalled();
+    }
+  });
+
+  it('judges a same-patch crew-type change against the NEW type', async () => {
+    const { c, update } = client(crewRow([], {}));
+    const out = await new SupabaseCrewRepository(c, 'development').update('cr1', {
+      crewType: 'assassins',
+      crewAbilities: ['crew-deadly'],
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledTimes(1);
   });
 });
