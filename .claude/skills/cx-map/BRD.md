@@ -4,7 +4,8 @@ The scope-of-record for HeistMind. Sibling of `STATUS.md` (what's built), `CX-MA
 page/flow), `FINDINGS.md` (the prioritized defect/improvement backlog), and `COMPETITIVE.md`
 (positioning). When scope changes, edit here first, then reconcile the others.
 
-_Last reviewed: 2026-07-05 (v2 — full rewrite: personas + user stories added, NFRs added,
+_Last reviewed: 2026-10-17 (F94 launch-product round: US-O7, US-C5, US-M6, US-M7, US-G6, US-X5
+added as shipped; US-O2 + US-D7 updated). Previously 2026-07-05 (v2 — full rewrite: personas + user stories added, NFRs added,
 coverage table refreshed post-Phase-4/5 and the piping-bug audit; requirement IDs R-A…R-I are
 STABLE and unchanged — they are referenced throughout `FINDINGS.md` and `CX-MAP.md`)._
 
@@ -83,7 +84,8 @@ records why.
 - **US-O1** As a new visitor, I understand the two modes (sheet anywhere / Discord play layer)
   from the landing page and can sign in with Discord in one click. [R-I1] ✅
 - **US-O2** As a signed-in user with nothing yet, my dashboard walks me through a 1-2-3 start
-  (build a character · create a campaign · join a game). [R-I2] ✅ _(F37 fixed)_
+  (build a character · create a campaign · join a campaign · play on Discord) — one card, not three
+  contradictory empty sections; "Welcome back" only once I have something. [R-I2] ✅ _(F37, F94)_
 - **US-O3** As a returning user, my dashboard opens to **my** campaigns, characters, and recent
   activity — not marketing. [R-I2] 🟡 _(works; sections pop in without loading states, and content
   is untested — F79)_
@@ -91,6 +93,9 @@ records why.
   ❌ _(F40 — 2s flash then an unexplained redirect home)_
 - **US-O5** As a signed-out visitor landing on any protected page, I get a clear sign-in
   affordance, not bare text. [R-I1] 🟡 _(primary routes ✅; six secondary routes bare — F72)_
+- **US-O7** As someone signing in from a shared link (invite, campaign, sheet), I land back where I
+  was going, not on the dashboard — and a cancelled Discord sign-in gets friendly copy, never the
+  provider's raw (spoofable) error text. [R-I1, N-SEC] ✅ _(F94 — validated same-origin `next`)_
 
 ### Rulesets (the CV foundation)
 
@@ -115,6 +120,8 @@ records why.
   open)_
 - **US-C4** As a player, I record friends/rivals (contacts) during creation, not just in the
   editor afterwards. [R-B1] ❌ _(F12 — contacts step missing from the wizard)_
+- **US-C5** As a player, I can delete a character I own (two-click confirm), from My Characters or
+  its sheet; the campaign log keeps its history. [R-F5] ✅ _(F94)_
 
 ### Characters — playing (web + Discord parity)
 
@@ -152,6 +159,13 @@ records why.
   character (coin banked to stash, logged, kept for history). [R-F1, R-F2, R-F3] ✅
 - **US-M5** As a member, everything shared survives reload and is visible to every player on
   load (async play-by-post model). [R-A4, R-E1] ✅
+- **US-M6** As a GM, I share an **invite link** (`/join/<code>`) that works even for someone not
+  signed in yet — they sign in and land in the campaign; join codes are case-insensitive and every
+  failure says why (not found / revoked / expired / used up / removed). [R-I2] ✅ _(F94)_
+- **US-M7** As a GM, I can revoke a join code and remove a player (they can't rejoin with a code);
+  as a player, I can leave a campaign. Either way the member's characters come back to them as
+  standalone, and the campaign log records it. Two-click confirms; enforced by RLS/RPC. [R-I2,
+  R-F6, N-SEC] ✅ _(F94)_
 
 ### GM campaign state
 
@@ -165,6 +179,10 @@ records why.
   state + faction project clocks unsurfaced — F47)_
 - **US-G4** As a GM, I start/end scores; everything the table does groups under the active score.
   [R-D1, R-D5, R-E2] ✅ _(payout/downtime transition not modelled — by scope decision #2)_
+- **US-G6** As a GM, I can delete a campaign I run — told first that attached characters are NOT
+  destroyed but returned to their owners as standalone (renamed on a name clash). As a ruleset
+  owner I can delete a ruleset, blocked with a clear message while a campaign or my own character
+  uses it (other players keep their own copy). (Renaming a campaign: still open.) [R-F5] ✅ _(F94)_
 - **US-G5** As a GM, I control the campaign lifecycle state players see. [R-I2] 🟡 _(F32 — state
   badge shown, no control to change it)_
 
@@ -195,8 +213,11 @@ use` then makes my sheet roll from Discord (`/roll action:` with autocomplete fr
 - **US-D6** As a non-member, I learn nothing — not even the campaign's name — from any command or
   autocomplete. [R-H2.3, N-SEC] ✅
 - **US-D7** As a new Discord user, `/heist help` shows me the whole surface grouped by what each
-  tier needs, and the web tells me the bot exists and how to install it. 🟡 _(help ✅; no
-  player-facing web docs/install page — F67)_
+  tier needs, and the web tells me the bot exists and how to install it. ✅ _(F67 `/discord`
+  guide; F94: "Add HeistMind to your Discord server" + user-install links on `/discord`, the
+  dashboard and the hub — live once `NEXT_PUBLIC_DISCORD_APP_ID` is set per Vercel target; the
+  guide is checked against the real command manifest, states the real setup order, and is in the
+  signed-in nav; the bot's "not a member" reply names the next step)_
 
 ### Cross-cutting experience
 
@@ -206,6 +227,9 @@ use` then makes my sheet roll from Discord (`/roll action:` with autocomplete fr
 - **US-X2** As a keyboard/screen-reader/low-vision user, the app is navigable and readable (skip
   link, focus order, contrast). 🟡 _(fixed cases F1/F41; no automated enforcement — F76)_
 - **US-X3** As any user, I can switch theme and language. ✅
+- **US-X5** As any user, what the product says is true: no promised ruleset editor or data export
+  that doesn't exist; one term per concept (campaign · join code / invite link · campaign log ·
+  playbook); the legal pages describe what's stored, shown and deleted. [CV] ✅ _(F94)_
 - **US-X4** As a mobile user, the sheet and hub are usable one-handed at the table. 🟡 _(F57 —
   scoped follow-up)_
 

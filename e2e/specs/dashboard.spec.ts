@@ -5,23 +5,67 @@
 //
 // Skips automatically when no service-role key is configured (fixture guard).
 
-import { isLocalStack } from '../support/env';
+import { hasAdminAuth, isLocalStack } from '../support/env';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName, uploadRuleset } from '../support/rulesets';
+import { throwawayPage } from '../support/personas';
 
 test.describe('dashboard (authenticated /)', () => {
   test('an injected session lands on the personal dashboard', async ({ gmPage }) => {
     await gmPage.goto('/');
 
     // Dashboard-only welcome heading (the header shows "Welcome, X" as text, not a heading).
-    await expect(gmPage.getByRole('heading', { name: /welcome back/i })).toBeVisible({
+    // "Welcome back" only for returning users (F94) — the shared persona may be either.
+    await expect(gmPage.getByRole('heading', { name: /^welcome/i })).toBeVisible({
       timeout: 15_000,
     });
 
-    // The "your stuff" sections + a primary quick action are always present.
-    await expect(gmPage.getByRole('heading', { name: /your campaigns/i })).toBeVisible();
-    await expect(gmPage.getByRole('heading', { name: /your characters/i })).toBeVisible();
-    await expect(gmPage.getByRole('link', { name: /create campaign/i })).toBeVisible();
+    // Either the first-run "Start here" or the "your stuff" sections, plus a primary action.
+    await expect(
+      gmPage
+        .getByRole('heading', { name: /start here/i })
+        .or(gmPage.getByRole('heading', { name: /your campaigns/i }))
+    ).toBeVisible();
+    await expect(gmPage.getByRole('link', { name: /create campaign/i }).first()).toBeVisible();
+  });
+
+  // F94 — a brand-new account gets "Welcome" (not "back"), ONE Start-here card with four real
+  // steps (incl. Discord) and none of the three redundant empty sections.
+  test('first run: Welcome, a single Start here (with a Discord step), no empty sections', async ({
+    browser,
+  }) => {
+    test.skip(!isLocalStack() || !hasAdminAuth(), 'Requires the local Supabase stack.');
+    const fresh = await throwawayPage(browser);
+    try {
+      const { page } = fresh;
+      await page.goto('/');
+      const h1 = page.getByRole('heading', { level: 1 });
+      await expect(h1).toHaveText(/^welcome, /i, { timeout: 15_000 });
+      await expect(h1).not.toHaveText(/back/i);
+      const start = page.getByTestId('dashboard-start-here');
+      await expect(start).toBeVisible();
+      for (const step of ['Build a character', 'Create a campaign', 'Join a campaign']) {
+        await expect(start.getByRole('link', { name: step })).toBeVisible();
+      }
+      await expect(start.getByRole('link', { name: /playing on discord/i })).toHaveAttribute(
+        'href',
+        '/discord'
+      );
+      // The dev server runs with a test NEXT_PUBLIC_DISCORD_APP_ID → the install button shows.
+      const install = start.getByRole('link', { name: /add heistmind to your discord server/i });
+      if (await install.count()) {
+        await expect(install).toHaveAttribute(
+          'href',
+          /discord\.com\/oauth2\/authorize\?client_id=/
+        );
+      }
+      await expect(page.getByRole('heading', { name: /your campaigns/i })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: /your characters/i })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: /recent activity/i })).toHaveCount(0);
+      await expect(page.getByText(/open a campaign to build/i)).toHaveCount(0);
+    } finally {
+      await fresh.dispose();
+    }
   });
 
   // F79 — the chrome-only assertion above would stay green if the sections never rendered a

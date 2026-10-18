@@ -16,6 +16,7 @@ import {
 import { captureError, logEvent } from '@heist-mind/telemetry';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useAuthTranslation } from '@/lib/i18n/hooks';
+import { safeNextPath, takeRememberedNextPath } from '@/lib/auth/next-path';
 
 /**
  * The OAuth return page. useSearchParams() needs a Suspense boundary for the route to prerender
@@ -47,10 +48,12 @@ function AuthCallback() {
         'error.surface': 'auth.callback',
         'oauth.description': errorDescription ?? undefined,
       });
-      setError(errorDescription || t('callback.failed'));
+      // F94 — never render the provider's error_description: it is attacker-controllable via a
+      // crafted callback link. A cancelled consent screen (access_denied) gets friendly copy.
+      setError(errorParam === 'access_denied' ? t('callback.cancelled') : t('callback.failed'));
       // F40 — long enough to actually read the message; home shows a retry banner on arrival.
       setTimeout(() => {
-        router.push('/?error=auth_failed');
+        router.push(errorParam === 'access_denied' ? '/' : '/?error=auth_failed');
       }, 6000);
       return;
     }
@@ -71,10 +74,12 @@ function AuthCallback() {
 
   useEffect(() => {
     // Redirect when authentication succeeds
+    // F94 — return to the page that started sign-in (e.g. /join/<code>), validated same-origin.
     if (isAuthenticated) {
-      router.push('/');
+      const next = safeNextPath(searchParams.get('next')) ?? takeRememberedNextPath();
+      router.replace(next ?? '/');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, searchParams]);
 
   return <CallbackShell error={error} />;
 }
@@ -114,10 +119,6 @@ function CallbackShell({ error = null }: { error?: string | null }) {
                   </Heading>
 
                   <Text variant='secondary'>{t('callback.waiting')}</Text>
-
-                  <Text size='xs' variant='muted'>
-                    {t('callback.processing')}
-                  </Text>
                 </Stack>
               </Stack>
             )}

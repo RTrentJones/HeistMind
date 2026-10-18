@@ -22,8 +22,9 @@ test.describe('GM: rulesets & games', () => {
   test('GM uploads a custom FitD ruleset', async ({ gmPage }) => {
     const name = uniqueName('Veil & Vow');
     await uploadRuleset(gmPage, 'veil.json', name);
-    // uploadRuleset asserts the redirect + listing; confirm the "Create game" CTA is offered.
-    await expect(gmPage.getByRole('link', { name: 'Create game' }).first()).toBeVisible();
+    // uploadRuleset asserts the redirect + listing; confirm the "Create campaign" CTA is offered
+    // (F94 terminology: campaign, never "game").
+    await expect(gmPage.getByRole('link', { name: 'Create campaign' }).first()).toBeVisible();
   });
 
   test('malformed ruleset upload is rejected with a validation error', async ({ gmPage }) => {
@@ -54,10 +55,23 @@ test.describe('GM: rulesets & games', () => {
     await expect(gmPage.getByLabel('Campaign state')).toHaveValue('active', { timeout: 15_000 });
   });
 
-  test.fixme('GM generates and copies a player invite', async ({ gmPage }) => {
-    // Invitations are out of scope for this PR (provider.ts leaves the invitations repo
-    // unimplemented). Ready to flesh out once the invite flow lands.
-    expect(gmPage).toBeTruthy();
+  test('GM generates a join code and copies its invite link (F94)', async ({ gmPage }) => {
+    await gmPage.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const ruleset = await uploadRuleset(gmPage, 'cinders.json', uniqueName('Cinders & Coin'));
+    await createCampaign(gmPage, ruleset, uniqueName('Invite Link Job'));
+    await gmPage.getByRole('button', { name: 'Create a join code' }).click();
+    const row = gmPage.getByTestId('join-code-row');
+    await expect(row).toHaveCount(1, { timeout: 10_000 });
+    const code = (await row.locator('code').innerText()).trim();
+    await expect(row.getByText('20 of 20 uses left')).toBeVisible();
+
+    await row.getByRole('button', { name: 'Copy invite link' }).click();
+    await expect(row.getByRole('button', { name: 'Copied!' })).toBeVisible();
+    const copied = await gmPage.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toBe(`${new URL(gmPage.url()).origin}/join/${code}`);
+
+    await row.getByRole('button', { name: 'Copy code' }).click();
+    expect(await gmPage.evaluate(() => navigator.clipboard.readText())).toBe(code);
   });
 
   test('GM dashboard lists games the GM owns', async ({ gmPage }) => {

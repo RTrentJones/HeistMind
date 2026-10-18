@@ -51,6 +51,7 @@ import { playbookLabel } from '../lib/playbook-label';
 import { CharacterEditor } from './CharacterEditor';
 import { LoadoutCard } from './LoadoutCard';
 import { AttachToCampaign } from './AttachToCampaign';
+import { DeleteCharacterCard } from './DeleteCharacterCard';
 import { GearCard } from './cards/GearCard';
 import { HarmCard } from './cards/HarmCard';
 import { TraumaPrompt } from './cards/TraumaPrompt';
@@ -708,6 +709,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
         <div ref={editorRef} className='max-sm:order-last'>
           <CharacterEditor character={character} initialSection={editorSection} />
         </div>
+      )}
+
+      {character.createdBy === user?.id && (
+        <DeleteCharacterCard characterId={character.id} name={character.name} />
       )}
 
       {/* F57 — the phone THUMB BAR: fixed quick jumps to the in-play sections, one thumb-reach

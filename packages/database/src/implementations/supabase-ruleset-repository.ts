@@ -60,4 +60,8 @@ export class SupabaseRulesetRepository extends SupabaseRepositoryBase implements
       return { success: true, data: fromSupabaseRuleset(row) };
     });
   }
+
+  async delete(id: string): Promise<Result<void>> {
+    return this.deleteById('rulesets', id);
+  }
 }

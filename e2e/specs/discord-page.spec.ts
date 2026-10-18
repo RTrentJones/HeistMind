@@ -20,6 +20,32 @@ test.describe('/discord — bot guide (anonymous)', () => {
     await expect(page.getByText('/character use|show|unset')).toBeVisible();
     await expect(page.getByText('/harm take|clear')).toBeVisible();
     await expect(page.getByText('/crew xp|advance')).toBeVisible();
+    // F94 — rows match the real manifest: /log is top-level, link/unlink + account are listed.
+    await expect(page.getByText('/log text:', { exact: true })).toBeVisible();
+    await expect(page.getByText('/heist link|unlink')).toBeVisible();
+    await expect(page.getByText('/heist account')).toBeVisible();
+    await expect(page.getByText(/\/heist log/)).toHaveCount(0);
+
+    // …and the setup order is the real one: campaign + join on the web first, no "claim" step.
+    const steps = page.getByTestId('discord-setup-steps');
+    await expect(steps).toContainText(/create the campaign on this site/i);
+    await expect(steps).toContainText(/invite link/i);
+    await expect(page.getByText(/claim a character/i)).toHaveCount(0);
+  });
+
+  test('offers the bot install links when the app id is configured', async ({ page }) => {
+    await page.goto('/discord');
+    const hero = page.getByRole('heading', { name: /heistmind on discord/i });
+    test.skip(await onComingSoon(page, hero), 'prod coming-soon gate — /discord redirects home');
+    const install = page.getByRole('link', { name: /add heistmind to your discord server/i });
+    test.skip((await install.count()) === 0, 'NEXT_PUBLIC_DISCORD_APP_ID not set on this deploy');
+    const href = (await install.getAttribute('href')) ?? '';
+    expect(href).toMatch(/^https:\/\/discord\.com\/oauth2\/authorize\?/);
+    expect(href).toContain('scope=bot+applications.commands');
+    expect(href).toContain('integration_type=0');
+    await expect(
+      page.getByRole('link', { name: /add it to your discord account/i })
+    ).toHaveAttribute('href', /integration_type=1/);
   });
 
   test('the landing play-by-post track links the guide', async ({ page }) => {

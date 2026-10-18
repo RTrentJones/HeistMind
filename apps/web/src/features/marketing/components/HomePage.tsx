@@ -27,21 +27,24 @@ import { usePageTranslation } from '@/lib/i18n/hooks';
 /**
  * Logged-out landing. Leads with the dual value prop (one product, two modes): a rules-valid
  * character/crew sheet you bring anywhere (Mode 1), and the async mechanical layer for play-by-post
- * on Discord — "Avrae for Forged in the Dark" (Mode 2). The dual CTA kicks off Discord OAuth; after
- * the callback redirects to `/`, an authenticated user lands on the dashboard (see `Dashboard`).
+ * on Discord — "Avrae for Forged in the Dark" (Mode 2). The dual CTA kicks off Discord OAuth and
+ * returns GMs to /games/new and players to the join-code box (F94).
  */
 export function HomePage() {
   const { t } = usePageTranslation();
   const { signIn: signInFlow } = useSignIn();
-  const signIn = () => void signInFlow();
+  // F94 — each CTA keeps its intent through OAuth: GMs land on "new campaign", players on the
+  // join-code box (the callback honours the validated `next`).
+  const signInGm = () => void signInFlow({ next: '/games/new' });
+  const signInPlayer = () => void signInFlow({ next: '/games#join' });
 
   const dualCta = (size: 'lg' | 'default') => (
     <Stack direction='column' gap='sm' align='center'>
       <Stack direction='row' gap='md' align='center' className='flex-wrap justify-center'>
-        <Button variant='ember' size={size} onClick={signIn}>
+        <Button variant='ember' size={size} onClick={signInGm}>
           {t('landing.cta.gm')}
         </Button>
-        <Button variant='outline' size={size} onClick={signIn}>
+        <Button variant='outline' size={size} onClick={signInPlayer}>
           {t('landing.cta.player')}
         </Button>
       </Stack>

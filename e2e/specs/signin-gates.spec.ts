@@ -40,7 +40,7 @@ test.describe('sign-in gates on secondary routes (anonymous, F72)', () => {
 test.describe('header nav (authenticated, F81)', () => {
   test('the persistent nav links My characters', async ({ gmPage }) => {
     await gmPage.goto('/');
-    await expect(gmPage.getByRole('heading', { name: /welcome back/i })).toBeVisible({
+    await expect(gmPage.getByRole('heading', { name: /^welcome/i })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -51,5 +51,15 @@ test.describe('header nav (authenticated, F81)', () => {
       .click();
     await expect(gmPage).toHaveURL(/\/characters$/);
     await expect(gmPage.getByRole('heading', { name: /my characters/i })).toBeVisible();
+  });
+
+  test('the signed-in nav reaches the Discord guide (F94)', async ({ gmPage }) => {
+    await gmPage.goto('/characters');
+    await gmPage
+      .getByRole('banner')
+      .getByRole('link', { name: /^discord$/i })
+      .click();
+    await expect(gmPage).toHaveURL(/\/discord$/);
+    await expect(gmPage.getByRole('heading', { name: /heistmind on discord/i })).toBeVisible();
   });
 });

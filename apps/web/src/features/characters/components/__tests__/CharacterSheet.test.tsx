@@ -61,6 +61,9 @@ vi.mock('@/features/rolls/components/RollLog', () => ({ RollLog: () => null }));
 vi.mock('../CharacterEditor', () => ({ CharacterEditor: () => null }));
 vi.mock('../LoadoutCard', () => ({ LoadoutCard: () => null }));
 vi.mock('../AttachToCampaign', () => ({ AttachToCampaign: () => null }));
+vi.mock('../DeleteCharacterCard', () => ({
+  DeleteCharacterCard: () => <div data-testid='delete-character' />,
+}));
 vi.mock('../cards/GearCard', () => ({ GearCard: () => null }));
 vi.mock('../cards/HarmCard', () => ({ HarmCard: () => null }));
 vi.mock('../cards/XpTracksCard', () => ({ XpTracksCard: () => null }));
@@ -211,5 +214,22 @@ describe('CharacterSheet writes + read-only gating', () => {
     expect(screen.queryByTestId('roll-panel')).not.toBeInTheDocument();
     // The stress pips render but are inert for a read-only viewer.
     expect(screen.getByRole('button', { name: 'Set stress to 4' })).toBeDisabled();
+  });
+
+  it('offers Delete character to the owner only — never the GM or a viewer (F94)', () => {
+    characterQuery.data = { ...character, gameId: 'g1', game: { createdBy: 'u1' } } as never;
+    const { unmount } = renderSheet();
+    expect(screen.getByTestId('delete-character')).toBeInTheDocument();
+    unmount();
+
+    // The viewer is the campaign's GM but not the owner: they may edit, never delete.
+    characterQuery.data = {
+      ...character,
+      gameId: 'g1',
+      game: { createdBy: 'u1' },
+      createdBy: 'someone-else',
+    } as never;
+    renderSheet();
+    expect(screen.queryByTestId('delete-character')).not.toBeInTheDocument();
   });
 });

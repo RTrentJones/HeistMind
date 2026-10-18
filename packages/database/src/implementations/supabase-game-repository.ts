@@ -191,4 +191,8 @@ export class SupabaseGameRepository extends SupabaseRepositoryBase implements Ga
       return { success: true, data: fromSupabaseGame(row) };
     });
   }
+
+  async delete(id: string): Promise<Result<void>> {
+    return this.deleteById('games', id);
+  }
 }

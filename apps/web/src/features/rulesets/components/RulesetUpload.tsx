@@ -60,7 +60,9 @@ export function RulesetUpload() {
     <Stack direction='column' gap='lg'>
       <Card variant='outline'>
         <Stack direction='column' gap='xs'>
-          <Heading level='h3'>{t('forms.rulesetUpload.startHeading')}</Heading>
+          <Heading level='h3' as='h2'>
+            {t('forms.rulesetUpload.startHeading')}
+          </Heading>
           <Text variant='muted' size='sm'>
             {t('forms.rulesetUpload.starterHintPrefix')}{' '}
             <Link href='/rulesets' className='underline'>
@@ -122,6 +124,14 @@ export function RulesetUpload() {
           />
           <span>{t('forms.rulesetUpload.attestLabel')}</span>
         </label>
+        {/* The concrete Acceptable Use rule, stated where the upload happens (PR #167 intent). */}
+        <Text variant='muted' size='xs' className='pl-6'>
+          {t('forms.rulesetUpload.attestAupPrefix')}
+          <Link href='/legal/acceptable-use' className='underline'>
+            {t('forms.rulesetUpload.attestAupLink')}
+          </Link>
+          {t('forms.rulesetUpload.attestAupSuffix')}
+        </Text>
         <Text variant='muted' size='xs' className='pl-6'>
           {t('forms.rulesetUpload.attestHintPrefix')}
           <Link href='/legal/terms' className='underline'>

@@ -55,7 +55,8 @@ export const copy = {
   guildOnly: 'That works inside a server channel, not here.',
   gmOnly: 'Only the campaign’s GM can do that.',
   notLinked: 'Nothing is linked here yet — the GM can run `/heist link`.',
-  notMember: 'This channel is linked to a HeistMind campaign you’re not a member of.',
+  notMember:
+    'This channel is linked to a HeistMind campaign you’re not a member of. Ask the GM for an invite link (or join code), join on the web, then try again.',
   campaignNotFound: (name: string) =>
     `No campaign of yours is named “${name}”. Try the autocomplete suggestions.`,
   noCategoryHere:
@@ -84,7 +85,8 @@ export const copy = {
   loggedFooter: (campaign: string) => `Logged to ${campaign}`,
   notLoggedNotLinked: 'Not logged — this channel isn’t linked to a campaign.',
   notLoggedNoCharacter: 'Not logged — no active character. `/character use` picks one.',
-  notLoggedNotMember: 'Not logged — you’re not a member of the linked campaign.',
+  notLoggedNotMember:
+    'Not logged — you’re not a member of the linked campaign. Ask the GM for an invite link to join.',
   notLoggedWrongCampaign: 'Not logged — your active character isn’t in the linked campaign.',
   pushedCharged: 'Pushed (+1d) — 2 stress marked on your sheet',
   abilityDiceNote: (bonus: number) =>

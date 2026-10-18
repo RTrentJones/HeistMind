@@ -321,3 +321,16 @@ export function useDetachCharacter() {
     onSuccess: () => qc.invalidateQueries({ queryKey: characterKeys.all }),
   });
 }
+
+/** Owner: delete a character for good. The campaign log keeps its entries (unlinked). */
+export function useDeleteCharacter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { characterId: string }) =>
+      getRepositories().characters.delete(vars.characterId).then(unwrap),
+    onSuccess: (_d, vars) => {
+      qc.removeQueries({ queryKey: characterKeys.detail(vars.characterId) });
+      return qc.invalidateQueries({ queryKey: characterKeys.all });
+    },
+  });
+}

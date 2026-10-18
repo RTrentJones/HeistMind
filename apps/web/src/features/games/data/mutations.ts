@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateGameData, GameState } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
+import { characterKeys } from '@/features/characters/data/queries';
+import { rollKeys } from '@/features/rolls/data/queries';
 import { gameKeys } from './queries';
 
 /**
@@ -31,5 +33,56 @@ export function useUpdateGameState(gameId: string) {
     mutationFn: (vars: { userId: string; state: GameState }) =>
       getRepositories().games.updateState(gameId, vars.userId, vars.state).then(unwrap),
     onSuccess: () => qc.invalidateQueries({ queryKey: gameKeys.all }),
+  });
+}
+
+/**
+ * GM: delete the campaign. Its characters are NOT destroyed — they return to their owners as
+ * standalone characters (00014 FK + the 00023 trigger); the campaign's crew, clocks, factions,
+ * scores, join codes and log go with it.
+ */
+export function useDeleteGame() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { gameId: string }) =>
+      getRepositories().games.delete(vars.gameId).then(unwrap),
+    onSuccess: async (_d, vars) => {
+      qc.removeQueries({ queryKey: gameKeys.detail(vars.gameId) });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: gameKeys.all }),
+        qc.invalidateQueries({ queryKey: characterKeys.all }),
+      ]);
+    },
+  });
+}
+
+/** GM: remove a player (status 'removed'; their characters go back to them as standalone). */
+export function useRemovePlayer(gameId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { playerId: string; note?: string }) =>
+      getRepositories().gamePlayers.removePlayer(gameId, vars.playerId, vars.note).then(unwrap),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: gameKeys.detail(gameId) }),
+        qc.invalidateQueries({ queryKey: characterKeys.all }),
+        qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) }),
+      ]),
+  });
+}
+
+/** Player: leave the campaign (their characters return to standalone). */
+export function useLeaveGame(gameId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { note?: string }) =>
+      getRepositories().gamePlayers.leave(gameId, vars.note).then(unwrap),
+    onSuccess: async () => {
+      qc.removeQueries({ queryKey: gameKeys.detail(gameId) });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: gameKeys.all }),
+        qc.invalidateQueries({ queryKey: characterKeys.all }),
+      ]);
+    },
   });
 }

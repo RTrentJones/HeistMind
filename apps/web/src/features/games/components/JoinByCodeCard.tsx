@@ -4,10 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Heading, Input, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
-import { useJoinViaCode } from '@/features/invitations/data/mutations';
+import {
+  joinFailureReason,
+  normalizeJoinCode,
+  useJoinViaCode,
+} from '@/features/invitations/data/mutations';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 
-/** Redeem a GM's invite code and jump into the campaign (the multiplayer front door, F2). */
+/**
+ * Redeem a GM's join code and jump into the campaign (the multiplayer front door, F2). Codes are
+ * case-insensitive and pasted invite links work too (F94); failures say WHY (revoked, used up…).
+ */
 export function JoinByCodeCard() {
   const { user } = useAuth();
   const { t } = usePageTranslation();
@@ -18,19 +25,21 @@ export function JoinByCodeCard() {
 
   const onJoin = async () => {
     const userId = user?.id;
-    if (!userId || !code.trim()) return;
+    // A pasted invite link (…/join/ABCD2345) works as well as the bare code.
+    const inviteCode = normalizeJoinCode(code.split('/join/').pop() ?? code);
+    if (!userId || !inviteCode) return;
     setJoinError(null);
     try {
-      const member = await join.mutateAsync({ userId, inviteCode: code.trim() });
+      const member = await join.mutateAsync({ userId, inviteCode });
       setCode('');
       router.push(`/games/${member.gameId}`);
-    } catch {
-      setJoinError(t('gamesList.joinFailed'));
+    } catch (err) {
+      setJoinError(t(`join.errors.${joinFailureReason(err)}`));
     }
   };
 
   return (
-    <Card variant='outline'>
+    <Card variant='outline' id='join'>
       <Stack direction='column' gap='sm'>
         <Heading level='h3' as='h2'>
           {t('gamesList.joinTitle')}
@@ -48,6 +57,9 @@ export function JoinByCodeCard() {
               value={code}
               onChange={e => setCode(e.target.value)}
               placeholder={t('gamesList.joinPlaceholder')}
+              autoCapitalize='characters'
+              autoComplete='off'
+              spellCheck={false}
             />
             <Button
               type='submit'
@@ -60,7 +72,7 @@ export function JoinByCodeCard() {
           </Stack>
         </form>
         {joinError && (
-          <Text variant='muted' size='sm' className='text-semantic-error'>
+          <Text variant='muted' size='sm' className='text-semantic-error' role='alert'>
             {joinError}
           </Text>
         )}

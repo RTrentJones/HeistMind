@@ -34,12 +34,17 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
   const busy = attachMutation.isPending || detachMutation.isPending;
 
   // Eligible targets: the owner's campaigns on this character's ruleset, minus the current one.
+  // A character that left a campaign runs on the owner's COPY of its ruleset (00023), which
+  // remembers its source — that campaign stays eligible and the RPC rebinds on attach.
+  const copiedFrom = character.ruleset?.compatibilityFlags?.copiedFrom;
   const games = useMemo(
     () =>
       (allGames.data ?? []).filter(
-        g => g.rulesetId === character.originalRulesetId && g.id !== character.gameId
+        g =>
+          (g.rulesetId === character.originalRulesetId || g.rulesetId === copiedFrom) &&
+          g.id !== character.gameId
       ),
-    [allGames.data, character.originalRulesetId, character.gameId]
+    [allGames.data, character.originalRulesetId, character.gameId, copiedFrom]
   );
 
   // Default the picker to the first eligible target (keep the selection if it's still valid).

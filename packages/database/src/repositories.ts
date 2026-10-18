@@ -78,6 +78,9 @@ export interface RulesetRepository {
   findById(id: string): Promise<Result<Ruleset | null>>;
   findByCreator(userId: string): Promise<Result<Ruleset[]>>;
   update(id: string, userId: string, data: UpdateRulesetData): Promise<Result<Ruleset>>;
+  /** Owner-only (RLS). Fails with the FK code 23503 while a campaign or one of the owner's own
+   * characters still uses it (other players' characters get a private copy — 00023). */
+  delete(id: string): Promise<Result<void>>;
 }
 
 export interface GameRepository {
@@ -93,9 +96,14 @@ export interface GameRepository {
    * tried in precedence order (the channel, then its category); a guild-wide default link
    * (channelId NULL) is the fallback. Null = nothing linked here.
    */
-  findByDiscordChannel(guildId: string, candidateChannelIds: string[]): Promise<Result<Game | null>>;
+  findByDiscordChannel(
+    guildId: string,
+    candidateChannelIds: string[]
+  ): Promise<Result<Game | null>>;
   /** Set (or clear, with null) a campaign's Discord link. GM-gating happens in the bot's authz. */
   setDiscordLink(gameId: string, link: DiscordLink | null): Promise<Result<Game>>;
+  /** GM-only (RLS). Attached characters return to standalone (00014 FK + the 00023 trigger). */
+  delete(id: string): Promise<Result<void>>;
 }
 
 /**
@@ -115,6 +123,11 @@ export interface GamePlayerRepository {
   findByGame(gameId: string): Promise<Result<GamePlayer[]>>;
   findByPlayer(playerId: string): Promise<Result<GamePlayer[]>>;
   isGameMaster(userId: string, gameId: string): Promise<Result<boolean>>;
+  /** GM-only kick (00023 RPC): status → 'removed', their characters return to standalone, and
+   * `note` (if given) is logged to the campaign feed. */
+  removePlayer(gameId: string, playerId: string, note?: string): Promise<Result<GamePlayer>>;
+  /** The caller leaves (00023 RPC): their row is deleted, their characters return to standalone. */
+  leave(gameId: string, note?: string): Promise<Result<void>>;
 }
 
 export interface CharacterRepository {
@@ -138,6 +151,8 @@ export interface CharacterRepository {
   attachToGame(characterId: string, gameId: string): Promise<Result<Character>>;
   /** Return a character to standalone ("My Characters"). Owner-only, enforced by the DB RPC. */
   detachFromGame(characterId: string): Promise<Result<Character>>;
+  /** Owner-only delete (the web only offers it to the owner). The feed keeps its entries. */
+  delete(id: string): Promise<Result<void>>;
 }
 
 /**

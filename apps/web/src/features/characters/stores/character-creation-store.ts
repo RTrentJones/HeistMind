@@ -393,7 +393,15 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
             };
             // Route through the validated create so the server enforces the same rules.
             const character = await createCharacterWithValidation(userId, data);
-            set({ isLoading: false, lastUpdated: new Date() });
+            // F94 — the draft is spent: clear it, or the NEXT character on this ruleset resumed the
+            // just-created one at its Confirm step (same name, playbook, picks).
+            set({
+              isLoading: false,
+              lastUpdated: new Date(),
+              name: '',
+              draft: emptyDraft(),
+              stepIndex: 0,
+            });
             useNotificationStore
               .getState()
               .success(

@@ -27,7 +27,7 @@ Server-side RLS enforces this: `is_active_game_member` gates reads, `is_game_gm`
 
 Every authenticated route is wrapped by `AppShell` (`apps/web/src/shared/components/AppShell.tsx`,
 mounted in the root layout inside `Providers`): a persistent `AuthHeader` (brand,
-Campaigns/Characters/Rulesets/Settings nav — the Characters link is the Mode-1 "My characters"
+Campaigns/Characters/Rulesets/Discord/Settings nav (Discord → the `/discord` guide, F94) — the Characters link is the Mode-1 "My characters"
 home, F81 — `LanguageSwitcher`, `ThemeToggle`, welcome + sign-out), path-derived `Breadcrumbs` wayfinding, a
 focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, and the site-wide
 **`Footer`** (`shared/components/Footer.tsx` — Terms/Privacy/DMCA/Acceptable-use/Licenses links +
@@ -35,7 +35,7 @@ focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, a
 (F93, ≈60px):** the brand is a link home (not an h1 — each page owns its h1); signed in, the nav
 (`<nav aria-label="Main">`) shows from `lg`, and below `lg` a **menu button** (disclosure:
 `aria-expanded`, focus into the panel, Escape / outside click / navigation close) opens a panel
-with Campaigns/Characters/Rulesets/Settings, the welcome line, language and Sign out. Signed out,
+with Campaigns/Characters/Rulesets/Discord/Settings, the welcome line, language and Sign out. Signed out,
 phones get one short "Sign In" button; the **clickwrap** line (`ClickwrapNotice`, `sm:`+ only —
 page-level notices cover phones) sits just under the header, outside the sticky row. The shell is
 a full-height column (`min-h-dvh`): `main` grows so the footer sits at the bottom of short pages,
@@ -51,6 +51,8 @@ full-screen layouts — so `HomePage` and `Dashboard` mount the same `Footer` th
 sign-in button + clickwrap) instead of a dead-end text prompt. Pinned by
 `e2e/specs/signin-gates.spec.ts`. Until the persisted auth hint has been read (post-mount — see
 below) the gate shows a neutral spinner, so a returning signed-in user never sees a sign-in flash.
+**Return-to intent (F94):** signing in from a gate returns to THAT page (`SignInGate` passes its
+pathname as `next`), not the dashboard — so a shared campaign/sheet link survives OAuth.
 
 **Server rendering + hydration (F90, 2026-10-17):** every route server-renders its real content.
 i18next initializes **synchronously** with the bundled English catalog (`lib/i18n/index.ts`,
@@ -114,24 +116,28 @@ bootstrap).
   `<main>`. Metadata: absolute brand title + description, canonical `/`, OG/Twitter card.
 - **Logged out — `HomePage`** (`apps/web/src/features/marketing/components/HomePage.tsx`): the reframed
   two-mode landing. Hero _"The mechanical home for your Forged-in-the-Dark crew,"_ a **dual CTA**
-  (_Run a campaign_ / _Join with a code_ — both kick off Discord OAuth), **two "how you'll use it"
+  (_Run a campaign_ / _Join with a code_ — both kick off Discord OAuth; since F94 each keeps its
+  intent: GMs return to `/games/new`, players to the join-code box `/games#join`), **two "how you'll use it"
   tracks** (_At your table_ (Mode 1) and _Play-by-post on Discord_ (Mode 2 — the body now names the
   LIVE bot: sheet-rated rolls, stress/harm/XP, clocks, GM controls as slash commands; tagged _"Like
   Avrae for D&D — but built for Forged in the Dark"_)), and **three pillars** (rules-driven · track
   from anywhere · take what you want). Copy lives in `pages.landing.*`.
 - **Signed in — `Dashboard`** (`apps/web/src/features/dashboard/components/Dashboard.tsx` +
   `features/dashboard/hooks/use-dashboard-data.ts`): the personal home (the OAuth callback redirects
-  to `/`). Header _"Welcome back, {name}"_; **quick actions** (create campaign · join a game ·
-  rulesets · upload ruleset); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
-  state); **Your characters** (`characters.findByPlayer` — the "My Characters" surface, name · playbook
-  · campaign · status, → sheet); **Recent activity** (a merged, newest-first feed over
-  `rolls.findByGame` across the user's campaigns). All over existing repos — no schema change.
-  All three sections show a `LoadingSpinner` while loading (F79 — Characters + Recent activity
-  used to collapse to nothing until the fetch resolved). Copy in `pages.dashboard.*`. Quick actions + the **"My characters"** link go to the standalone
-  `/characters` routes (Phase 5 — portable characters; see below). A **brand-new user** (no
-  campaigns AND no characters) gets a guided **"Start here" 1-2-3** card (build a character ·
-  create a campaign · join a game — each step a real link) instead of disconnected empty cards
-  (F37, `pages.dashboard.startHere.*`).
+  to `/` unless a `next` intent says otherwise). Header _"Welcome back, {name}"_ **only for a
+  returning user** (any campaign or character); a newcomer gets _"Welcome, {name}"_ (F94).
+  **Quick actions** (create campaign · join a campaign · new character · rulesets · upload ruleset ·
+  **Discord guide**); **Your campaigns** (`games.findByCreator` + `findByPlayer`, role badge +
+  state); **Your characters** (`characters.findByPlayer`, name · playbook · campaign · status, →
+  sheet); **Recent activity** (a merged, newest-first feed over `rolls.findByGame` across the
+  user's campaigns). Each section shows a spinner while loading (F79). Copy in `pages.dashboard.*`.
+  **First run (F37 → F94):** a brand-new user (no campaigns AND no characters, both loaded) gets ONE
+  **"Start here"** card _instead of_ the three sections (which used to repeat it, one saying the
+  false "Open a campaign to build your scoundrel"): 1. Build a character (works on its own) · 2. Create a campaign (send players its invite link) · 3. Join a campaign (open an invite link, or
+  enter a join code at `/games#join`) · 4. **Playing on Discord?** → `/discord`, plus the **Add
+  HeistMind to your Discord server** / user-install links (`DiscordInstallLinks`, hidden when
+  `NEXT_PUBLIC_DISCORD_APP_ID` is unset). Returning users' empty state reads "No characters yet.
+  Build one — no campaign needed."
 - **Legal touchpoints (2026-07-05):** every sign-in affordance carries the **clickwrap** line
   ("By signing in, you agree to the Terms of Service and Privacy Policy" — `ClickwrapNotice`,
   rendered under the dual CTA (both hero + bottom), inside `SignInGate`, and in the signed-out
@@ -147,29 +153,55 @@ bootstrap).
   has its own loading → error (Try again) → empty; Recent activity stays loading across the
   per-campaign fan-out, so "No recent activity" never flashes before the rows (the F79 residue);
   activity titles and playbooks are translated/named.
-- _Last verified:_ 2026-10-17 (F91)
+- _Last verified:_ 2026-10-17 (F94: Welcome vs Welcome back, single Start here with a Discord
+  step, CTA intents; previously F91)
 
 ### `/auth/callback` — OAuth return
 
 - **File:** `apps/web/src/app/auth/callback/page.tsx`
 - **Purpose:** handles the Discord OAuth redirect; waits for auth state, then redirects.
-- **Actions:** none (automatic). Shows a loading state, or an error on failure/timeout. The
-  `useSearchParams` reader sits in a `<Suspense>` whose fallback is the same "completing sign-in"
-  card, so the route prerenders (title "Signing in · HeistMind", noindex).
-- **Nav:** → `/` on success; → `/?error=auth_failed` on failure.
+- **Actions:** none (automatic). Shows _"Signing you in — finishing your Discord sign-in, this
+  usually takes a second"_ (no more "Supabase is processing your OAuth tokens"). **Errors never
+  render the provider's `error_description`** (attacker-controllable via a crafted link — F94):
+  `error=access_denied` (Cancel on Discord's consent screen) shows _"You cancelled the Discord
+  sign-in. No problem…"_ and returns to `/` quietly; any other error shows generic copy and goes to
+  `/?error=auth_failed` (the F40 banner). The `useSearchParams` reader sits in a `<Suspense>`, so
+  the route prerenders (title "Signing in · HeistMind", noindex).
+- **Return-to intent (F94):** on success it goes to a **validated `next`** — the `?next=` on the
+  callback URL (set by `signInWithProvider(…, { next })`, `lib/auth/next-path.ts`), else a one-shot
+  sessionStorage copy written at sign-in. `safeNextPath` accepts only a rooted same-origin path:
+  full URLs, `//host`, backslashes, control chars and `/auth/*` fall back to `/` (no open redirect).
+- **Nav:** → `next` (e.g. `/join/<code>`, `/games/new`, the gated page) or `/`; → `/` (cancel) or
+  `/?error=auth_failed` on failure.
+- _Last verified:_ 2026-10-17 (F94)
+
+### `/join/[code]` — Invite link (F94)
+
+- **Files:** `apps/web/src/app/join/[code]/{layout,page}.tsx` (title "Join a campaign", noindex;
+  `/join/` disallowed in robots) → `JoinInvite` (`features/invitations/components/JoinInvite.tsx`).
+- **Purpose:** the shareable invite — the GM copies it from the hub's invite card.
+- **Signed out:** _"You're invited to a campaign"_ — what HeistMind is, the join code, the clickwrap
+  and **Sign in with Discord to join**, which carries `next=/join/<code>` through OAuth so the person
+  lands back here and joins.
+- **Signed in:** redeems once on arrival (`redeem_invite_code`; codes are trimmed/upper-cased —
+  **case-insensitive**) → toast _"You joined the campaign"_ → the hub. Already a member → the hub,
+  no use consumed. **Specific errors** (`data-reason`): not found, **revoked**, **expired**, **used
+  up**, **removed** (the link can't add you back), generic (Try again). Each offers "Enter a join
+  code" (`/games#join`) and back to the dashboard.
+- _Last verified:_ 2026-10-17 (feature introduction, F94)
 
 ### `/games` — Campaign hub (created + joined)
 
 - **File:** `apps/web/src/app/games/page.tsx`
-- **Purpose:** lists campaigns the user **created** (GM) _and_ those they've **joined** (Player), in
-  one list with a per-card role badge (`findByCreator` + `games.findByPlayer`).
-- **Components:** `Card` per game (name, description, state badge, GM/Player role badge); "New
-  campaign" button; a **join-via-code** box (`invitations.joinViaCode` → `redeem_invite_code` RPC);
-  `InviteCodeSection` (`features/games/components/`) — GM-only join-code generator.
-- **Actions:** open a campaign; create a new one; **join a campaign by code**; (GM) **generate an
-  invite/join code**.
+- **Purpose:** lists campaigns the user **created** (GM) _and_ **joined** (Player), one list with a
+  per-card role badge (`findByCreator` + `games.findByPlayer`).
+- **Components:** `Card` per game; "New campaign" button; the **Join a campaign** box
+  (`JoinByCodeCard`, anchor `#join`) — label **"Join code"** (F94 terminology), case-insensitive,
+  also accepts a **pasted invite link**; failures say why (not found / revoked / expired / used up /
+  removed — same copy as `/join/[code]`). The GM's join-code card lives on the campaign hub.
 - **Nav:** → `/games/new`, → `/games/[gameId]`.
-- **Role:** auth-gated. Targeted + public codes; ownership/role gating via RLS + `gamePlayers`.
+- **Role:** auth-gated. Ownership/role gating via RLS + `gamePlayers`.
+- _Last verified:_ 2026-10-17 (F94)
 
 ### `/games/new` — Create campaign
 
@@ -178,7 +210,9 @@ bootstrap).
 - **Actions:** name (required, **unique per creator**), description, ruleset select; Create. Accepts
   `?ruleset=<id>` to preselect. **Zero rulesets → the built-in catalog renders inline**
   (`StarterCatalogInline`, F37): one click creates an owned copy and the form appears with it
-  preselected — no `/rulesets` detour.
+  preselected — no `/rulesets` detour. Its lead-in reads _"Pick a system to run — one click adds a
+  copy you own"_ (F94; it used to say "Upload a ruleset first" above the one-click catalog) and the
+  catalog titles are h2 under the page h1.
 - **Nav:** → `/games/[gameId]` on success.
 - **CX intent:** a duplicate name surfaces a plain-language message ("You already have a campaign
   named …"), not the raw `23505` constraint (handled in `GameForm`).
@@ -187,6 +221,23 @@ bootstrap).
 
 - **File:** `apps/web/src/app/games/[gameId]/page.tsx`
 - **Purpose:** the campaign's home — characters + all shared campaign objects.
+- **Membership + sharing (F94):**
+  - **Invite players** (`InviteCodeSection`, GM-only): each live join code shows **"N of 20 uses
+    left"**, **Copy invite link** (`<origin>/join/<code>` — works for people not signed in yet),
+    **Copy code**, and a two-click **Revoke** (status `revoked`; stops working at once).
+  - **Players** (`MembersPanel`, everyone): active members with GM/Player badges and "(you)". The GM
+    gets a two-click **Remove** per player (`remove_game_player` RPC: status `removed` — can't rejoin
+    with a code — their characters go back to them as standalone, log note "was removed from the
+    campaign by the GM"); removed members show as a muted "Removed: …" line (GM only). A player gets
+    a two-click **Leave campaign** (`leave_game` RPC: row deleted — may rejoin — characters return to
+    My Characters, log note "left the campaign") → `/games`. A detached character keeps a readable
+    ruleset (00023 gives its owner a copy of the GM's). Anyone else is refused at the API.
+  - **Play this campaign on Discord** (`DiscordLinkCard`, GM-only): add the bot, run
+    `/heist link campaign:<this campaign>` (Manage Channels), players join with the invite link +
+    `/character use`; install button (hidden without `NEXT_PUBLIC_DISCORD_APP_ID`) + guide link.
+  - **Delete campaign** (`DeleteCampaignCard`, GM-only, bottom): explains first — characters are NOT
+    deleted, they return to their owners as standalone (renamed "(2)" on a name clash); crew,
+    clocks, factions, scores, join codes and the log go — then a two-click confirm → `/games`.
 - **Components:**
   - `CharacterRoster` (`apps/web/src/features/characters/components/CharacterRoster.tsx`) — the
     campaign roster: each character attributed to its **player** (resolves `createdBy` → profile name),
@@ -251,7 +302,9 @@ bootstrap).
   submits). The log translates outcomes / kinds / position-effect, puts the meta line
   (who · dice · position/effect) on its own line without a leading "·", and roster playbooks show
   their names, not ids.
-- _Last verified:_ 2026-10-17 (F91 launch-review frontend round)
+- The log heading reads **"Campaign log"** (was "Roll Log" — F94 terminology).
+- _Last verified:_ 2026-10-17 (F94: invite link/revoke, Players remove/leave, Discord card, delete
+  campaign; previously F91)
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -352,6 +405,8 @@ bootstrap).
   The newest roll result is announced via an `aria-live` region; the rename row is a real form.
 - _Last verified:_ 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire banner,
   Veteran-gated advances; F91 launch-review frontend round; previously 2026-07-11 backlog rounds E+F)
+- **Delete (F94):** the owner (only — not the GM) gets a **Delete character** card at the bottom of
+  the sheet: two-click confirm → `/characters`; log entries stay in the log.
 - **Standalone variant (Phase 5).** The same `CharacterSheet` also renders at **`/characters/[id]`**
   for a character with no campaign: the score/shared-dice-log sections hide, and an **`AttachToCampaign`**
   card ("Bring to a campaign") offers to link it into a same-ruleset campaign. See the `/characters`
@@ -364,11 +419,17 @@ bootstrap).
   (`packages/shared/src/builtin-rulesets/`), each with a tier + license badge, a blurb, an
   attribution notice where required, and a `LoadBuiltinRulesetButton`
   (`apps/web/src/features/rulesets/components/LoadBuiltinRulesetButton.tsx`); then a `Card` per
-  owned ruleset (name, version, "Create game").
+  owned ruleset under a **"Your rulesets"** h2 (name, version, **"Create campaign"**, two-click
+  **Delete** — F94).
 - **Built-ins shipped:** **Brackwater** (original starter), **Blades in the Dark** (CC BY 3.0, with
   attribution), **Wicked Ones** (CC0). All are action-rating FitD rulesets; Wicked Ones models the
   dungeon as the crew type and uses crew **resource pools** (hoard + threat).
-- **Actions:** add any built-in (creates an editable copy, or **refreshes** an existing copy to the
+- **Copy truth (F94):** there is **no ruleset editor** — no more "editable copy you can reskin
+  freely"; each built-in adds **a copy you own**; to customize, upload a modified ruleset JSON.
+- **Delete (F94):** owner-only. Refused while a campaign or one of your own characters is built on
+  it — the toast says so plainly, not a raw FK error. Other players' characters bound to it get their
+  own copy first (00023).
+- **Actions:** add any built-in (creates a copy you own, or **refreshes** an existing copy to the
   latest bundled content — see `ruleset-content-is-a-snapshot` memory); create a game from a ruleset;
   upload your own. Button copy is **"Add &lt;name&gt; to my rulesets"** with a clarifying tooltip
   (was the ambiguous "Load … starter" — F36).
@@ -377,7 +438,7 @@ bootstrap).
 - **360px (F91, 2026-10-17):** the long "Add … to my rulesets" CTAs and the list rows wrap instead
   of running past a phone viewport (also on `/characters/new` and `/games/new`, which embed the
   catalog); a load error offers Try again. `e2e/specs/mobile-overflow.spec.ts` checks every route at 360px.
-- _Last verified:_ 2026-10-17 (F91)
+- _Last verified:_ 2026-10-17 (F94: delete, copy truth, "Create campaign"; previously F91)
 
 ### `/rulesets/new` — Upload ruleset
 
@@ -387,10 +448,14 @@ bootstrap).
   A **guidance card** (F35) outlines the required/optional JSON shape and points to the starter
   catalog as the no-JSON path. **IP attestation (2026-07-05):** a required checkbox ("I have the
   right to upload this content…") gates the Upload button — the ToS §2 warranty restated at the
-  moment it matters — with a muted line linking `/legal/terms` and `/legal/dmca`. (The e2e
-  `uploadRuleset` helper checks it for every spec.)
+  moment it matters — with muted lines stating the **Acceptable Use rule** ("Own words only: game
+  mechanics can be reimplemented, but text copied from commercial game books can't be uploaded",
+  linking `/legal/acceptable-use` — PR #167's intent, F94) and linking `/legal/terms` +
+  `/legal/dmca`. (The e2e `uploadRuleset` helper checks it.) The guidance heading is an h2 and its
+  hint no longer says "edit your copy — no JSON required": a starter is "a copy you own"; to
+  customize, edit its JSON and upload it.
 - **Nav:** → `/rulesets` on success.
-- _Last verified:_ 2026-07-05 (attestation gate added)
+- _Last verified:_ 2026-10-17 (F94; previously 2026-07-05 attestation gate)
 
 ### `/characters` — My Characters (Phase 5 — portable characters)
 
@@ -398,8 +463,10 @@ bootstrap).
 - **Purpose:** the campaign-independent home for every character the user owns — standalone **and**
   in-campaign (`characters.findByPlayer`). A standalone one carries a "Standalone" badge.
 - **Actions:** "New character" → `/characters/new`; open a character (standalone → `/characters/[id]`,
-  in-campaign → its game route); **Duplicate** (Phase 5b — `cloneCharacter` → a new standalone copy).
+  in-campaign → its game route); **Duplicate** (Phase 5b — `cloneCharacter` → a new standalone copy);
+  **Delete** (F94 — owner, two-click; card names are h2 under the page h1).
 - **Nav:** → `/characters/new`, `/characters/[id]`, `/games/[gameId]/characters/[id]`.
+- _Last verified:_ 2026-10-17 (F94)
 
 ### `/characters/new` — Build a standalone character
 
@@ -409,7 +476,9 @@ bootstrap).
   **The built-in catalog is inline** (`StarterCatalogInline`, F37): with zero rulesets it IS the
   page (one click → straight into the wizard, no `/rulesets` detour); with rulesets present it sits
   below the picker as "Add another system". A secondary link offers the JSON upload
-  (`/rulesets/new`).
+  (`/rulesets/new`). Ruleset/catalog titles are h2 (F94). After a create the wizard draft is
+  cleared, so the next character starts at step 1 (F94 — it used to reopen the just-created one at
+  its Confirm step).
 - **Nav:** → `/characters/[id]` on create; → `/rulesets/new` (bring your own).
 
 ### `/characters/[characterId]` — Standalone character sheet
@@ -420,6 +489,9 @@ bootstrap).
   standalone → **"Bring to a campaign"**; in-campaign (Phase 5b) → **"Move to another campaign"**
   (excludes the current one) + **"Return to My Characters"** (detach). Attach/move use
   `attach_character_to_game`, detach uses `detach_character`; both are owner-only, RPC-enforced.
+  Returning while still a member keeps the campaign's ruleset (so it can come back); leaving, being
+  removed or the campaign's deletion gives the owner a readable copy that remembers its source, so
+  after rejoining the campaign is offered again and attach rebinds to its ruleset (00023).
 
 ### `/legal/*` — Legal documents (public, six routes)
 
@@ -443,25 +515,40 @@ bootstrap).
 - **Metadata (F90):** titles render as "Terms of Service · HeistMind" etc. (template), each with
   its own canonical + OG/Twitter text + the shared card image; the document text is in the
   server-rendered HTML.
-- _Last verified:_ 2026-10-17 (F90: server-rendered copy, per-page canonical/OG; previously
-  2026-07-05 placeholders filled)
+- **Accuracy pass (F94, effective October 17, 2026):** Terms §7 promises notice "so you can save
+  what matters to you" (not "export" — no export feature; PR #167's intent). Privacy: the HeistMind
+  name is the Discord display name/username, **never the email**; display name, avatar and Discord
+  ID are visible to other signed-in users, email never; bot posts live on Discord; §6 lists per-item
+  deletes and what account deletion removes (profile, characters, rulesets, campaigns you run +
+  their crew/clocks/factions/scores/log, memberships, your log entries) vs keeps (other players'
+  characters returned to them; clocks/factions/scores you made in someone else's campaign,
+  unattributed; Discord messages); §7: no self-service export (requests by email).
+- _Last verified:_ 2026-10-17 (F94 accuracy pass; F90 server-rendered copy, per-page canonical/OG)
 
 ### `/discord` — The bot guide (public, F67)
 
 - **Files:** `apps/web/src/app/discord/page.tsx` (server component + `metadata`) →
   `DiscordGuideContent` (`apps/web/src/features/marketing/components/`) — the legal-page pattern;
   command names/syntax are deliberately literal (they must match the registered commands).
-- **Purpose:** the page a GM sends players — what the bot is, a 3-step getting-started (try the
-  dice with no account → one web Discord sign-in IS the account link → `/character use` and roll
-  from the sheet in a linked channel), and the full command reference (mirrors `/heist help` and
-  `packages/discord/README.md`'s table — update the three together).
-- **Nav:** public, no auth gate; linked from the landing's play-by-post track ("How the bot
-  works →"). On gated prod the route redirects home (only `/` + `/legal/*` stay reachable).
+- **Purpose:** the page a GM sends players — what the bot is; **Add HeistMind to your Discord
+  server** + "add it to your Discord account" (user install) under the hero (`DiscordInstallLinks`:
+  `bot applications.commands` permissions=0 / `applications.commands` user install, from
+  `NEXT_PUBLIC_DISCORD_APP_ID`, hidden when unset); the **real setup order** (F94): 1. add the bot
+  (+ try the dice) · 2. GM creates the campaign **on this site**, runs `/heist link campaign:`
+  (Manage Channels) and copies the invite link · 3. players sign in once (the account link), open
+  the invite link (or enter the join code on `/games`), build a character, `/character use` · 4. play. The command reference renders from one `COMMANDS` array that a **unit test checks
+  against the real slash-command manifest both ways** — it had drifted (`/heist log` for `/log`,
+  missing unlink/about/account, a "claim a character" step that doesn't exist). Mirrors `/heist
+help` and `packages/discord/README.md`.
+- **Nav:** public; linked from the landing's play-by-post track, the **signed-in header nav
+  ("Discord")**, the dashboard (quick action + Start here) and the hub's GM Discord card. On gated
+  prod the route redirects home.
 - **Metadata (F90):** "The Discord play-by-post bot · HeistMind", own canonical + OG/Twitter text;
   the guide is in the server-rendered HTML (link unfurls and crawlers see it).
 - **Layout (F93):** the command reference is a single `<dl>` — stacked cards (command, then
   labelled Needs / Does) below `md`, a 3-column table-like grid from `md`; nothing scrolls sideways.
-- _Last verified:_ 2026-10-17 (F90 SSR + metadata; F93 responsive command reference; previously
+- _Last verified:_ 2026-10-17 (F94: install links, real setup order, manifest-checked reference,
+  signed-in reachability; F90 SSR + metadata; F93 responsive command reference; previously
   2026-07-11 feature introduction — bot-parity round, F67)
 
 ### `/settings` — Account settings (self-service deletion)
@@ -474,13 +561,17 @@ bootstrap).
   destructive button. Deletion calls `deleteAccount()` (profiles data seam) → `POST
 /api/account/delete` with the session access token as a bearer; the route verifies the token
   server-side (`auth.getUser`), then service-role `auth.admin.deleteUser(callerId)` — the auth
-  user cascades through profiles → games/characters/rulesets/rolls. On success: local sign-out +
+  user cascades through profiles → games/characters/rulesets/rolls. Other players' characters in
+  the deleted user's campaigns are handed back to them as standalone with their own ruleset copy
+  (00023 — before, a GM whose players had built characters could not delete their account: the
+  ruleset FK blocked the cascade). On success: local sign-out +
   redirect `/`. Failures surface inline; the route is creds-guarded (503 without the service key).
 - **Nav:** header nav gains a persistent **Settings** link (`navigation.settings`); → `/` after
   deletion.
 - **CX intent:** deletion is discoverable but hard to trigger accidentally (confirm word +
   destructive styling); copy states exactly what is removed and that it's unrecoverable.
-- _Last verified:_ 2026-07-05 (feature introduction)
+- _Last verified:_ 2026-10-17 (F94: GM-with-players deletion covered by deletion.spec; previously
+  2026-07-05 feature introduction)
 
 ### Error & 404 surfaces (every route)
 
@@ -550,9 +641,11 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
 5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`. _Valid
    only if name is non-empty, a playbook is chosen, and `validateCharacter(mode:'creation')`
    passes._ "Create character" submits via
-   `getRepositories().characterManagement.createCharacterWithValidation`.
+   `getRepositories().characterManagement.createCharacterWithValidation`; on success the persisted
+   draft (name, picks, step) is cleared so the next character starts fresh (F94).
 
-_Last verified:_ 2026-10-17 (rules-accuracy round F92: Veteran-gated other-playbook abilities,
+_Last verified:_ 2026-10-17 (F94: draft cleared after create, "playbook" not "crew role" copy;
+rules-accuracy round F92: Veteran-gated other-playbook abilities,
 pre-placed dot floor; F93 stepper statuses + selected-playbook / derived-attribute badges; previously
 2026-06-27 @ 2535b31)
 
@@ -599,7 +692,10 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   through suggestions.
 
 Failure posture everywhere: public defers that fail authz become delete + ephemeral; non-members
-learn nothing (not even the campaign's name). **No bot known-gaps remain:** F66 (threads under a
+learn nothing (not even the campaign's name) — but since F94 the "not a member" reply names the
+next step: _"Ask the GM for an invite link (or join code), join on the web, then try again."_
+**Install (F94):** every command is registered for guild AND user install; the web offers both
+install links (`/discord`, dashboard first run, hub GM card). **No bot known-gaps remain:** F66 (threads under a
 category link) closed via the app's first bot-token fetch — a thread whose parent channel is only
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
@@ -624,13 +720,15 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
    the Dark, or Wicked Ones), or upload your own via `/rulesets/new`.
 2. **Create game** from the ruleset card → `/games/new`. 4. Name + description + ruleset → Create.
 3. On `/games/[gameId]`: set up the crew (`CrewSheet`), create clocks (`ClocksPanel`), seed factions
-   (`FactionsPanel`). 6. **Invite players** — on `/games`, generate a join code (`InviteCodeSection`)
-   and share it.
+   (`FactionsPanel`). 6. **Invite players** — on the hub's invite card, create a join code and
+   **Copy invite link** (`/join/<code>`); revoke it any time. 7. Optional: the **Play on Discord**
+   card → add the bot, `/heist link` the channel.
 
 ### J2 — Player: join a campaign, create a character
 
-1. Sign in. 2. On `/games`, **paste the join code** into the join box (`invitations.joinViaCode`) →
-   the campaign appears in your list with a Player badge. 3. Open it (`/games/[gameId]`). 4. **Create
+1. **Open the GM's invite link** (`/join/<code>`) — signed out, sign in with Discord and you land
+   back on it — and you're on the campaign hub (or paste the code/link into `/games#join`). 2. The campaign appears in your list with a Player badge. 3. (Leave any time from the hub's
+   Players card; your characters come back to My Characters.) 4. **Create
    character** → wizard (playbook → ratings → abilities → identity → review → Create). 5. Land back on
    the hub; open the character sheet to play.
 
@@ -652,4 +750,5 @@ Use these as the user-validation scripts (walk each step, apply the Lens-1 quest
 1. On the character sheet, mark XP (tracks fill). 2. When the playbook track fills, spend an advance
    (action dot or ability). 3. Sheet updates; track resets.
 
-_Last verified:_ 2026-06-28 @ 78123c1 (J3 updated for score start/end, per-score loadout, off-app result recording)
+_Last verified:_ 2026-10-17 (F94: J1 invite link + Discord card, J2 invite-link join); previously
+2026-06-28 @ 78123c1 (J3 updated for score start/end, per-score loadout, off-app result recording)

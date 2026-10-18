@@ -215,7 +215,7 @@ export async function mintAccessToken(env: E2EEnv, user: TestUser): Promise<stri
 }
 
 /** A service-role client scoped to the env's data schema (games/rulesets/game_players live there). */
-function dataClient(env: E2EEnv): SupabaseClient {
+export function dataClient(env: E2EEnv): SupabaseClient {
   return createClient(env.supabaseUrl!, env.supabaseServiceRoleKey!, {
     auth: { autoRefreshToken: false, persistSession: false },
     db: { schema: env.heistmindSchema },

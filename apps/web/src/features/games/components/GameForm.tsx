@@ -73,7 +73,7 @@ export function GameForm() {
     return (
       <Stack direction='column' gap='sm'>
         <Text variant='muted'>{t('forms.gameForm.needRuleset')}</Text>
-        <StarterCatalogInline onLoaded={rs => setRulesetId(rs.id)} />
+        <StarterCatalogInline onLoaded={rs => setRulesetId(rs.id)} headingLevel='h2' />
       </Stack>
     );
   }

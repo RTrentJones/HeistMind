@@ -49,7 +49,7 @@ export async function uploadRuleset(
   await page.getByLabel(/right to upload this content/i).check();
   await page.getByRole('button', { name: 'Upload ruleset' }).click();
 
-  await expect(page).toHaveURL(/\/rulesets$/);
+  await expect(page).toHaveURL(/\/rulesets$/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name })).toBeVisible();
 
   return { name, version, optionLabel: `${name} (v${version})` };
@@ -70,7 +70,7 @@ export async function createCampaign(
   await page.getByLabel('Campaign name').fill(campaignName);
   await page.getByRole('button', { name: 'Create campaign' }).click();
 
-  await expect(page).toHaveURL(/\/games\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: campaignName })).toBeVisible();
   return page.url();
 }

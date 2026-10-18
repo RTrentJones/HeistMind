@@ -8,7 +8,7 @@ import { createCampaign, uniqueName, uploadRuleset } from '../support/rulesets';
 
 test.describe.configure({ timeout: 120_000 });
 
-test.describe('Join via invite code', () => {
+test.describe('Join via join code', () => {
   // Mutates the per-env schema — local Supabase stack only (matches the journey specs).
   test.beforeEach(() => {
     test.skip(
@@ -27,14 +27,15 @@ test.describe('Join via invite code', () => {
 
     // GM: generate a public join code on the campaign page (InviteCodeSection is GM-only).
     await gmPage.getByRole('button', { name: 'Create a join code' }).click();
-    const codeEl = gmPage.locator('code').first();
+    const codeEl = gmPage.getByTestId('join-code-row').locator('code');
     await expect(codeEl).toBeVisible({ timeout: 10_000 });
     const code = (await codeEl.innerText()).trim();
     expect(code.length).toBeGreaterThan(0);
 
-    // Player (a different account): redeem the code on /games → land in the campaign.
+    // Player (a different account): redeem the code on /games → land in the campaign. Typed in
+    // lowercase on purpose — join codes are case-insensitive (F94).
     await playerPage.goto('/games');
-    await playerPage.getByLabel('Invite code').fill(code);
+    await playerPage.getByLabel('Join code').fill(code.toLowerCase());
     await playerPage.getByRole('button', { name: 'Join', exact: true }).click();
     await playerPage.waitForURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
     await expect(playerPage.getByRole('heading', { name: campaignName })).toBeVisible({

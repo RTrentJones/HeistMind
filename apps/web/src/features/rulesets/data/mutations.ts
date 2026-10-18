@@ -61,3 +61,24 @@ export function useLoadBuiltinRuleset() {
     onSuccess: () => qc.invalidateQueries({ queryKey: rulesetKeys.all }),
   });
 }
+
+/**
+ * Delete a ruleset you own. The FKs block it (Postgres 23503) while any campaign or one of YOUR
+ * characters still uses it — `rulesetDeleteBlocked(err)` lets the UI say so plainly. Other
+ * players' characters bound to it get their own copy first (00023 trigger).
+ */
+export function useDeleteRuleset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { rulesetId: string }) =>
+      getRepositories().rulesets.delete(vars.rulesetId).then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: rulesetKeys.all }),
+  });
+}
+
+/** True when a ruleset delete failed because a campaign or character still uses it. */
+export function rulesetDeleteBlocked(err: unknown): boolean {
+  return (
+    err instanceof RepositoryError && (err.code === '23503' || /foreign key/i.test(err.message))
+  );
+}

@@ -28,13 +28,13 @@ test.describe('Player: join, create, roll, advance', () => {
     const campaignName = uniqueName('Player Journey');
     const gameUrl = await createCampaign(gmPage, ruleset, campaignName);
     await gmPage.getByRole('button', { name: 'Create a join code' }).click();
-    const codeEl = gmPage.locator('code').first();
+    const codeEl = gmPage.getByTestId('join-code-row').locator('code');
     await expect(codeEl).toBeVisible({ timeout: 10_000 });
     const code = (await codeEl.innerText()).trim();
 
     // --- Player joins with the code and lands in the campaign. ---
     await playerPage.goto('/games');
-    await playerPage.getByLabel('Invite code').fill(code);
+    await playerPage.getByLabel('Join code').fill(code);
     await playerPage.getByRole('button', { name: 'Join', exact: true }).click();
     await playerPage.waitForURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
     await expect(playerPage.getByRole('heading', { name: campaignName })).toBeVisible({

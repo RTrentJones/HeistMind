@@ -55,7 +55,7 @@ test.describe('GM: dice rolls + roll log', () => {
 
     // The roll is on the campaign's shared, DB-backed log (and survives navigation).
     await gmPage.goto(gameUrl);
-    await expect(gmPage.getByRole('heading', { name: 'Roll Log' })).toBeVisible();
+    await expect(gmPage.getByRole('heading', { name: 'Campaign log' })).toBeVisible();
     await expect(gmPage.getByText(/\[\d/).first()).toBeVisible({ timeout: 15_000 });
   });
 

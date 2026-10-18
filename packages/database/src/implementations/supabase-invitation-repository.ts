@@ -152,7 +152,8 @@ export class SupabaseInvitationRepository
     });
   }
 
-  /** Redeem a public join code via the SECURITY DEFINER RPC (migration 00009). */
+  /** Redeem a public join code via the SECURITY DEFINER RPC (00010 → 00022 → 00023: case-insensitive,
+   * specific errors — not found / revoked / expired / no uses left / removed). */
   async joinViaCode(data: JoinGameData, _userId: string): Promise<Result<GamePlayer>> {
     return this.run(async () => {
       const code = data.inviteCode;
@@ -162,18 +163,10 @@ export class SupabaseInvitationRepository
           error: { message: 'An invite code is required', code: 'VALIDATION' },
         };
       }
-      // redeem_invite_code isn't in the generated DB types yet — call it through a narrow cast.
-      const { data: row, error } = await (
-        this.db as unknown as {
-          rpc: (
-            fn: string,
-            args: Record<string, unknown>
-          ) => Promise<{
-            data: unknown;
-            error: { message: string; code?: string; details?: string } | null;
-          }>;
-        }
-      ).rpc('redeem_invite_code', { p_code: code });
+      // The 00023 RPC trims + upper-cases server-side too; normalise here so the request is clean.
+      const { data: row, error } = await this.rpcUntyped('redeem_invite_code', {
+        p_code: code.trim().toUpperCase(),
+      });
       if (error) return failFromError(error);
       if (!row)
         return {

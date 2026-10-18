@@ -27,6 +27,9 @@ import { gameStateLabel } from '@/features/rolls/lib/labels';
 import { errorMessage } from '@/lib/query/result';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 import { InviteCodeSection } from '@/features/games/components/InviteCodeSection';
+import { MembersPanel } from '@/features/games/components/MembersPanel';
+import { DiscordLinkCard } from '@/features/games/components/DiscordLinkCard';
+import { DeleteCampaignCard } from '@/features/games/components/DeleteCampaignCard';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { AddResultForm } from '@/features/rolls/components/AddResultForm';
@@ -141,6 +144,8 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         </Stack>
 
         {game.createdBy === user?.id && <InviteCodeSection gameId={gameId} />}
+        <MembersPanel game={game} userId={user?.id} />
+        {game.createdBy === user?.id && <DiscordLinkCard campaignName={game.name} />}
 
         <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
           <Heading level='h2' variant='primary'>
@@ -224,6 +229,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           </Stack>
         </Card>
         <RollLog gameId={gameId} />
+        {game.createdBy === user?.id && <DeleteCampaignCard gameId={gameId} name={game.name} />}
       </Stack>
     </Container>
   );
