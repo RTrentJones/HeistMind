@@ -27,6 +27,7 @@ import {
 } from '@heist-mind/ui';
 import { useCrewByGame } from '@/features/crews/data/queries';
 import { useCharacterAdvancement } from '@/features/characters/lib/use-character-advancement';
+import { withEditsSince } from '@/features/characters/lib/with-edits-since';
 import { HarmCard } from './cards/HarmCard';
 import { GearCard } from './cards/GearCard';
 import { CrewBenefits } from './advancement/CrewBenefits';
@@ -118,10 +119,11 @@ export function CharacterEditor({
   // the sheet — keeps its live value instead of being reverted by a stale draft (review item 2).
   const saveDraft = async () => {
     const base = JSON.parse(draftBaseRef.current) as CharacterData;
-    const out = await saveBuild(base, draft);
+    const submitted = draft;
+    const out = await saveBuild(base, submitted);
     if (out.status === 'saved') {
       draftBaseRef.current = JSON.stringify(out.data);
-      setDraft(structuredClone(out.data));
+      setDraft(current => withEditsSince(submitted, current, out.data));
     } else if (out.status === 'conflict') {
       setRebase(true);
     }
