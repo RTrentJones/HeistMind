@@ -1,6 +1,6 @@
 // Logged-in home — `/` renders the personal Dashboard once a session is present (marketing shows
 // when signed out, covered by home.spec.ts). The gmPage fixture injects a real Supabase session, so
-// visiting `/` should land on the dashboard chrome: the welcome heading, the quick actions, and the
+// visiting `/` should land on the dashboard chrome: the "Your dashboard" heading, the quick actions, and the
 // "your campaigns" / "your characters" sections (which render their headings even with no data yet).
 //
 // Skips automatically when no service-role key is configured (fixture guard).
@@ -14,11 +14,12 @@ test.describe('dashboard (authenticated /)', () => {
   test('an injected session lands on the personal dashboard', async ({ gmPage }) => {
     await gmPage.goto('/');
 
-    // Dashboard-only welcome heading (the header shows "Welcome, X" as text, not a heading).
-    // "Welcome back" only for returning users (F94) — the shared persona may be either.
-    await expect(gmPage.getByRole('heading', { name: /^welcome/i })).toBeVisible({
+    // The page title is distinct from the header's "Welcome, <name>" greeting (F96 — the name
+    // used to appear twice: header text + a "Welcome, <name>" h1).
+    await expect(gmPage.getByRole('heading', { level: 1, name: 'Your dashboard' })).toBeVisible({
       timeout: 15_000,
     });
+    await expect(gmPage.getByRole('main').getByText(/welcome/i)).toHaveCount(0);
 
     // Either the first-run "Start here" or the "your stuff" sections, plus a primary action.
     await expect(
@@ -26,12 +27,12 @@ test.describe('dashboard (authenticated /)', () => {
         .getByRole('heading', { name: /start here/i })
         .or(gmPage.getByRole('heading', { name: /your campaigns/i }))
     ).toBeVisible();
-    await expect(gmPage.getByRole('link', { name: /create campaign/i }).first()).toBeVisible();
+    await expect(gmPage.getByRole('link', { name: /create (a )?campaign/i }).first()).toBeVisible();
   });
 
-  // F94 — a brand-new account gets "Welcome" (not "back"), ONE Start-here card with four real
-  // steps (incl. Discord) and none of the three redundant empty sections.
-  test('first run: Welcome, a single Start here (with a Discord step), no empty sections', async ({
+  // F94/F96 — a brand-new account gets ONE Start-here card with four real steps (incl. Discord),
+  // first, without the quick-action wall that repeated it, and none of the redundant sections.
+  test('first run: a single Start here (with a Discord step), no quick actions, no empty sections', async ({
     browser,
   }) => {
     test.skip(!isLocalStack() || !hasAdminAuth(), 'Requires the local Supabase stack.');
@@ -40,10 +41,11 @@ test.describe('dashboard (authenticated /)', () => {
       const { page } = fresh;
       await page.goto('/');
       const h1 = page.getByRole('heading', { level: 1 });
-      await expect(h1).toHaveText(/^welcome, /i, { timeout: 15_000 });
-      await expect(h1).not.toHaveText(/back/i);
+      await expect(h1).toHaveText('Your dashboard', { timeout: 15_000 });
       const start = page.getByTestId('dashboard-start-here');
       await expect(start).toBeVisible();
+      await expect(page.getByTestId('dashboard-quick-actions')).toHaveCount(0);
+      await expect(page.getByText(/welcome back/i)).toHaveCount(0);
       for (const step of ['Build a character', 'Create a campaign', 'Join a campaign']) {
         await expect(start.getByRole('link', { name: step })).toBeVisible();
       }
@@ -83,9 +85,8 @@ test.describe('dashboard (authenticated /)', () => {
     await createCampaign(gmPage, ruleset, campaign);
 
     await gmPage.goto('/');
-    await expect(gmPage.getByRole('heading', { name: /welcome back/i })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(gmPage.getByTestId('dashboard-quick-actions')).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.getByTestId('dashboard-subtitle')).toHaveText(/pick up where/i);
 
     // Real content: the campaign just created is listed under "Your campaigns".
     await expect(gmPage.getByRole('heading', { name: campaign })).toBeVisible();

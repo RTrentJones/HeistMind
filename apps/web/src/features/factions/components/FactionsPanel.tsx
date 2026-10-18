@@ -18,11 +18,15 @@ import {
 } from '@/features/factions/data/mutations';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { ConfirmButton } from '@/shared/components/ConfirmButton';
+import { NewFactionForm, type NewFactionValues } from './NewFactionForm';
 
 /**
  * Factions + status for a campaign. The city's powers, with a tier and a status toward the crew
  * (−3 war … +3 allied). Faction "projects" are clocks linked to the faction. DB-backed shared
  * state; members read, the GM maintains. RLS enforces GM-write server-side.
+ *
+ * The GM adds factions two ways (F96): the free-text form (always — Blades in the Dark ships no
+ * suggestions, setting IP) and, when the ruleset suggests powers, a one-click seed picker.
  */
 export function FactionsPanel({
   gameId,
@@ -50,6 +54,23 @@ export function FactionsPanel({
       ? `${t('components.factionsPanel.loadFailed')} — ${factionsQuery.error.message}`
       : null);
 
+  const failMessage = (e: Error) =>
+    `${t('components.factionsPanel.addFailed')}${e.message ? ` — ${e.message}` : ''}`;
+
+  // Sequenced: the form clears only once the faction actually landed.
+  const addCustom = async (values: NewFactionValues): Promise<boolean> => {
+    const userId = user?.id;
+    if (!userId) return false;
+    setError(null);
+    try {
+      await createFaction.mutateAsync({ userId, data: { gameId, ...values } });
+      return true;
+    } catch (e) {
+      setError(failMessage(e as Error));
+      return false;
+    }
+  };
+
   const addSuggested = () => {
     const userId = user?.id;
     if (!userId || !pick) return;
@@ -59,10 +80,7 @@ export function FactionsPanel({
       { userId, data: { gameId, name: pick, factionType: def?.type, tier: def?.tier ?? 0 } },
       {
         onSuccess: () => setPick(''),
-        onError: e =>
-          setError(
-            `${t('components.factionsPanel.addFailed')}${e.message ? ` — ${e.message}` : ''}`
-          ),
+        onError: e => setError(failMessage(e)),
       }
     );
   };
@@ -87,9 +105,13 @@ export function FactionsPanel({
       )}
 
       {factions.length === 0 ? (
-        <Text variant='muted' size='sm'>
-          {t('components.factionsPanel.empty')}
-          {isGm ? t('components.factionsPanel.emptyGmHint') : ''}
+        <Text variant='muted' size='sm' data-testid='factions-empty'>
+          {t('components.factionsPanel.empty')}{' '}
+          {isGm
+            ? available.length > 0
+              ? t('components.factionsPanel.emptyGmHintSuggested')
+              : t('components.factionsPanel.emptyGmHint')
+            : t('components.factionsPanel.emptyPlayerHint')}
         </Text>
       ) : (
         <Stack direction='column' gap='md'>
@@ -115,7 +137,7 @@ export function FactionsPanel({
         >
           <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
             <Select
-              label={t('components.factionsPanel.addFaction')}
+              label={t('components.factionsPanel.suggestedLabel')}
               value={pick}
               onChange={e => setPick(e.target.value)}
             >
@@ -129,11 +151,19 @@ export function FactionsPanel({
                 </option>
               ))}
             </Select>
-            <Button type='submit' variant='ember' disabled={createFaction.isPending || !pick}>
-              {t('components.factionsPanel.addFaction')}
+            <Button type='submit' variant='outline' disabled={createFaction.isPending || !pick}>
+              {t('components.factionsPanel.addSuggested')}
             </Button>
           </Stack>
         </form>
+      )}
+
+      {isGm && (
+        <NewFactionForm
+          existingNames={factions.map(f => f.name)}
+          busy={createFaction.isPending}
+          onCreate={addCustom}
+        />
       )}
     </Stack>
   );
@@ -219,6 +249,12 @@ function FactionCard({
             </ConfirmButton>
           )}
         </Stack>
+
+        {faction.notes && (
+          <Text variant='muted' size='sm' className='whitespace-pre-line'>
+            {faction.notes}
+          </Text>
+        )}
 
         <Stack direction='row' gap='lg' align='center' className='flex-wrap'>
           <Stack direction='row' gap='xs' align='center'>

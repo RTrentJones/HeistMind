@@ -30,6 +30,7 @@ export function toSupabaseFactionInsert(data: CreateFactionData, userId: string)
     faction_type: data.factionType ?? null,
     tier: clampFactionTier(data.tier ?? 0),
     status: clampFactionStatus(data.status ?? 0),
+    notes: data.notes?.trim() ? data.notes.trim() : null,
     created_by: userId,
   };
 }

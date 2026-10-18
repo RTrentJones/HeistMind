@@ -14,7 +14,7 @@ test.describe('authenticated session (injected)', () => {
     await expect(gmPage.getByRole('button', { name: /sign out/i })).toBeVisible({
       timeout: 15_000,
     });
-    // Scoped to the header: a first-run dashboard greets with the same "Welcome, <name>" (F94).
+    // The greeting lives ONLY in the header now — the dashboard h1 is "Your dashboard" (F96).
     await expect(
       gmPage
         .getByRole('banner')

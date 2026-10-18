@@ -40,7 +40,7 @@ test.describe('sign-in gates on secondary routes (anonymous, F72)', () => {
 test.describe('header nav (authenticated, F81)', () => {
   test('the persistent nav links My characters', async ({ gmPage }) => {
     await gmPage.goto('/');
-    await expect(gmPage.getByRole('heading', { name: /^welcome/i })).toBeVisible({
+    await expect(gmPage.getByRole('heading', { level: 1, name: 'Your dashboard' })).toBeVisible({
       timeout: 15_000,
     });
 
