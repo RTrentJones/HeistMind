@@ -14,8 +14,12 @@ test.describe('authenticated session (injected)', () => {
     await expect(gmPage.getByRole('button', { name: /sign out/i })).toBeVisible({
       timeout: 15_000,
     });
+    // Scoped to the header: a first-run dashboard greets with the same "Welcome, <name>" (F94).
     await expect(
-      gmPage.getByText(new RegExp(`welcome, (${gmUser.username}|${gmUser.email})`, 'i'))
+      gmPage
+        .getByRole('banner')
+        .getByText(new RegExp(`welcome, (${gmUser.username}|${gmUser.email})`, 'i'))
+        .first()
     ).toBeVisible();
     await expect(gmPage.getByRole('button', { name: /^sign in$/i })).toHaveCount(0);
   });
