@@ -253,7 +253,7 @@ describe('/crew', () => {
       'p1',
       expect.objectContaining({ kind: 'crew', note: expect.stringContaining('Pack Rats') })
     );
-    expect(content(calls)).toContain('new special ability: **Pack Rats**');
+    expect(content(calls)).toContain('new special ability: Pack Rats');
   });
 
   it('advance refuses BEFORE any write: a non-full track, another type’s ability, a bad pick', async () => {
@@ -294,7 +294,7 @@ describe('/crew', () => {
       crewAbilities: ['crew-second-story'],
       resources: { 'crew-xp': 0, 'crew-upgrade:crew-mastery': 2 },
     });
-    expect(content(calls)).toContain('**Mastery** (2/4)');
+    expect(content(calls)).toContain('upgrade boxes on Mastery (2/4)');
   });
 });
 

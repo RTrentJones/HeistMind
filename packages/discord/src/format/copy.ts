@@ -157,12 +157,12 @@ export const copy = {
   crewPickUpgrade: (name: string, boxes: number, size: number) =>
     `Mark 2 upgrade boxes: ${name} (${boxes}/${size})`,
   crewPickOtherUpgrades: 'Mark 2 boxes on other upgrades (record them on the crew sheet)',
-  crewStartingAbility: (names: string) => `Starting crew ability: **${names}**`,
-  crewNewAbility: (names: string) => `Crew advance — new special ability: **${names}**`,
+  crewStartingAbility: (names: string) => `Starting crew ability: ${names}`,
+  crewNewAbility: (names: string) => `Crew advance — new special ability: ${names}`,
   crewUpgradeBoxes: (name: string, boxes: number, size: number) =>
-    `Crew advance — marked 2 upgrade boxes on **${name}** (${boxes}/${size})`,
+    `Crew advance — marked 2 upgrade boxes on ${name} (${boxes}/${size})`,
   crewUpgradeUnlocked: (name: string) =>
-    `Crew advance — **${name}** unlocked (all upgrade boxes marked)`,
+    `Crew advance — ${name} unlocked (all upgrade boxes marked)`,
   crewOtherUpgrades: 'Crew advance — two upgrade boxes marked (record them on the crew sheet)',
   clockNotFound: (name: string) => `No clock “${name}”. Try the autocomplete suggestions.`,
   clockTicked: (name: string, filled: number, segments: number) =>
