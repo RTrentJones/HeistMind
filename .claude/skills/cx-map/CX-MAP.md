@@ -36,9 +36,16 @@ focus-revealed **skip-to-main** link, the `<main id="main-content">` landmark, a
 (`<nav aria-label="Main">`) shows from `lg`, and below `lg` a **menu button** (disclosure:
 `aria-expanded`, focus into the panel, Escape / outside click / navigation close) opens a panel
 with Campaigns/Characters/Rulesets/Discord/Settings, the welcome line, language and Sign out. Signed out,
-phones get one short "Sign In" button; the **clickwrap** line (`ClickwrapNotice`, `sm:`+ only —
+phones get one short "Sign In" button. **No signed-out flash (F101):** a pre-hydration script
+(`lib/auth-hint.ts`, beside the theme script) marks `<html data-auth="in">` when the browser looks
+signed in (persisted `auth-store` hint or a Supabase `sb-*-auth-token` key); CSS then hides the
+Sign In actions/clickwrap and the header shows only the theme toggle + a menu-sized slot until the
+session check answers (`useAuthPending`); `<AuthListener/>` keeps the attribute in sync. `main`
+is at least a viewport tall (`min-h-[calc(100dvh-4rem)]`, F101), so the footer sits just below the
+fold and auth-check → spinner → content swaps don't move it. The header
+greets by display name → username → plain "Welcome" (never the email). The **clickwrap** line (`ClickwrapNotice`, `sm:`+ only —
 page-level notices cover phones) sits just under the header, outside the sticky row. The shell is
-a full-height column (`min-h-dvh`): `main` grows so the footer sits at the bottom of short pages,
+a full-height column (`min-h-dvh`): `main` is at least a viewport tall (F101), so the footer sits just below the fold on short pages,
 with a consistent `pt-6 sm:pt-10` under the header; breadcrumbs align to each route's own column.
 The theme class is set on `<html>` by an inline pre-paint script (no dark flash for light users). The shell steps aside on `/`
 (marketing hero owns its header) and `/auth/*` (transient callback), which render their own
@@ -153,8 +160,12 @@ bootstrap).
   has its own loading → error (Try again) → empty; Recent activity stays loading across the
   per-campaign fan-out, so "No recent activity" never flashes before the rows (the F79 residue);
   activity titles and playbooks are translated/named.
-- _Last verified:_ 2026-10-17 (F94: Welcome vs Welcome back, single Start here with a Discord
-  step, CTA intents; previously F91)
+- **Signed-in first paint (F101):** the server HTML carries the marketing page AND a hidden neutral
+  dashboard skeleton (`HomeSwitch`); the auth-hint script picks which paints, so a returning user
+  never sees the marketing page / Sign In header (it used to show for ~1.3s). After hydration:
+  Dashboard when signed in, the skeleton while a likely session is being checked, else marketing.
+- _Last verified:_ 2026-10-18 (F101: no signed-out flash; previously F94 Welcome vs Welcome back,
+  single Start here with a Discord step, CTA intents)
 
 ### `/auth/callback` — OAuth return
 
@@ -180,6 +191,9 @@ bootstrap).
 - **Files:** `apps/web/src/app/join/[code]/{layout,page}.tsx` (title "Join a campaign", noindex;
   `/join/` disallowed in robots) → `JoinInvite` (`features/invitations/components/JoinInvite.tsx`).
 - **Purpose:** the shareable invite — the GM copies it from the hub's invite card.
+- **Malformed link (F101):** a code that can't exist (not 4–32 letters/digits) says **"This invite
+  link looks broken"** right away — signed in or out (`data-testid=join-invalid`) — with "Enter a
+  join code" + home, instead of "You're invited" and a sign-in that could only fail.
 - **Signed out:** _"You're invited to a campaign"_ — what HeistMind is, the join code, the clickwrap
   and **Sign in with Discord to join**, which carries `next=/join/<code>` through OAuth so the person
   lands back here and joins.
@@ -187,8 +201,12 @@ bootstrap).
   **case-insensitive**) → toast _"You joined the campaign"_ → the hub. Already a member → the hub,
   no use consumed. **Specific errors** (`data-reason`): not found, **revoked**, **expired**, **used
   up**, **removed** (the link can't add you back), generic (Try again). Each offers "Enter a join
-  code" (`/games#join`) and back to the dashboard.
-- _Last verified:_ 2026-10-17 (feature introduction, F94)
+  code" (`/games#join`; hidden for **removed**, where no code can help) and back to the dashboard.
+  These failures are **HTTP 400** (00025: `P0001`, was a 500 from `P0002`); the web keys off the
+  message, unchanged.
+- **After joining (F101):** lands on `/games/<id>?joined=1` → the hub's **"You're in — welcome to
+  <campaign>"** banner (Build your character / Bring an existing character / Dismiss).
+- _Last verified:_ 2026-10-18 (F101: malformed-link card, 400s, joined banner; introduced F94)
 
 ### `/games` — Campaign hub (created + joined)
 
@@ -221,21 +239,33 @@ bootstrap).
 
 - **File:** `apps/web/src/app/games/[gameId]/page.tsx`
 - **Purpose:** the campaign's home — characters + all shared campaign objects.
+- **Layout (F101):** title → (after a join) the **"You're in"** banner → for the GM, ONE
+  **"Campaign setup"** disclosure (`CampaignSetup`, `<details>`) holding Invite players, Players and
+  the Discord card — **open while the GM is alone, folded once players are in** (initial state only;
+  a mid-session join doesn't snap it shut) → **Characters** → crew, clocks, factions, score, log →
+  players' **Players** card (with Leave) → the GM's **Delete campaign**. Characters used to start at
+  y≈1130 under three setup cards. (`AppShell`'s `main` is at least a viewport tall, so the footer
+  isn't dragged around as panels resolve — CLS.)
 - **Membership + sharing (F94):**
   - **Invite players** (`InviteCodeSection`, GM-only): each live join code shows **"N of 20 uses
     left"**, **Copy invite link** (`<origin>/join/<code>` — works for people not signed in yet),
-    **Copy code**, and a two-click **Revoke** (status `revoked`; stops working at once).
+    **Copy code**, and a two-click **Revoke** (status `revoked`; stops working at once). F101: the
+    code + uses sit on row 1 and the three buttons in an even group on row 2 (at 360px "Revoke" used
+    to wrap alone); **Revoke** is a crimson-text `danger-ghost` button, not purple like Copy.
   - **Players** (`MembersPanel`, everyone): active members with GM/Player badges and "(you)". The GM
     gets a two-click **Remove** per player (`remove_game_player` RPC: status `removed` — can't rejoin
     with a code — their characters go back to them as standalone, log note "was removed from the
-    campaign by the GM"); removed members show as a muted "Removed: …" line (GM only). A player gets
+    campaign by the GM"; F101: `danger-ghost`, armed label "Remove?" with the name in its accessible
+    label, width reserved so arming doesn't re-wrap the row); removed members show as a muted "Removed: …" line (GM only). A player gets
     a two-click **Leave campaign** (`leave_game` RPC: row deleted — may rejoin — characters return to
     My Characters, log note "left the campaign") → `/games`. A detached character keeps a readable
     ruleset (00023 gives its owner a copy of the GM's). Anyone else is refused at the API.
   - **Play this campaign on Discord** (`DiscordLinkCard`, GM-only): add the bot, run
     `/heist link campaign:<this campaign>` (Manage Channels), players join with the invite link +
     `/character use`; install button (hidden without `NEXT_PUBLIC_DISCORD_APP_ID`) + guide link.
-  - **Delete campaign** (`DeleteCampaignCard`, GM-only, bottom): explains first — characters are NOT
+  - **Delete campaign** (`DeleteCampaignCard`, GM-only, bottom; F101: `Card variant='danger'` +
+    `danger-outline` button, armed label "Delete for good" — the named wording stays the accessible
+    name — so it no longer looks like any other card or wraps to two lines): explains first — characters are NOT
     deleted, they return to their owners as standalone (renamed "(2)" on a name clash); crew,
     clocks, factions, scores, join codes and the log go — then a two-click confirm → `/games`.
 - **Components:**
@@ -303,8 +333,8 @@ bootstrap).
   (who · dice · position/effect) on its own line without a leading "·", and roster playbooks show
   their names, not ids.
 - The log heading reads **"Campaign log"** (was "Roll Log" — F94 terminology).
-- _Last verified:_ 2026-10-17 (F94: invite link/revoke, Players remove/leave, Discord card, delete
-  campaign; previously F91)
+- _Last verified:_ 2026-10-18 (F101: setup disclosure, joined banner, danger affordances, invite row,
+  CLS; previously F94 invite link/revoke, Players remove/leave, Discord card, delete campaign)
 - **Role:** GM edits campaign objects; players read them.
 - **CX intent:** read-only state should be visibly read-only for players; the hub should be
   scannable, not an undifferentiated wall of panels.
@@ -492,6 +522,15 @@ bootstrap).
   Returning while still a member keeps the campaign's ruleset (so it can come back); leaving, being
   removed or the campaign's deletion gives the owner a readable copy that remembers its source, so
   after rejoining the campaign is offered again and attach rebinds to its ruleset (00023).
+  **Copies of the same built-in (F101, 00025):** a character built from the catalog runs on the
+  player's own copy of e.g. Blades in the Dark while the campaign runs on the GM's; rulesets with
+  **identical content** now count as the same system — the picker lists the server's
+  `attachable_games_for_character` answer and attach rebinds to the campaign's ruleset. A
+  customised/older copy still doesn't match; the empty state says why and links **Start a campaign
+  with it** (`/games/new?ruleset=<id>`) and **join one with a code** (`/games#join`). The Delete
+  character card uses the danger treatment (F101).
+- _Last verified:_ 2026-10-18 (F101: attach across content-identical ruleset copies, truthful
+  linked empty state, danger delete card)
 
 ### `/legal/*` — Legal documents (public, six routes)
 

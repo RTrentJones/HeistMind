@@ -32,6 +32,68 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F101 — Round-3 pixel UX: signed-out flash, "Bring to a campaign" dead end, quiet danger, top-heavy hub
+
+_(Numbered F101 to stay clear of parallel round-3 branches that may take F95+.)_
+
+- **severity:** S2 (the portable-sheet promise broke for every catalog-built character; every
+  returning user saw the signed-out site first) · **type:** CX-flaw — from the round-3 pixel audit
+  (`round3-pixel.md` P1-2, P1-3, P1-5, P1-6, P1-7, P2-9…P2-16, P2-19, P2-20)
+- **what was wrong:**
+  - **Signed-out flash** (P1-2): `/` painted the marketing page + "Sign In / Sign Up" header for
+    ~1.3s before the dashboard, and gated pages flashed "Sign in to continue" for users with a live
+    Supabase session but no stored hint — the auth store only hydrates after mount.
+  - **Attach dead end** (P1-3): a character built from the catalog runs on the player's OWN copy of
+    the built-in (e.g. Blades in the Dark); the campaign runs on the GM's copy — same content,
+    different row id. Both `AttachToCampaign` and `attach_character_to_game` matched on exact id, so
+    the card said "None of your campaigns use this ruleset" with unlinked "Create one, or join".
+  - **Quiet danger** (P1-5): delete campaign/character were plain outline cards; Revoke/Remove were
+    purple ghost buttons like "Copy code"; arming widened Remove onto its own row and wrapped the
+    delete label to two lines; at 360px "Revoke" wrapped alone.
+  - **Top-heavy hub + CLS** (P1-6/7): Invite, Players and Discord cards pushed Characters to
+    y≈1130 at 1440; CLS 0.26→0.35 (GM), 0.25→1.00 (player at 768), ~1.04 post-join.
+  - **P2s:** primary buttons 40px on phones vs 44px secondary; native selects ~29px;
+    `/join/<malformed>` said "You're invited"; join failures were HTTP 500 (P0002); no "you're in"
+    moment after joining (first card's only button: Leave); crimson GM badge; inconsistent inline
+    code; "Whisper" vs "The Whisper".
+- **fix:**
+  - **Auth hint:** `lib/auth-hint.ts` inline `<head>` script → `<html data-auth="in">` from the
+    persisted hint or an `sb-*-auth-token` key; CSS hides `[data-auth-only=out]` / shows
+    `[data-auth-only=in]`; store `sessionHint` + `useAuthPending`; `HomeSwitch` SSRs marketing + a
+    hidden skeleton; `AuthHeader` shows a height-matched placeholder while resolving; `SignInGate` /
+    `JoinInvite` wait for the session check. Never greets by email.
+  - **00025** (`supabase/migrations/00025_attach_across_ruleset_copies.sql`, idempotent, applied
+    twice to stack2): `rulesets_attach_compatible` (same row · 00023 `copiedFrom` copy ·
+    **content-identical** rows), `attachable_games_for_character` (the picker's source),
+    `attach_character_to_game` on that predicate (still rebinds to the campaign's ruleset), and
+    `redeem_invite_code` / attach not-found errors as **P0001 → HTTP 400** (messages unchanged).
+    Empty state now explains and links `/games/new?ruleset=<id>` and `/games#join`.
+  - **Danger:** `Button` `danger-outline` / `danger-ghost`; danger cards; `ConfirmButton`
+    `reserveWidth` + short visible confirms with named accessible labels; invite row as code+uses /
+    3-button group.
+  - **Hub:** one "Campaign setup" `<details>` (open while the GM is alone), Characters next, players'
+    Players card after the table; `AppShell` `main` at least a viewport tall (footer below the fold); the attach picker holds its height while resolving.
+  - **P2s:** `Button` default + `Select` `max-sm:min-h-11`; malformed-link card; `?joined=1` "You're
+    in" banner; brand GM badge; base-layer chip for bare inline `<code>`; `playbookLabel` falls back
+    to the bundled systems' names.
+- **measured** (`next dev` on :3111, stack2 seed, round-3 `capture-r3` tooling with a visible-h1
+  settle; "before" = round-3 `metrics-final.json` / this branch's base on the same server). CLS:
+  hub GM 1440 0.35 (0.83 on base) → **0.09**, 768 0.21 → 0.17, 360 0.20 → **0**; hub player 768
+  1.00 → **0.08–0.16**, 1440 0.72 → **0.02–0.10**, 360 0.20 → 0; post-join landing 1.04 (768) →
+  **0.18**, 0.71 (1440) → 0.11; standalone sheet 0.20–0.36 → **0–0.01**; /games 0.28 → 0.01.
+  Load probe (`r3-cls.mjs` on :3111, no stored hint): hub 1440 0.42 → 0.02, sheet 360 0.27 → 0.00.
+  Sub-44px targets at 360: hub GM 69 → 58, hub player 19 → 14, dashboard 9 → 3, join/gates 5 → 4.
+  axe: 0 violations on every captured shot; no horizontal scroll.
+- **tests:** unit — auth-hint (script ≡ function), SignInGate session-hint spinner, ConfirmButton
+  reserveWidth, playbook label, `findAttachableGameIds`, Button danger variants/sizes; SQL scenarios
+  on stack2; e2e — new `attach-across-copies` (attach across copies, empty-state links, joined
+  banner, bad code = 400, malformed link), join-link/membership updated for the setup disclosure.
+- **residue:** a customised or older-bundle copy still can't attach (by design — "refresh" both
+  copies from the catalog); `Dashboard.tsx` (out of this round's scope) still greets by email for
+  ~300ms while the profile loads and picks "Welcome"/"Welcome back" before lists load (P2-18,
+  P1-8); card-title hierarchy (P2-17) and the `/discord` grid (P2-22) not touched.
+- **status:** fixed (branch `feat/ux-r3`)
+
 ### F94 — Launch product round: no bot install, no invite link, no deletes or membership controls, untrue copy
 
 - **severity:** S1 (Mode 2 couldn't start; nobody could delete anything) · **type:** CX-flaw —
