@@ -80,8 +80,13 @@ export function setStress(
   repos: DatabaseRepositories,
   input: SetStressInput
 ): Promise<Result<Character | null>> {
-  return patchLive(repos, input.characterId, input.userId, fresh => {
-    const next = clampStress(fresh.ruleset.content, input.stress);
+  return patchLive(repos, input.characterId, input.userId, async fresh => {
+    const next = clampStress(
+      fresh.ruleset.content,
+      input.stress,
+      fresh.characterData,
+      await crewContextFor(repos, fresh.gameId)
+    );
     return next === (fresh.characterData?.stress ?? 0) ? null : { stress: next };
   });
 }

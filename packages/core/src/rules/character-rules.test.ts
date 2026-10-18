@@ -1115,6 +1115,23 @@ describe('clampStress', () => {
     expect(clampStress(content, 4)).toBe(4);
     expect(clampStress(content, 99)).toBe(9);
   });
+
+  it('with the character, clamps into the EFFECTIVE track (ability + crew stress boxes)', () => {
+    const rs = ruleset({});
+    rs.specialAbilities = [
+      ...(rs.specialAbilities ?? []),
+      { id: 'tough', name: 'Tough', description: '', effects: { stressBoxes: 2 } },
+    ];
+    rs.crew = {
+      types: [],
+      abilities: [{ id: 'hardy', name: 'Hardy', description: '', effects: { stressBoxes: 1 } }],
+    };
+    const data = character({ specialAbilities: ['tough'] });
+    const base = stressBounds(rs).max;
+    expect(clampStress(rs, 99, data)).toBe(base + 2);
+    expect(clampStress(rs, base + 1, data)).toBe(base + 1); // a clear on the long track keeps its value
+    expect(clampStress(rs, 99, data, { crewAbilities: ['hardy'] })).toBe(base + 3);
+  });
 });
 
 // ----- rules-accuracy round (review-rules #1/#3/#8/#9) -----------------------------------------

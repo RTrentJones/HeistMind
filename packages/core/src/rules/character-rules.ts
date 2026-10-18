@@ -292,9 +292,19 @@ export function isAbilityAdvanceable(
   );
 }
 
-/** Clamp a stress value into the ruleset's track (0..max). */
-export function clampStress(content: RulesetContent, value: number): number {
-  return Math.max(0, Math.min(value, stressBounds(content).max));
+/**
+ * Clamp a stress value into the track (0..max). With the character (and its campaign crew) the max
+ * is the EFFECTIVE track — ability and crew stress boxes included — so a clear on a lengthened track
+ * never drops more than asked; without them it is the ruleset's base track.
+ */
+export function clampStress(
+  content: RulesetContent,
+  value: number,
+  data?: CharacterData,
+  crew?: CrewContext | null
+): number {
+  const max = data ? effectiveStressMax(content, data, crew) : stressBounds(content).max;
+  return Math.max(0, Math.min(value, max));
 }
 
 /** Stress/trauma bounds, defaulting to BitD values when the ruleset omits `stress`. */

@@ -9,7 +9,6 @@ import {
   veteranGatewayFor,
   PLAYBOOK_TRACK,
   rulesetActions,
-  stressBounds,
   usesXpTracks,
   xpMarks,
   xpTrackSize,
@@ -181,7 +180,7 @@ export const handleVice: CommandHandler = (ctx, interaction) => {
       logLabel: copy.viceLog,
     });
     if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
-    const max = stressBounds(character.ruleset.content).max;
+    const max = effectiveStressMax(character.ruleset.content, character.characterData);
     const embed = rollEmbed({
       title: copy.viceTitle(character.name, pool.zeroDice ? 0 : pool.count),
       results,
