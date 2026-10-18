@@ -6,7 +6,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { CharacterData } from '@heist-mind/core';
-import { DEFAULT_RULESET } from '@heist-mind/shared';
+import { DEFAULT_RULESET, getBuiltinById } from '@heist-mind/shared';
 import '@/lib/i18n';
 import { XpTracksCard } from '../XpTracksCard';
 
@@ -93,7 +93,7 @@ describe('XpTracksCard', () => {
     expect(box).toBeDisabled();
   });
 
-  it('trigger shortcuts add their value to the playbook track', async () => {
+  it('session triggers mark 1 or 2 XP on the chosen track (RAW: any track)', async () => {
     const onMarkXp = vi.fn();
     render(
       <XpTracksCard
@@ -104,9 +104,31 @@ describe('XpTracksCard', () => {
         onMarkXp={onMarkXp}
       />
     );
-    const plusButtons = screen.getAllByRole('button', { name: '+1' });
-    expect(plusButtons.length).toBeGreaterThan(0);
-    await userEvent.click(plusButtons[0]!);
+    const plusOne = screen.getAllByRole('button', { name: /^Mark 1 XP on Playbook:/ });
+    expect(plusOne.length).toBeGreaterThan(0);
+    await userEvent.click(plusOne[0]!);
     expect(onMarkXp).toHaveBeenCalledWith('playbook', 3);
+    await userEvent.selectOptions(screen.getByLabelText('Mark end-of-session XP on'), 'force');
+    await userEvent.click(screen.getAllByRole('button', { name: /^Mark 2 XP on Force:/ })[0]!);
+    expect(onMarkXp).toHaveBeenCalledWith('force', 2);
+  });
+
+  it('BitD: the playbook trigger leads the session list; the desperate trigger is auto, not a button', () => {
+    const bitd = getBuiltinById('blades-in-the-dark')?.content ?? DEFAULT_RULESET;
+    render(
+      <XpTracksCard
+        content={bitd}
+        data={{ ...data(), playbook: 'cutter' }}
+        busy={false}
+        canEdit
+        onMarkXp={() => {}}
+      />
+    );
+    const session = screen.getByTestId('xp-session-triggers');
+    expect(session).toHaveTextContent('You addressed a challenge with violence or coercion.');
+    expect(session).not.toHaveTextContent('desperate');
+    expect(screen.getByTestId('xp-desperate-trigger')).toHaveTextContent(
+      /attribute for the action you rolled.*automatically/
+    );
   });
 });

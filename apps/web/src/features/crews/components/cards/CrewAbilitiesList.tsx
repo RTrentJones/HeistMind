@@ -1,64 +1,119 @@
 'use client';
 
-import type { Crew, CrewRules, UpdateCrewData } from '@heist-mind/core';
+import {
+  crewAdvanceReady,
+  crewStartingPickAvailable,
+  crewUpgradeBoxes,
+  findCrewAbility,
+  isCrewAbilityUnlocked,
+  isCrewUpgrade,
+  type Crew,
+  type CrewRules,
+  type UpdateCrewData,
+} from '@heist-mind/core';
 import { Badge, Stack, Text } from '@heist-mind/ui';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
- * Crew special abilities: the GM toggles them from the ruleset's list; players see the taken ones
- * as badges. Renders nothing when the ruleset defines no crew abilities.
+ * Crew special abilities + modelled upgrades, read-only for everyone: the held abilities (name +
+ * rules text) and each upgrade's box progress (BitD Mastery 0–4). New abilities are TAKEN through
+ * the crew-advance picker (RAW: the starting pick, then one per full advancement track) — never
+ * ticked here. The GM may remove a held ability (a correction; removals never need an advance). A
+ * held ability the current rules wouldn't allow (an older sheet) is kept and flagged. Renders
+ * nothing when the ruleset defines no crew abilities.
  */
 export function CrewAbilitiesList({
   crew,
-  abilities,
+  crewRules,
   isGm,
+  busy,
   onSave,
 }: {
   crew: Crew;
-  abilities: NonNullable<CrewRules['abilities']>;
+  crewRules?: CrewRules;
   isGm: boolean;
+  busy: boolean;
   onSave: (patch: UpdateCrewData) => void;
 }) {
   const { t } = useTranslation();
+  const abilities = crewRules?.abilities ?? [];
   if (abilities.length === 0) return null;
-  const toggleAbility = (id: string) =>
-    onSave({
-      crewAbilities: crew.crewAbilities.includes(id)
-        ? crew.crewAbilities.filter(a => a !== id)
-        : [...crew.crewAbilities, id],
-    });
+  const rs = { crew: crewRules };
+  const held = crew.crewAbilities.filter(id => !isCrewUpgrade(findCrewAbility(rs, id)));
+  const upgrades = abilities.filter(a => isCrewUpgrade(a) && !a.retired);
+  const nextHint = crewStartingPickAvailable(rs, crew)
+    ? isGm
+      ? t('components.crewSheet.startingPickHint')
+      : t('components.crewSheet.startingPickHintPlayer')
+    : crewAdvanceReady(crew.resources)
+      ? null
+      : t('components.crewSheet.earnNextAbilityHint');
+
   return (
-    <div>
+    <div data-testid='crew-abilities'>
       <Text as='strong'>{t('components.crewSheet.crewAbilities')}</Text>
-      {isGm ? (
-        <Stack direction='column' gap='xs'>
-          {abilities
-            .filter(a => !a.retired || crew.crewAbilities.includes(a.id))
-            .map(a => (
-              <label key={a.id} className='flex cursor-pointer items-start gap-2.5'>
-                <input
-                  type='checkbox'
-                  checked={crew.crewAbilities.includes(a.id)}
-                  onChange={() => toggleAbility(a.id)}
-                />
-                <Text size='sm'>
-                  <span className='font-display'>{a.name}</span>
-                  <span className='text-foreground-muted'> — {a.description}</span>
-                </Text>
-              </label>
-            ))}
-        </Stack>
-      ) : crew.crewAbilities.length > 0 ? (
-        <Stack direction='row' gap='sm' className='flex-wrap'>
-          {crew.crewAbilities.map(id => (
-            <Badge key={id} variant='success'>
-              {abilities.find(a => a.id === id)?.name ?? id}
-            </Badge>
-          ))}
-        </Stack>
-      ) : (
+      {held.length === 0 ? (
         <Text variant='muted' size='sm'>
           {t('components.crewSheet.noneTaken')}
+        </Text>
+      ) : (
+        <Stack direction='column' gap='xs'>
+          {held.map(id => {
+            const def = findCrewAbility(rs, id);
+            const legacy = !!def && !isCrewAbilityUnlocked(rs, crew, id);
+            return (
+              <div key={id} className='flex items-start justify-between gap-2.5'>
+                <Text size='sm'>
+                  <span className='font-display'>{def?.name ?? id}</span>
+                  {def?.description && (
+                    <span className='text-foreground-muted'> — {def.description}</span>
+                  )}
+                  {legacy && (
+                    <Badge variant='warning' size='sm' className='ml-2'>
+                      {t('components.crewSheet.legacyAbility')}
+                    </Badge>
+                  )}
+                </Text>
+                {isGm && (
+                  <ConfirmButton
+                    disabled={busy}
+                    aria-label={t('components.crewSheet.removeAbilityAria', {
+                      name: def?.name ?? id,
+                    })}
+                    confirmLabel={t('components.crewSheet.removeAbilityConfirm')}
+                    onConfirm={() =>
+                      onSave({ crewAbilities: crew.crewAbilities.filter(a => a !== id) })
+                    }
+                  >
+                    {t('components.crewSheet.removeAbility')}
+                  </ConfirmButton>
+                )}
+              </div>
+            );
+          })}
+        </Stack>
+      )}
+      {upgrades.length > 0 && (
+        <Stack direction='row' gap='sm' className='mt-2 flex-wrap'>
+          {upgrades.map(u => {
+            const boxes = crewUpgradeBoxes(rs, crew, u.id);
+            const size = u.upgradeBoxes ?? 0;
+            return (
+              <Badge
+                key={u.id}
+                variant={boxes >= size ? 'success' : 'outline'}
+                data-testid={`crew-upgrade-${u.id}`}
+              >
+                {t('components.crewSheet.upgradeProgress', { name: u.name, boxes, size })}
+              </Badge>
+            );
+          })}
+        </Stack>
+      )}
+      {nextHint && (
+        <Text variant='muted' size='sm' className='mt-1'>
+          {nextHint}
         </Text>
       )}
     </div>

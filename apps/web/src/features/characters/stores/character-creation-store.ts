@@ -56,8 +56,22 @@ function errorBelongsToStep(field: string, kind: StepKind, stepId: string): bool
   if (kind === 'abilities')
     return field === 'specialAbilities' || field.startsWith('specialAbilities.');
   if (kind === 'choice') return field.startsWith('custom');
+  // Identity picks (a listed vice/background) block the step that collects them.
+  if (kind === 'identity')
+    return (
+      field === stepId ||
+      (stepId === 'identity' && ['heritage', 'background', 'vice'].includes(field))
+    );
   return false;
 }
+
+/** The free-text identity fields the wizard writes (a listed pick + its specifics). */
+export type IdentityTextField =
+  | 'heritage'
+  | 'background'
+  | 'backgroundDetail'
+  | 'vice'
+  | 'viceDetail';
 
 interface CharacterCreationState extends LoadingState {
   // Transient (NOT persisted) — re-supplied on mount via initFromRuleset.
@@ -81,7 +95,7 @@ interface CharacterCreationState extends LoadingState {
   setAttribute: (attributeId: string, value: number) => void;
   setActionRating: (actionId: string, value: number) => void;
   toggleAbility: (abilityId: string) => void;
-  setIdentityField: (field: 'heritage' | 'background' | 'vice', value: string) => void;
+  setIdentityField: (field: IdentityTextField, value: string) => void;
   /**
    * Pick the close friend / rival from the playbook's contact list (F12 — BitD identity). At most
    * one contact per relationship; null clears the pick.

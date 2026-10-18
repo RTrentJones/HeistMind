@@ -127,7 +127,7 @@ export const COMMANDS: Array<{ command: string; needs: string; does: string }> =
   {
     command: '/crew xp|advance',
     needs: 'GM, linked channel',
-    does: 'Mark crew advancement XP · spend a full track on a new crew ability',
+    does: 'Mark crew advancement XP · take the starting crew ability, or spend a full track on a new crew ability from your crew type’s list or 2 upgrade boxes (pick: from the suggestions)',
   },
   {
     command: '/clock tick',

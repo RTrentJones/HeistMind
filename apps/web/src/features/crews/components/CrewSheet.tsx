@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type { CrewRules, UpdateCrewData } from '@heist-mind/core';
+import type { CrewAdvanceChoice, CrewRules, UpdateCrewData } from '@heist-mind/core';
 import {
+  crewAbilityName,
   applyHeat,
   crewHalvesTierCost,
   incarcerate,
@@ -28,6 +29,7 @@ import { CrewStatStepper } from './cards/CrewStatStepper';
 import { CrewAdvanceTrack } from './cards/CrewAdvanceTrack';
 import { CrewResourcePools } from './cards/CrewResourcePools';
 import { CrewAbilitiesList } from './cards/CrewAbilitiesList';
+import { CrewAdvancePicker } from './cards/CrewAdvancePicker';
 import { CrewClaimsCard } from './cards/CrewClaimsCard';
 import { CrewCohortsCard } from './cards/CrewCohortsCard';
 
@@ -106,17 +108,42 @@ export function CrewSheet({
       logNote: t('components.crewSheet.logCrewXpNote', { xp, total: CREW_XP_TRACK }),
     });
   };
-  const takeCrewAdvanceAction = () => {
+  // RAW crew advance (engine `takeCrewAdvance`): the starting pick, or a full track spent on a new
+  // ability / two upgrade boxes — one write, one feed event, phrased from what was actually gained.
+  const takeCrewAdvanceAction = (choice: CrewAdvanceChoice) => {
     const userId = user?.id;
     if (!crew || !userId) return;
+    const rs = { crew: crewRules };
+    const describe = (plan: {
+      startingPick: boolean;
+      added: string[];
+      upgrade?: { id: string; boxes: number; size: number; completed: boolean };
+    }) => {
+      if (plan.upgrade)
+        return plan.upgrade.completed
+          ? t('components.crewSheet.logUpgradeDone', { name: crewAbilityName(rs, plan.upgrade.id) })
+          : t('components.crewSheet.logUpgradeBoxes', {
+              name: crewAbilityName(rs, plan.upgrade.id),
+              boxes: plan.upgrade.boxes,
+              size: plan.upgrade.size,
+            });
+      if (plan.added.length === 0) return t('components.crewSheet.logOtherUpgrades');
+      const names = plan.added.map(id => crewAbilityName(rs, id)).join(' + ');
+      return plan.startingPick
+        ? t('components.crewSheet.logStartingAbility', { names })
+        : t('components.crewSheet.logCrewAbility', { names });
+    };
+    let note = '';
     takeAdvanceMut.mutate(
       {
         crew,
+        content: rs,
+        choice,
         userId,
         logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
-        logNote: t('components.crewSheet.logCrewAdvanceNote'),
+        logNote: plan => (note = describe(plan)),
       },
-      { onSuccess: () => setAdvanceNotice(t('components.crewSheet.advanceTakenNotice')) }
+      { onSuccess: () => setAdvanceNotice(note) }
     );
   };
 
@@ -349,8 +376,16 @@ export function CrewSheet({
         busy={busy}
         advanceNotice={advanceNotice}
         onMarkXp={markCrewXp}
-        onTakeAdvance={takeCrewAdvanceAction}
       />
+      {isGm && (
+        <CrewAdvancePicker
+          key={`${crew.crewAbilities.join(',')}:${JSON.stringify(crew.resources)}`}
+          crew={crew}
+          crewRules={crewRules}
+          busy={busy}
+          onTake={takeCrewAdvanceAction}
+        />
+      )}
       <CrewResourcePools
         crew={crew}
         pools={crewRules?.resourcePools ?? []}
@@ -358,12 +393,7 @@ export function CrewSheet({
         busy={busy}
         onSave={save}
       />
-      <CrewAbilitiesList
-        crew={crew}
-        abilities={crewRules?.abilities ?? []}
-        isGm={isGm}
-        onSave={save}
-      />
+      <CrewAbilitiesList crew={crew} crewRules={crewRules} isGm={isGm} busy={busy} onSave={save} />
       <CrewClaimsCard
         crew={crew}
         available={crewRules?.claims ?? []}

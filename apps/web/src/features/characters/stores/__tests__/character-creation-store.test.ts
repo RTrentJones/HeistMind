@@ -235,3 +235,47 @@ describe('resume + reset', () => {
     expect(store().draft.playbook).toBe('');
   });
 });
+
+describe('BitD creation gates (round-3 #2 / #4)', () => {
+  const BITD = asRuleset(BLADES_IN_THE_DARK);
+  const stepIndex = (id: string) => store().steps.findIndex(s => s.id === id);
+
+  it('blocks the ratings step AND Create until all 7 action dots are placed, with the reason', () => {
+    store().initFromRuleset(BITD);
+    store().setName('Silks');
+    store().setPlaybook('cutter'); // 3 dots pre-placed, 4 to assign
+    const ratings = stepIndex('action-ratings');
+    const review = stepIndex('review');
+    expect(store().isStepValid(ratings)).toBe(false);
+    expect(store().stepError(ratings)).toBe('Assign all 7 action dots — 4 left to place.');
+    expect(store().isStepValid(review)).toBe(false);
+    expect(store().stepError(review)).toBe('Assign all 7 action dots — 4 left to place.');
+    expect(store().canSubmit()).toBe(false);
+
+    for (const action of ['Hunt', 'Prowl']) store().setActionRating(action, 2);
+    expect(store().isStepValid(ratings)).toBe(true);
+    expect(store().canSubmit()).toBe(true);
+  });
+
+  it('BitD splits identity into heritage (free text), background + vice (listed choices)', () => {
+    store().initFromRuleset(BITD);
+    expect(store().steps.map(s => s.id)).toEqual([
+      'playbook',
+      'action-ratings',
+      'special-abilities',
+      'heritage',
+      'background',
+      'vice',
+      'review',
+    ]);
+    store().setPlaybook('cutter');
+    for (const action of ['Hunt', 'Prowl']) store().setActionRating(action, 2);
+    store().setIdentityField('vice', 'Stupor');
+    store().setIdentityField('viceDetail', 'The fighting pits — Big Tam');
+    expect(store().isStepValid(stepIndex('vice'))).toBe(true);
+    // A vice that isn't one of the seven (a tampered draft) blocks its step.
+    store().setIdentityField('vice', 'Cards');
+    expect(store().isStepValid(stepIndex('vice'))).toBe(false);
+    expect(store().stepError(stepIndex('vice'))).toMatch(/isn't one of this ruleset's vice/);
+  });
+});

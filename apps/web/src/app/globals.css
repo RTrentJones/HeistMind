@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /*
  * F83 — ONE Tailwind utility layer per page. The design system contributes its THEME (tokens,
@@ -7,7 +7,7 @@
  * `@import "@heist-mind/ui/styles"` pulled in a SECOND full compiled utility layer, whose later
  * base `.hidden` outranked the app's responsive `sm:block` at every width.
  */
-@import "@heist-mind/ui/theme";
+@import '@heist-mind/ui/theme';
 @source "../../../../packages/ui/dist";
 
 /*
