@@ -165,10 +165,15 @@ export async function ensureTestUser(env: E2EEnv, user: TestUser): Promise<TestU
   const existing = await findUserByEmail(admin, user.email);
   if (existing) {
     // Re-assert the password so signInWithPassword is guaranteed to work.
+    // A Discord persona created before 00024 carried the snowflake in user metadata only, which
+    // 00024 no longer trusts (and its remediation released). Re-mark it the way a Discord sign-in
+    // is, so the app-metadata trigger re-links it, then assert as for a fresh persona.
     await admin.auth.admin.updateUserById(existing.id, {
       password: user.password,
       email_confirm: true,
+      ...(user.discordId ? { app_metadata: DISCORD_APP_METADATA } : {}),
     });
+    if (user.discordId) await assertDiscordLinked(admin, existing.id, user.discordId);
     return { ...user, id: existing.id };
   }
 
