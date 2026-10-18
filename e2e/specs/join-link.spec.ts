@@ -23,8 +23,12 @@ test.describe('invite link /join/<code>', () => {
     try {
       const campaign = await campaignWithJoinCode(gm.page, 'Link Job');
       // Lowercase on purpose: codes are case-insensitive end to end.
-      await joinViaLink(player.page, campaign, campaign.code.toLowerCase());
-      await expect(player.page.getByText('You joined the campaign')).toBeVisible();
+      // The success toast fires as the redirect starts — assert it before the (slower) hub load.
+      await player.page.goto(`/join/${campaign.code.toLowerCase()}`);
+      await expect(player.page.getByText('You joined the campaign')).toBeVisible({
+        timeout: 20_000,
+      });
+      await joinViaLink(player.page, campaign);
 
       // The use is counted on the GM's invite card.
       await gm.page.reload();

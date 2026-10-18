@@ -49,6 +49,10 @@ test.describe('home page (anonymous)', () => {
       .getByRole('contentinfo')
       .getByRole('link', { name: /^terms$/i })
       .click();
-    await expect(page.getByRole('heading', { level: 1, name: /terms of service/i })).toBeVisible();
+    // A cold dev-server compile of /legal/terms can outlast the default 5s expect.
+    await page.waitForURL(/\/legal\/terms$/, { timeout: 20_000 });
+    await expect(page.getByRole('heading', { level: 1, name: /terms of service/i })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
