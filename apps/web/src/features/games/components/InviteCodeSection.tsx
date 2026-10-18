@@ -95,8 +95,9 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
                 typeof window === 'undefined' ? '' : joinLinkFor(window.location.origin, codeValue);
               return (
                 <li key={inv.id} data-testid='join-code-row' className='flex flex-col gap-2'>
-                  {/* Row 1: the code + uses. Row 2: an even button group — at 360px the old
-                      single wrapping row left "Revoke" alone on a line like a stray link. */}
+                  {/* Row 1: the code + uses. Then the actions: on phones a full-width "Copy
+                      invite link" over an even Copy code / Revoke pair (the old single wrapping
+                      row left "Revoke" alone on a line like a stray link); one row from `sm`. */}
                   <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
                     <code className='rounded bg-background-tertiary px-2 py-1 font-mono tracking-widest'>
                       {codeValue}
@@ -105,10 +106,11 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
                       {t('inviteSection.usesLeft', { count: usesLeft, max: inv.maxUses ?? 1 })}
                     </Text>
                   </div>
-                  <div className='grid grid-cols-3 gap-2 sm:flex sm:flex-wrap'>
+                  <div className='grid grid-cols-2 gap-2 sm:flex sm:flex-wrap'>
                     <Button
                       variant='outline'
                       size='sm'
+                      className='max-sm:col-span-2'
                       onClick={() => void copy(link, `${inv.id}:link`)}
                     >
                       {copied === `${inv.id}:link`
