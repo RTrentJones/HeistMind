@@ -206,6 +206,15 @@ describe('ability picks (toggleAbility)', () => {
     store().toggleAbility('cutter-mule'); // swapping Veteran out drops the cross pick it opened
     expect(store().draft.specialAbilities).toEqual(['cutter-mule']);
   });
+
+  it('BitD: a repeat Veteran never swaps in for the Veteran it requires', () => {
+    store().initFromRuleset(asRuleset(BLADES_IN_THE_DARK));
+    store().setPlaybook('cutter');
+    store().toggleAbility('veteran');
+    store().toggleAbility('lurk-infiltrator');
+    store().toggleAbility('veteran-2'); // would replace its own prerequisite → no-op
+    expect(store().draft.specialAbilities).toEqual(['veteran', 'lurk-infiltrator']);
+  });
 });
 
 describe('resume + reset', () => {

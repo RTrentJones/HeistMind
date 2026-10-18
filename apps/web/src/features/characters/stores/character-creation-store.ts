@@ -265,8 +265,11 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
             const rosterPicks = specialAbilities.filter(a => !cross(state.draft, a));
             if (limit === 1) {
               if (has) return {};
-              if (!isAbilityUnlocked(content, state.draft, abilityId)) return {};
               const crossPicks = specialAbilities.filter(a => cross(state.draft, a));
+              // Judge the pick against the selection the swap LEAVES: a repeat Veteran whose
+              // prerequisite is the very pick being swapped out would land without it.
+              const swapped = { ...state.draft, specialAbilities: crossPicks };
+              if (!isAbilityUnlocked(content, swapped, abilityId)) return {};
               return write([abilityId, ...crossPicks]);
             }
             // Multi-select: toggle off if held, else add up to the limit (prereq gated).
