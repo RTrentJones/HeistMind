@@ -14,7 +14,7 @@ export function DeleteCharacterCard({ characterId, name }: { characterId: string
   const router = useRouter();
   const del = useDeleteCharacter();
   return (
-    <Card variant='outline' className='max-sm:order-last'>
+    <Card variant='danger' className='max-sm:order-last'>
       <Stack direction='column' gap='sm' align='start'>
         <Heading level='h3' as='h2'>
           {t('deleteCharacter.title')}
@@ -23,7 +23,12 @@ export function DeleteCharacterCard({ characterId, name }: { characterId: string
           {t('deleteCharacter.explain')}
         </Text>
         <ConfirmButton
-          confirmLabel={t('deleteCharacter.confirm', { name })}
+          variant='danger-outline'
+          // Short visible confirm (the long "Delete “name” for good" wrapped to two lines at
+          // 360px); the full, named wording stays the accessible name.
+          confirmLabel={t('deleteCharacter.confirmShort')}
+          confirmAriaLabel={t('deleteCharacter.confirm', { name })}
+          reserveWidth
           loading={del.isPending}
           onConfirm={() =>
             del.mutate(

@@ -92,9 +92,14 @@ export function MembersPanel({
                   {isGm && !pIsGm && (
                     <ConfirmButton
                       size='sm'
-                      variant='ghost'
+                      variant='danger-ghost'
                       className='ml-auto'
-                      confirmLabel={t('members.confirmRemove', { name })}
+                      // Short visible confirm + reserved width: "Remove Nyx Player?" used to
+                      // widen the button onto its own row at 360px. The name stays in the
+                      // accessible label.
+                      confirmLabel={t('members.confirmRemoveShort')}
+                      confirmAriaLabel={t('members.confirmRemove', { name })}
+                      reserveWidth
                       loading={removeMut.isPending && removeMut.variables?.playerId === p.playerId}
                       aria-label={t('members.removeAria', { name })}
                       onConfirm={() => remove(p)}
@@ -124,6 +129,7 @@ export function MembersPanel({
               </Text>
               <ConfirmButton
                 size='sm'
+                variant='danger-outline'
                 confirmLabel={t('members.confirmLeave')}
                 loading={leaveMut.isPending}
                 onConfirm={leave}

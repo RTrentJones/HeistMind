@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { Suspense, use } from 'react';
 import Link from 'next/link';
 import type { GameState } from '@heist-mind/core';
 import {
@@ -30,6 +30,8 @@ import { InviteCodeSection } from '@/features/games/components/InviteCodeSection
 import { MembersPanel } from '@/features/games/components/MembersPanel';
 import { DiscordLinkCard } from '@/features/games/components/DiscordLinkCard';
 import { DeleteCampaignCard } from '@/features/games/components/DeleteCampaignCard';
+import { JoinedBanner } from '@/features/games/components/JoinedBanner';
+import { CampaignSetup } from '@/features/games/components/CampaignSetup';
 import { RollPanel } from '@/features/rolls/components/RollPanel';
 import { RollLog } from '@/features/rolls/components/RollLog';
 import { AddResultForm } from '@/features/rolls/components/AddResultForm';
@@ -59,7 +61,9 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
   }
   if (gameQuery.isLoading) {
     return (
-      <Container maxWidth='md' padding='lg'>
+      // UX r3 (CLS): hold the viewport while the hub loads so the footer isn't painted mid-screen
+      // and then shoved down by ~1000px of panels.
+      <Container maxWidth='md' padding='lg' className='min-h-dvh'>
         <LoadingSpinner />
       </Container>
     );
@@ -90,8 +94,15 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
     );
   }
 
+  const isGm = game.createdBy === user?.id;
+  // Setup starts open while the GM is still alone in the campaign; once players are in it folds
+  // away so a returning GM lands on the table, not on invites (UX r3: Characters sat at y≈1130).
+  const hasPlayers = game.players.some(p => p.status === 'active' && p.playerId !== game.createdBy);
+
   return (
-    <Container maxWidth='4xl' padding='lg'>
+    // min-h-dvh: panels resolve at different heights; keeping the footer below the fold while they
+    // do stops it (and everything after a panel) from jumping (UX r3 — CLS 0.35 → see FINDINGS).
+    <Container maxWidth='4xl' padding='lg' className='min-h-dvh'>
       <Stack direction='column' gap='lg'>
         <Stack direction='column' gap='xs'>
           <Heading level='h1' variant='hero'>
@@ -99,7 +110,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           </Heading>
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             <Text variant='muted'>{game.ruleset.name} ·</Text>
-            {game.createdBy === user?.id ? (
+            {isGm ? (
               // F32 — the GM moves the campaign through its lifecycle right where it's shown.
               <Tooltip variant='dark' content={t('gamesList.stateLegend')}>
                 <span>
@@ -143,9 +154,17 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           {game.description && <Text>{game.description}</Text>}
         </Stack>
 
-        {game.createdBy === user?.id && <InviteCodeSection gameId={gameId} />}
-        <MembersPanel game={game} userId={user?.id} />
-        {game.createdBy === user?.id && <DiscordLinkCard campaignName={game.name} />}
+        <Suspense fallback={null}>
+          <JoinedBanner gameId={gameId} campaignName={game.name} />
+        </Suspense>
+
+        {isGm && (
+          <CampaignSetup initiallyOpen={!hasPlayers}>
+            <InviteCodeSection gameId={gameId} />
+            <MembersPanel game={game} userId={user?.id} />
+            <DiscordLinkCard campaignName={game.name} />
+          </CampaignSetup>
+        )}
 
         <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
           <Heading level='h2' variant='primary'>
@@ -181,36 +200,28 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           {t('game.crewHeading')}
         </Heading>
         <Card variant='outline'>
-          <CrewSheet
-            gameId={gameId}
-            isGm={game.createdBy === user?.id}
-            crewRules={game.ruleset.content.crew}
-          />
+          <CrewSheet gameId={gameId} isGm={isGm} crewRules={game.ruleset.content.crew} />
         </Card>
 
         <Heading level='h2' variant='primary'>
           {t('game.clocksHeading')}
         </Heading>
         <Card variant='outline'>
-          <ClocksPanel gameId={gameId} isGm={game.createdBy === user?.id} />
+          <ClocksPanel gameId={gameId} isGm={isGm} />
         </Card>
 
         <Heading level='h2' variant='primary'>
           {t('game.factionsHeading')}
         </Heading>
         <Card variant='outline'>
-          <FactionsPanel
-            gameId={gameId}
-            isGm={game.createdBy === user?.id}
-            suggestions={game.ruleset.content.factions}
-          />
+          <FactionsPanel gameId={gameId} isGm={isGm} suggestions={game.ruleset.content.factions} />
         </Card>
 
         <Heading level='h2' variant='primary'>
           {t('game.scoreHeading')}
         </Heading>
         <Card variant='outline'>
-          <ScorePanel gameId={gameId} isGm={game.createdBy === user?.id} gameState={game.state} />
+          <ScorePanel gameId={gameId} isGm={isGm} gameState={game.state} />
         </Card>
 
         <Heading level='h2' variant='primary'>
@@ -229,7 +240,10 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
           </Stack>
         </Card>
         <RollLog gameId={gameId} />
-        {game.createdBy === user?.id && <DeleteCampaignCard gameId={gameId} name={game.name} />}
+        {/* Players: who's in + Leave, after the table (it used to be the first card, so a fresh
+            joiner's only visible action was "Leave campaign"). */}
+        {!isGm && <MembersPanel game={game} userId={user?.id} />}
+        {isGm && <DeleteCampaignCard gameId={gameId} name={game.name} />}
       </Stack>
     </Container>
   );

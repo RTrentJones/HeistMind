@@ -18,6 +18,23 @@ describe('SignInGate', () => {
     expect(screen.queryByRole('button', { name: /Sign In with Discord/i })).not.toBeInTheDocument();
   });
 
+  it('keeps the spinner while a likely-signed-in browser awaits the session check (F101)', () => {
+    useAuthStore.setState({
+      hasHydrated: true,
+      isAuthenticated: false,
+      sessionChecked: false,
+      sessionHint: true,
+    });
+    const { rerender } = render(<SignInGate prompt='Sign in to view your characters.' />);
+    expect(screen.queryByText('Sign in to continue')).not.toBeInTheDocument();
+
+    // The check answered "signed out" → now the gate is the right thing to show.
+    useAuthStore.setState({ sessionChecked: true });
+    rerender(<SignInGate prompt='Sign in to view your characters.' />);
+    expect(screen.getByText('Sign in to continue')).toBeInTheDocument();
+    useAuthStore.setState({ sessionHint: false, sessionChecked: false });
+  });
+
   it('renders the default heading, page prompt, and a working sign-in button', async () => {
     const signInWithOAuth = vi.fn().mockResolvedValue({ data: {}, error: null });
     vi.mocked(getAuthService).mockReturnValue({

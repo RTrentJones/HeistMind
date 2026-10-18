@@ -43,4 +43,27 @@ describe('ConfirmButton (two-click armed confirm)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove Alarm' }));
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it('reserveWidth keeps both labels laid out (inactive one hidden from AT) so arming never resizes', () => {
+    render(
+      <ConfirmButton
+        confirmLabel='Delete for good'
+        confirmAriaLabel='Delete “The Job” for good'
+        reserveWidth
+        variant='danger-outline'
+        onConfirm={vi.fn()}
+      >
+        Delete campaign
+      </ConfirmButton>
+    );
+    const button = screen.getByRole('button', { name: 'Delete campaign' });
+    const ghost = button.querySelector('[aria-hidden="true"]');
+    expect(ghost).toHaveTextContent('Delete for good');
+    expect(ghost).toHaveClass('invisible');
+
+    fireEvent.click(button);
+    const armed = screen.getByRole('button', { name: 'Delete “The Job” for good' });
+    expect(armed).toHaveAttribute('data-armed', 'true');
+    expect(armed.querySelector('[aria-hidden="true"]')).toHaveTextContent('Delete campaign');
+  });
 });

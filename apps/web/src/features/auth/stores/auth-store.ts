@@ -8,6 +8,7 @@ import { captureError } from '@heist-mind/telemetry';
 import { getAuthService } from '@/lib/auth';
 import { callbackUrl, rememberNextPath, safeNextPath } from '@/lib/auth/next-path';
 import { getQueryClient } from '@/lib/query/client';
+import { readAuthHint } from '@/lib/auth-hint';
 // Profile reads go through the profiles data seam (its non-hook surface — this store's actions run
 // outside React); repositories are never touched here directly.
 import * as profilesApi from '@/features/profiles/data/api';
@@ -31,6 +32,12 @@ interface AuthState extends LoadingState {
    * than flash a sign-in prompt to a returning user.
    */
   hasHydrated: boolean;
+  /**
+   * F101 — this browser LOOKS signed in (persisted hint or a Supabase session key; see
+   * lib/auth-hint.ts), read at hydration. Not persisted, never proof: it only makes auth-dependent
+   * UI hold a neutral placeholder until `sessionChecked`, instead of flashing signed-out UI.
+   */
+  sessionHint: boolean;
 
   // Auth actions (Discord OAuth is the only sign-in method — see BRD; the profile row is created
   // by the DB trigger on first sign-in, so there is no client-side signup/profile-create path).
@@ -61,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: false,
         sessionChecked: false,
         hasHydrated: false,
+        sessionHint: false,
         isLoading: false,
         error: null,
         lastUpdated: undefined,
@@ -82,6 +90,7 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: false,
               isLoading: false,
               sessionChecked: false,
+              sessionHint: false,
               lastUpdated: new Date(),
             });
             // Drop every cached query so the next account on this browser never sees the previous
@@ -196,6 +205,7 @@ export const useAuthStore = create<AuthState>()(
             profile: null,
             isAuthenticated: false,
             sessionChecked: false,
+            sessionHint: false,
             isLoading: false,
             error: null,
             lastUpdated: undefined,
@@ -252,8 +262,21 @@ export function rehydrateAuthStore(): void {
   } catch {
     // Storage blocked → start signed-out; the session check below still restores a live session.
   }
-  useAuthStore.setState({ hasHydrated: true });
+  useAuthStore.setState({ hasHydrated: true, sessionHint: readAuthHint() });
 }
+
+/**
+ * Is the auth state still unresolved for UI purposes? True before hydration (server HTML + first
+ * client render), and after it while a likely-signed-in browser (`sessionHint`) awaits the session
+ * check. Pending UI shows a neutral skeleton/spinner — never the signed-out page or a sign-in gate.
+ */
+export function selectAuthPending(
+  s: Pick<AuthState, 'hasHydrated' | 'isAuthenticated' | 'sessionChecked' | 'sessionHint'>
+): boolean {
+  return !s.hasHydrated || (!s.isAuthenticated && !s.sessionChecked && s.sessionHint);
+}
+
+export const useAuthPending = () => useAuthStore(selectAuthPending);
 
 /** Grace period letting the OAuth listener claim the session before the manual check runs. */
 const SESSION_CHECK_DELAY_MS = 100;

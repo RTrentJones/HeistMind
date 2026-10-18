@@ -24,11 +24,12 @@ export function DiscordLinkCard({ campaignName }: { campaignName: string }) {
         <ol className='list-decimal space-y-1 pl-5 text-sm'>
           <li>{t('discordLink.step1')}</li>
           <li>
-            {t('discordLink.step2Lead')}{' '}
-            <code className='break-words'>/heist link campaign:{campaignName}</code>{' '}
+            {t('discordLink.step2Lead')} <code>/heist link campaign:{campaignName}</code>{' '}
             {t('discordLink.step2Tail')}
           </li>
-          <li>{t('discordLink.step3')}</li>
+          <li>
+            {t('discordLink.step3Lead')} <code>/character use</code>.
+          </li>
         </ol>
         <DiscordInstallLinks size='sm' />
         <Text variant='muted' size='sm'>
