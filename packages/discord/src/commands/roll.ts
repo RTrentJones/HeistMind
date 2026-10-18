@@ -72,8 +72,15 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
   const bargain = booleanOption(interaction, 'bargain') === true;
   const assist = booleanOption(interaction, 'assist') === true;
   if (push && bargain) return inline(reply(copy.rollPushAndBargain, { ephemeral: true }));
-  const extra = (push || bargain ? 1 : 0) + (assist ? 1 : 0);
-  const moveNotes = [...(bargain ? [copy.bargainNote] : []), ...(assist ? [copy.assistNote] : [])];
+  // `bonus:` is the ±Nd an ability sets on this roll (Ambush +1d from hiding…) — situational prose
+  // the player claims, kept apart from the push/bargain exclusion above.
+  const bonus = integerOption(interaction, 'bonus') ?? 0;
+  const extra = (push || bargain ? 1 : 0) + (assist ? 1 : 0) + bonus;
+  const moveNotes = [
+    ...(bargain ? [copy.bargainNote] : []),
+    ...(assist ? [copy.assistNote] : []),
+    ...(bonus !== 0 ? [copy.abilityDiceNote(bonus)] : []),
+  ];
 
   const finish = (title: string, pool: number, rollNote?: string) => {
     const { count, zeroDice } = diceForRating(pool);
@@ -99,7 +106,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
 
       const rating = character.characterData.skills[resolved] ?? 0;
       // F43 — moderate harm costs a die, RAW; the sheet is the source of truth in both clients
-      // (the web panel applies the same penalty). `extra` remains the GM's lever to waive it.
+      // (the web panel applies the same penalty); a claimed `bonus:` can offset it.
       const harmPenalty = harmDicePenalty(character.characterData);
       const pool = rating + extra - harmPenalty;
       const { count, zeroDice } = diceForRating(pool);
@@ -171,7 +178,7 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
 
   // Manual form: pure compute, inline. The title shows the TOTAL pool (dice + bonus dice).
   if (dice === null) return inline(reply(copy.rollNeedsDiceOrAction, { ephemeral: true }));
-  const pool = dice + extra;
+  const pool = Math.max(0, dice + extra);
   const manualNotes = [
     ...(push ? [copy.pushedReminder] : []),
     ...moveNotes,

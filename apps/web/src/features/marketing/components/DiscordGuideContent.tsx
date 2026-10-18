@@ -70,14 +70,14 @@ export const COMMANDS: Array<{ command: string; needs: string; does: string }> =
     does: 'Pick, show (or share) and clear the character the bot acts as — one at a time',
   },
   {
-    command: '/roll action: [push|bargain] [assist]',
+    command: '/roll action: [push|bargain] [assist] [bonus]',
     needs: 'active character',
-    does: 'Action roll from your sheet rating; push (+1d, 2 stress) OR a devil’s bargain (+1d), plus an assist (+1d, the helper marks 1 stress); moderate harm costs a die; persists in a linked channel',
+    does: 'Action roll from your sheet rating; push (+1d, 2 stress) OR a devil’s bargain (+1d), plus an assist (+1d, the helper marks 1 stress); bonus adds or removes an ability’s dice (Ambush +1); moderate harm costs a die; persists in a linked channel',
   },
   {
     command: '/resist attribute: [bonus]',
     needs: 'active character',
-    does: 'Resist with your sheet’s attribute rating (in a linked campaign), plus any ability bonus dice (bonus:1 for Iron Will); the stress cost lands on your sheet',
+    does: 'Resist with your sheet’s attribute rating (in a linked campaign), plus any ability dice (bonus:1 for Iron Will, bonus:-1 for Daredevil); the stress cost lands on your sheet',
   },
   {
     command: '/stress add|clear',
