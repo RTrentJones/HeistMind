@@ -162,6 +162,28 @@ describe('saveCharacterBuild — patches only the fields the player changed', ()
     expect(written()).toMatchObject({ trauma: [condition], traumaPending: 0 });
   });
 
+  it('owing two and marking one leaves exactly one owed (reconciled once, against the live row)', async () => {
+    const owing = { ...LIVE_DATA, stress: 0, trauma: [], traumaPending: 2 } as CharacterData;
+    const { r, written } = reposWithLive(character(owing));
+    const condition = DEFAULT_RULESET.traumaConditions![0]!;
+    const draft = { ...owing, trauma: [condition] } as CharacterData;
+    await saveCharacterBuild(r, { characterId: 'c1', userId: 'player', base: owing, draft });
+    expect(written()).toMatchObject({ trauma: [condition], traumaPending: 1 });
+  });
+
+  it('a pick undone before saving leaves the debt untouched (nothing to write)', async () => {
+    const owing = { ...LIVE_DATA, stress: 0, trauma: [], traumaPending: 1 } as CharacterData;
+    const { r, update } = reposWithLive(character(owing));
+    const out = await saveCharacterBuild(r, {
+      characterId: 'c1',
+      userId: 'player',
+      base: owing,
+      draft: { ...owing },
+    });
+    expect(out).toEqual({ success: true, data: null });
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("lets the campaign's GM save (mirrors RLS) and rejects anyone else", async () => {
     const { r } = reposWithLive(character(LIVE_DATA));
     const input = { characterId: 'c1', base: BASE_DATA, draft: { ...BASE_DATA, vice: 'Weird' } };

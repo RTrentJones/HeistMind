@@ -150,7 +150,9 @@ export function saveCharacterBuild(
       patch.stress = change.stress;
       if (change.traumaPending > 0) patch.traumaPending = change.traumaPending;
     }
-    // Conditions marked in the editor pay down what the LIVE row owes (the draft's count may be stale).
+    // Conditions marked in the editor pay down what the LIVE row owes — the single place this
+    // happens (the editor draft never edits the debt). `patch.traumaPending` is only set above,
+    // by a stress overflow in this same save, which is then part of what is owed.
     if (patch.trauma !== undefined) {
       const owed = patch.traumaPending ?? fresh.characterData.traumaPending;
       const settled = reconcileTraumaPending(fresh.characterData, {
