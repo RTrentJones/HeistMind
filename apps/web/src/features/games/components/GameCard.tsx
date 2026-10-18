@@ -25,7 +25,8 @@ export function GameCard({ game, role }: { game: Game; role: 'gm' | 'player' }) 
           )}
         </div>
         <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
-          <Badge variant={role === 'gm' ? 'ember' : 'steel'}>
+          {/* Brand, not ember: the crimson GM badge read as an error state (UX r3). */}
+          <Badge variant={role === 'gm' ? 'default' : 'steel'}>
             {role === 'gm' ? t('pages.gamesList.gmBadge') : t('pages.gamesList.playerBadge')}
           </Badge>
           <Tooltip variant='dark' size='lg' content={t('pages.gamesList.stateLegend')}>

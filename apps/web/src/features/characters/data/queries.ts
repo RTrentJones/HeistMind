@@ -12,6 +12,7 @@ export const characterKeys = {
   byPlayer: (userId: string) => ['characters', 'player', userId] as const,
   byGame: (gameId: string) => ['characters', 'game', gameId] as const,
   detail: (id: string) => ['characters', 'detail', id] as const,
+  attachable: (id: string) => ['characters', 'attachable', id] as const,
 };
 
 export const characterQueries = {
@@ -52,6 +53,20 @@ export const characterQueries = {
       ...sharedCampaignState,
       queryFn: id ? () => getRepositories().characters.findWithDetails(id).then(unwrap) : skipToken,
     }),
+  /**
+   * The ids of the caller's campaigns this character may attach to (00025 RPC — the server's own
+   * compatibility rule, incl. content-identical copies of a built-in). Under `characterKeys.all`,
+   * so attach/detach invalidation refreshes it; load-on-view because joining/leaving a campaign
+   * (another concept) changes the answer.
+   */
+  attachable: (id: string | undefined) =>
+    queryOptions({
+      queryKey: characterKeys.attachable(id ?? ''),
+      ...sharedCampaignState,
+      queryFn: id
+        ? () => getRepositories().characters.findAttachableGameIds(id).then(unwrap)
+        : skipToken,
+    }),
 };
 
 export function useCharactersByPlayer(userId: string | undefined) {
@@ -64,4 +79,8 @@ export function useCharactersByGame(gameId: string | undefined) {
 
 export function useCharacterDetail(id: string | undefined) {
   return useQuery(characterQueries.detail(id));
+}
+
+export function useAttachableGameIds(characterId: string | undefined) {
+  return useQuery(characterQueries.attachable(characterId));
 }

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Cinzel, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { themeInitScript } from '@/lib/theme-script';
+import { authHintInitScript } from '@/lib/auth-hint';
 import { AppShell } from '@/shared/components/AppShell';
 import { INDEXABLE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 
@@ -68,10 +69,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning: the theme script sets the theme class on <html> before hydration (F93).
+    // suppressHydrationWarning: the theme + auth-hint scripts set the theme class / data-auth on
+    // <html> before hydration (F93, F98).
     <html lang='en' suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
+        {/* F98: <html data-auth="in"> for a likely-signed-in browser, before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: authHintInitScript() }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${playfairDisplay.variable} antialiased`}

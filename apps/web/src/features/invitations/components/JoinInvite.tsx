@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button, Card, Container, Heading, LoadingSpinner, Stack, Text } from '@heist-mind/ui';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
-import { useAuth, useAuthStore } from '@/features/auth/stores/auth-store';
+import { useAuth, useAuthPending, useAuthStore } from '@/features/auth/stores/auth-store';
 import {
   joinFailureReason,
   normalizeJoinCode,
@@ -30,6 +30,9 @@ export function JoinInvite({ rawCode }: { rawCode: string }) {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const hasHydrated = useAuthStore(state => state.hasHydrated);
+  // F98: a browser that looks signed in waits for the session check rather than flash the
+  // signed-out invite card.
+  const pending = useAuthPending();
   const { signIn, isSigningIn } = useSignIn();
   const join = useJoinViaCode();
   const [failure, setFailure] = useState<JoinFailure | null>(null);
@@ -46,7 +49,8 @@ export function JoinInvite({ rawCode }: { rawCode: string }) {
     try {
       const member = await join.mutateAsync({ userId, inviteCode: code });
       useNotificationStore.getState().success(t('join.joinedToast'));
-      router.replace(`/games/${member.gameId}`);
+      // `?joined=1` → the hub's one-time "You're in" banner (the toast is gone by the time it settles).
+      router.replace(`/games/${member.gameId}?joined=1`);
     } catch (err) {
       setFailure(joinFailureReason(err));
     }
@@ -59,10 +63,35 @@ export function JoinInvite({ rawCode }: { rawCode: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- redeem once per mount, on sign-in
   }, [hasHydrated, isAuthenticated, user?.id]);
 
-  if (!hasHydrated) {
+  if (pending) {
     return (
       <Container maxWidth='md' padding='lg'>
         <LoadingSpinner />
+      </Container>
+    );
+  }
+
+  // A link whose code can't exist says so up front — signed in or out — instead of inviting the
+  // visitor to sign in first and only failing afterwards.
+  if (!CODE_SHAPE.test(code)) {
+    return (
+      <Container maxWidth='md' padding='lg'>
+        <Card variant='outline' data-testid='join-invalid'>
+          <Stack direction='column' gap='md' align='start'>
+            <Heading level='h2' as='h1' variant='primary'>
+              {t('join.invalidTitle')}
+            </Heading>
+            <Text>{t('join.invalidBody')}</Text>
+            <Stack direction='row' gap='sm' className='flex-wrap'>
+              <Button asChild variant='default'>
+                <Link href='/games#join'>{t('join.enterCode')}</Link>
+              </Button>
+              <Button asChild variant='ghost'>
+                <Link href='/'>{t('join.backHome')}</Link>
+              </Button>
+            </Stack>
+          </Stack>
+        </Card>
       </Container>
     );
   }
@@ -119,9 +148,12 @@ export function JoinInvite({ rawCode }: { rawCode: string }) {
                   {t('join.retry')}
                 </Button>
               )}
-              <Button asChild variant='outline'>
-                <Link href='/games#join'>{t('join.enterCode')}</Link>
-              </Button>
+              {/* A removed member can't rejoin with any code — don't offer that dead end. */}
+              {failure !== 'removed' && (
+                <Button asChild variant='outline'>
+                  <Link href='/games#join'>{t('join.enterCode')}</Link>
+                </Button>
+              )}
               <Button asChild variant='ghost'>
                 <Link href='/'>{t('join.backHome')}</Link>
               </Button>

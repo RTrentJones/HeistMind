@@ -18,9 +18,10 @@ const selectVariants = cva(
   {
     variants: {
       selectSize: {
-        sm: 'px-2 py-1 text-sm',
-        default: 'px-2 py-1.5 text-sm',
-        lg: 'px-3 py-2 text-base',
+        // Native selects were ~29px tall on phones; every size is a 44px tap target there.
+        sm: 'px-2 py-1 text-sm max-sm:min-h-11',
+        default: 'px-2 py-1.5 text-sm max-sm:min-h-11',
+        lg: 'px-3 py-2 text-base max-sm:min-h-11',
       },
       state: {
         default: '',

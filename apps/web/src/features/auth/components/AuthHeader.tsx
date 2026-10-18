@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth, useAuthActions } from '@/features/auth/stores/auth-store';
+import { useAuth, useAuthActions, useAuthPending } from '@/features/auth/stores/auth-store';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { COMING_SOON } from '@/lib/coming-soon';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
@@ -48,7 +48,8 @@ function MenuIcon({ open }: { open: boolean }) {
  * returns to the button). The header used to wrap into a ~266px sticky block on phones.
  */
 export function AuthHeader() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, hasHydrated } = useAuth();
+  const pending = useAuthPending();
   const { signOut } = useAuthActions();
   const { t } = useTranslation();
   const { signIn: handleDiscordSignIn } = useSignIn();
@@ -106,9 +107,23 @@ export function AuthHeader() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const signedIn = isAuthenticated && !!user;
+  // Never greet by email (for Discord users that's their Discord email): display name, then
+  // username, else a plain "Welcome".
+  const displayName = user?.profile?.displayName || user?.profile?.username || '';
   const welcome = signedIn
-    ? t('auth.header.welcomeUser', { name: user.profile?.displayName || user.email || '' })
+    ? displayName
+      ? t('auth.header.welcomeUser', { name: displayName })
+      : t('auth.header.welcome')
     : '';
+  // While a likely-signed-in session resolves (F98) the header shows neither the Sign In actions
+  // nor the nav — just the theme toggle and a menu-sized slot, so nothing jumps when it settles.
+  const resolving = !signedIn && pending;
+  const placeholder = (
+    <>
+      <ThemeToggle className='max-sm:h-11 max-sm:w-11' />
+      <span aria-hidden='true' className='inline-block h-11 w-11 lg:h-8' />
+    </>
+  );
 
   return (
     <>
@@ -118,8 +133,10 @@ export function AuthHeader() {
         // carry it on phones), as a second banner line so the row itself never wraps.
         // max-sm:hidden, NOT `hidden sm:block` (F83).
         subline={
-          !signedIn && !COMING_SOON ? (
-            <ClickwrapNotice className='text-right max-sm:hidden' />
+          !signedIn && !COMING_SOON && (!pending || !hasHydrated) ? (
+            <div data-auth-only='out' className='contents'>
+              <ClickwrapNotice className='text-right max-sm:hidden' />
+            </div>
           ) : undefined
         }
       >
@@ -183,36 +200,46 @@ export function AuthHeader() {
                 <MenuIcon open={menuOpen} />
               </Button>
             </>
+          ) : resolving && hasHydrated ? (
+            placeholder
           ) : (
             <>
-              <LanguageSwitcher />
-              <ThemeToggle className='max-sm:h-11 max-sm:w-11' />
-              {COMING_SOON ? null : (
-                // Prod is behind the always-on coming-soon gate (main only) — no sign-in is shown.
-                <>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => void handleDiscordSignIn()}
-                    loading={isLoading}
-                    className='max-sm:hidden'
-                  >
-                    {t('auth.header.signIn')}
-                  </Button>
-                  {/* Phones get the short label so the header stays one row; the button does the
-                    same thing (Discord OAuth) either way. */}
-                  <Button
-                    variant='default'
-                    size='sm'
-                    onClick={() => void handleDiscordSignIn()}
-                    loading={isLoading}
-                    className='whitespace-nowrap'
-                  >
-                    <span className='sm:hidden'>{t('auth.header.signIn')}</span>
-                    <span className='max-sm:hidden'>{t('auth.header.signUpDiscord')}</span>
-                  </Button>
-                </>
+              {/* Pre-hydration, the hint script decides which of these two paints (F98). */}
+              {!hasHydrated && (
+                <span data-auth-only='in' className='contents'>
+                  {placeholder}
+                </span>
               )}
+              <span data-auth-only='out' className='contents'>
+                <LanguageSwitcher />
+                <ThemeToggle className='max-sm:h-11 max-sm:w-11' />
+                {COMING_SOON ? null : (
+                  // Prod is behind the always-on coming-soon gate (main only) — no sign-in is shown.
+                  <>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => void handleDiscordSignIn()}
+                      loading={isLoading}
+                      className='max-sm:hidden'
+                    >
+                      {t('auth.header.signIn')}
+                    </Button>
+                    {/* Phones get the short label so the header stays one row; the button does the
+                    same thing (Discord OAuth) either way. */}
+                    <Button
+                      variant='default'
+                      size='sm'
+                      onClick={() => void handleDiscordSignIn()}
+                      loading={isLoading}
+                      className='whitespace-nowrap'
+                    >
+                      <span className='sm:hidden'>{t('auth.header.signIn')}</span>
+                      <span className='max-sm:hidden'>{t('auth.header.signUpDiscord')}</span>
+                    </Button>
+                  </>
+                )}
+              </span>
             </>
           )}
         </HeaderActions>

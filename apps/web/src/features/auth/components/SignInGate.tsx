@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Button, Card, Container, Heading, LoadingSpinner, Stack, Text } from '@heist-mind/ui';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { useSignIn } from '@/features/auth/hooks/use-sign-in';
-import { useAuthStore } from '@/features/auth/stores/auth-store';
+import { useAuthPending } from '@/features/auth/stores/auth-store';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /**
@@ -14,7 +14,9 @@ import { useTranslation } from '@/lib/i18n/hooks';
  *
  * Until the persisted auth hint has been read (after mount — see `rehydrateAuthStore`), the store
  * reports signed-out on every render, including the server HTML. Rather than paint a "sign in"
- * prompt at a returning signed-in user, the gate holds a neutral spinner until hydration settles.
+ * prompt at a returning signed-in user, the gate holds a neutral spinner until hydration settles —
+ * and, for a browser that looks signed in (a Supabase session key but no stored hint, F98), until
+ * the session check has answered.
  * Signing in from the gate returns to the gated page (F94), not the dashboard.
  */
 export function SignInGate({
@@ -30,9 +32,9 @@ export function SignInGate({
   const { t } = useTranslation();
   const pathname = usePathname();
   const { signIn, isSigningIn } = useSignIn();
-  const hasHydrated = useAuthStore(state => state.hasHydrated);
+  const pending = useAuthPending();
 
-  if (!hasHydrated) {
+  if (pending) {
     return (
       <Container maxWidth='md' padding='lg'>
         <LoadingSpinner />

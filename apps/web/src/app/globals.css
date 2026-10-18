@@ -20,3 +20,32 @@
 .font-display {
   font-family: var(--font-cinzel), var(--font-playfair), 'Cinzel', 'Playfair Display', serif;
 }
+
+/*
+ * UX r3 — ONE inline-code look. Bare <code> in running copy (the /discord getting-started steps,
+ * the hub's Discord card) rendered as unstyled body-size monospace while the command reference
+ * used chips. Unclassed inline code now gets the same chip as the reference; anything with its own
+ * classes (join-code chips, the reference itself) is untouched. Base layer, so utilities win.
+ */
+@layer base {
+  :where(p, li, span, dd, td) > code:not([class]) {
+    border-radius: 0.25rem;
+    background-color: var(--color-background-tertiary);
+    padding: 0.125rem 0.375rem;
+    font-size: 0.85em;
+    overflow-wrap: anywhere;
+  }
+}
+
+/*
+ * F98 — signed-in hint (lib/auth-hint.ts). Before hydration a likely-signed-in browser gets
+ * <html data-auth="in">: hide signed-out-only chrome (the marketing page, the header's Sign In
+ * actions + clickwrap) and show the neutral placeholders instead. Without the attribute (visitors,
+ * crawlers, no-JS) the placeholders stay hidden and the server HTML reads as-is.
+ */
+html[data-auth='in'] [data-auth-only='out'] {
+  display: none !important;
+}
+html:not([data-auth='in']) [data-auth-only='in'] {
+  display: none !important;
+}

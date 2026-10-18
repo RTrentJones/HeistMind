@@ -18,7 +18,7 @@ export function DeleteCampaignCard({ gameId, name }: { gameId: string; name: str
   const router = useRouter();
   const del = useDeleteGame();
   return (
-    <Card variant='outline'>
+    <Card variant='danger'>
       <Stack direction='column' gap='sm' align='start'>
         <Heading level='h3' as='h2'>
           {t('deleteCampaign.title')}
@@ -27,7 +27,12 @@ export function DeleteCampaignCard({ gameId, name }: { gameId: string; name: str
           {t('deleteCampaign.explain')}
         </Text>
         <ConfirmButton
-          confirmLabel={t('deleteCampaign.confirm', { name })}
+          variant='danger-outline'
+          // Short visible confirm (the long "Delete “name” for good" wrapped to two lines at
+          // 360px); the full, named wording stays the accessible name.
+          confirmLabel={t('deleteCampaign.confirmShort')}
+          confirmAriaLabel={t('deleteCampaign.confirm', { name })}
+          reserveWidth
           loading={del.isPending}
           onConfirm={() =>
             del.mutate(
