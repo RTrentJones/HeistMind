@@ -1,12 +1,14 @@
 name: Supabase CI/CD
 
 on:
+  # No `paths` filter on push (F101): the `migrations-applied` job ("Migrations applied") must
+  # report on EVERY main/development push, because the Vercel production build waits for it
+  # (scripts/vercel-migration-gate.mjs). A path-filtered workflow would leave that check missing
+  # and the gate would time out. The `changes` job decides whether the heavy validation + deploy run:
+  # always on main (every prod push re-asserts the idempotent `production` schema), on development
+  # only when a DB file changed.
   push:
     branches: [main, development]
-    paths:
-      - 'supabase/**'
-      - 'packages/database/**'
-      - '.github/workflows/supabase-ci.yml'
   pull_request:
     branches: [main]
     paths:
@@ -16,10 +18,9 @@ on:
   # pushes to development/main already deploy automatically (see the deploy job's condition).
   workflow_dispatch:
 
-# Prevent concurrent deployments to the same environment
-concurrency:
-  group: supabase-deploy-${{ github.ref }}
-  cancel-in-progress: false
+# Concurrency lives on the `deploy` job, not the workflow (F101): every main/development push now
+# starts this workflow, and a workflow-level group keeps only ONE pending run, so a no-DB-change push
+# would cancel a queued run that carried a migration. Only runs that actually deploy queue now.
 
 env:
   # Pin versions for reproducibility
@@ -31,6 +32,9 @@ env:
   # SUPABASE_CLI_VERSION; bump deliberately. (The old 1.142.2 pin predated config.toml's
   # `db.major_version = 17` and died with "Invalid db.major_version: 17".)
   SUPABASE_CLI_VERSION: '2.121.0'
+  # Exact greenlight pin (never unpinned/`latest`): lockstep with the version RTrentJones.dev's
+  # wrapper + infra `?ref=` run (v0.10.0). Keep equal to greenlight-verify.yml's GREENLIGHT_VERSION.
+  GREENLIGHT_VERSION: '0.10.0'
 
 jobs:
   # Detect what actually changed to optimize CI time
@@ -41,12 +45,24 @@ jobs:
       migrations: ${{ steps.filter.outputs.migrations }}
       schema: ${{ steps.filter.outputs.schema }}
       types: ${{ steps.filter.outputs.types }}
+      # Whether validate (+ deploy, on main/development pushes) runs at all for this event.
+      needed: ${{ steps.needed.outputs.needed }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v2
+        with:
+          fetch-depth: 0 # the push diff below compares against the previous tip
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # Pushes diff against the previous tip of the branch (not the default branch), so a
+          # development push that touches no DB file really reads as "no DB change".
+          base: ${{ github.event_name == 'push' && github.event.before || '' }}
           filters: |
+            db:
+              - 'supabase/**'
+              - 'packages/database/**'
+              - 'scripts/ci/**'
+              - '.github/workflows/supabase-ci.yml'
             migrations:
               - 'supabase/migrations/**'
             schema:
@@ -55,12 +71,37 @@ jobs:
             types:
               - 'packages/database/**'
 
+      - name: Decide whether validation + deploy run
+        id: needed
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          DB_CHANGED: ${{ steps.filter.outputs.db }}
+        run: |
+          if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ]; then
+            needed=true   # every prod push re-applies the idempotent migrations to `production`
+          elif [ "$EVENT" != "push" ]; then
+            needed=true   # PRs are path-filtered by the trigger; manual dispatch is deliberate
+          elif [ "$DB_CHANGED" = "true" ]; then
+            needed=true
+          else
+            needed=false
+          fi
+          echo "needed=$needed" >> "$GITHUB_OUTPUT"
+          echo "DB validation/deploy needed for $EVENT on $REF: $needed"
+
   validate:
     name: Validate Database Changes
     runs-on: ubuntu-latest
     needs: changes
-    # Add timeout to prevent hanging jobs
-    timeout-minutes: 15
+    if: needs.changes.outputs.needed == 'true'
+    # Add timeout to prevent hanging jobs (registry retries back off up to ~2.5 min per pull step)
+    timeout-minutes: 25
+    # `full` = the docker-backed checks ran; `degraded` = the local stack / postgres-meta image
+    # could not be pulled from ANY registry (CI infrastructure, see F101) so only the static
+    # checks ran. A REAL failure (bad SQL, types that don't compile) still fails this job.
+    outputs:
+      validation: ${{ steps.level.outputs.level }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -118,6 +159,7 @@ jobs:
           echo "✅ Migration files validated"
 
       - name: Start Supabase local instance
+        id: start
         run: |
           # Verify CLI is available
           if ! command -v supabase &> /dev/null; then
@@ -129,27 +171,26 @@ jobs:
           supabase stop --no-backup 2>/dev/null || echo "No existing instance to stop"
           docker volume prune -f 2>/dev/null || echo "No volumes to prune"
 
-          # Start with retries. Track success so an exhausted loop FAILS the step — otherwise
-          # the loop's exit code is the last `sleep` (0) and the step goes green while the DB
-          # never came up, surfacing later as a confusing "connection refused" in psql.
-          started=false
-          for i in {1..3}; do
-            if supabase start; then
-              echo "✅ Supabase started successfully"
-              started=true
-              break
-            else
-              echo "⚠️ Attempt $i failed, retrying..."
-              supabase stop --no-backup 2>/dev/null || true
-              sleep 5
-            fi
-          done
-          if [ "$started" != "true" ]; then
-            echo "❌ Supabase failed to start after 3 attempts"
-            exit 1
+          # Backoff + image-registry rotation (ghcr.io → ECR → Docker Hub → ghcr.io), F101. The
+          # script exits 75 only when EVERY attempt died pulling images (rate limit / registry
+          # outage): CI infrastructure, not the code. Anything else (e.g. a migration that fails
+          # to apply during start) is a real failure and fails this step.
+          set +e
+          scripts/ci/supabase-retry.sh --stop-between -- supabase start
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "stack=up" >> "$GITHUB_OUTPUT"
+          elif [ "$rc" -eq 75 ]; then
+            echo "stack=unavailable" >> "$GITHUB_OUTPUT"
+            echo "::warning title=DB validation degraded::The local Supabase stack could not pull its images from any registry. Docker-backed checks are SKIPPED; static checks + the dangerous-SQL scan still gate the deploy (F101)."
+          else
+            echo "❌ supabase start failed (exit $rc), not a registry problem: blocking the deploy."
+            exit "$rc"
           fi
 
       - name: Validate migration syntax
+        if: steps.start.outputs.stack == 'up'
         run: |
           echo "🔍 Checking migration SQL syntax..."
 
@@ -185,6 +226,7 @@ jobs:
           done
 
       - name: Run schema deployment test
+        if: steps.start.outputs.stack == 'up'
         run: |
           echo "🧪 Testing schema targeting mechanism..."
 
@@ -237,7 +279,7 @@ jobs:
           EOF
 
       - name: Test rollback capability
-        if: needs.changes.outputs.schema == 'true'
+        if: steps.start.outputs.stack == 'up' && needs.changes.outputs.schema == 'true'
         run: |
           echo "🔄 Testing migration rollback capability..."
 
@@ -278,12 +320,26 @@ jobs:
           echo "💡 Note: Backup strategy uses schema-targeted approach to avoid permission issues"
 
       - name: Generate and validate types
+        id: types
+        if: steps.start.outputs.stack == 'up'
         run: |
-          # Generate types with error handling
-          pnpm --filter @heist-mind/database db:types-local || {
+          # `gen types --local` runs a separate postgres-meta container: the pull that hit
+          # "toomanyrequests: Data limit exceeded" on public.ecr.aws (F101). Same retry/rotation;
+          # an exhausted pull (75) degrades the run instead of skipping the migration deploy.
+          set +e
+          scripts/ci/supabase-retry.sh -- pnpm --filter @heist-mind/database db:types-local
+          rc=$?
+          set -e
+          if [ "$rc" -eq 75 ]; then
+            git checkout -- packages/database/src/supabase-types.ts
+            echo "types=unavailable" >> "$GITHUB_OUTPUT"
+            echo "::warning title=DB validation degraded::postgres-meta could not be pulled from any registry; type generation SKIPPED (F101)."
+            exit 0
+          fi
+          if [ "$rc" -ne 0 ]; then
             echo "❌ Failed to generate types"
             exit 1
-          }
+          fi
 
           # Compile TypeScript with strict settings
           pnpm --filter @heist-mind/database tsc --noEmit --strict || {
@@ -292,8 +348,10 @@ jobs:
           }
 
           echo "✅ Type generation and validation successful"
+          echo "types=ok" >> "$GITHUB_OUTPUT"
 
       - name: Run integration tests
+        if: steps.start.outputs.stack == 'up'
         run: |
           echo "🧪 Running database integration tests..."
 
@@ -313,6 +371,16 @@ jobs:
             -- Add more integration tests
           EOF
 
+      - name: Record validation level
+        id: level
+        env:
+          STACK: ${{ steps.start.outputs.stack }}
+          TYPES: ${{ steps.types.outputs.types }}
+        run: |
+          if [ "$STACK" = "up" ] && [ "$TYPES" = "ok" ]; then level=full; else level=degraded; fi
+          echo "level=$level" >> "$GITHUB_OUTPUT"
+          echo "Validation level: $level (stack=${STACK:-n/a}, types=${TYPES:-n/a})"
+
       - name: Create validation report
         if: always()
         run: |
@@ -322,7 +390,12 @@ jobs:
           echo "- Total migrations: $(ls -1 supabase/migrations/*.sql | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "- New migrations: ${{ needs.changes.outputs.migrations && '✅ Yes' || '➖ No' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Schema changes: ${{ needs.changes.outputs.schema && '⚠️ Yes' || '➖ No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Validation level: ${{ steps.level.outputs.level || 'failed' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.level.outputs.level }}" = "degraded" ]; then
+            echo "### ⚠️ Degraded validation (F101)" >> $GITHUB_STEP_SUMMARY
+            echo "Docker images could not be pulled from any registry, so the local-stack checks were skipped. The deploy still runs, gated on the static checks + the dangerous-SQL scan." >> $GITHUB_STEP_SUMMARY
+          fi
 
           if [ "${{ needs.changes.outputs.schema }}" = "true" ]; then
             echo "### ⚠️ Schema Changes Detected" >> $GITHUB_STEP_SUMMARY
@@ -420,7 +493,7 @@ jobs:
         # Greenlight's canonical pre-apply scan (DROP/TRUNCATE/DELETE- or UPDATE-without-WHERE → fail;
         # lock-heavy ops warn). Runs in security-scan, which `deploy` needs: → a danger finding blocks
         # the apply. Default mode (acknowledge an intentional op inline with `-- greenlight:allow`).
-        run: npx -y @rtrentjones/greenlight migrations scan ./supabase/migrations
+        run: npx -y "@rtrentjones/greenlight@${GREENLIGHT_VERSION}" migrations scan ./supabase/migrations
 
   deploy:
     name: Deploy to ${{ matrix.environment }}
@@ -429,6 +502,13 @@ jobs:
     # Auto-deploy migrations alongside the code on BOTH branches: development → development
     # schema, main → production schema. A change that needs a migration ships with it — no
     # manual step. (workflow_dispatch is still available for a manual re-run/backfill.)
+    #
+    # Validation-infra policy (F101): a REAL validation failure (bad SQL, a migration that won't
+    # apply, types that don't compile) fails `validate` and BLOCKS this job. A registry outage
+    # makes `validate` succeed as `degraded`, and this job still runs: skipping it is the worse
+    # failure, because Vercel ships the web code regardless. Degraded is still gated on the
+    # static checks + the dangerous-SQL scan, the hosted apply is ON_ERROR_STOP, and on main the
+    # same files have already applied cleanly to `development` (main only fast-forwards from it).
     if: |
       always() &&
       needs.validate.result == 'success' &&
@@ -450,8 +530,19 @@ jobs:
     # environment tracking/protection isn't used here (none configured), and prod is gated via
     # workflow_dispatch above. So we omit `environment:` to avoid the spurious app-verify run.
     timeout-minutes: 20
+    # Prevent concurrent deployments to the same environment. If a newer deploy supersedes a queued
+    # one, nothing is lost: every deploy applies ALL migration files (idempotent), in order.
+    concurrency:
+      group: supabase-deploy-${{ github.ref }}
+      cancel-in-progress: false
 
     steps:
+      - name: Flag a degraded validation
+        if: needs.validate.outputs.validation == 'degraded'
+        run: |
+          echo "::warning title=Deploying on degraded validation::Docker-backed DB validation was unavailable (registry); deploying on static checks + the dangerous-SQL scan (F101)."
+          echo "⚠️ Deploying on **degraded** validation (registry unavailable), see the validate job." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -666,6 +757,59 @@ jobs:
             echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
             echo "Please check the logs above for error details." >> $GITHUB_STEP_SUMMARY
           fi
+
+  # The stable, always-reported gate check ("Migrations applied"). Vercel's production build waits
+  # for it on the same commit (scripts/vercel-migration-gate.mjs via vercel.json `ignoreCommand`),
+  # greenlight-verify asserts it before verifying a Production deployment, and it is the check to
+  # mark REQUIRED on `main`. Green = this commit's schema is in place (or it needed no DB work);
+  # red = a migration deploy was needed and did not succeed. Keep the job NAME stable: the gate
+  # script and greenlight-verify look it up by name.
+  migrations-applied:
+    name: Migrations applied
+    runs-on: ubuntu-latest
+    needs: [changes, validate, security-scan, deploy]
+    if: always()
+    steps:
+      - name: Report the migration gate
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          CHANGES: ${{ needs.changes.result }}
+          NEEDED: ${{ needs.changes.outputs.needed }}
+          VALIDATE: ${{ needs.validate.result }}
+          VALIDATION: ${{ needs.validate.outputs.validation }}
+          SCAN: ${{ needs.security-scan.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+        run: |
+          echo "changes=$CHANGES needed=$NEEDED validate=$VALIDATE ($VALIDATION) scan=$SCAN deploy=$DEPLOY"
+          if [ "$CHANGES" != "success" ]; then
+            echo "❌ Change detection failed: cannot tell whether migrations were needed."
+            exit 1
+          fi
+          if [ "$NEEDED" != "true" ]; then
+            echo "✅ No DB change on this push: nothing to apply."
+            exit 0
+          fi
+          deploys=false
+          if [ "$EVENT" != "pull_request" ] && { [ "$REF" = "refs/heads/main" ] || [ "$REF" = "refs/heads/development" ]; }; then
+            deploys=true
+          fi
+          if [ "$deploys" != "true" ]; then
+            # PR / feature-branch dispatch: validation only, no deploy expected.
+            if [ "$VALIDATE" = "success" ] && [ "$SCAN" != "failure" ]; then
+              echo "✅ Validation passed ($VALIDATION); no deploy on $REF."
+              exit 0
+            fi
+            echo "❌ Validation did not pass."
+            exit 1
+          fi
+          if [ "$DEPLOY" = "success" ]; then
+            echo "✅ Migrations applied for $REF (validation: $VALIDATION)."
+            exit 0
+          fi
+          echo "❌ A migration deploy was needed on $REF and did not succeed (deploy=$DEPLOY)."
+          echo "   The production web build is held until this check is green (F101)."
+          exit 1
 
   # Automated rollback capability
   rollback:

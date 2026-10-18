@@ -62,6 +62,10 @@ jobs:
       - name: Run tests
         run: pnpm test:coverage
 
+      # Repo scripts that run outside any package (the Vercel production migration gate, F101).
+      - name: Run script tests
+        run: pnpm test:scripts
+
       - name: Upload coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,8 +128,10 @@ jobs:
       # Boots Postgres + Auth via Docker and applies supabase/migrations (incl. the profiles
       # trigger), so admin-created users get a real profile row — the same state a Discord
       # sign-up produces. Maps the local stack's keys into the env the app + suite read.
+      # Backoff + image-registry rotation (ghcr.io → ECR → Docker Hub) against the registry rate
+      # limits that failed supabase-ci (F101). Any non-zero exit still fails the E2E job.
       - name: Start local Supabase
-        run: supabase start
+        run: scripts/ci/supabase-retry.sh --stop-between -- supabase start
 
       - name: Export Supabase env
         # `supabase status -o env` emits KEY="value" (quoted); appended verbatim to $GITHUB_ENV the
