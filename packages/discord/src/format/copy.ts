@@ -87,6 +87,8 @@ export const copy = {
   notLoggedNotMember: 'Not logged — you’re not a member of the linked campaign.',
   notLoggedWrongCampaign: 'Not logged — your active character isn’t in the linked campaign.',
   pushedCharged: 'Pushed (+1d) — 2 stress marked on your sheet',
+  abilityDiceNote: (bonus: number) =>
+    `Includes ${bonus > 0 ? '+' : '−'}${Math.abs(bonus)}d from an ability or upgrade.`,
   resistCharged: (character: string, stress: number) =>
     stress < 0
       ? `Critical — **1 stress cleared** on ${character}’s sheet.`
@@ -108,9 +110,33 @@ export const copy = {
   scoreLogStart: 'Score started',
   scoreLogEnd: 'Score ended',
   noCrew: 'No crew sheet yet — create it on the web app first.',
-  crewTierNotReady: (rep: number) => `The Rep track isn’t full — ${rep}/12.`,
-  crewLogHeat: (amount: number) => `+${amount} heat`,
+  crewTierNotReady: (rep: number, needed: number) => `The Rep track isn’t full — ${rep}/${needed}.`,
+  crewTierMax: 'The crew is already at the top Tier.',
+  crewTierCoinShort: (needed: number, have: number) =>
+    `Raising the Tier costs **${needed} coin** (new Tier × 8) — the crew has ${have} (coin + vault).`,
+  crewHoldStrengthened: 'Rep spent — **hold is now strong**. (Rep resets to 0; no coin needed.)',
+  crewTierRaised: (tier: number, cost: number) =>
+    `Paid **${cost} coin** — now **Tier ${tier}**. Rep resets to 0 and hold drops to weak.`,
+  crewLogHeat: (amount: number) => (amount < 0 ? `${amount} heat` : `+${amount} heat`),
   crewLogTier: 'Advanced a tier',
+  crewLogHold: 'Full Rep spent — hold strengthened (weak → strong)',
+  crewLogTierPaid: (tier: number, cost: number) =>
+    `Advanced to Tier ${tier} — paid ${cost} coin; hold now weak`,
+  traumaLogNote: (name: string) =>
+    `${name} marked their last stress box — trauma! Stress clears; a trauma condition is owed.`,
+  traumaRetireLogNote: (name: string) =>
+    `${name} has reached the trauma limit and must retire (or take the fall for the crew).`,
+  traumaTaken: (name: string, sheetUrl: string) =>
+    `**${name}** marked their last stress box — **trauma**. Stress is back to 0; pick the trauma condition on the sheet: ${sheetUrl}`,
+  traumaRetire: '**That’s the trauma limit — this scoundrel must retire.**',
+  rollPushAndBargain:
+    'Push yourself OR take a devil’s bargain for the bonus die — not both (one or the other, RAW).',
+  bargainNote: 'Devil’s bargain (+1d) — the GM names the cost',
+  assistNote: 'Assisted (+1d) — the helper marks 1 stress',
+  resistNeedsAttribute: (names: string[]) =>
+    `Name the attribute you resist with — one of ${names.join(', ')}. Your sheet sets the dice.`,
+  resistNeedsDice:
+    'Give the dice to roll (`dice:`), or set an active character in a linked channel.',
   crewLogIncarcerate: 'Incarceration — Wanted down one, Heat cleared',
   harmPenaltyNote: '−1d (moderate harm)',
   severeHarmNote: 'Severe harm — acting needs help or a push',
@@ -183,7 +209,7 @@ export const copy = {
       '`/roll dice:3` action roll · `/resist` · `/fortune` · `/dice 2d6+1`',
       '',
       '**Your sheet** — sign in with Discord on the site once, then `/character use`',
-      '`/roll action:Skirmish` (+`extra`, `push`) · `/character show` · `/stress add|clear` · `/harm take|clear` (+`armor` to soak a level) · `/vice indulge` · `/xp mark|advance`',
+      '`/roll action:Skirmish` (+`push` or `bargain`, `assist`) · `/character show` · `/stress add|clear` · `/harm take|clear` (+`armor` to soak a level) · `/vice indulge` · `/xp mark|advance`',
       '',
       '**Linked campaigns** — the GM runs `/heist link` in a channel (needs Manage Channels; Manage Server for a server-wide link)',
       'Sheet rolls and `/resist` there land in the campaign log. `/log` records a settled result · `/heist status` shows score/crew/clocks.',

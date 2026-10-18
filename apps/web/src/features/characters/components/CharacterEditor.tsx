@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  clampStress,
   deriveAttributes,
-  stressBounds,
+  effectiveStressMax,
   usesActionRatings,
   usesXpTracks,
   xpTrackSize,
@@ -28,6 +27,7 @@ import {
 } from '@heist-mind/ui';
 import { useCrewByGame } from '@/features/crews/data/queries';
 import { useCharacterAdvancement } from '@/features/characters/lib/use-character-advancement';
+import { withEditsSince } from '@/features/characters/lib/with-edits-since';
 import { HarmCard } from './cards/HarmCard';
 import { GearCard } from './cards/GearCard';
 import { CrewBenefits } from './advancement/CrewBenefits';
@@ -54,7 +54,6 @@ export function CharacterEditor({
 }) {
   const { t } = useTranslation();
   const content = character.ruleset.content;
-  const bounds = stressBounds(content);
 
   const [section, setSection] = useState<Section>(initialSection);
   // Follow a changed request from the opener (e.g. editor open on Build, then "Take advance").
@@ -68,6 +67,9 @@ export function CharacterEditor({
   const crew: CrewContext | null = crewQuery.data
     ? { crewAbilities: crewQuery.data.crewAbilities }
     : null;
+
+  // Ability and crew stress boxes lengthen the track (the same max the engine overflows at).
+  const stressMax = effectiveStressMax(content, draft, crew);
 
   const { saving, error, saveBuild, buyAbility, advanceAction } = useCharacterAdvancement(
     character,
@@ -97,13 +99,35 @@ export function CharacterEditor({
     });
   }, [character.id, character.updatedAt, character.characterData]);
 
+  // A save CONFLICT (a field the player edited also changed elsewhere) rebases the draft onto the
+  // live row on the next render — after the mutation's awaited refetch has landed in the cache.
+  const [rebase, setRebase] = useState(false);
+  useEffect(() => {
+    if (!rebase) return;
+    draftBaseRef.current = JSON.stringify(character.characterData);
+    setDraft(structuredClone(character.characterData));
+    setRebase(false);
+  }, [rebase, character.characterData]);
+
+  // The draft never touches `traumaPending`: a condition picked here pays down owed trauma on SAVE
+  // (server-side, against the live row), so undoing an unsaved pick simply leaves the debt intact.
   const patch = (p: Partial<CharacterData>) => setDraft(d => ({ ...d, ...p }));
 
-  // Loadout moved off the build to the character sheet (per-score choice, not a build/advance) —
-  // the editor does NOT own it, so every save carries the LIVE value. Otherwise a draft based on
-  // a pre-refetch snapshot (the dirty-guard above keeps it, by design) would silently wipe a
-  // loadout the sheet saved moments earlier: a full-object write from a stale base.
-  const saveDraft = () => void saveBuild({ ...draft, loadout: character.characterData.loadout });
+  // Saves are a PATCH of only the fields this draft changed vs the snapshot it started from,
+  // merged server-side onto the LIVE row (engine `saveCharacterBuild`). So everything the editor
+  // didn't touch — the per-score loadout, harm the GM marked, XP the bot logged, stress clicked on
+  // the sheet — keeps its live value instead of being reverted by a stale draft (review item 2).
+  const saveDraft = async () => {
+    const base = JSON.parse(draftBaseRef.current) as CharacterData;
+    const submitted = draft;
+    const out = await saveBuild(base, submitted);
+    if (out.status === 'saved') {
+      draftBaseRef.current = JSON.stringify(out.data);
+      setDraft(current => withEditsSince(submitted, current, out.data));
+    } else if (out.status === 'conflict') {
+      setRebase(true);
+    }
+  };
 
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const playbookContacts = playbook?.contacts ?? [];
@@ -195,7 +219,7 @@ export function CharacterEditor({
               </>
             )}
 
-            <Button variant='ember' onClick={saveDraft} loading={saving}>
+            <Button variant='ember' onClick={() => void saveDraft()} loading={saving}>
               {t('components.characterEditor.saveBuild')}
             </Button>
           </Stack>
@@ -206,13 +230,13 @@ export function CharacterEditor({
             <Heading level='h3'>{t('components.characterEditor.stress')}</Heading>
             <StressTracker
               current={draft.stress}
-              max={bounds.max}
+              max={stressMax}
               interactive
               showNumbers
               size='lg'
-              onChange={v => patch({ stress: clampStress(content, v) })}
+              onChange={v => patch({ stress: Math.max(0, Math.min(v, stressMax)) })}
             />
-            {draft.stress >= bounds.max && (
+            {draft.stress >= stressMax && (
               <Alert variant='warning' size='sm'>
                 {t('components.characterEditor.stressMaxed')}
               </Alert>
@@ -220,7 +244,7 @@ export function CharacterEditor({
 
             <HarmCard content={content} data={draft} edit={{ onPatch: patch }} />
 
-            <Button variant='ember' onClick={saveDraft} loading={saving}>
+            <Button variant='ember' onClick={() => void saveDraft()} loading={saving}>
               {t('components.characterEditor.saveStress')}
             </Button>
           </Stack>
@@ -235,7 +259,7 @@ export function CharacterEditor({
 
             <GearCard data={draft} edit={{ playbookContacts, onPatch: patch }} />
 
-            <Button variant='ember' onClick={saveDraft} loading={saving}>
+            <Button variant='ember' onClick={() => void saveDraft()} loading={saving}>
               {t('components.characterEditor.saveGear')}
             </Button>
           </Stack>
@@ -268,7 +292,12 @@ export function CharacterEditor({
                 ))}
               </Stack>
               <Heading level='h3'>{t('components.characterEditor.specialAbilities')}</Heading>
-              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <AdvancementOptions
+                character={character}
+                crew={crew}
+                onBuy={buyAbility}
+                saving={saving}
+              />
               <Heading level='h3'>{t('components.characterEditor.actionDots')}</Heading>
               <ActionDotOptions
                 character={character}
@@ -284,7 +313,12 @@ export function CharacterEditor({
                   {t('components.characterEditor.xpAvailable', { xp: character.experiencePoints })}
                 </Badge>
               </Stack>
-              <AdvancementOptions character={character} onBuy={buyAbility} saving={saving} />
+              <AdvancementOptions
+                character={character}
+                crew={crew}
+                onBuy={buyAbility}
+                saving={saving}
+              />
             </Stack>
           ))}
       </Stack>

@@ -22,8 +22,11 @@ import { fromSupabaseRuleset } from '../adapters/ruleset-adapter';
 import { toJson, parseSupabaseJson } from '../adapters/profile-adapter';
 import { SupabaseCharacterRepository } from './supabase-character-repository';
 import {
+  grandfatherHeldAbilities,
   validateCharacter,
   advancementCost,
+  isAbilityUnlocked,
+  veteranGatewayFor,
   usesXpTracks,
   xpTrackFull,
   advanceTrack,
@@ -176,7 +179,13 @@ export class SupabaseCharacterManagementRepository
       if (!ruleset.success) return ruleset as Result<Character>;
 
       const crew = current.data.gameId ? await this.crewForGame(current.data.gameId) : null;
-      const result = validateCharacter(ruleset.data, nextData, { mode: 'live', crew });
+      // Grandfathering (core `grandfatherHeldAbilities`): refuse a held-but-unslotted
+      // cross-playbook ability only when THIS write adds an ability.
+      const result = grandfatherHeldAbilities(
+        validateCharacter(ruleset.data, nextData, { mode: 'live', crew }),
+        current.data.characterData.specialAbilities,
+        nextData.specialAbilities
+      );
       if (!result.isValid) return failValidation<Character>(result);
 
       return this.characters.update(characterId, userId, data);
@@ -205,7 +214,19 @@ export class SupabaseCharacterManagementRepository
       // rulesets gate on having enough pooled XP (then subtract the ruleset-resolved cost).
       const trackMode = usesXpTracks(ruleset);
       const track = advanceTrack(ruleset, adv);
-      const cost = advancementCost(ruleset, adv);
+      // The cost comes from the RULESET only (never the client) — and a flat-pool ruleset must
+      // offer a valid, non-negative option for this kind of advance (review #13).
+      const resolvedCost = advancementCost(ruleset, adv);
+      if (!trackMode && resolvedCost === null) {
+        return {
+          success: false,
+          error: {
+            message: 'This ruleset offers no valid advancement of that kind.',
+            code: 'NO_ADVANCEMENT_OPTION',
+          },
+        };
+      }
+      const cost = resolvedCost ?? 0;
       if (trackMode) {
         if (!xpTrackFull(ruleset, character.characterData, track)) {
           const label = track === PLAYBOOK_TRACK ? 'playbook' : track;
@@ -247,24 +268,40 @@ export class SupabaseCharacterManagementRepository
       // The campaign's crew gates what an advance may take (a veteran upgrade opens cross-playbook
       // picks) and raises the bounds the result is validated against (Mastery/Deadly/Mule). A
       // standalone character (no game) advances against the ruleset alone.
-      const crew = character.gameId ? await this.crewForGame(character.gameId) : null;
+      // An advance is decided against a DEFINITE crew context: the campaign's crew, or "no crew"
+      // (a standalone character, or a campaign that hasn't started its crew) — never "unknown".
+      const crew: CrewContext = (character.gameId
+        ? await this.crewForGame(character.gameId)
+        : null) ?? { crewAbilities: [] };
 
-      // Apply the effect to a cloned build.
+      // Apply the effect to a cloned build. One advance = ONE dot (a client `value` is ignored).
       const next: CharacterData = structuredClone(character.characterData);
       if (adv.type === 'attribute')
-        next.attributes[adv.target] = (next.attributes[adv.target] ?? 0) + (adv.value ?? 1);
-      else if (adv.type === 'skill')
-        next.skills[adv.target] = (next.skills[adv.target] ?? 0) + (adv.value ?? 1);
+        next.attributes[adv.target] = (next.attributes[adv.target] ?? 0) + 1;
+      else if (adv.type === 'skill') next.skills[adv.target] = (next.skills[adv.target] ?? 0) + 1;
       else if (adv.type === 'ability') {
         if (next.specialAbilities.includes(adv.target))
           return {
             success: false,
             error: { message: 'Ability already known.', code: 'DUPLICATE_ABILITY' },
           };
-        // Advancement is the BitD "veteran" path: a played character may reach beyond its starting
-        // playbook (subject to the option's own `requirements`/prereqs, checked above). So we don't
-        // re-apply creation's roster/tier gate here — crew context instead RAISES the live bounds the
-        // result is validated against (Mastery action cap, Deadly dots, Mule load) just below.
+        // RAW: a playbook advance takes an ability from YOUR playbook; anything else needs a free
+        // Veteran slot (the character's own Veteran ability, or a crew grant). Same predicate the
+        // wizard, the editor and the bot's suggestions use.
+        // Taking Veteran IS taking the other playbook's ability (one advance): when only a slot is
+        // missing and the playbook has an untaken Veteran, both land together.
+        const gateway = veteranGatewayFor(ruleset, character.characterData, adv.target, crew);
+        if (gateway) next.specialAbilities = [...next.specialAbilities, gateway];
+        else if (!isAbilityUnlocked(ruleset, character.characterData, adv.target, crew)) {
+          return {
+            success: false,
+            error: {
+              message:
+                'That ability comes from another playbook and no Veteran slot can open for it.',
+              code: 'ABILITY_LOCKED',
+            },
+          };
+        }
         next.specialAbilities = [...next.specialAbilities, adv.target];
       } else if (adv.type === 'playbook') {
         next.playbook = adv.target;
@@ -274,8 +311,15 @@ export class SupabaseCharacterManagementRepository
       if (trackMode) next.xp = clearXpTrack(next, track);
 
       // Re-validate the resulting build (live invariants), in the crew's context.
+      // Abilities held BEFORE this advance are grandfathered for the veteran budget (see
+      // updateCharacterWithValidation); the newly taken one was gated just above.
       const post = validateCharacter(ruleset, next, { mode: 'live', crew });
-      if (!post.isValid) return failValidation<Character>(post);
+      const held = new Set(character.characterData.specialAbilities);
+      const postErrors = post.errors.filter(
+        e => !(e.code === 'ABILITY_LOCKED' && held.has(e.field.replace(/^specialAbilities\./, '')))
+      );
+      if (postErrors.length > 0)
+        return failValidation<Character>({ ...post, errors: postErrors, isValid: false });
 
       const record: AdvancementRecord = {
         id: newId(),

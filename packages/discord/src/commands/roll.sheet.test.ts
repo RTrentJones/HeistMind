@@ -30,12 +30,62 @@ const cmd = (options: Option[]): APIApplicationCommandInteraction =>
   }) as unknown as APIApplicationCommandInteraction;
 
 describe('/roll action (sheet form)', () => {
-  it('defers PUBLICLY and rolls rating + extra + push with the reminder note', async () => {
+  it('push and a devil’s bargain are one or the other (RAW) — both refuses inline', async () => {
+    const result = await handleRoll(
+      ctx(repos(), [6, 5, 4]),
+      cmd([
+        { name: 'action', type: 3, value: RATED_ACTION },
+        { name: 'push', type: 5, value: true },
+        { name: 'bargain', type: 5, value: true },
+      ])
+    );
+    expect(result.work).toBeUndefined();
+    expect(JSON.stringify(result.response)).toContain('not both');
+  });
+
+  it('a bargain + assist caps at +2d and names both moves', async () => {
+    const calls = await run(
+      await handleRoll(
+        ctx(repos(), [6, 5, 4, 3]),
+        cmd([
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'bargain', type: 5, value: true },
+          { name: 'assist', type: 5, value: true },
+        ])
+      )
+    );
+    const embed = (calls[0]?.payload as { embeds: { title: string; description: string }[] })
+      .embeds[0];
+    expect(embed?.title).toBe(`Silks — ${RATED_ACTION} 2d +2d`);
+    expect(embed?.description).toContain('Devil’s bargain');
+    expect(embed?.description).toContain('Assisted');
+  });
+
+  it('bonus: adds an ability’s die beside push + assist (Ambush: 2 + 1 + 1 + 1 = 5d)', async () => {
+    const calls = await run(
+      await handleRoll(
+        ctx(repos(), [6, 5, 4, 3, 2]),
+        cmd([
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+          { name: 'assist', type: 5, value: true },
+          { name: 'bonus', type: 4, value: 1 },
+        ])
+      )
+    );
+    const embed = (calls[0]?.payload as { embeds: { title: string; description: string }[] })
+      .embeds[0];
+    expect(embed?.title).toBe(`Silks — ${RATED_ACTION} 2d +3d`);
+    expect(embed?.description).toContain('[6, 5, 4, 3, 2]');
+    expect(embed?.description).toContain('+1d from an ability');
+  });
+
+  it('defers PUBLICLY and rolls rating + assist + push with the reminder note', async () => {
     const result = await handleRoll(
       ctx(repos(), [6, 5, 4, 3]),
       cmd([
         { name: 'action', type: 3, value: RATED_ACTION.toLowerCase() }, // case-insensitive match
-        { name: 'extra', type: 4, value: 1 },
+        { name: 'assist', type: 5, value: true },
         { name: 'push', type: 5, value: true },
       ])
     );
@@ -44,7 +94,7 @@ describe('/roll action (sheet form)', () => {
     const calls = await run(result);
     const embed = (calls[0]?.payload as { embeds: { title: string; description: string }[] })
       .embeds[0];
-    // rating 2 + extra 1 + push 1 = 4d
+    // rating 2 + assist 1 + push 1 = 4d
     expect(embed?.title).toBe(`Silks — ${RATED_ACTION} 2d +2d`);
     expect(embed?.description).toContain('[6, 5, 4, 3]');
     expect(embed?.description).toContain('mark 2 stress');

@@ -49,19 +49,13 @@ const StressTracker: React.FC<StressTrackerProps> = ({
       return 'bg-semantic-error border-semantic-error/60 shadow-lg shadow-semantic-error/25';
     }
 
+    // ONE stress colour (F93): the pips used to be green/orange/ember by level, so the same
+    // track read differently on two sheets. Ember is "stress"; only a full track (trauma next)
+    // escalates to the error colour.
     if (isFilled) {
-      switch (level) {
-        case 'low':
-          return 'bg-semantic-success border-semantic-success/60';
-        case 'medium':
-          return 'bg-semantic-warning border-semantic-warning/60';
-        case 'high':
-          return 'bg-game-ember border-game-ember/60';
-        case 'critical':
-          return 'bg-semantic-error border-semantic-error/60 animate-stress-pulse';
-        default:
-          return 'bg-foreground-muted border-foreground-muted/60';
-      }
+      return level === 'critical'
+        ? 'bg-semantic-error border-semantic-error/60 animate-stress-pulse'
+        : 'bg-game-ember border-game-ember/60';
     }
 
     return 'bg-background-secondary border-border-primary hover:border-border-secondary';
@@ -97,13 +91,7 @@ const StressTracker: React.FC<StressTrackerProps> = ({
             <span
               className={cn(
                 'text-sm font-medium',
-                level === 'critical'
-                  ? 'text-semantic-error-fg'
-                  : level === 'high'
-                    ? 'text-game-ember-fg'
-                    : level === 'medium'
-                      ? 'text-semantic-warning-fg'
-                      : 'text-semantic-success-fg'
+                level === 'critical' ? 'text-semantic-error-fg' : 'text-game-ember-fg'
               )}
             >
               {current}/{max}
@@ -113,7 +101,9 @@ const StressTracker: React.FC<StressTrackerProps> = ({
       )}
 
       <StressTooltip current={current} max={max} consequences={consequences}>
-        <div className={cn('flex', gaps[size])}>
+        {/* F93 — pips never shrink (they squashed into ovals in narrow phone cards); the row
+            wraps instead. */}
+        <div className={cn('flex flex-wrap', gaps[size])}>
           {Array.from({ length: max }, (_, index) => (
             <motion.button
               key={index}
@@ -127,7 +117,9 @@ const StressTracker: React.FC<StressTrackerProps> = ({
               }
               aria-pressed={index < current}
               className={cn(
-                'rounded-full border-2 transition-all duration-200',
+                'aspect-square shrink-0 rounded-full border-2 transition-all duration-200',
+                interactive &&
+                  "relative max-sm:after:absolute max-sm:after:-inset-1.5 max-sm:after:content-['']",
                 sizes[size],
                 getStressColor(index, hoveredIndex === index),
                 interactive && 'cursor-pointer hover:scale-110 active:scale-95',
@@ -156,6 +148,9 @@ interface ActionDotsProps {
   onChange?: (value: number) => void;
   interactive?: boolean;
   label?: string;
+  /** Accessible name of the rated thing when no visible `label` is rendered (e.g. the row
+   * already shows it). Used in the pip labels: "Set Hunt to 2". */
+  name?: string;
   size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'ember' | 'steel' | 'shadow' | 'crimson';
   className?: string;
@@ -167,6 +162,7 @@ const ActionDots: React.FC<ActionDotsProps> = ({
   onChange,
   interactive = false,
   label,
+  name,
   size = 'default',
   variant = 'default',
   className,
@@ -181,8 +177,8 @@ const ActionDots: React.FC<ActionDotsProps> = ({
   };
 
   const gaps = {
-    sm: 'gap-1',
-    default: 'gap-1.5',
+    sm: 'gap-1 max-sm:gap-2',
+    default: 'gap-1.5 max-sm:gap-2.5',
     lg: 'gap-2',
   };
 
@@ -245,7 +241,7 @@ const ActionDots: React.FC<ActionDotsProps> = ({
         </div>
       )}
 
-      <div className={cn('flex', gaps[size])}>
+      <div className={cn('flex flex-wrap', gaps[size])}>
         {Array.from({ length: max }, (_, index) => (
           <motion.button
             key={index}
@@ -254,12 +250,16 @@ const ActionDots: React.FC<ActionDotsProps> = ({
             // with many dot rows (the wizard, the editor) stay unambiguous.
             aria-label={
               index + 1 === current
-                ? `Clear ${label ?? 'rating'} to ${current - 1}`
-                : `Set ${label ?? 'rating'} to ${index + 1}`
+                ? `Clear ${label ?? name ?? 'rating'} to ${current - 1}`
+                : `Set ${label ?? name ?? 'rating'} to ${index + 1}`
             }
             aria-pressed={index < current}
             className={cn(
-              'rounded-full border-2 transition-all duration-200',
+              'aspect-square shrink-0 rounded-full border-2 transition-all duration-200',
+              // F93 — a ≥40px invisible hit area around small dots on phones, without changing
+              // the visual density.
+              interactive &&
+                "relative max-sm:after:absolute max-sm:after:-inset-2 max-sm:after:content-['']",
               sizes[size],
               getDotClass(index),
               interactive && 'cursor-pointer hover:scale-110 active:scale-95',

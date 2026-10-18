@@ -78,6 +78,8 @@ export interface AlertProps
   icon?: React.ReactNode;
   /** Whether to show the default icon */
   showIcon?: boolean;
+  /** Accessible name of the dismiss button — apps pass a localized string. */
+  dismissLabel?: string;
 }
 
 export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
@@ -90,6 +92,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
       onDismiss,
       icon,
       showIcon = true,
+      dismissLabel = 'Dismiss alert',
       children,
       ...props
     },
@@ -114,8 +117,11 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
     return (
       <div
         ref={ref}
-        role='alert'
-        aria-live='polite'
+        // Only ERRORS interrupt (role=alert, implicitly assertive). Hints, warnings, info and
+        // success are polite live status messages — announcing every static hint as an alert
+        // made screen readers interrupt for non-urgent copy (review item 16).
+        role={variant === 'destructive' ? 'alert' : 'status'}
+        aria-live={variant === 'destructive' ? undefined : 'polite'}
         className={cn(alertVariants({ variant, size }), className)}
         {...props}
       >
@@ -135,7 +141,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
               'focus:ring-brand-primary focus:ring-offset-2',
               'focus:ring-offset-background-primary'
             )}
-            aria-label='Dismiss alert'
+            aria-label={dismissLabel}
           >
             <X className='h-4 w-4' />
           </button>

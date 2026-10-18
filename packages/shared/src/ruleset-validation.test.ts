@@ -23,6 +23,19 @@ describe('validateRulesetContent', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('rejects a negative or non-numeric advancement cost (flat-XP rulesets, review #13)', () => {
+    const opt = (cost: unknown) => ({
+      ...validContent,
+      advancement: {
+        xpTriggers: [],
+        advancementOptions: [{ id: 'a', name: 'A', description: '', cost, category: 'ability' }],
+      },
+    });
+    expect(validateRulesetContent(opt(-2)).ok).toBe(false);
+    expect(validateRulesetContent(opt('3')).ok).toBe(false);
+    expect(validateRulesetContent(opt(0)).ok).toBe(true);
+  });
+
   it('rejects a non-object', () => {
     const result = validateRulesetContent('nope');
     expect(result.ok).toBe(false);

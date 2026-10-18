@@ -3,10 +3,12 @@
 // resolve the actor's active character, realize dice where needed, and phrase the outcome).
 // All public: they're table-facing gameplay events, and in a DM "public" is just you.
 import {
+  effectiveStressMax,
   HARM_LEVELS,
+  isAbilityAdvanceable,
+  veteranGatewayFor,
   PLAYBOOK_TRACK,
   rulesetActions,
-  stressBounds,
   usesXpTracks,
   xpMarks,
   xpTrackSize,
@@ -39,6 +41,7 @@ import {
 import { deferred, failEphemeral } from '../respond';
 import type { BotContext, CommandHandler, FollowUpClient } from '../types';
 import { activeCharacter } from './roll';
+import { TRAUMA_LOG, traumaReply } from './trauma';
 
 function asHarmLevel(value: string | null): HarmLevel | null {
   return HARM_LEVELS.find(l => l === value) ?? null;
@@ -61,7 +64,7 @@ async function requireCharacter(
   return character;
 }
 
-/** /stress add|clear — a clamped delta on the active character's track. */
+/** /stress add|clear — a delta on the active character's track (the last box → trauma, RAW). */
 export const handleStress: CommandHandler = (ctx, interaction) => {
   const sub = subcommandName(interaction);
   const amount = integerOption(interaction, 'amount') ?? 1;
@@ -74,11 +77,16 @@ export const handleStress: CommandHandler = (ctx, interaction) => {
       characterId: character.id,
       userId: character.createdBy,
       stress: delta,
+      traumaLog: TRAUMA_LOG,
     });
     if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
-    const max = stressBounds(character.ruleset.content).max;
+    const max = effectiveStressMax(character.ruleset.content, character.characterData);
+    // RAW: marking the last box is trauma, not a clamp — say so, and send them to pick it.
+    if (out.data?.trauma) {
+      return followUp.editOriginal({ content: traumaReply(ctx, character, out.data.mustRetire) });
+    }
     const content = out.data
-      ? copy.stressLine(character.name, out.data.characterData.stress, max)
+      ? copy.stressLine(character.name, out.data.character.characterData.stress, max)
       : copy.stressUnchanged(character.name);
     return followUp.editOriginal({ content });
   });
@@ -172,7 +180,7 @@ export const handleVice: CommandHandler = (ctx, interaction) => {
       logLabel: copy.viceLog,
     });
     if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
-    const max = stressBounds(character.ruleset.content).max;
+    const max = effectiveStressMax(character.ruleset.content, character.characterData);
     const embed = rollEmbed({
       title: copy.viceTitle(character.name, pool.zeroDice ? 0 : pool.count),
       results,
@@ -321,6 +329,16 @@ export async function harmAutocomplete(
   }
 }
 
+/** The crew context an advance is judged in: the campaign's crew abilities, or none. */
+async function crewContextFor(
+  ctx: BotContext,
+  character: CharacterWithDetails
+): Promise<{ crewAbilities: string[] }> {
+  if (!ctx.repos || character.gameId === null) return { crewAbilities: [] };
+  const crew = await ctx.repos.crews.findByGame(character.gameId);
+  return { crewAbilities: crew.success && crew.data ? crew.data.crewAbilities : [] };
+}
+
 /**
  * /xp suggestions: `mark track:` offers the ruleset's XP tracks (playbook + attributes);
  * `advance pick:` offers unowned abilities + action dots.
@@ -354,9 +372,19 @@ export async function xpAutocomplete(
       interaction as unknown as APIApplicationCommandInteraction,
       'pick'
     );
+    // Only LEGAL picks (review #1): the playbook's own roster, plus cross-playbook abilities only
+    // while a Veteran slot is free — the same predicate the repository's advance gate runs, in the
+    // same crew context (the campaign's crew, or none).
+    const crew = await crewContextFor(ctx, character);
     const abilities = content.specialAbilities
       .filter(a => !owned.includes(a.id))
-      .map(a => ({ name: `Learn ${a.name}`, value: `ability:${a.id}` }));
+      .filter(a => isAbilityAdvanceable(content, character.characterData, a.id, crew))
+      .map(a => ({
+        name: veteranGatewayFor(content, character.characterData, a.id, crew)
+          ? `Learn ${a.name} (takes Veteran)`
+          : `Learn ${a.name}`,
+        value: `ability:${a.id}`,
+      }));
     const dots = rulesetActions(content).map(name => {
       const rating = character.characterData.skills[name] ?? 0;
       return { name: `+1 ${name} dot (${rating}→${rating + 1})`, value: `skill:${name}` };

@@ -4,10 +4,11 @@ import { useState } from 'react';
 import type { CrewRules, UpdateCrewData } from '@heist-mind/core';
 import {
   applyHeat,
-  advanceTier,
+  crewHalvesTierCost,
   incarcerate,
+  repToDevelop,
+  tierAdvanceCost,
   CREW_XP_TRACK,
-  REP_PER_TIER,
   CREW_LIMITS,
 } from '@heist-mind/core';
 import { Alert, Badge, Button, Heading, Select, Stack, Text, Tooltip } from '@heist-mind/ui';
@@ -174,6 +175,14 @@ export function CrewSheet({
 
   const typeName =
     crewRules?.types.find(type => type.id === crew.crewType)?.name ?? crew.crewType ?? '—';
+  // RAW development inputs: rep needed (12 − turf), and the coin a strong-hold Tier raise costs.
+  const repNeeded = repToDevelop(crew.claims);
+  const repFull = crew.rep >= repNeeded;
+  const tierCost = tierAdvanceCost(
+    crew.tier + 1,
+    crewHalvesTierCost({ crew: crewRules }, crew.crewAbilities)
+  );
+  const canAffordTier = crew.coin + crew.vault >= tierCost;
 
   const stepper = (
     label: string,
@@ -243,8 +252,8 @@ export function CrewSheet({
 
       <Stack direction='row' gap='lg' className='flex-wrap'>
         {stepper(t('components.crewSheet.tier'), 'tier', crew.tier, CREW_LIMITS.tier)}
-        {/* Rep is uncapped — it accrues until a full track is spent to advance Tier (button below). */}
-        {stepper(t('components.crewSheet.rep'), 'rep', crew.rep)}
+        {/* Rep caps at the tracker length: 12 less held turf (RAW — "12 is the max", no carry). */}
+        {stepper(t('components.crewSheet.rep'), 'rep', crew.rep, repNeeded)}
         {stepper(t('components.crewSheet.heat'), 'heat', crew.heat, CREW_LIMITS.heat, () => {
           // BitD: filling the heat track (9) marks a Wanted level and resets heat. Through the
           // ENGINE so the cascade also lands in the campaign feed (the note previews the same
@@ -268,29 +277,48 @@ export function CrewSheet({
         {stepper(t('components.crewSheet.vault'), 'vault', crew.vault)}
       </Stack>
 
-      {/* Crew-progression actions (GM): spend a full Rep track to advance Tier (BitD), and apply an
-          incarceration to cool off (−1 Wanted, clear Heat — BitD's direct release valve). */}
-      {isGm && (crew.rep >= REP_PER_TIER || crew.wanted > 0 || crew.heat > 0) && (
-        <Stack direction='row' gap='sm' className='flex-wrap'>
-          {crew.rep >= REP_PER_TIER && crew.tier < CREW_LIMITS.tier && (
-            <Button
-              variant='ember'
-              size='sm'
-              disabled={busy}
-              onClick={() => {
-                const userId = user?.id;
-                if (!userId) return;
-                const next = advanceTier({ tier: crew.tier, rep: crew.rep });
-                advanceTierMut.mutate({
-                  crew,
-                  userId,
-                  logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
-                  logNote: t('components.crewSheet.logTierNote', { tier: next.tier }),
-                });
-              }}
-            >
-              {t('components.crewSheet.advanceTier', { tier: crew.tier + 1 })}
-            </Button>
+      {/* Crew-progression actions (GM): develop from a full Rep tracker (RAW: weak hold → strong;
+          strong hold → pay new Tier × 8 coin), and apply an incarceration to cool off (−1 Wanted,
+          clear Heat — BitD's direct release valve). */}
+      {isGm && (repFull || crew.wanted > 0 || crew.heat > 0) && (
+        <Stack direction='row' gap='sm' className='flex-wrap' align='center'>
+          {repFull && (crew.hold === 'weak' || crew.tier < CREW_LIMITS.tier) && (
+            <>
+              <Button
+                variant='ember'
+                size='sm'
+                disabled={busy || (crew.hold === 'strong' && !canAffordTier)}
+                onClick={() => {
+                  const userId = user?.id;
+                  if (!userId) return;
+                  advanceTierMut.mutate({
+                    crew,
+                    content: { crew: crewRules },
+                    userId,
+                    logLabel: crew.name?.trim() || t('components.crewSheet.logLabel'),
+                    logNote: o =>
+                      o.kind === 'hold'
+                        ? t('components.crewSheet.logHoldNote')
+                        : t('components.crewSheet.logTierNote', { tier: o.tier, cost: o.cost }),
+                  });
+                }}
+              >
+                {crew.hold === 'weak'
+                  ? t('components.crewSheet.strengthenHold')
+                  : t('components.crewSheet.advanceTier', {
+                      tier: crew.tier + 1,
+                      cost: tierCost,
+                    })}
+              </Button>
+              {crew.hold === 'strong' && !canAffordTier && (
+                <Text variant='muted' size='sm'>
+                  {t('components.crewSheet.tierCoinShort', {
+                    cost: tierCost,
+                    have: crew.coin + crew.vault,
+                  })}
+                </Text>
+              )}
+            </>
           )}
           {(crew.wanted > 0 || crew.heat > 0) && (
             <Button

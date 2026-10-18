@@ -25,7 +25,7 @@ export default function RouteError({
     <Container maxWidth='md' padding='lg'>
       <Card variant='outline'>
         <Stack direction='column' gap='md' align='start'>
-          <Heading level='h2' variant='primary'>
+          <Heading level='h2' as='h1' variant='primary'>
             {t('errors.boundary.title')}
           </Heading>
           <Text variant='muted'>{t('errors.boundary.fallback')}</Text>

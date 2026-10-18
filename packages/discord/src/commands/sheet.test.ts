@@ -11,10 +11,12 @@ import type {
   APIEmbed,
 } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_RULESET } from '@heist-mind/shared';
 import { clearActorCache } from '../authz';
 import {
   characterOnDefaultRuleset,
   content,
+  CREW,
   ctx,
   fail,
   ok,
@@ -472,5 +474,68 @@ describe('sheet autocompletes', () => {
   it('degrades to [] with no repos', async () => {
     expect(await harmAutocomplete(ctx(null), auto('harm', 'clear', []))).toEqual([]);
     expect(await xpAutocomplete(ctx(null), auto('xp', 'advance', []))).toEqual([]);
+  });
+
+  // Review #1: suggestions are LEGAL picks only — on the shipped ruleset, another playbook's
+  // abilities are hidden until a veteran slot opens (here Brackwater's crew Veteran, F62).
+  it('xp advance hides other playbooks’ abilities unless a veteran slot is free', async () => {
+    const [own, other] = DEFAULT_RULESET.playbooks;
+    const foreign = other!.specialAbilities.find(id => !own!.specialAbilities.includes(id))!;
+    const foreignName = DEFAULT_RULESET.specialAbilities.find(a => a.id === foreign)!.name;
+    const scoundrel = characterOnDefaultRuleset({ characterData: { specialAbilities: [] } });
+    const offered = await xpAutocomplete(
+      ctx(baseRepos({}, scoundrel)),
+      auto('xp', 'advance', [{ name: 'pick', type: 3, value: '' }])
+    );
+    expect(offered.map(c => c.value)).not.toContain(`ability:${foreign}`);
+    expect(offered.map(c => c.value)).toContain(`ability:${own!.specialAbilities[0]}`);
+
+    clearActorCache();
+    const withVeteran = baseRepos(
+      {
+        crews: {
+          findByGame: vi.fn().mockResolvedValue(ok({ ...CREW, crewAbilities: ['crew-veteran'] })),
+        },
+      },
+      scoundrel
+    );
+    const opened = await xpAutocomplete(
+      ctx(withVeteran),
+      auto('xp', 'advance', [{ name: 'pick', type: 3, value: foreignName.toLowerCase() }])
+    );
+    expect(opened.map(c => c.value)).toContain(`ability:${foreign}`);
+  });
+});
+
+describe('/stress — the last box is trauma, not a clamp (review #3)', () => {
+  it('add past the track → stress 0, a trauma owed, feed note, and a pick-it-on-the-sheet reply', async () => {
+    const r = baseRepos({}, characterOnDefaultRuleset({ characterData: { stress: 8 } }));
+    const calls = await run(
+      await handleStress(ctx(r), cmd('stress', 'add', [{ name: 'amount', type: 4, value: 3 }]))
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({
+        characterData: expect.objectContaining({ stress: 0, traumaPending: 1 }),
+      })
+    );
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'note', note: expect.stringContaining('last stress box') })
+    );
+    expect(content(calls)).toContain('trauma');
+    expect(content(calls)).toContain('https://heistmind.example/characters/c1');
+  });
+
+  it('the fourth trauma also says the scoundrel must retire', async () => {
+    const scarred = characterOnDefaultRuleset({
+      characterData: { stress: 9, trauma: DEFAULT_RULESET.traumaConditions!.slice(0, 3) },
+    });
+    const r = baseRepos({}, scarred);
+    const calls = await run(
+      await handleStress(ctx(r), cmd('stress', 'add', [{ name: 'amount', type: 4, value: 1 }]))
+    );
+    expect(content(calls)).toContain('must retire');
   });
 });

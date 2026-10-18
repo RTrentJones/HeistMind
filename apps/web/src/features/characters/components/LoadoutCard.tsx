@@ -113,7 +113,9 @@ export function LoadoutCard({
   return (
     <Card variant='outline'>
       <Stack direction='column' gap='md'>
-        <Heading level='h3'>{t('components.loadout.heading')}</Heading>
+        <Heading level='h3' as='h2'>
+          {t('components.loadout.heading')}
+        </Heading>
 
         {stale && (
           <Alert variant='warning' size='sm'>

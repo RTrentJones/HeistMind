@@ -286,7 +286,7 @@ test.describe('Cross-client parity: web wizard → bot gameplay → web feed', (
     // The roll entry: labeled with the ruleset action, attributed, wearing a DICE outcome badge.
     await expect(discordPage.getByText(ACTION, { exact: true })).toBeVisible({ timeout: 15_000 });
     const rollEntry = discordPage.locator('div').filter({ hasText: ACTION }).last().locator('..');
-    await expect(rollEntry.getByText(/^(crit|success|partial|bad)$/)).toBeVisible();
+    await expect(rollEntry.getByText(/^(Critical!|Success|Partial|Bad outcome)$/)).toBeVisible();
 
     // The harm event: the note text, under the NEUTRAL 'Harm' kind badge — never an outcome.
     await expect(discordPage.getByText(HARM_NOTE)).toBeVisible();
@@ -296,7 +296,7 @@ test.describe('Cross-client parity: web wizard → bot gameplay → web feed', (
       .last()
       .locator('..');
     await expect(harmEntry.getByText('Harm', { exact: true })).toBeVisible();
-    await expect(harmEntry.getByText(/^(crit|success|partial|bad)$/)).toHaveCount(0);
+    await expect(harmEntry.getByText(/^(Critical!|Success|Partial|Bad outcome)$/)).toHaveCount(0);
 
     // ── 4. The character sheet carries the bot-inflicted harm ─────────────────────────────
     await discordPage.getByRole('link', { name: 'View' }).first().click();

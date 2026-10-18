@@ -75,16 +75,16 @@ describe('useElementSize', () => {
 
       // Verify that the hook returns proper initial state
       const [ref, size] = result.current;
-      expect(ref).toBeDefined();
-      expect(ref.current).toBe(null);
+      expect(ref).toHaveProperty('current', null);
       expect(size.width).toBe(0);
       expect(size.height).toBe(0);
 
-      // Verify that a ResizeObserver exists for this hook instance
-      expect(mockResizeObserver).toBeDefined();
+      // Verify that the hook constructed a ResizeObserver for this instance
+      expect(mockResizeObserverConstructor).toHaveBeenCalled();
     });
 
     it('should observe element when ref is set', () => {
+      const observe = vi.spyOn(MockResizeObserver.prototype, 'observe');
       const mockElement = document.createElement('div');
       mockElement.getBoundingClientRect = vi.fn().mockReturnValue({ width: 100, height: 50 });
 
@@ -103,8 +103,8 @@ describe('useElementSize', () => {
       // Verify that getBoundingClientRect was called, proving the element was processed
       expect(mockElement.getBoundingClientRect).toHaveBeenCalled();
 
-      // Test that ResizeObserver triggers work correctly
-      expect(mockResizeObserver).toBeDefined();
+      // The element was handed to a ResizeObserver
+      expect(observe).toHaveBeenCalledWith(mockElement);
       const mockEntry: ResizeObserverEntry = {
         target: mockElement,
         contentRect: {
@@ -312,11 +312,13 @@ describe('useElementSize', () => {
 
       // Since the hook is working correctly (size is updated),
       // we know the ResizeObserver is functioning properly.
-      // Test that unmount doesn't throw errors and cleanup works
+      const unobserve = vi.spyOn(MockResizeObserver.prototype, 'unobserve');
+      const disconnect = vi.spyOn(MockResizeObserver.prototype, 'disconnect');
       expect(() => unmount()).not.toThrow();
 
-      // Verify the hook properly cleaned up by ensuring no memory leaks
-      expect(mockResizeObserver).toBeDefined();
+      // Cleanup really ran: the element was unobserved and the observer disconnected
+      expect(unobserve).toHaveBeenCalledWith(mockElement);
+      expect(disconnect).toHaveBeenCalled();
     });
   });
 

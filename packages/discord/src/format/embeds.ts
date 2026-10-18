@@ -1,6 +1,6 @@
 // Embed builders + the FitD outcome color language (mirrors the web's badge variants).
 import type { APIEmbed } from 'discord-api-types/v10';
-import { stressBounds, type CharacterWithDetails, type RollOutcome } from '@heist-mind/core';
+import { effectiveStressMax, type CharacterWithDetails, type RollOutcome } from '@heist-mind/core';
 import { copy, OUTCOME_LABEL } from './copy';
 
 export const OUTCOME_COLOR: Record<RollOutcome, number> = {
@@ -52,9 +52,9 @@ export function campaignStatusEmbed(input: {
 export function characterSheetEmbed(character: CharacterWithDetails): APIEmbed {
   const data = character.characterData;
   const content = character.ruleset.content;
-  const playbookName =
-    content.playbooks.find(p => p.id === data.playbook)?.name ?? data.playbook;
-  const bounds = stressBounds(content);
+  const playbookName = content.playbooks.find(p => p.id === data.playbook)?.name ?? data.playbook;
+  // Ability stress boxes (Survivor) lengthen the shown track; crew boxes need the campaign crew.
+  const stressMax = effectiveStressMax(content, data);
   const harm = data.harm ?? { lesser: [], moderate: [], severe: [] };
   const harmLine =
     [...harm.severe, ...harm.moderate, ...harm.lesser].join(', ') || copy.sheetNoHarm;
@@ -66,10 +66,16 @@ export function characterSheetEmbed(character: CharacterWithDetails): APIEmbed {
       { name: copy.sheetPlaybook, value: playbookName, inline: true },
       {
         name: copy.sheetStress,
-        value: `${data.stress}/${bounds.max}` + (data.trauma.length > 0 ? ` · ${data.trauma.join(', ')}` : ''),
+        value:
+          `${data.stress}/${stressMax}` +
+          (data.trauma.length > 0 ? ` · ${data.trauma.join(', ')}` : ''),
         inline: true,
       },
-      { name: copy.sheetCoin, value: `${data.coins ?? 0} coin · ${data.stash ?? 0} stash`, inline: true },
+      {
+        name: copy.sheetCoin,
+        value: `${data.coins ?? 0} coin · ${data.stash ?? 0} stash`,
+        inline: true,
+      },
       { name: copy.sheetHarm, value: harmLine },
     ],
   };
@@ -91,7 +97,9 @@ export function rollEmbed(input: {
     title: input.title,
     description: lines.join('\n'),
     color: input.outcome ? OUTCOME_COLOR[input.outcome] : NEUTRAL_COLOR,
-    ...(input.outcome ? { fields: [{ name: 'Outcome', value: OUTCOME_LABEL[input.outcome] }] } : {}),
+    ...(input.outcome
+      ? { fields: [{ name: 'Outcome', value: OUTCOME_LABEL[input.outcome] }] }
+      : {}),
     ...(input.footer ? { footer: { text: input.footer } } : {}),
   };
 }

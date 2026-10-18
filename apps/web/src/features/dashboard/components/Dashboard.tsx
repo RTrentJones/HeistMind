@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   Container,
-  ErrorDisplay,
   Grid,
   Heading,
   LoadingSpinner,
@@ -15,6 +14,9 @@ import {
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { Footer } from '@/shared/components/Footer';
+import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
+import { rollKindLabel } from '@/features/rolls/lib/labels';
+import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
@@ -47,7 +49,8 @@ function relativeTime(date: Date, now: number, t: TranslationFunction): string {
 export function Dashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const { loading, error, campaigns, characters, activity } = useDashboardData(user?.id);
+  const { campaigns, characters, activity, campaignsStatus, charactersStatus, activityStatus } =
+    useDashboardData(user?.id);
 
   const name = user?.profile?.displayName || user?.profile?.username || user?.email || '';
   const gameNameById = new Map(campaigns.map(c => [c.game.id, c.game.name]));
@@ -63,7 +66,7 @@ export function Dashboard() {
       key={ch.id}
       character={ch}
       meta={t('pages.dashboard.characterMeta', {
-        playbook: ch.playbookType,
+        playbook: playbookLabel(ch.playbookType),
         campaign: ch.gameId ? (gameNameById.get(ch.gameId) ?? '') : t('pages.dashboard.standalone'),
       })}
       actions={
@@ -93,7 +96,7 @@ export function Dashboard() {
           <div>
             <Stack direction='row' gap='xs' align='center' className='flex-wrap'>
               <Text as='strong' size='sm'>
-                {a.roll.label ?? a.roll.kind}
+                {a.roll.label ?? rollKindLabel(a.roll.kind, t)}
               </Text>
               <Text variant='muted' size='sm'>
                 {meta}
@@ -146,45 +149,48 @@ export function Dashboard() {
               </Button>
             </Stack>
 
-            {error && <ErrorDisplay title={t('pages.gamesList.loadError')} message={error} />}
-
             {/* Brand-new user (no campaigns, no characters): one guided "start here" instead of
                 three disconnected empty cards (F37). Each step is a real link. */}
-            {!loading && campaigns.length === 0 && characters.length === 0 && (
-              <Card variant='outline'>
-                <Stack direction='column' gap='sm' align='start'>
-                  <Heading level='h2' variant='primary'>
-                    {t('pages.dashboard.startHere.title')}
-                  </Heading>
-                  <Text variant='muted' size='sm'>
-                    {t('pages.dashboard.startHere.intro')}
-                  </Text>
-                  <Stack direction='column' gap='xs' align='start'>
-                    <Text size='sm'>
-                      1.{' '}
-                      <Link href='/characters/new' className='underline'>
-                        {t('pages.dashboard.startHere.step1')}
-                      </Link>{' '}
-                      {t('pages.dashboard.startHere.step1Note')}
+            {!campaignsStatus.loading &&
+              !charactersStatus.loading &&
+              !campaignsStatus.error &&
+              !charactersStatus.error &&
+              campaigns.length === 0 &&
+              characters.length === 0 && (
+                <Card variant='outline'>
+                  <Stack direction='column' gap='sm' align='start'>
+                    <Heading level='h2' variant='primary'>
+                      {t('pages.dashboard.startHere.title')}
+                    </Heading>
+                    <Text variant='muted' size='sm'>
+                      {t('pages.dashboard.startHere.intro')}
                     </Text>
-                    <Text size='sm'>
-                      2.{' '}
-                      <Link href='/games/new' className='underline'>
-                        {t('pages.dashboard.startHere.step2')}
-                      </Link>{' '}
-                      {t('pages.dashboard.startHere.step2Note')}
-                    </Text>
-                    <Text size='sm'>
-                      3.{' '}
-                      <Link href='/games' className='underline'>
-                        {t('pages.dashboard.startHere.step3')}
-                      </Link>{' '}
-                      {t('pages.dashboard.startHere.step3Note')}
-                    </Text>
+                    <Stack direction='column' gap='xs' align='start'>
+                      <Text size='sm'>
+                        1.{' '}
+                        <Link href='/characters/new' className='underline'>
+                          {t('pages.dashboard.startHere.step1')}
+                        </Link>{' '}
+                        {t('pages.dashboard.startHere.step1Note')}
+                      </Text>
+                      <Text size='sm'>
+                        2.{' '}
+                        <Link href='/games/new' className='underline'>
+                          {t('pages.dashboard.startHere.step2')}
+                        </Link>{' '}
+                        {t('pages.dashboard.startHere.step2Note')}
+                      </Text>
+                      <Text size='sm'>
+                        3.{' '}
+                        <Link href='/games' className='underline'>
+                          {t('pages.dashboard.startHere.step3')}
+                        </Link>{' '}
+                        {t('pages.dashboard.startHere.step3Note')}
+                      </Text>
+                    </Stack>
                   </Stack>
-                </Stack>
-              </Card>
-            )}
+                </Card>
+              )}
 
             {/* Your campaigns */}
             <Stack direction='row' justify='between' align='center'>
@@ -197,8 +203,15 @@ export function Dashboard() {
                 </Button>
               )}
             </Stack>
-            {loading ? (
+            {campaignsStatus.loading ? (
               <LoadingSpinner />
+            ) : campaignsStatus.error ? (
+              <QueryError
+                testId='dashboard-campaigns-error'
+                title={t('components.asyncState.campaignsLoadFailed')}
+                message={campaignsStatus.error}
+                onRetry={campaignsStatus.retry}
+              />
             ) : campaigns.length === 0 ? (
               <Card variant='outline'>
                 <Stack direction='column' gap='sm' align='start'>
@@ -223,8 +236,15 @@ export function Dashboard() {
                 <Link href='/characters'>{t('pages.dashboard.manageCharacters')}</Link>
               </Button>
             </Stack>
-            {loading ? (
-              <LoadingSpinner />
+            {charactersStatus.loading ? (
+              <QueryLoading />
+            ) : charactersStatus.error ? (
+              <QueryError
+                testId='dashboard-characters-error'
+                title={t('components.asyncState.charactersLoadFailed')}
+                message={charactersStatus.error}
+                onRetry={charactersStatus.retry}
+              />
             ) : characters.length === 0 ? (
               <Card variant='outline'>
                 <Stack direction='column' gap='sm' align='start'>
@@ -244,12 +264,21 @@ export function Dashboard() {
             <Heading level='h2' variant='primary'>
               {t('pages.dashboard.recentActivity')}
             </Heading>
-            {loading ? (
-              <LoadingSpinner />
+            {activityStatus.loading ? (
+              <QueryLoading testId='dashboard-activity-loading' />
+            ) : activityStatus.error ? (
+              <QueryError
+                testId='dashboard-activity-error'
+                title={t('components.asyncState.activityLoadFailed')}
+                message={activityStatus.error}
+                onRetry={activityStatus.retry}
+              />
             ) : activity.length === 0 ? (
-              <Text variant='muted'>{t('pages.dashboard.noActivity')}</Text>
+              <Text variant='muted' data-testid='dashboard-activity-empty'>
+                {t('pages.dashboard.noActivity')}
+              </Text>
             ) : (
-              <Stack direction='column' gap='sm'>
+              <Stack direction='column' gap='sm' data-testid='dashboard-activity-list'>
                 {activity.map(activityRow)}
               </Stack>
             )}

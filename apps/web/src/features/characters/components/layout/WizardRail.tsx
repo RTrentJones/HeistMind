@@ -3,6 +3,7 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { STEP_STATUS_KEY, stepStatus } from './step-status';
 
 /**
  * Left vertical step rail for the `rail` layout (ported from
@@ -23,14 +24,16 @@ export function WizardRail() {
   return (
     <nav className='flex flex-col gap-1' aria-label={t('components.wizard.stepsLabel')}>
       {steps.map((s, i) => {
-        const current = i === stepIndex;
-        const complete = !current && isStepValid(i);
+        // F93 — same status model as the pill stepper: never green ahead of the current step.
+        const status = stepStatus(i, stepIndex, isStepValid(i));
+        const current = status === 'current';
+        const complete = status === 'complete';
         return (
           <button
             key={s.id}
             type='button'
             onClick={() => goToStep(i)}
-            aria-current={current}
+            aria-current={current ? 'step' : undefined}
             className='flex cursor-pointer items-center gap-3 text-left'
             style={{
               padding: '11px 12px',
@@ -83,6 +86,7 @@ export function WizardRail() {
               </span>
               <span style={{ fontSize: 14, fontWeight: 600 }}>{s.name}</span>
             </span>
+            <span className='sr-only'> ({t(STEP_STATUS_KEY[status])})</span>
           </button>
         );
       })}

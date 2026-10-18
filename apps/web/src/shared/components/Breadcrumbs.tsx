@@ -10,6 +10,22 @@ import { useTranslation } from '@/lib/i18n/hooks';
  * segments are relabelled to their kind ("Campaign", "Character") since names aren't resolved here.
  * Renders nothing on shallow routes (a single crumb adds no wayfinding over the page title).
  */
+/**
+ * The trail sits in the SAME column as the page below it (F93: it used a fixed max-w-4xl while
+ * most deep pages are 3xl, so crumbs started ~80px left of the content at desktop widths). The
+ * classes mirror each route's `<Container maxWidth=… padding='lg'>` (and the wizard's own 900px
+ * column, which has no Container).
+ */
+const COLUMN_3XL = 'max-w-3xl px-8 lg:px-12';
+const COLUMN_4XL = 'max-w-4xl px-8 lg:px-12';
+const COLUMN_WIZARD = 'max-w-[900px] px-[clamp(20px,4vw,32px)]';
+
+export function crumbColumn(pathname: string): string {
+  if (/^\/games\/[^/]+\/characters\/new$/.test(pathname)) return COLUMN_WIZARD;
+  if (/^\/games\/[^/]+$/.test(pathname) && pathname !== '/games/new') return COLUMN_4XL;
+  return COLUMN_3XL;
+}
+
 export function Breadcrumbs() {
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -43,7 +59,7 @@ export function Breadcrumbs() {
   return (
     <nav
       aria-label={t('navigation.breadcrumbLabel')}
-      className='mx-auto w-full max-w-4xl px-4 pt-4 sm:px-6 lg:px-8'
+      className={`mx-auto w-full pt-4 ${crumbColumn(pathname)}`}
     >
       <ol className='flex flex-wrap items-center gap-1.5 text-sm text-foreground-muted'>
         {crumbs.map((c, i) => {

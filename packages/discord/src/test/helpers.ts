@@ -37,9 +37,14 @@ export const CREW = {
   gameId: 'g1',
   name: 'The Silver Nails',
   tier: 1,
-  rep: 13,
+  rep: 12,
   heat: 8,
   wanted: 2,
+  hold: 'strong',
+  coin: 10,
+  vault: 8,
+  claims: [] as string[],
+  crewAbilities: [] as string[],
 };
 export const CLOCK = { id: 'cl1', gameId: 'g1', name: 'Alarm', filled: 3, segments: 4 };
 export const FACTION = { id: 'f1', gameId: 'g1', name: 'The Hive', status: 1 };
@@ -158,6 +163,7 @@ export function repos(
         ),
     },
     rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+    rulesets: { findById: vi.fn().mockResolvedValue(ok({ id: 'rs1', content: DEFAULT_RULESET })) },
     characterManagement: {
       updateCharacterWithValidation: vi
         .fn()

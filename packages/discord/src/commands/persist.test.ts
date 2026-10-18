@@ -6,9 +6,11 @@
 // RATED_ACTION at 2 and ATTRIBUTE as the resistance label.
 import type { APIApplicationCommandInteraction, APIEmbed } from 'discord-api-types/v10';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_RULESET } from '@heist-mind/shared';
 import { clearActorCache } from '../authz';
 import {
   ATTRIBUTE,
+  characterOn,
   characterOnDefaultRuleset,
   ctx,
   fail,
@@ -130,18 +132,65 @@ describe('/roll action — persisted (Phase 2)', () => {
   });
 });
 
+describe('/roll push — the trauma reply reports the APPLIED outcome', () => {
+  // The shipped ruleset with one crew ability that grants a stress box: max 9 → 10 for members.
+  const withCrewBox = structuredClone(DEFAULT_RULESET);
+  withCrewBox.crew = {
+    ...(withCrewBox.crew ?? { types: [] }),
+    abilities: [
+      ...(withCrewBox.crew?.abilities ?? []),
+      { id: 'hardy', name: 'Hardy', description: '', effects: { stressBoxes: 1 } },
+    ],
+  } as typeof withCrewBox.crew;
+
+  it('a push to 9 on a crew-lengthened track announces no trauma', async () => {
+    const r = repos(
+      {
+        crews: {
+          findByGame: vi.fn().mockResolvedValue(ok({ id: 'cr1', crewAbilities: ['hardy'] })),
+        },
+      },
+      characterOn(withCrewBox, { characterData: { stress: 7, skills: { [RATED_ACTION]: 2 } } })
+    );
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [6, 5, 4]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+        ])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({ characterData: expect.objectContaining({ stress: 9 }) })
+    );
+    expect(JSON.stringify(calls)).not.toMatch(/trauma/i);
+  });
+});
+
 describe('/resist — persisted (Phase 2)', () => {
-  it('linked + member + in-campaign → engine rollResistance marks the stress on the sheet', async () => {
+  // ATTRIBUTE's rating is DERIVED from the sheet: the fixture rates one of its actions (RATED_ACTION)
+  // so the rating is 1; rating a second of its actions makes it 2.
+  const secondAction = DEFAULT_RULESET.attributes[0]!.skills[1]!;
+  const ratedTwo = () =>
+    characterOnDefaultRuleset({
+      characterData: { skills: { [RATED_ACTION]: 2, [secondAction]: 1 } },
+    });
+
+  it('linked + member + in-campaign → rolls the SHEET rating (typed dice ignored) and marks stress', async () => {
     const r = repos();
     const calls = await run(
       await handleResist(
-        ctx(r, [4, 2]),
+        ctx(r, [4, 2, 6, 6, 6, 6, 6, 6, 6, 6]),
         guildCmd('resist', [
-          { name: 'dice', type: 4, value: 2 },
+          { name: 'dice', type: 4, value: 10 },
           { name: 'attribute', type: 3, value: ATTRIBUTE },
         ])
       )
     );
+    // Review #6: a rating-1 resist rolls 1 die, not the typed 10.
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',
       expect.objectContaining({
@@ -149,7 +198,8 @@ describe('/resist — persisted (Phase 2)', () => {
         characterId: 'c1',
         kind: 'resistance',
         label: ATTRIBUTE,
-        results: [4, 2],
+        dice: 1,
+        results: [4],
       })
     );
     expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
@@ -162,10 +212,108 @@ describe('/resist — persisted (Phase 2)', () => {
     expect(embed.footer?.text).toBe('Logged to The Docks Job');
   });
 
-  it('a critical phrases the 1-stress clear (already at 0 → sheet untouched)', async () => {
+  it('bonus: adds an ability’s resistance dice (Iron Will +1d) to the sheet rating', async () => {
     const r = repos();
     const calls = await run(
-      await handleResist(ctx(r, [6, 6]), guildCmd('resist', [{ name: 'dice', type: 4, value: 2 }]))
+      await handleResist(
+        ctx(r, [4, 2, 6, 6]),
+        guildCmd('resist', [
+          { name: 'attribute', type: 3, value: ATTRIBUTE },
+          { name: 'bonus', type: 4, value: 1 },
+        ])
+      )
+    );
+    // Rating 1 + bonus 1 = 2 dice; the highest (4) costs 2 stress.
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance', dice: 2, results: [4, 2] })
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({ characterData: expect.objectContaining({ stress: 2 }) })
+    );
+    const embed = firstEmbed(calls);
+    expect(embed.title).toContain('2d');
+    expect(embed.description).toContain('+1d from an ability');
+  });
+
+  it('bonus: also takes a penalty (Daredevil −1d) — never below a 0d pool', async () => {
+    const r = repos({}, ratedTwo());
+    const calls = await run(
+      await handleResist(
+        ctx(r, [5, 6, 6]),
+        guildCmd('resist', [
+          { name: 'attribute', type: 3, value: ATTRIBUTE },
+          { name: 'bonus', type: 4, value: -1 },
+        ])
+      )
+    );
+    // Rating 2 − 1 = 1 die.
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance', dice: 1, results: [5] })
+    );
+    expect(firstEmbed(calls).description).toContain('−1d from an ability');
+  });
+
+  it('a point-buy ruleset rolls the STORED attribute rating (nothing to derive from)', async () => {
+    // The shipped ruleset with action ratings switched off = the legacy point-buy shape: attributes
+    // are bought directly, so the sheet (and the bot) read them as stored.
+    const pointBuy = structuredClone(DEFAULT_RULESET);
+    delete pointBuy.characterCreation.actionRatings;
+    const attrId = DEFAULT_RULESET.attributes[0]!.id;
+    const r = repos({}, characterOn(pointBuy, { characterData: { attributes: { [attrId]: 3 } } }));
+    await run(
+      await handleResist(
+        ctx(r, [4, 2, 1, 6, 6]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    expect(r.rolls.create).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ kind: 'resistance', dice: 3, results: [4, 2, 1] })
+    );
+  });
+
+  it('persisting needs a ruleset attribute — refuses ephemerally, nothing logged', async () => {
+    const r = repos();
+    const calls = await run(
+      await handleResist(ctx(r, [4, 2]), guildCmd('resist', [{ name: 'dice', type: 4, value: 2 }]))
+    );
+    expect(r.rolls.create).not.toHaveBeenCalled();
+    expect(calls.map(c => c.method)).toEqual(['delete', 'ephemeral']);
+    expect(String(calls[1]?.payload)).toContain(ATTRIBUTE);
+  });
+
+  it('a resist cost that marks the last box → trauma reply pointing at the sheet', async () => {
+    const r = repos({}, characterOnDefaultRuleset({ characterData: { stress: 8 } }));
+    const calls = await run(
+      await handleResist(
+        ctx(r, [3]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
+      'c1',
+      'p1',
+      expect.objectContaining({
+        characterData: expect.objectContaining({ stress: 0, traumaPending: 1 }),
+      })
+    );
+    const payload = calls[0]?.payload as { content?: string };
+    expect(payload.content).toContain('trauma');
+    expect(payload.content).toContain('https://heistmind.example/characters/c1');
+    expect(r.rolls.create).toHaveBeenCalledWith('p1', expect.objectContaining({ kind: 'note' }));
+  });
+
+  it('a critical phrases the 1-stress clear (already at 0 → sheet untouched)', async () => {
+    const r = repos({}, ratedTwo());
+    const calls = await run(
+      await handleResist(
+        ctx(r, [6, 6]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
     );
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',

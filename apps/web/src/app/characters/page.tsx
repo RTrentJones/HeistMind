@@ -16,7 +16,8 @@ import {
 } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { SignInGate } from '@/features/auth/components/SignInGate';
-import { usePageTranslation } from '@/lib/i18n/hooks';
+import { usePageTranslation, useTranslation } from '@/lib/i18n/hooks';
+import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { CharacterCard } from '@/features/characters/components/CharacterCard';
 import { useCharactersByPlayer } from '@/features/characters/data/queries';
 import { useCloneCharacter } from '@/features/characters/data/mutations';
@@ -32,6 +33,7 @@ import { errorMessage } from '@/lib/query/result';
 export default function MyCharactersPage() {
   const { user, isAuthenticated } = useAuth();
   const { t } = usePageTranslation();
+  const { t: tAll } = useTranslation();
   const router = useRouter();
   const characters = useCharactersByPlayer(user?.id);
   const games = useGamesByPlayer(user?.id);
@@ -76,7 +78,7 @@ export default function MyCharactersPage() {
       character={ch}
       standaloneLabel={t('characters.standalone')}
       meta={t('characters.meta', {
-        playbook: ch.playbookType,
+        playbook: playbookLabel(ch.playbookType),
         campaign: ch.gameId ? (gameNames[ch.gameId] ?? '') : t('characters.standalone'),
       })}
       actions={
@@ -104,7 +106,7 @@ export default function MyCharactersPage() {
   return (
     <Container maxWidth='4xl' padding='lg'>
       <Stack direction='column' gap='lg'>
-        <Stack direction='row' justify='between' align='center'>
+        <Stack direction='row' justify='between' align='center' className='flex-wrap gap-2'>
           <Heading level='h1' variant='hero'>
             {t('characters.title')}
           </Heading>
@@ -117,12 +119,18 @@ export default function MyCharactersPage() {
           <ErrorDisplay
             title={t('characters.loadError')}
             message={cloneError ?? (characters.error as Error)?.message ?? ''}
+            {...(characters.isError
+              ? {
+                  onRetry: () => void characters.refetch(),
+                  retryText: tAll('components.asyncState.retry'),
+                }
+              : {})}
           />
         )}
 
         {characters.isLoading ? (
           <LoadingSpinner />
-        ) : !characters.data || characters.data.length === 0 ? (
+        ) : characters.isError ? null : !characters.data || characters.data.length === 0 ? (
           <Card variant='outline'>
             <Stack direction='column' gap='sm' align='start'>
               <Text variant='muted'>{t('characters.empty')}</Text>

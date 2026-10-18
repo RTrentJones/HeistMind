@@ -81,6 +81,11 @@ export interface CrewAbilityDefinition {
    * `{ veteran: 1 }`. Applied by `validateCharacter` when crew context is supplied.
    */
   effects?: AbilityEffects;
+  /**
+   * A definition kept only so sheets that already hold it still render its text (e.g. a built-in
+   * ability removed when the content was corrected against the SRD). Never offered for a new pick.
+   */
+  retired?: boolean;
 }
 
 export interface StressRules {
@@ -136,8 +141,25 @@ export interface AbilityEffects {
   actionMax?: number;
   /** Extra free action dots the member may place (BitD crew "Deadly": 1). Summed across abilities. */
   bonusActionDots?: number;
-  /** Grant N cross-playbook ("veteran") ability picks, opening tier-2 abilities outside the roster. */
+  /**
+   * Restrict where `bonusActionDots` may go (BitD Deadly: `['Hunt', 'Prowl', 'Skirmish']`). Omit to
+   * allow any action.
+   */
+  bonusActionDotsIn?: string[];
+  /**
+   * The bonus dot "supersedes the normal starting limit" (BitD Deadly taken at creation): it may lift
+   * an allowed action one past `maxAtCreation` (never past the absolute cap).
+   */
+  bonusDotsExceedCreationCap?: boolean;
+  /**
+   * Grant N veteran slots — each lets the character take ONE special ability from outside its
+   * playbook's roster (BitD: the playbook "Veteran" ability). Summed across abilities (+ crew).
+   */
   veteran?: number;
+  /** Extra stress boxes on the character's track (BitD Hound "Survivor": +1). Summed. */
+  stressBoxes?: number;
+  /** Crew ability: advancing Tier costs half the coin (BitD crew "Patron"). */
+  halfTierCost?: boolean;
 }
 
 export interface AbilityDefinition {
@@ -152,6 +174,11 @@ export interface AbilityDefinition {
   category?: string;
   /** Optional structured effects applied by the validator (see {@link AbilityEffects}). */
   effects?: AbilityEffects;
+  /**
+   * A definition kept only so sheets that already hold it still render its text (e.g. a built-in
+   * ability removed when the content was corrected against the SRD). Never offered for a new pick.
+   */
+  retired?: boolean;
 }
 
 export interface ContactDefinition {

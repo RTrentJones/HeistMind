@@ -11,7 +11,7 @@ import {
 
 const badgeVariants = cva(
   [
-    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+    'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
     'transition-all duration-200 ease-in-out',
     'focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-background-primary',
     'select-none',
@@ -149,6 +149,8 @@ export interface BadgeProps
   badgeRole?: 'status' | 'skill' | 'action' | 'inventory' | 'character';
   /** Accessible description for complex badges */
   accessibleDescription?: string;
+  /** Let long content wrap onto more lines instead of truncating with an ellipsis (F93). */
+  wrap?: boolean;
 }
 
 const Badge = React.memo(
@@ -166,6 +168,7 @@ const Badge = React.memo(
         onClick,
         badgeRole,
         accessibleDescription,
+        wrap = false,
         'aria-label': ariaLabel,
         'aria-describedby': ariaDescribedBy,
         role,
@@ -196,7 +199,11 @@ const Badge = React.memo(
       return (
         <MotionDiv
           ref={ref}
-          className={cn(badgeVariants({ variant, size, interactive: !!isClickable, className }))}
+          className={cn(
+            badgeVariants({ variant, size, interactive: !!isClickable }),
+            wrap && 'rounded-2xl text-left',
+            className
+          )}
           onClick={onClick}
           initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.8 }}
           animate={
@@ -230,7 +237,7 @@ const Badge = React.memo(
               {icon}
             </span>
           )}
-          <span className='truncate'>{children}</span>
+          <span className={wrap ? 'min-w-0 break-words' : 'truncate'}>{children}</span>
           {onRemove && (
             <button
               type='button'

@@ -4,7 +4,7 @@
 // deterministic and unit-testable.
 import { resistanceStress, type Result, type Roll } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { applyStress } from './characters';
+import { applyStress, type StressOutcome, type TraumaLogCopy } from './characters';
 
 export interface ActionRollInput {
   gameId: string;
@@ -30,16 +30,24 @@ export interface ActionRollInput {
    * their own 1 stress from their sheet (the async self-service the table already uses).
    */
   assist?: { characterId: string };
+  /** Feed copy when a push/assist cost marks someone's last stress box (→ trauma). */
+  traumaLog?: TraumaLogCopy;
 }
 
 const PUSH_STRESS_COST = 2;
 const ASSIST_STRESS_COST = 1;
 
+/** A persisted action roll plus what its push cost actually did to the roller's stress. */
+export type ActionRollOutcome = Roll & {
+  /** The applied push-stress change (null when not pushed / nothing written) — never a prediction. */
+  pushStress: StressOutcome | null;
+};
+
 /** Persist an action/fortune roll, then charge the push + assist stress costs taken with it. */
 export async function rollAction(
   repos: DatabaseRepositories,
   input: ActionRollInput
-): Promise<Result<Roll>> {
+): Promise<Result<ActionRollOutcome>> {
   const created = await repos.rolls.create(input.userId, {
     gameId: input.gameId,
     ...(input.characterId !== undefined ? { characterId: input.characterId } : {}),
@@ -52,20 +60,24 @@ export async function rollAction(
     ...(input.effect !== undefined ? { effect: input.effect } : {}),
     ...(input.note !== undefined ? { note: input.note } : {}),
   });
-  if (!created.success) return created;
+  if (!created.success) return created as Result<never>;
+  let pushStress: StressOutcome | null = null;
   if (input.pushed === true && input.characterId !== undefined) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
       userId: input.userId,
       stress: PUSH_STRESS_COST,
+      ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
     if (!stressed.success) return stressed as Result<never>;
+    pushStress = stressed.data;
   }
   if (input.assist !== undefined) {
     const assisted = await applyStress(repos, {
       characterId: input.assist.characterId,
       userId: input.userId,
       stress: ASSIST_STRESS_COST,
+      ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
     // NOT_OWNER = the assister is another player's character — the roll stands; they self-mark
     // (see the assist doc above). Anything else is a real failure.
@@ -73,7 +85,7 @@ export async function rollAction(
       return assisted as Result<never>;
     }
   }
-  return created;
+  return { success: true, data: { ...created.data, pushStress } };
 }
 
 export interface ResistanceRollInput {
@@ -84,17 +96,20 @@ export interface ResistanceRollInput {
   dice: number;
   results: number[];
   zeroDice: boolean;
+  /** Feed copy when the resistance cost marks the last stress box (→ trauma). */
+  traumaLog?: TraumaLogCopy;
 }
 
 /**
  * Persist a resistance roll and apply its stress delta (`6 − highest die`; a CRITICAL clears 1,
- * per RAW) to the resisting character. Returns the roll plus the delta actually applied
- * (−1 on a crit).
+ * per RAW) to the resisting character. Returns the roll, the delta (−1 on a crit), and whether the
+ * cost marked the last stress box (`trauma` — stress reset to 0, a condition owed; `mustRetire`
+ * when that fills the trauma track).
  */
 export async function rollResistance(
   repos: DatabaseRepositories,
   input: ResistanceRollInput
-): Promise<Result<{ roll: Roll; stress: number }>> {
+): Promise<Result<{ roll: Roll; stress: number; trauma: boolean; mustRetire: boolean }>> {
   const stress = resistanceStress(input.results, { zeroDice: input.zeroDice });
   const created = await repos.rolls.create(input.userId, {
     gameId: input.gameId,
@@ -106,13 +121,18 @@ export async function rollResistance(
     zeroDice: input.zeroDice,
   });
   if (!created.success) return created as Result<never>;
+  let trauma = false;
+  let mustRetire = false;
   if (input.characterId !== undefined && stress !== 0) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
       userId: input.userId,
       stress,
+      ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
     if (!stressed.success) return stressed as Result<never>;
+    trauma = stressed.data?.trauma ?? false;
+    mustRetire = stressed.data?.mustRetire ?? false;
   }
-  return { success: true, data: { roll: created.data, stress } };
+  return { success: true, data: { roll: created.data, stress, trauma, mustRetire } };
 }

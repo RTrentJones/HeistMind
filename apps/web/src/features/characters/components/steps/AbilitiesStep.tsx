@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { abilityChoiceLimit, isAbilityUnlocked, type AbilityDefinition } from '@heist-mind/core';
+import {
+  abilityChoiceLimit,
+  consumesVeteranSlot,
+  creationAbilityLimit,
+  isAbilityUnlocked,
+  type AbilityDefinition,
+} from '@heist-mind/core';
 import { Badge, Button, Card, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -29,24 +35,51 @@ export function AbilitiesStep() {
   }
 
   const selected = draft.specialAbilities;
+  // Roster picks fit the base limit; a held Veteran adds a slot for one cross-playbook pick.
   const limit = abilityChoiceLimit(content, draft.playbook);
+  const totalLimit = creationAbilityLimit(content, draft);
+  const rosterChosen = selected.filter(id => !consumesVeteranSlot(content, draft, id)).length;
 
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const rosterIds = new Set(playbook?.specialAbilities ?? []);
-  const roster = abilities.filter(a => rosterIds.has(a.id));
-  const others = abilities.filter(a => !rosterIds.has(a.id));
+  // Retired definitions only render on sheets that already hold them — never as a wizard option.
+  const offered = abilities.filter(a => !a.retired || selected.includes(a.id));
+  const roster = offered.filter(a => rosterIds.has(a.id));
+  const others = offered.filter(a => !rosterIds.has(a.id));
 
   const renderCard = (ab: AbilityDefinition) => {
     const isSelected = selected.includes(ab.id);
-    const unlocked = isAbilityUnlocked(content, draft, ab.id);
-    // A single-slot pick (limit 1) SWAPS on click, so other unlocked abilities stay selectable — only
-    // a true multi-select cap (limit > 1) disables the rest once full.
-    const atLimit = !isSelected && limit !== 1 && selected.length >= limit;
+    const crossPick = consumesVeteranSlot(content, draft, ab.id);
+    // A single-slot roster click SWAPS, so judge it against the selection the swap leaves (the
+    // current roster pick gone) — Veteran (second) can't replace the Veteran it requires.
+    const swapsIn = limit === 1 && !isSelected && !crossPick;
+    const candidate = swapsIn
+      ? {
+          ...draft,
+          specialAbilities: selected.filter(id => consumesVeteranSlot(content, draft, id)),
+        }
+      : draft;
+    const unlocked = isAbilityUnlocked(content, candidate, ab.id);
+    // A single-slot roster pick (limit 1) SWAPS on click, so other unlocked roster abilities stay
+    // selectable — only a true multi-select cap (limit > 1) disables the rest once full. A
+    // cross-playbook pick is gated by a free Veteran slot (`unlocked`), never swapped in.
+    const atLimit = !isSelected && !crossPick && limit !== 1 && rosterChosen >= limit;
     const disabled = !isSelected && (!unlocked || atLimit);
+    const prereqMissing =
+      !!ab.prerequisite &&
+      !selected.includes(ab.prerequisite) &&
+      content.specialAbilities.some(a => a.id === ab.prerequisite);
     const reason = !unlocked
-      ? ab.prerequisite
-        ? t('components.steps.abilities.requires', { prerequisite: ab.prerequisite })
-        : t('components.steps.abilities.notAvailable')
+      ? prereqMissing
+        ? t('components.steps.abilities.requires', {
+            prerequisite:
+              content.specialAbilities.find(a => a.id === ab.prerequisite)?.name ??
+              ab.prerequisite ??
+              '',
+          })
+        : crossPick
+          ? t('components.steps.abilities.needsVeteran')
+          : t('components.steps.abilities.notAvailable')
       : atLimit
         ? t('components.steps.abilities.limitReached', { limit })
         : null;
@@ -118,7 +151,7 @@ export function AbilitiesStep() {
   return (
     <div className='flex flex-col gap-3'>
       <Text variant='muted' size='sm'>
-        {t('components.steps.abilities.countChosen', { count: selected.length, limit })}
+        {t('components.steps.abilities.countChosen', { count: selected.length, limit: totalLimit })}
         {playbook
           ? t('components.steps.abilities.playbookAbilities', { playbook: playbook.name })
           : ''}

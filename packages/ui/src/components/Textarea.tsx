@@ -109,9 +109,9 @@ const Textarea = React.memo(
             disabled={disabled}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            initial={getInitialAnimation()}
+            initial={prefersReducedMotion ? false : { y: 10 }}
+            // No animated opacity: it would land inline and beat `disabled:opacity-50` (F93).
             animate={{
-              opacity: 1,
               y: 0,
               scale: isFocused && !prefersReducedMotion ? 1.01 : 1,
             }}

@@ -3,6 +3,7 @@
 import type { Clock as ClockType } from '@heist-mind/core';
 import { Button, Clock, Stack } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { ConfirmButton } from '@/shared/components/ConfirmButton';
 
 /**
  * One clock with its GM tick/remove controls — the single implementation of the −1/+1/remove row
@@ -29,7 +30,17 @@ export function ClockTile({
   const { t } = useTranslation();
   return (
     <Stack direction='column' gap='xs' align='center'>
-      <Clock segments={clock.segments} filled={clock.filled} label={clock.name} size={size} />
+      <Clock
+        segments={clock.segments}
+        filled={clock.filled}
+        label={clock.name}
+        size={size}
+        ariaLabel={t('components.a11yLabels.clockAria', {
+          name: clock.name,
+          filled: Math.max(0, Math.min(clock.filled, clock.segments)),
+          segments: clock.segments,
+        })}
+      />
       {isGm && (
         <Stack direction='row' gap='xs' align='center'>
           <Button
@@ -50,15 +61,21 @@ export function ClockTile({
           >
             +1
           </Button>
-          <Button
+          {/* Removing a clock is destructive and has no undo — two-click armed confirm. */}
+          <ConfirmButton
             variant='ghost'
-            size='sm'
             aria-label={t('components.clocksPanel.removeAria', { name: clock.name })}
+            confirmAriaLabel={t('components.confirmAction.removeClockAria', { name: clock.name })}
+            confirmLabel={
+              removeLabel.length <= 1
+                ? t('components.confirmAction.short')
+                : t('components.confirmAction.removeClock')
+            }
             disabled={busy}
-            onClick={() => onRemove(clock.id)}
+            onConfirm={() => onRemove(clock.id)}
           >
             {removeLabel}
-          </Button>
+          </ConfirmButton>
         </Stack>
       )}
     </Stack>

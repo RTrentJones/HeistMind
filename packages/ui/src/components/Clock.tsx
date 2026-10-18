@@ -10,6 +10,11 @@ export interface ClockProps {
   size?: number;
   /** Optional caption rendered under the ring (shown with the `filled/segments` count). */
   label?: string;
+  /**
+   * The ring's accessible name. Apps pass a LOCALIZED string (e.g. "Alarm: 2 of 6 segments
+   * filled"); the English default exists only for standalone/Storybook use.
+   */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -29,7 +34,14 @@ function wedgePath(cx: number, cy: number, r: number, start: number, end: number
  * A FitD progress clock: a ring divided into `segments` wedges, the first `filled` of which are
  * lit. Presentation only — ticking is driven by the surrounding panel. SVG, so it scales cleanly.
  */
-export const Clock: React.FC<ClockProps> = ({ segments, filled, size = 72, label, className }) => {
+export const Clock: React.FC<ClockProps> = ({
+  segments,
+  filled,
+  size = 72,
+  label,
+  ariaLabel,
+  className,
+}) => {
   const count = Math.max(1, Math.floor(segments));
   const lit = Math.max(0, Math.min(Math.floor(filled), count));
   const cx = size / 2;
@@ -44,7 +56,7 @@ export const Clock: React.FC<ClockProps> = ({ segments, filled, size = 72, label
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         role='img'
-        aria-label={`${label ? `${label}: ` : ''}${lit} of ${count} segments filled`}
+        aria-label={ariaLabel ?? `${label ? `${label}: ` : ''}${lit} of ${count} segments filled`}
       >
         {Array.from({ length: count }, (_, i) => (
           <path

@@ -27,7 +27,7 @@ export function Footer() {
           <Link
             key={link.href}
             href={link.href}
-            className='text-sm text-foreground-muted underline-offset-2 hover:underline'
+            className='inline-flex items-center text-sm text-foreground-muted underline-offset-2 hover:underline max-sm:min-h-11'
           >
             {t(link.key)}
           </Link>

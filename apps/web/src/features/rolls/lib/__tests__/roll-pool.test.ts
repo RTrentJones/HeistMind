@@ -7,15 +7,23 @@ describe('rollPool', () => {
     expect(rollPool({ mode: 'action', rating: 0 })).toEqual({ count: 2, zeroDice: true });
   });
 
-  it('action: push and devil’s bargain each add one die (they stack)', () => {
+  it('action: push OR devil’s bargain adds one die — never both (RAW)', () => {
     expect(rollPool({ mode: 'action', rating: 2, push: true })).toEqual({
       count: 3,
       zeroDice: false,
     });
-    expect(rollPool({ mode: 'action', rating: 2, push: true, bargain: true })).toEqual({
-      count: 4,
+    expect(rollPool({ mode: 'action', rating: 2, bargain: true })).toEqual({
+      count: 3,
       zeroDice: false,
     });
+    expect(rollPool({ mode: 'action', rating: 2, push: true, bargain: true })).toEqual({
+      count: 3,
+      zeroDice: false,
+    });
+    // An assist is a separate +1d: the RAW maximum is +2d.
+    expect(
+      rollPool({ mode: 'action', rating: 2, push: true, bargain: true, assist: true })
+    ).toEqual({ count: 4, zeroDice: false });
     // A pushed 0-rating action becomes a REAL 1-die pool (the extra die lifts the zero-dice rule).
     expect(rollPool({ mode: 'action', rating: 0, push: true })).toEqual({
       count: 1,
