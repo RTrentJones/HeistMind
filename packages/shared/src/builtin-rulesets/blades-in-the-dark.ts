@@ -137,6 +137,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['blade', 'armor', 'heavy-blade'],
       attributes: {},
       skills: { Skirmish: 2, Command: 1 },
+      xpTrigger: 'You addressed a challenge with violence or coercion.',
     },
     {
       id: 'hound',
@@ -159,6 +160,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['pistol', 'fine-rifle', 'spyglass'],
       attributes: {},
       skills: { Hunt: 2, Survey: 1 },
+      xpTrigger: 'You addressed a challenge with tracking or violence.',
     },
     {
       id: 'leech',
@@ -182,6 +184,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['tinkering-tools', 'alchemy-kit', 'documents'],
       attributes: {},
       skills: { Tinker: 2, Wreck: 1 },
+      xpTrigger: 'You addressed a challenge with technical skill or mayhem.',
     },
     {
       id: 'lurk',
@@ -205,6 +208,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['burglary-gear', 'climbing-gear', 'blade'],
       attributes: {},
       skills: { Prowl: 2, Finesse: 1 },
+      xpTrigger: 'You addressed a challenge with stealth or evasion.',
     },
     {
       id: 'slide',
@@ -228,6 +232,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['fine-clothes', 'disguise-kit', 'documents'],
       attributes: {},
       skills: { Consort: 2, Sway: 1 },
+      xpTrigger: 'You addressed a challenge with deception or influence.',
     },
     {
       id: 'spider',
@@ -251,6 +256,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['fine-clothes', 'documents', 'subterfuge-supplies'],
       attributes: {},
       skills: { Study: 2, Consort: 1 },
+      xpTrigger: 'You addressed a challenge with calculation or conspiracy.',
     },
     {
       id: 'whisper',
@@ -277,6 +283,7 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
       equipment: ['arcane-implements', 'spirit-mask', 'documents'],
       attributes: {},
       skills: { Attune: 2, Study: 1 },
+      xpTrigger: 'You addressed a challenge with knowledge or arcane power.',
     },
   ],
 
@@ -976,25 +983,33 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
   },
 
   advancement: {
+    // RAW (bladesinthedark.com/advancement): a desperate action roll marks 1 xp in the ATTRIBUTE
+    // of the action rolled (the engine marks it with the roll); at the end of the session each
+    // trigger that happened marks 1 xp (2 if it happened a lot) on any track — the playbook's own
+    // trigger (`playbooks[].xpTrigger`) plus the two common ones below.
     xpTriggers: [
       {
         id: 'desperate',
         name: 'Desperate Action',
-        description: 'Mark XP the first time you roll a desperate action in a session.',
+        description:
+          'Every time you make a desperate action roll, mark 1 xp in the attribute for the action ' +
+          'you rolled.',
         value: 1,
+        kind: 'desperate-roll',
       },
       {
         id: 'playbook',
-        name: 'Express Your Playbook',
-        description:
-          'Mark playbook XP when you express your beliefs, drives, heritage, or background.',
+        name: 'Beliefs, Drives, Heritage, Background',
+        description: 'You expressed your beliefs, drives, heritage, or background.',
         value: 1,
+        kind: 'end-of-session',
       },
       {
         id: 'struggle',
-        name: 'Struggle With Vice',
-        description: 'Mark XP when you struggle with trouble from your vice or traumas.',
+        name: 'Vice or Trauma',
+        description: 'You struggled with issues from your vice or traumas during the session.',
         value: 1,
+        kind: 'end-of-session',
       },
     ],
     advancementOptions: [
@@ -1047,18 +1062,115 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         order: 3,
         required: false,
       },
+      // Identity, one field per step (the schema's home for listed choices: a step's `options`).
+      // Heritage stays free text — BitD's heritages are setting content (excluded from the CC BY
+      // grant). Backgrounds are the book's seven categories; vice texts are the SRD's
+      // (bladesinthedark.com/character-creation, CC BY 3.0).
       {
-        id: 'identity',
-        name: 'Heritage, Background & Vice',
-        description: 'Where you come from, what you did before, and the vice that steadies you.',
+        id: 'heritage',
+        name: 'Heritage',
+        description: 'Where your family line is from — and a detail about your family life.',
         order: 4,
         required: false,
+      },
+      {
+        id: 'background',
+        name: 'Background',
+        description: 'What you did before you joined the crew. Add a specific detail.',
+        order: 5,
+        required: false,
+        options: [
+          {
+            id: 'academic',
+            name: 'Academic',
+            description: 'A professor, student, researcher, or other scholar.',
+          },
+          {
+            id: 'labor',
+            name: 'Labor',
+            description: 'A factory worker, dock hand, miner, hunter, sailor, or other tradesman.',
+          },
+          {
+            id: 'law',
+            name: 'Law',
+            description: 'A lawyer, constable, investigator, bounty hunter, or jailer.',
+          },
+          {
+            id: 'trade',
+            name: 'Trade',
+            description: 'A merchant, shopkeeper, artisan, or other business owner.',
+          },
+          {
+            id: 'military',
+            name: 'Military',
+            description: 'A soldier, marine, officer, mercenary, or deserter.',
+          },
+          {
+            id: 'noble',
+            name: 'Noble',
+            description: 'Born to wealth and title — fallen, disowned, or slumming it.',
+          },
+          {
+            id: 'underworld',
+            name: 'Underworld',
+            description: 'A street urchin, gang member, fence, smuggler, or career criminal.',
+          },
+        ],
+      },
+      {
+        id: 'vice',
+        name: 'Vice',
+        description:
+          'Choose your vice, then name its specifics and your vice purveyor (who and where).',
+        order: 6,
+        required: false,
+        options: [
+          {
+            id: 'faith',
+            name: 'Faith',
+            description: 'You’re dedicated to an unseen power, forgotten god, ancestor, etc.',
+          },
+          {
+            id: 'gambling',
+            name: 'Gambling',
+            description: 'You crave games of chance, betting on sporting events, etc.',
+          },
+          {
+            id: 'luxury',
+            name: 'Luxury',
+            description: 'Expensive or ostentatious displays of opulence.',
+          },
+          {
+            id: 'obligation',
+            name: 'Obligation',
+            description: 'You’re devoted to a family, a cause, an organization, a charity, etc.',
+          },
+          {
+            id: 'pleasure',
+            name: 'Pleasure',
+            description: 'Gratification from lovers, food, drink, drugs, art, theater, etc.',
+          },
+          {
+            id: 'stupor',
+            name: 'Stupor',
+            description:
+              'You seek oblivion in the abuse of drugs, drinking to excess, getting beaten to a ' +
+              'pulp in the fighting pits, etc.',
+          },
+          {
+            id: 'weird',
+            name: 'Weird',
+            description:
+              'You experiment with strange essences, consort with rogue spirits, observe bizarre ' +
+              'rituals or taboos, etc.',
+          },
+        ],
       },
       {
         id: 'review',
         name: 'Review',
         description: 'Look over the sheet and join the crew.',
-        order: 5,
+        order: 7,
         required: true,
       },
     ],
@@ -1229,24 +1341,46 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
           'people when you pass yourselves off as ordinary citizens.',
       },
       {
+        // On the Assassins, Bravos, Hawkers and Shadows sheets [book].
         id: 'crew-patron',
         name: 'Patron',
+        crewTypes: ['assassins', 'bravos', 'hawkers', 'shadows'],
         description: 'When you advance your Tier, it costs half the coin it normally would.',
         effects: { halfTierCost: true },
       },
+      // Veteran is on every crew sheet (three boxes, like the playbook Veteran) [book]: each take
+      // opens ONE special ability from another crew type's list. It never lets members take other
+      // playbooks' abilities — that is the playbook Veteran.
       {
         id: 'crew-veteran',
         name: 'Veteran',
-        description:
-          'Choose a special ability from another crew type. (This opens a CREW ability — it does ' +
-          'not let members take other playbooks’ abilities; that is the playbook Veteran.)',
+        description: 'Choose a special ability from another crew type.',
+        effects: { crewVeteran: 1 },
       },
       {
+        id: 'crew-veteran-2',
+        name: 'Veteran (second)',
+        prerequisite: 'crew-veteran',
+        description: 'Take Veteran again: choose another special ability from another crew type.',
+        effects: { crewVeteran: 1 },
+      },
+      {
+        id: 'crew-veteran-3',
+        name: 'Veteran (third)',
+        prerequisite: 'crew-veteran-2',
+        description: 'Take Veteran a third time: another special ability from another crew type.',
+        effects: { crewVeteran: 1 },
+      },
+      {
+        // An UPGRADE, not a special ability (bladesinthedark.com/crew → Mastery): "You may advance
+        // your PCs' action ratings to 4… This costs four upgrade boxes to unlock." — two crew
+        // advances spent on upgrade boxes.
         id: 'crew-mastery',
         name: 'Mastery',
         description:
-          'A crew upgrade (four upgrade boxes in the book): PCs may advance their action ratings ' +
-          'to 4 (instead of the usual cap of 3).',
+          'Your crew has access to master level training: PCs may advance their action ratings ' +
+          'to 4 (instead of the usual cap of 3). Costs four upgrade boxes to unlock.',
+        upgradeBoxes: 4,
         effects: { actionMax: 4 },
       },
       // Retired (non-SRD, shipped by earlier versions) — kept so a crew that holds one still shows it.

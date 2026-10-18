@@ -12,7 +12,7 @@ import type {
   Result,
 } from '@heist-mind/core';
 import type { DatabaseRepositories } from '@heist-mind/database';
-import { DEFAULT_RULESET } from '@heist-mind/shared';
+import { DEFAULT_RULESET, getBuiltinById } from '@heist-mind/shared';
 import {
   advanceCharacter,
   applyStress,
@@ -33,7 +33,7 @@ import {
 import { flashback, indulgeVice, viceDicePool } from './downtime';
 import { setFactionStatus } from './factions';
 import { saveLoadout } from './loadout';
-import { rollAction, rollResistance } from './rolls';
+import { markDesperateRollXp, rollAction, rollResistance } from './rolls';
 import { endScore, startScore } from './scores';
 
 const ok = <T>(data: T): Result<T> => ({ success: true, data });
@@ -54,6 +54,7 @@ const CHARACTER = {
     specialAbilities: [],
     stress: 6,
     trauma: [],
+    vice: 'Gambling',
     contacts: [],
     custom: {},
   },
@@ -589,6 +590,125 @@ describe('indulgeVice', () => {
     expect(out.success).toBe(true);
     expect(create).not.toHaveBeenCalled();
   });
+
+  it('refuses NO_VICE (no write, no log) until the character has a vice', async () => {
+    const update = vi.fn();
+    const create = vi.fn();
+    const noVice = {
+      ...CHARACTER,
+      characterData: { ...CHARACTER.characterData, vice: '  ' },
+    } as CharacterWithDetails;
+    const r = repos({
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(noVice)) },
+      characterManagement: { updateCharacterWithValidation: update },
+      rolls: { create },
+    });
+    const out = await indulgeVice(r, {
+      character: noVice,
+      userId: 'u1',
+      results: [4],
+      zeroDice: false,
+      logLabel: 'x',
+    });
+    expect(out.success ? null : out.error.code).toBe('NO_VICE');
+    expect(update).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('rollAction — desperate-roll XP (BitD: the rolled action’s attribute)', () => {
+  // Real BitD content (fixture provenance): Skirmish belongs to Prowess.
+  const BITD = getBuiltinById('blades-in-the-dark')?.content ?? DEFAULT_RULESET;
+  const bitdChar = (xp?: { playbook: number; attributes: Record<string, number> }) =>
+    ({
+      ...CHARACTER,
+      ruleset: { content: BITD },
+      characterData: { ...CHARACTER.characterData, ...(xp ? { xp } : {}) },
+    }) as unknown as CharacterWithDetails;
+  const roll = {
+    gameId: 'g1',
+    userId: 'u1',
+    characterId: 'c1',
+    kind: 'action' as const,
+    label: 'Skirmish',
+    action: 'Skirmish',
+    dice: 2,
+    results: [3, 2],
+    zeroDice: false,
+  };
+
+  it('a desperate action roll marks 1 xp in the action’s ATTRIBUTE track (not playbook)', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(bitdChar())) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await rollAction(r, { ...roll, position: 'desperate' });
+    expect(out.success && out.data.desperateXp).toEqual({ track: 'prowess', amount: 1, marks: 1 });
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({
+        xp: { playbook: 0, attributes: { prowess: 1 } },
+      }),
+    });
+  });
+
+  it('markDesperateRollXp marks the same attribute XP with no roll persisted (standalone, F96)', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn();
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(bitdChar())) },
+      characterManagement: { updateCharacterWithValidation: update },
+    });
+    const out = await markDesperateRollXp(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      action: 'Skirmish',
+    });
+    expect(out.success && out.data).toEqual({ track: 'prowess', amount: 1, marks: 1 });
+    expect(create).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ xp: { playbook: 0, attributes: { prowess: 1 } } }),
+    });
+  });
+
+  it('marks nothing on a risky roll, a full track, or someone else’s character', async () => {
+    const update = vi.fn().mockResolvedValue(ok({} as Character));
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const risky = await rollAction(
+      repos({
+        rolls: { create },
+        characters: { findWithDetails: vi.fn().mockResolvedValue(ok(bitdChar())) },
+        characterManagement: { updateCharacterWithValidation: update },
+      }),
+      { ...roll, position: 'risky' }
+    );
+    expect(risky.success && risky.data.desperateXp).toBeNull();
+    const full = await rollAction(
+      repos({
+        rolls: { create },
+        characters: {
+          findWithDetails: vi
+            .fn()
+            .mockResolvedValue(ok(bitdChar({ playbook: 0, attributes: { prowess: 6 } }))),
+        },
+        characterManagement: { updateCharacterWithValidation: update },
+      }),
+      { ...roll, position: 'desperate' }
+    );
+    expect(full.success && full.data.desperateXp).toBeNull();
+    const other = await rollAction(
+      repos({
+        rolls: { create },
+        characters: { findWithDetails: vi.fn().mockResolvedValue(ok(bitdChar())) },
+        characterManagement: { updateCharacterWithValidation: update },
+      }),
+      { ...roll, userId: 'someone-else', position: 'desperate' }
+    );
+    expect(other.success && other.data.desperateXp).toBeNull();
+    expect(update).not.toHaveBeenCalled();
+  });
 });
 
 describe('retireCharacter', () => {
@@ -852,31 +972,136 @@ describe('crew progression', () => {
     );
   });
 
-  it('takeCrewAdvance resets a FULL track to 0 and logs; refuses a non-full track', async () => {
+  // Real BitD content (F69 fixture provenance): a Shadows crew's own list + the crew Veteran.
+  const BITD = getBuiltinById('blades-in-the-dark')?.content ?? DEFAULT_RULESET;
+  const SHADOWS = {
+    ...CREW,
+    crewType: 'shadows',
+    crewAbilities: ['crew-second-story'],
+    resources: { 'crew-xp': 8 },
+  } as unknown as Crew;
+
+  it('takeCrewAdvance spends a FULL track on an own-list ability (one write: ability + reset) and logs', async () => {
     const update = vi.fn().mockResolvedValue(ok(CREW));
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
     const r = repos({ crews: { update }, rolls: { create } });
-    const full = { ...CREW, resources: { 'crew-xp': 8 } } as unknown as Crew;
-    const out = await takeCrewAdvance(r, { crew: full, userId: 'u1', logLabel: 'l', logNote: 'n' });
-    expect(out.success).toBe(true);
-    expect(update).toHaveBeenCalledWith('cr1', { resources: { 'crew-xp': 0 } });
-    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ kind: 'crew' }));
-
-    // The rule lives in the write path, not the button: a non-full track is refused, no write.
-    const guarded = repos({
-      crews: { update: vi.fn() },
-      rolls: { create: vi.fn() },
-    });
-    const refused = await takeCrewAdvance(guarded, {
-      crew: { ...CREW, resources: { 'crew-xp': 7 } } as unknown as Crew,
+    const logNote = vi.fn().mockReturnValue('took Pack Rats');
+    const out = await takeCrewAdvance(r, {
+      crew: SHADOWS,
+      content: BITD,
+      choice: { kind: 'ability', abilityId: 'crew-network' },
       userId: 'u1',
       logLabel: 'l',
-      logNote: 'n',
+      logNote,
     });
-    expect(refused.success).toBe(false);
-    expect(
-      (guarded as unknown as { crews: { update: ReturnType<typeof vi.fn> } }).crews.update
-    ).not.toHaveBeenCalled();
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', {
+      crewAbilities: ['crew-second-story', 'crew-network'],
+      resources: { 'crew-xp': 0 },
+    });
+    expect(logNote).toHaveBeenCalledWith(expect.objectContaining({ added: ['crew-network'] }));
+    expect(create).toHaveBeenCalledWith('u1', expect.objectContaining({ note: 'took Pack Rats' }));
+  });
+
+  it('takeCrewAdvance refuses (no write, no log) a non-full track, another type’s ability without a slot, and Mastery as an ability', async () => {
+    const update = vi.fn();
+    const create = vi.fn();
+    const r = repos({ crews: { update }, rolls: { create } });
+    const base = { userId: 'u1', logLabel: 'l', logNote: () => 'n', content: BITD };
+    const notFull = await takeCrewAdvance(r, {
+      ...base,
+      crew: { ...SHADOWS, resources: { 'crew-xp': 7 } } as Crew,
+      choice: { kind: 'ability', abilityId: 'crew-network' },
+    });
+    expect(notFull.success).toBe(false);
+    expect(notFull.success ? null : notFull.error.code).toBe('TRACK_NOT_FULL');
+    // Deadly is the Assassins'. All three crew Veteran takes are held and each slot is already
+    // spent on another Assassins ability — nothing can open a fourth.
+    const crossNoGate = await takeCrewAdvance(r, {
+      ...base,
+      crew: {
+        ...SHADOWS,
+        crewAbilities: [
+          'crew-second-story',
+          'crew-veteran',
+          'crew-death-veil',
+          'crew-veteran-2',
+          'crew-predators',
+          'crew-veteran-3',
+          'crew-no-traces',
+        ],
+      } as Crew,
+      choice: { kind: 'ability', abilityId: 'crew-deadly' },
+    });
+    expect(crossNoGate.success ? null : crossNoGate.error.code).toBe('ABILITY_LOCKED');
+    const mastery = await takeCrewAdvance(r, {
+      ...base,
+      crew: SHADOWS,
+      choice: { kind: 'ability', abilityId: 'crew-mastery' },
+    });
+    expect(mastery.success ? null : mastery.error.code).toBe('ABILITY_LOCKED');
+    expect(update).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('takeCrewAdvance takes Veteran WITH another type’s ability in one advance', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const r = repos({ crews: { update }, rolls: { create: vi.fn().mockResolvedValue(ok({})) } });
+    const out = await takeCrewAdvance(r, {
+      crew: SHADOWS,
+      content: BITD,
+      choice: { kind: 'ability', abilityId: 'crew-deadly' },
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: () => 'n',
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', {
+      crewAbilities: ['crew-second-story', 'crew-veteran', 'crew-deadly'],
+      resources: { 'crew-xp': 0 },
+    });
+  });
+
+  it('takeCrewAdvance marks two Mastery boxes per advance and grants it at four', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const r = repos({ crews: { update }, rolls: { create: vi.fn().mockResolvedValue(ok({})) } });
+    const base = { userId: 'u1', logLabel: 'l', logNote: () => 'n', content: BITD };
+    await takeCrewAdvance(r, {
+      ...base,
+      crew: SHADOWS,
+      choice: { kind: 'upgrades', upgradeId: 'crew-mastery' },
+    });
+    expect(update).toHaveBeenLastCalledWith('cr1', {
+      crewAbilities: ['crew-second-story'],
+      resources: { 'crew-xp': 0, 'crew-upgrade:crew-mastery': 2 },
+    });
+    await takeCrewAdvance(r, {
+      ...base,
+      crew: { ...SHADOWS, resources: { 'crew-xp': 8, 'crew-upgrade:crew-mastery': 2 } } as Crew,
+      choice: { kind: 'upgrades', upgradeId: 'crew-mastery' },
+    });
+    expect(update).toHaveBeenLastCalledWith('cr1', {
+      crewAbilities: ['crew-second-story', 'crew-mastery'],
+      resources: { 'crew-xp': 0 },
+    });
+  });
+
+  it('takeCrewAdvance gives a brand-new crew its starting ability free (track untouched)', async () => {
+    const update = vi.fn().mockResolvedValue(ok(CREW));
+    const r = repos({ crews: { update }, rolls: { create: vi.fn().mockResolvedValue(ok({})) } });
+    const out = await takeCrewAdvance(r, {
+      crew: { ...SHADOWS, crewAbilities: [], resources: {} } as Crew,
+      content: BITD,
+      choice: { kind: 'ability', abilityId: 'crew-second-story' },
+      userId: 'u1',
+      logLabel: 'l',
+      logNote: p => (p.startingPick ? 'starting' : 'advance'),
+    });
+    expect(out.success).toBe(true);
+    expect(update).toHaveBeenCalledWith('cr1', {
+      crewAbilities: ['crew-second-story'],
+      resources: {},
+    });
   });
 });
 

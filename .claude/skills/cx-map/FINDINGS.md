@@ -32,6 +32,93 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F97 — Round-3 rules: free crew-ability ticking, unspent creation dots, desperate XP on the wrong track, no vice/background choices
+
+- **severity:** S1 (crew abilities / creation dots broke "every action offered is legal") · S2
+  (XP triggers, vice) · S4 (raw prerequisite id) · **type:** FitD-accuracy — from the round-3
+  launch review (items 1–5). Verified against the SRD (bladesinthedark.com) and the code first;
+  book-only facts are marked **[book]**.
+- **what was wrong (verified):**
+  1. **Crew abilities weren't rules-checked.** `CrewAbilitiesList` rendered every ruleset crew
+     ability as a GM checkbox (no type filter, no advance spent); `crews.update({crewAbilities})`
+     wrote anything; `takeCrewAdvance` only reset the track ("pick a new crew ability below"); the
+     BitD builtin made Mastery a crew ability (one tick = rating 4) and the crew Veteran had no
+     effect. RAW: [crew → Choose a special ability] "Take a look at the special abilities for your
+     crew and choose one… You can get more special abilities in the future by earning xp";
+     [advancement → Crew Advancement] "When you fill your crew advancement tracker, clear the marks
+     and take a new special ability or mark two crew upgrade boxes"; [crew → Mastery] "This costs
+     four upgrade boxes to unlock"; crew-sheet Veteran takes another crew type's ability **[book]**.
+  2. **Wizard allowed unspent action dots.** `validateCharacter` (creation) only _warned_ when
+     spent < budget, and the wizard never shows warnings — so "3/7" could be created. RAW:
+     [character-creation] "Your playbook begins with three action dots already placed. You get to
+     add four more dots (so you'll have seven total)."
+  3. **F92 deferred XP triggers.** The BitD desperate trigger said "the first time you roll a
+     desperate action in a session" and its sheet button marked the PLAYBOOK track; nothing marked
+     XP after a desperate roll; no playbook-specific trigger existed. RAW: [advancement] "Every time
+     you make a desperate action roll, mark 1 xp in the attribute for the action you rolled";
+     end-of-session: "your playbook-specific xp trigger", "You expressed your beliefs, drives,
+     heritage, or background", "You struggled with issues from your vice or traumas" — 1 xp, 2 if
+     it happened a lot, "on any xp tracks you want". [character-playbook] "mark XP if you addressed
+     a challenge with: …".
+  4. **Vice/background were optional free text** (one combined BitD identity step) and Indulge vice
+     showed with no vice. RAW: [character-creation] the seven vices (Faith, Gambling, Luxury,
+     Obligation, Pleasure, Stupor, Weird) "with the specific details and the name and location of
+     your vice purveyor"; backgrounds Academic/Labor/Law/Trade/Military/Noble/Underworld **[book]**
+     (the SRD shows "Labor: Hunter, mutineer").
+  5. "Requires veteran-2" printed the raw prerequisite id (`AdvancementOptions.tsx` + the core
+     validator message).
+- **fix:**
+  1. **Core `rules/crew-abilities.ts`** (mirrors the character `isAbilityUnlocked` /
+     `veteranGatewayFor` / grandfathering pattern): own list = the crew type's abilities + shared
+     ones (+ new `crewTypes[]` for multi-sheet abilities like Patron); another type's ability needs
+     a crew Veteran slot (new `effects.crewVeteran`; Veteran + the pick land in ONE advance);
+     retired only when held; new `upgradeBoxes` marks a definition as an UPGRADE (Mastery: 4) bought
+     two boxes per advance (progress in `resources['crew-upgrade:<id>']`, no migration; at 4 the id
+     joins `crewAbilities` so `actionMax` applies as before). `planCrewAdvance` = the free starting
+     pick for a crew with no special ability, else a FULL track → ability OR two boxes (cleared in
+     the same write). `checkCrewProgression` is the **server-side gate** in
+     `SupabaseCrewRepository.update`: any write that adds an ability or a box must equal one planned
+     advance from the stored row; removals and held legacy abilities pass. Engine `takeCrewAdvance`
+     takes a `choice`. Web: `CrewAdvancePicker` (legal picks only) + read-only `CrewAbilitiesList`
+     (legacy flag, upgrade progress, GM remove). Bot: `/crew advance pick:` (required, GM-gated
+     autocomplete). BitD content: Patron on Assassins/Bravos/Hawkers/Shadows **[book]**, crew
+     Veteran ×3, Mastery an upgrade; Brackwater's Mastery is an upgrade too.
+  2. `ACTION_POINTS_UNSPENT` error in creation mode ("Assign all 7 action dots — N left to
+     place."), so the ratings step's Next, the review Create and the server-side create all refuse;
+     an optional Deadly dot still only warns.
+  3. `XPTrigger.kind: 'desperate-roll' | 'end-of-session'`, `PlaybookDefinition.xpTrigger`; core
+     `desperateRollXp` / `sessionXpTriggers`. Engine `rollAction` takes the `action` and marks the
+     desperate trigger in that action's attribute (validated write; skipped when the track is full
+     or the roller can't write the sheet) and returns `desperateXp`; web roll panel + `/roll` report
+     it. Experience card: playbook trigger first, a track select, +1/+2. BitD: all 7 playbook
+     triggers, SRD wording.
+  4. BitD steps split into heritage (free text — the book's heritages are setting content) →
+     background (7) → vice (7, SRD text), reusing the schema's existing home for listed choices
+     (`characterCreation.steps[].options`; core `identityOptions`/`matchIdentityOption`). New
+     `CharacterData.backgroundDetail` / `viceDetail` (JSONB). Creation refuses an unlisted pick
+     (`IDENTITY_UNKNOWN`; live = warning, legacy free text keeps working). Editor selects + detail
+     fields. Indulge vice is disabled with a reason until a vice is set (core `hasVice`; engine
+     `indulgeVice` refuses `NO_VICE`; `/vice indulge` refuses with a sheet link).
+  5. Core `abilityName`; the editor and validator print names ("Requires Veteran (second)").
+- **tests:** core `crew-abilities.test.ts` (11) + new character-rules cases (unspent dots, Deadly
+  dot optional, XP triggers, identity, prerequisite names; crew-abilities coverage gated
+  100/100/100/87); shared BitD content suite (crew lists, Mastery, triggers, vices/backgrounds,
+  7-dot creation) + upload validation (`kind`, `upgradeBoxes`, crew `prerequisite`); engine
+  (crew advance choice/refusals/Veteran gateway/Mastery boxes/starting pick, desperate XP,
+  NO_VICE); database crew-gate suite; discord (`/crew advance pick:` + autocomplete, desperate
+  `/roll`, `/vice` refusal); web (picker, abilities card, track, wizard store gates, IdentityStep,
+  sheet vice gate, XP card, roll panel, prerequisite names). e2e: gm-crew, gm-crew-grant (Mastery
+  via two advances), gm-action-ratings (blocked at 5/7), gm-resistance-downtime (vice gate),
+  discord Act 3.7 (signed `/crew advance pick:` + type-4 autocomplete); every Brackwater wizard
+  journey now places the 4 creation dots (`assignKnifeDots`).
+- **residue / not done:** the crew-advance **stash payout** ("each PC gets stash equal to the crew
+  Tier+2") and **crew creation upgrades** (two pre-selected + two chosen) are not modelled — other
+  upgrades are "record on the paper sheet"; legacy characters already saved with unspent dots
+  still can't spend them in the editor (new characters can't be created that way); the **Wicked
+  Ones** builtin keeps its own "first time in a session" desperate trigger (its RAW wasn't
+  re-verified here) and Brackwater keeps its own playbook-track desperate trigger (original
+  content — neither sets `kind`, so neither auto-marks).
+- **status:** fixed (branch `feat/rules-r3`)
 ### F96 — Round-3 launch review: no way to add a faction on BitD; standalone sheets can't roll; copy polish
 
 - **severity:** S1 (a BitD GM could never add a faction) · **type:** CX-flaw + FitD-gap — from the
@@ -511,10 +598,11 @@ raw_app_meta_data ON auth.users` (service-role `app_metadata` — admin `createU
      5/6/9/11/13 + labels: as described in F9/F19 corrections, `/resist` sheet rating,
      `bonusActionDotsIn`/`bonusDotsExceedCreationCap`, `advancementCost` → ruleset-only and
      `NO_ADVANCEMENT_OPTION`, upload validation rejects negative costs, `FACTION_STATUS_LABELS`.
-- **deferred (open):** desperate-roll XP track + playbook XP triggers (review #7); healing clock /
-  recovery step-down (#10); heavy/special armor as items + "push via special armor" (#12 — the
-  ability texts now say special armor, the mechanic is GM-adjudicated); crew upgrades / Mastery as
-  an upgrade / Tier+2 stash payout (#13 crew side); starting crew coin 2 (#15); coin/stash limits
+- **deferred (open):** ~~desperate-roll XP track + playbook XP triggers (review #7)~~ — **closed
+  by F97**; healing clock / recovery step-down (#10); heavy/special armor as items + "push via
+  special armor" (#12 — the ability texts now say special armor, the mechanic is GM-adjudicated);
+  crew upgrades / ~~Mastery as an upgrade~~ (**closed by F97** — four upgrade boxes, two per
+  advance) / Tier+2 stash payout (#13 crew side — still open); starting crew coin 2 (#15); coin/stash limits
   (#16); crew-aware Deadly in the creation WIZARD (the validator/repository honour it; the wizard
   has no crew context — F54 residue); a bot-side trauma picker (players pick on the web sheet);
   automatic reduce-heat downtime roll.

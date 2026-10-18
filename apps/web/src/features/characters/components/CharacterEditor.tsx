@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   deriveAttributes,
   effectiveStressMax,
+  identityOptions,
+  matchIdentityOption,
   usesActionRatings,
   usesXpTracks,
   xpTrackSize,
@@ -13,6 +15,7 @@ import {
   type CharacterData,
   type CharacterWithDetails,
   type CrewContext,
+  type IdentityField,
 } from '@heist-mind/core';
 import {
   Alert,
@@ -21,6 +24,7 @@ import {
   Card,
   Heading,
   Input,
+  Select,
   Stack,
   StressTracker,
   Text,
@@ -132,6 +136,34 @@ export function CharacterEditor({
   const playbook = content.playbooks.find(p => p.id === draft.playbook);
   const playbookContacts = playbook?.contacts ?? [];
 
+  // An identity field: a SELECT of the ruleset's listed choices (BitD vices/backgrounds) — keeping a
+  // legacy free-text value selectable so an older sheet isn't silently cleared — else free text.
+  const identityField = (field: IdentityField, label: string) => {
+    const options = identityOptions(content, field);
+    const value = draft[field] ?? '';
+    if (options.length === 0)
+      return (
+        <Input label={label} value={value} onChange={e => patch({ [field]: e.target.value })} />
+      );
+    const legacy = value && !matchIdentityOption(content, field, value) ? value : null;
+    return (
+      <Select
+        label={label}
+        value={matchIdentityOption(content, field, value)?.name ?? value}
+        onChange={e => patch({ [field]: e.target.value })}
+      >
+        <option value=''>{t('components.characterEditor.identityNone')}</option>
+        {options.map(o => (
+          <option key={o.id} value={o.name}>
+            {o.name}
+            {o.description ? ` — ${o.description}` : ''}
+          </option>
+        ))}
+        {legacy && <option value={legacy}>{legacy}</option>}
+      </Select>
+    );
+  };
+
   const tab = (id: Section, label: string) => (
     <Button variant={section === id ? 'ember' : 'outline'} size='sm' onClick={() => setSection(id)}>
       {label}
@@ -158,20 +190,19 @@ export function CharacterEditor({
           <Stack direction='column' gap='md'>
             <Heading level='h3'>{t('components.characterEditor.identity')}</Heading>
             <Stack direction='column' gap='sm' className='max-w-md'>
+              {identityField('heritage', t('components.characterEditor.heritage'))}
+              {identityField('background', t('components.characterEditor.background'))}
               <Input
-                label={t('components.characterEditor.heritage')}
-                value={draft.heritage ?? ''}
-                onChange={e => patch({ heritage: e.target.value })}
+                label={t('components.characterEditor.backgroundDetail')}
+                value={draft.backgroundDetail ?? ''}
+                onChange={e => patch({ backgroundDetail: e.target.value })}
               />
+              {identityField('vice', t('components.characterEditor.vice'))}
               <Input
-                label={t('components.characterEditor.background')}
-                value={draft.background ?? ''}
-                onChange={e => patch({ background: e.target.value })}
-              />
-              <Input
-                label={t('components.characterEditor.vice')}
-                value={draft.vice ?? ''}
-                onChange={e => patch({ vice: e.target.value })}
+                label={t('components.characterEditor.viceDetail')}
+                value={draft.viceDetail ?? ''}
+                onChange={e => patch({ viceDetail: e.target.value })}
+                helpText={t('components.characterEditor.viceDetailHelp')}
               />
             </Stack>
 

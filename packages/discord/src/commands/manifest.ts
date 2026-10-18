@@ -494,7 +494,18 @@ export const COMMAND_MANIFEST: RESTPostAPIChatInputApplicationCommandsJSONBody[]
       {
         type: ApplicationCommandOptionType.Subcommand,
         name: 'advance',
-        description: 'Spend a FULL advancement track: reset it and take a new crew ability',
+        description:
+          'Starting crew ability, or spend a FULL track: new crew ability / 2 upgrade boxes',
+        options: [
+          {
+            type: ApplicationCommandOptionType.String,
+            name: 'pick',
+            description: 'A crew ability from your crew type’s list, or 2 upgrade boxes',
+            required: true,
+            autocomplete: true,
+            max_length: 100,
+          },
+        ],
       },
     ],
   },

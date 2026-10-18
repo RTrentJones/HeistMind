@@ -111,6 +111,9 @@ export const baseIgnores = {
     // Storybook config (main/preview/test-runner) is tooling outside the src tsconfig project —
     // the typed-lint project service can't parse it and it isn't product code.
     '**/.storybook/**',
+    // Same for the per-package vitest configs (excluded from each package tsconfig): the typed
+    // lint can't parse them, so a coverage-floor edit used to fail the pre-commit hook.
+    '**/vitest.config.ts',
     '**/*.tsbuildinfo',
     '**/supabase-types.ts',
   ],

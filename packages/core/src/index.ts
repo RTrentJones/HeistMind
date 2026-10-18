@@ -7,3 +7,4 @@ export * from './rules/dice';
 export * from './rules/clocks';
 export * from './rules/crews';
 export * from './rules/factions';
+export * from './rules/crew-abilities';

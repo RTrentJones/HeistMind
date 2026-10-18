@@ -8,6 +8,7 @@ import {
   usesActionRatings,
   rulesetActions,
   viceStressCleared,
+  hasVice,
   usesXpTracks,
   xpTrackSize,
   xpMarks,
@@ -556,7 +557,14 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 variant='outline'
                 size='sm'
                 loading={busy}
-                disabled={(character.characterData?.stress ?? 0) === 0}
+                // RAW: you indulge YOUR vice — unavailable until one is set (the reason shows below).
+                disabled={
+                  !hasVice(character.characterData ?? {}) ||
+                  (character.characterData?.stress ?? 0) === 0
+                }
+                aria-describedby={
+                  hasVice(character.characterData ?? {}) ? undefined : 'indulge-vice-reason'
+                }
                 onClick={() => {
                   if (!viceArmed) {
                     setViceArmed(true);
@@ -572,12 +580,25 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   : t('components.downtime.indulgeVice.action')}
               </Button>
             )}
-            {character.characterData?.vice && (
+            {hasVice(character.characterData ?? {}) ? (
               <Text variant='muted' size='sm'>
                 {t('components.downtime.indulgeVice.viceLabel', {
-                  vice: character.characterData.vice,
+                  vice: [character.characterData.vice, character.characterData.viceDetail]
+                    .filter(Boolean)
+                    .join(' — '),
                 })}
               </Text>
+            ) : (
+              canEdit && (
+                <Text
+                  id='indulge-vice-reason'
+                  variant='muted'
+                  size='sm'
+                  data-testid='indulge-vice-reason'
+                >
+                  {t('components.downtime.indulgeVice.noVice')}
+                </Text>
+              )
             )}
           </Stack>
           {viceNote && (
@@ -653,6 +674,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                   rating: character.characterData?.skills?.[name] ?? 0,
                 }))}
                 attributes={sheetContent.attributes.map(a => ({
+                  id: a.id,
                   name: a.name,
                   rating: attributes[a.id] ?? 0,
                 }))}
@@ -664,6 +686,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
                 gameId={character.gameId ?? null}
                 characterId={character.id}
                 attributes={sheetContent.attributes.map(a => ({
+                  id: a.id,
                   name: a.name,
                   rating: attributes[a.id] ?? 0,
                 }))}

@@ -3,6 +3,7 @@
 // for history). This drives create → retire → it drops to the retired section, and persists.
 
 import { isLocalStack } from '../support/env';
+import { assignKnifeDots } from '../support/characters';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName } from '../support/rulesets';
 
@@ -34,7 +35,9 @@ test.describe('GM: roster & retire (Brackwater)', () => {
     await gmPage.getByLabel('Character name').fill('Retiree');
     await gmPage.getByRole('button', { name: 'The Knife' }).click();
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
-    for (let i = 0; i < 7; i++) await next.click();
+    await next.click(); // → action ratings
+    await assignKnifeDots(gmPage);
+    for (let i = 0; i < 6; i++) await next.click();
     await gmPage.getByRole('button', { name: 'Create character' }).click();
     await gmPage.waitForURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
 

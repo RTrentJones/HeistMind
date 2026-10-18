@@ -340,7 +340,7 @@ test.describe('Discord interactions endpoint', () => {
     );
 
     // Act 3.7 (F86): crew advancement over the wire — /crew xp fills the 8-box track and
-    // /crew advance spends it; both persist AND land 'crew' feed events via the engine.
+    // /crew advance pick: spends it; both persist AND land 'crew' feed events via the engine.
     await dev.from('crews').delete().eq('game_id', game.data!.id);
     const crew = await dev
       .from('crews')
@@ -380,21 +380,70 @@ test.describe('Discord interactions endpoint', () => {
       })
       .toBe(true);
 
-    const crewAdvance = await request.post(
+    // Round-3 #1: /crew advance takes a `pick:` from a GM-gated AUTOCOMPLETE of legal choices
+    // only. A new crew (no ability yet) gets its free starting pick; Mastery is never an ability.
+    const crewAuto = await request.post(
       '/api/discord',
       signed({
-        type: 2,
+        type: 4,
         ...guildSurface,
-        data: { name: 'crew', type: 1, options: [{ name: 'advance', type: 1, options: [] }] },
+        data: {
+          name: 'crew',
+          type: 1,
+          options: [
+            {
+              name: 'advance',
+              type: 1,
+              options: [{ name: 'pick', type: 3, value: '', focused: true }],
+            },
+          ],
+        },
       })
     );
-    expect(crewAdvance.status()).toBe(200);
-    await expect
-      .poll(async () => {
-        const row = await dev.from('crews').select('resources').eq('id', crew.data!.id).single();
-        return (row.data?.resources as Record<string, number> | null)?.['crew-xp'] ?? null;
-      })
-      .toBe(0);
+    expect(crewAuto.status()).toBe(200);
+    const crewChoices = (
+      (await crewAuto.json()) as { data: { choices: { name: string; value: string }[] } }
+    ).data.choices.map(c => c.value);
+    expect(crewChoices).toContain('ability:crew-network');
+    expect(crewChoices).not.toContain('ability:crew-mastery');
+
+    const crewAdvance = (pick: string) =>
+      request.post(
+        '/api/discord',
+        signed({
+          type: 2,
+          ...guildSurface,
+          data: {
+            name: 'crew',
+            type: 1,
+            options: [
+              { name: 'advance', type: 1, options: [{ name: 'pick', type: 3, value: pick }] },
+            ],
+          },
+        })
+      );
+    const crewRow = async () => {
+      const row = await dev
+        .from('crews')
+        .select('resources, crew_abilities')
+        .eq('id', crew.data!.id)
+        .single();
+      return {
+        xp: (row.data?.resources as Record<string, number> | null)?.['crew-xp'] ?? null,
+        mastery:
+          (row.data?.resources as Record<string, number> | null)?.['crew-upgrade:crew-mastery'] ??
+          0,
+        abilities: (row.data?.crew_abilities as string[] | null) ?? [],
+      };
+    };
+    // The free starting pick: the ability lands, the full track is untouched.
+    expect((await crewAdvance('ability:crew-network')).status()).toBe(200);
+    await expect.poll(async () => (await crewRow()).abilities).toEqual(['crew-network']);
+    expect((await crewRow()).xp).toBe(8);
+    // The full track spent on two Mastery upgrade boxes: track → 0, Mastery 2/4.
+    expect((await crewAdvance('upgrade:crew-mastery')).status()).toBe(200);
+    await expect.poll(async () => (await crewRow()).xp).toBe(0);
+    expect((await crewRow()).mastery).toBe(2);
     await expect
       .poll(async () => {
         const rows = await dev
@@ -402,9 +451,14 @@ test.describe('Discord interactions endpoint', () => {
           .select('note, kind')
           .eq('game_id', game.data!.id)
           .eq('kind', 'crew');
-        return rows.data?.some(r => r.note === 'Crew advance taken — new crew ability unlocked');
+        return rows.data?.map(r => r.note);
       })
-      .toBe(true);
+      .toEqual(
+        expect.arrayContaining([
+          'Starting crew ability: The Network',
+          'Crew advance — marked 2 upgrade boxes on Mastery (2/4)',
+        ])
+      );
 
     // Act 3.8 (F92): /crew tier develops RAW — a full Rep tracker on STRONG hold pays new
     // Tier × 8 coin (Tier 1 → 8) for +1 Tier, Rep → 0, hold → weak; feed-logged.

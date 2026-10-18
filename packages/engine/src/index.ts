@@ -35,8 +35,13 @@ export type {
 } from './characters';
 export { saveCharacterBuild, sameJson, setStress } from './character-data';
 export type { SaveCharacterBuildInput, SetStressInput } from './character-data';
-export { rollAction, rollResistance } from './rolls';
-export type { ActionRollInput, ActionRollOutcome, ResistanceRollInput } from './rolls';
+export { markDesperateRollXp, rollAction, rollResistance } from './rolls';
+export type {
+  ActionRollInput,
+  ActionRollOutcome,
+  DesperateXpMark,
+  ResistanceRollInput,
+} from './rolls';
 export { flashback, indulgeVice, viceDicePool } from './downtime';
 export type { FlashbackInput, IndulgeViceInput, IndulgeViceOutcome } from './downtime';
 export { startScore, endScore } from './scores';
@@ -50,7 +55,12 @@ export {
   markCrewXp,
   takeCrewAdvance,
 } from './crews';
-export type { AdvanceCrewTierInput, ApplyCrewHeatInput, MarkCrewXpInput } from './crews';
+export type {
+  AdvanceCrewTierInput,
+  ApplyCrewHeatInput,
+  MarkCrewXpInput,
+  TakeCrewAdvanceInput,
+} from './crews';
 export { setFactionStatus } from './factions';
 export type { SetFactionStatusInput } from './factions';
 export { tickClock } from './clocks';

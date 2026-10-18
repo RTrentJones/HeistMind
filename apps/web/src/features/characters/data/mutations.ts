@@ -19,6 +19,7 @@ import {
   clearHarm,
   flashback,
   indulgeVice,
+  markDesperateRollXp,
   markXp,
   retireCharacter,
   saveCharacterBuild,
@@ -198,6 +199,21 @@ export function useApplyStress(characterId: string, gameId: string | null) {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: characterKeys.all });
       if (gameId !== null) await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });
+    },
+  });
+}
+
+/**
+ * A standalone sheet's desperate action roll still earns its RAW attribute XP (ENGINE
+ * markDesperateRollXp — the same rule `rollAction` applies to a logged campaign roll; F96/F97).
+ */
+export function useMarkDesperateRollXp(characterId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { userId: string; action: string }) =>
+      unwrap(await markDesperateRollXp(getRepositories(), { characterId, ...vars })),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: characterKeys.all });
     },
   });
 }

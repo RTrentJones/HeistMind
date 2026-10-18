@@ -20,12 +20,62 @@ type IdentityField = (typeof IDENTITY_FIELDS)[keyof typeof IDENTITY_FIELDS];
 export function IdentityStep({ step }: { step?: CreationStep }) {
   const field = step ? IDENTITY_FIELDS[step.id as keyof typeof IDENTITY_FIELDS] : undefined;
   const options = step?.options ?? [];
-  const body = field && options.length > 0 ? <FieldPicker field={field} options={options} /> : null;
+  // A single-field step: its listed choices as cards (+ the specifics for background/vice), or —
+  // with no list (BitD heritage) — just that field as free text. A combined step: all three.
+  const body = field ? (
+    options.length > 0 ? (
+      <Stack direction='column' gap='md' className='w-full'>
+        <FieldPicker field={field} options={options} />
+        {field !== 'heritage' && <DetailField field={field} />}
+      </Stack>
+    ) : (
+      <SingleFreeTextField field={field} />
+    )
+  ) : null;
   return (
     <Stack direction='column' gap='lg' align='start'>
       {body ?? <FreeTextIdentity />}
       {(field === 'vice' || !body) && <ContactsPicker />}
     </Stack>
+  );
+}
+
+/** The specifics that go with a listed pick: background detail, or the vice + its purveyor. */
+function DetailField({ field }: { field: 'background' | 'vice' }) {
+  const { t } = useTranslation();
+  const key = field === 'vice' ? 'viceDetail' : 'backgroundDetail';
+  const { value, setField } = useCharacterCreationStore(
+    useShallow(s => ({ value: s.draft[key] ?? '', setField: s.setIdentityField }))
+  );
+  return (
+    <div className='w-full max-w-lg'>
+      <Input
+        label={t(`components.steps.identity.${key}Label`)}
+        placeholder={t(`components.steps.identity.${key}Placeholder`)}
+        value={value}
+        onChange={e => setField(key, e.target.value)}
+        helpText={t(`components.steps.identity.${key}Help`)}
+      />
+    </div>
+  );
+}
+
+/** One identity field as free text (a single-field step whose ruleset lists no choices). */
+function SingleFreeTextField({ field }: { field: IdentityField }) {
+  const { t } = useTranslation();
+  const { value, setField } = useCharacterCreationStore(
+    useShallow(s => ({ value: s.draft[field] ?? '', setField: s.setIdentityField }))
+  );
+  return (
+    <div className='w-full max-w-lg'>
+      <Input
+        label={t(`components.steps.identity.${field}Label`)}
+        placeholder={t(`components.steps.identity.${field}Placeholder`)}
+        value={value}
+        onChange={e => setField(field, e.target.value)}
+        helpText={t(`components.steps.identity.${field}Help`)}
+      />
+    </div>
   );
 }
 

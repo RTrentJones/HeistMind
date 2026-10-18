@@ -131,7 +131,13 @@
         "contactsHelp": "Pick a close friend and a rival from your playbook's circle — part of who your scoundrel is.",
         "contactNone": "— none yet —",
         "friendLabel": "Close friend",
-        "rivalLabel": "Rival"
+        "rivalLabel": "Rival",
+        "backgroundDetailLabel": "Background details",
+        "backgroundDetailPlaceholder": "e.g. Labor: hunter, mutineer",
+        "backgroundDetailHelp": "Something specific about the life you led before the crew.",
+        "viceDetailLabel": "Vice details & purveyor",
+        "viceDetailPlaceholder": "e.g. Dice at the Silver Gull — Old Mags, by the north docks",
+        "viceDetailHelp": "What exactly you indulge in, and your vice purveyor's name and location."
       },
       "choice": {
         "empty": "Nothing to choose for this step.",
@@ -216,7 +222,12 @@
       "quickNav": "Sheet sections",
       "quickCondition": "Condition",
       "quickDice": "Dice",
-      "quickXp": "XP & gear"
+      "quickXp": "XP & gear",
+      "sessionTriggersHeading": "End of session",
+      "sessionTrackLabel": "Mark end-of-session XP on",
+      "sessionTriggersHelp": "Each trigger: 1 XP if it happened, 2 if it happened a lot — on any track you choose.",
+      "markTriggerAria": "Mark {{count}} XP on {{track}}: {{trigger}}",
+      "desperateAuto": "(Marked automatically when you make a desperate roll here.)"
     },
     "characterEditor": {
       "tabBuild": "Build",
@@ -290,7 +301,11 @@
       "pickAction": "{{name}} — pick an action to raise",
       "maxSuffix": " (max)",
       "incrementSuffix": " → +1",
-      "viaVeteran": "Takes Veteran"
+      "viaVeteran": "Takes Veteran",
+      "backgroundDetail": "Background details",
+      "viceDetail": "Vice details & purveyor",
+      "viceDetailHelp": "What you indulge in, and your purveyor's name and location.",
+      "identityNone": "— not chosen —"
     },
     "rollPanel": {
       "rollFailed": "Roll failed.",
@@ -364,7 +379,8 @@
       "harmLesserHint": "Lesser harm — expect reduced effect.",
       "harmSevereHint": "Severe harm — you can't act without help or pushing yourself.",
       "localNote": "Rolls here aren't saved anywhere — this character isn't in a campaign, so there's no campaign log. The stress a roll costs (pushing, resisting) is marked on this sheet.",
-      "localHistory": "This session's rolls"
+      "localHistory": "This session's rolls",
+      "desperateXpNote": "Desperate roll — marked 1 XP in {{attribute}} ({{marks}} on the track)."
     },
     "rollLog": {
       "empty": "No rolls yet.",
@@ -495,13 +511,11 @@
       "incarcerate": "Incarcerated (−1 Wanted, clear Heat)",
       "advancementXp": "Advancement",
       "xpReady": "Full — ready to advance",
-      "takeCrewAdvance": "Take advance (reset XP)",
+      "takeCrewAdvance": "Take advance",
       "markCrewXpAria": "Mark {{count}} crew XP",
       "unmarkCrewXpAria": "Unmark — back to {{count}} crew XP",
       "logCrewXpNote": "Crew XP {{xp}}/{{total}}",
-      "logCrewAdvanceNote": "Crew advance taken — new crew ability unlocked",
-      "advanceTakenNotice": "Advance taken — pick a new crew ability below.",
-      "advanceReadyHint": "Track full — take the advance, then pick a new crew ability below.",
+      "advanceReadyHint": "Track full — choose the advance below: a new special ability or two upgrade boxes.",
       "crewXpHint": "Mark XP when you pull off a smart operation, contend with a greater foe, bolster your reputation, or express the crew's nature.",
       "holdLabel": "Hold: {{value}}",
       "holdStrong": "strong",
@@ -527,7 +541,29 @@
       "logHeatNote": "Heat marked — heat {{heat}}, wanted {{wanted}}",
       "logTierNote": "Advanced to Tier {{tier}} — paid {{cost}} coin; Rep reset, hold now weak",
       "logHoldNote": "Full Rep spent — hold strengthened (weak → strong)",
-      "logIncarcerateNote": "Incarceration — heat cleared, wanted {{wanted}}"
+      "logIncarcerateNote": "Incarceration — heat cleared, wanted {{wanted}}",
+      "takeStartingAbility": "Take starting ability",
+      "pickerStartingTitle": "Choose the crew's starting special ability",
+      "pickerStartingHelp": "A new crew takes one special ability from its own crew type's list. Taking Veteran opens one ability from another crew type instead.",
+      "pickerAdvanceTitle": "Crew advance: a new special ability or two upgrade boxes",
+      "pickerAdvanceHelp": "Spending the advance clears the XP track. Abilities come from your crew type's list; Veteran opens one from another crew type.",
+      "viaVeteran": "via Veteran",
+      "markUpgradeBoxes": "Mark 2 upgrade boxes: {{name}} ({{boxes}}/{{size}})",
+      "markOtherUpgrades": "Mark 2 boxes on other upgrades",
+      "markOtherUpgradesHelp": "Lair, training, cohorts and the rest — record them on your crew sheet.",
+      "upgradeProgress": "{{name}} {{boxes}}/{{size}} upgrade boxes",
+      "startingPickHint": "Choose the crew's starting ability above.",
+      "startingPickHintPlayer": "The GM hasn't chosen the crew's starting ability yet.",
+      "earnNextAbilityHint": "New crew abilities come from a full advancement track (mark crew XP above).",
+      "legacyAbility": "Not on this crew's list",
+      "removeAbility": "Remove",
+      "removeAbilityConfirm": "Remove? Click again",
+      "removeAbilityAria": "Remove crew ability {{name}}",
+      "logStartingAbility": "Starting crew ability: {{names}}",
+      "logCrewAbility": "Crew advance — new special ability: {{names}}",
+      "logUpgradeBoxes": "Crew advance — marked 2 upgrade boxes on {{name}} ({{boxes}}/{{size}})",
+      "logUpgradeDone": "Crew advance — {{name}} unlocked (all upgrade boxes marked)",
+      "logOtherUpgrades": "Crew advance — two upgrade boxes marked (recorded on the crew sheet)"
     },
     "factionsPanel": {
       "loading": "Loading factions…",
@@ -589,7 +625,8 @@
         "viceLabel": "Vice: {{vice}}",
         "logLabel": "Indulged vice — cleared {{count}} stress",
         "overindulged": "Overindulged — you cleared more stress than you had. The GM picks a consequence: attract trouble, brag (+2 heat), go lost for a while, or get cut off by your purveyor.",
-        "failed": "Couldn't clear stress"
+        "failed": "Couldn't clear stress",
+        "noVice": "Set a vice (Edit build → Identity) to indulge it — you visit YOUR vice's purveyor."
       }
     },
     "builtinRuleset": {
@@ -1040,7 +1077,7 @@
         "log": "Record a settled result in the campaign log — attributed to you, tagged to the active score",
         "score": "Operation lifecycle — log entries are tagged to the score",
         "crewHeat": "Add/reduce heat (→ wanted cascade) · full Rep: hold weak→strong, or pay new Tier × 8 coin · Wanted −1 + Heat cleared",
-        "crewXp": "Mark crew advancement XP · spend a full track on a new crew ability",
+        "crewXp": "Mark crew advancement XP · take the starting crew ability, or spend a full track on a new crew ability from your crew type’s list or 2 upgrade boxes (pick: from the suggestions)",
         "clock": "Advance or wind back a clock; filling it announces the milestone",
         "faction": "Set a faction’s standing toward the crew (−3 war … +3 allies)"
       }

@@ -53,9 +53,18 @@ test.describe('GM: action ratings (Brackwater)', () => {
     await expect(gmPage.getByTestId('derived-cunning')).toHaveText('2');
     await expect(gmPage.getByText(/5 \/ 7 action dots/)).toBeVisible();
 
-    // Abilities → identity steps → review → create (under-spent dots are a warning, not a block).
-    // BitD = exactly ONE ability at creation; the playbook seeds Scarred, clicking Bulwark SWAPS to it.
+    // RAW (round-3 #2): every creation dot is placed before play — with 2 left, Next is blocked
+    // and the footer says why. Place the last two (Scout + Rig) and it opens.
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
+    await expect(next).toBeDisabled();
+    await expect(gmPage.getByText(/Assign all 7 action dots — 2 left to place\./)).toBeVisible();
+    await gmPage.getByRole('button', { name: 'Set Scout to 1' }).click();
+    await gmPage.getByRole('button', { name: 'Set Rig to 1' }).click();
+    await expect(gmPage.getByText(/7 \/ 7 action dots/)).toBeVisible();
+    await expect(gmPage.getByTestId('derived-cunning')).toHaveText('4');
+
+    // Abilities → identity steps → review → create.
+    // BitD = exactly ONE ability at creation; the playbook seeds Scarred, clicking Bulwark SWAPS to it.
     await next.click();
     await expect(gmPage.getByText(/of 1 chosen/i)).toBeVisible();
     await gmPage.getByRole('button', { name: /Bulwark/ }).click();

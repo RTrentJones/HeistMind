@@ -871,7 +871,10 @@ export const DEFAULT_RULESET: RulesetContent = {
         id: 'crew-mastery',
         name: 'Mastery',
         description:
-          'Crew members may advance an action rating to 4 (instead of the usual cap of 3).',
+          'A crew upgrade (four upgrade boxes): crew members may advance an action rating to 4 ' +
+          '(instead of the usual cap of 3).',
+        // FitD: Mastery is bought with upgrade boxes (two per crew advance), not taken as an ability.
+        upgradeBoxes: 4,
         effects: { actionMax: 4 },
       },
       {

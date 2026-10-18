@@ -4,6 +4,7 @@
 // All public: they're table-facing gameplay events, and in a DM "public" is just you.
 import {
   effectiveStressMax,
+  hasVice,
   HARM_LEVELS,
   isAbilityAdvanceable,
   veteranGatewayFor,
@@ -170,6 +171,10 @@ export const handleVice: CommandHandler = (ctx, interaction) => {
   return deferred(async followUp => {
     const character = await requireCharacter(ctx, interaction, followUp);
     if (!character || !ctx.repos) return;
+    // RAW: you indulge YOUR vice — refuse before rolling (nothing logged) until one is set.
+    if (!hasVice(character.characterData)) {
+      return failEphemeral(followUp, copy.viceNotSet(`${ctx.siteUrl}/characters/${character.id}`));
+    }
     const pool = viceDicePool(character);
     const results = ctx.realize(pool.count);
     const out = await indulgeVice(ctx.repos, {
@@ -179,7 +184,13 @@ export const handleVice: CommandHandler = (ctx, interaction) => {
       zeroDice: pool.zeroDice,
       logLabel: copy.viceLog,
     });
-    if (!out.success) return failEphemeral(followUp, copy.somethingBroke);
+    if (!out.success)
+      return failEphemeral(
+        followUp,
+        out.error.code === 'NO_VICE'
+          ? copy.viceNotSet(`${ctx.siteUrl}/characters/${character.id}`)
+          : copy.somethingBroke
+      );
     const max = effectiveStressMax(character.ruleset.content, character.characterData);
     const embed = rollEmbed({
       title: copy.viceTitle(character.name, pool.zeroDice ? 0 : pool.count),

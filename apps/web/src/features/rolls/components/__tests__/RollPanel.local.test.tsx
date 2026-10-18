@@ -12,12 +12,14 @@ import { RollPanel } from '../RollPanel';
 const actionRoll = { mutateAsync: vi.fn(), isPending: false };
 const resistanceRoll = { mutateAsync: vi.fn(), isPending: false };
 const applyStress = { mutateAsync: vi.fn().mockResolvedValue(null), isPending: false };
+const markDesperateXp = { mutateAsync: vi.fn().mockResolvedValue(null), isPending: false };
 vi.mock('@/features/rolls/data/mutations', () => ({
   useActionRoll: () => actionRoll,
   useResistanceRoll: () => resistanceRoll,
 }));
 vi.mock('@/features/characters/data/mutations', () => ({
   useApplyStress: () => applyStress,
+  useMarkDesperateRollXp: () => markDesperateXp,
 }));
 vi.mock('@/features/auth/stores/auth-store', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 
@@ -35,7 +37,7 @@ const renderLocal = () =>
           { name: 'Prowl', rating: 2 },
           { name: 'Hunt', rating: 0 },
         ]}
-        attributes={[{ name: 'Prowess', rating: 1 }]}
+        attributes={[{ id: 'prowess', name: 'Prowess', rating: 1 }]}
       />
     </TooltipProvider>
   );
@@ -44,6 +46,7 @@ beforeEach(() => {
   actionRoll.mutateAsync.mockReset();
   resistanceRoll.mutateAsync.mockReset();
   applyStress.mutateAsync.mockClear();
+  markDesperateXp.mutateAsync.mockReset().mockResolvedValue(null);
 });
 // Only Math.random is restored — restoreAllMocks would also undo the setup file's global mocks.
 afterAll(() => randomSpy.mockRestore());
@@ -60,6 +63,28 @@ describe('RollPanel — standalone (display-only) rolls', () => {
     expect(screen.getByTestId('roll-result')).toHaveTextContent('[6, 6]');
     expect(actionRoll.mutateAsync).not.toHaveBeenCalled();
     expect(applyStress.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('a desperate action roll still marks its attribute XP (RAW) and says so', async () => {
+    fixDice(2);
+    markDesperateXp.mutateAsync.mockResolvedValue({ track: 'prowess', amount: 1, marks: 1 });
+    const user = userEvent.setup();
+    renderLocal();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Position' }), 'desperate');
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toBeInTheDocument();
+    expect(markDesperateXp.mutateAsync).toHaveBeenCalledWith({ userId: 'u1', action: 'Prowl' });
+    expect(await screen.findByText(/marked 1 XP in Prowess/i)).toBeInTheDocument();
+    expect(actionRoll.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('a risky roll marks no desperate XP', async () => {
+    fixDice(2);
+    const user = userEvent.setup();
+    renderLocal();
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toBeInTheDocument();
+    expect(markDesperateXp.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('pushing charges 2 stress to the sheet (no log write)', async () => {

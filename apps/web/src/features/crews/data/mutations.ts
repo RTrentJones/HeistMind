@@ -12,6 +12,7 @@ import {
   markCrewXp,
   takeCrewAdvance,
   type AdvanceCrewTierInput,
+  type TakeCrewAdvanceInput,
 } from '@heist-mind/engine';
 import { rollKeys } from '@/features/rolls/data/queries';
 import { getRepositories } from '@/lib/auth';
@@ -112,11 +113,17 @@ export function useMarkCrewXp(gameId: string) {
   });
 }
 
-/** Spend a FULL crew advancement track via the ENGINE (reset + feed event; refuses a non-full track). */
+/**
+ * Take a crew advance via the ENGINE (RAW: the free starting pick, or a FULL track spent on a new
+ * special ability / two upgrade boxes — ability + track reset in one write) + feed event. Refusals
+ * (track not full, an off-list ability) surface as errors; the repository re-checks server-side.
+ */
 export function useTakeCrewAdvance(gameId: string) {
   const invalidate = useCrewFeedInvalidation(gameId);
+  const fresh = useFreshCrew(gameId);
   return useMutation({
-    mutationFn: async (vars: CrewOpVars) => unwrap(await takeCrewAdvance(getRepositories(), vars)),
+    mutationFn: async (vars: TakeCrewAdvanceInput) =>
+      unwrap(await takeCrewAdvance(getRepositories(), { ...vars, crew: fresh(vars.crew) })),
     onSuccess: invalidate,
   });
 }

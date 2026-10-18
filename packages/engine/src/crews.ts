@@ -5,11 +5,13 @@
 import {
   applyHeat,
   advanceTier,
-  crewAdvanceReady,
   crewHalvesTierCost,
   incarcerate,
+  planCrewAdvance,
   withCrewXp,
   type Crew,
+  type CrewAdvanceChoice,
+  type CrewAdvancePlan,
   type Result,
   type RulesetContent,
 } from '@heist-mind/core';
@@ -28,7 +30,10 @@ async function updateAndLog(
   repos: DatabaseRepositories,
   input: CrewLogInput,
   patch: Partial<
-    Pick<Crew, 'heat' | 'wanted' | 'tier' | 'rep' | 'hold' | 'coin' | 'vault' | 'resources'>
+    Pick<
+      Crew,
+      'heat' | 'wanted' | 'tier' | 'rep' | 'hold' | 'coin' | 'vault' | 'resources' | 'crewAbilities'
+    >
   >
 ): Promise<Result<Crew>> {
   const updated = await repos.crews.update(input.crew.id, patch);
@@ -129,20 +134,37 @@ export function markCrewXp(
   return updateAndLog(repos, input, { resources: withCrewXp(input.crew.resources, input.xp) });
 }
 
+export interface TakeCrewAdvanceInput extends Omit<CrewLogInput, 'logNote'> {
+  /** The campaign's ruleset content — the crew's ability list, upgrades and Veteran rules. */
+  content: Pick<RulesetContent, 'crew'> | null | undefined;
+  /** What the advance (or the free crew-creation pick) spends on. */
+  choice: CrewAdvanceChoice;
+  /** Log-note copy, told what happened (the engine never owns copy). */
+  logNote: (plan: Extract<CrewAdvancePlan, { ok: true }>) => string;
+}
+
 /**
- * Spend a FULL crew advancement track: reset it to 0 and log the advance (BitD: the crew takes a
- * new crew ability/upgrade). Refuses when the track isn't full — the write path enforces the rule,
- * not just the button's visibility.
+ * Take a crew advance RAW (core `planCrewAdvance`): the free crew-creation pick while the crew has
+ * no special ability yet; otherwise a FULL advancement track is cleared for a new special ability
+ * from the crew's own list (another type's only through a crew Veteran slot) or for two upgrade
+ * boxes (BitD Mastery unlocks at four). Refusals come back with the core code (`TRACK_NOT_FULL`,
+ * `ABILITY_LOCKED`, `ABILITY_HELD`, `UPGRADE_COMPLETE`…) and nothing is written or logged. The
+ * crew repository re-checks the transition server-side (`checkCrewProgression`).
  */
 export function takeCrewAdvance(
   repos: DatabaseRepositories,
-  input: CrewLogInput
+  input: TakeCrewAdvanceInput
 ): Promise<Result<Crew>> {
-  if (!crewAdvanceReady(input.crew.resources)) {
+  const plan = planCrewAdvance(input.content, input.crew, input.choice);
+  if (!plan.ok) {
     return Promise.resolve({
       success: false,
-      error: { message: 'Crew advancement track is not full' },
+      error: { message: `Crew can't advance: ${plan.code}`, code: plan.code },
     });
   }
-  return updateAndLog(repos, input, { resources: withCrewXp(input.crew.resources, 0) });
+  return updateAndLog(
+    repos,
+    { ...input, logNote: input.logNote(plan) },
+    { crewAbilities: plan.crewAbilities, resources: plan.resources }
+  );
 }

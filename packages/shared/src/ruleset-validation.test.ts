@@ -36,6 +36,27 @@ describe('validateRulesetContent', () => {
     expect(validateRulesetContent(opt(0)).ok).toBe(true);
   });
 
+  it('checks XP trigger kinds and crew upgrade boxes / prerequisites (round 3)', () => {
+    const withTrigger = (kind: unknown) => ({
+      ...validContent,
+      advancement: {
+        xpTriggers: [{ id: 'd', name: 'D', description: '', value: 1, kind }],
+        advancementOptions: [],
+      },
+    });
+    expect(validateRulesetContent(withTrigger('desperate-roll')).ok).toBe(true);
+    expect(validateRulesetContent(withTrigger('whenever')).ok).toBe(false);
+    const withCrew = (extra: Record<string, unknown>) => ({
+      ...validContent,
+      crew: { types: [], abilities: [{ id: 'm', name: 'M', description: '', ...extra }] },
+    });
+    expect(validateRulesetContent(withCrew({ upgradeBoxes: 4 })).ok).toBe(true);
+    expect(validateRulesetContent(withCrew({ upgradeBoxes: 0 })).ok).toBe(false);
+    expect(validateRulesetContent(withCrew({ upgradeBoxes: 1.5 })).ok).toBe(false);
+    expect(validateRulesetContent(withCrew({ prerequisite: 'm' })).ok).toBe(true);
+    expect(validateRulesetContent(withCrew({ prerequisite: 'ghost' })).ok).toBe(false);
+  });
+
   it('rejects a non-object', () => {
     const result = validateRulesetContent('nope');
     expect(result.ok).toBe(false);

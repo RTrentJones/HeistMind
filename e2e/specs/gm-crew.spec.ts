@@ -40,10 +40,17 @@ test.describe('GM: crew sheet', () => {
     await gmPage.getByRole('button', { name: 'Increase Heat' }).click();
     await expect(gmPage.getByTestId('crew-heat')).toHaveText('1');
 
-    // Take a crew ability (the checkbox is controlled by an async save → click, then await the
-    // persisted checked state) and stake a claim.
-    await gmPage.getByRole('checkbox', { name: /Deadly/ }).click();
-    await expect(gmPage.getByRole('checkbox', { name: /Deadly/ })).toBeChecked({ timeout: 10_000 });
+    // RAW (round-3 #1): a new crew takes ONE starting ability in the advance picker — abilities
+    // are never ticked freely. Take Deadly, then stake a claim.
+    const picker = gmPage.getByTestId('crew-advance-picker');
+    await expect(picker.getByText("Choose the crew's starting special ability")).toBeVisible();
+    await expect(gmPage.getByRole('checkbox', { name: /Deadly/ })).toHaveCount(0);
+    await picker.getByRole('radio', { name: /Deadly/ }).check();
+    await picker.getByRole('button', { name: 'Take starting ability' }).click();
+    const abilities = gmPage.getByTestId('crew-abilities');
+    await expect(abilities.getByText('Deadly', { exact: true })).toBeVisible({ timeout: 10_000 });
+    // The starting pick is spent — no free second pick until the XP track fills.
+    await expect(picker).toHaveCount(0);
     await gmPage.getByLabel('Add claim').selectOption('Lair');
     await gmPage.getByRole('button', { name: 'Add claim' }).click();
     // The claim renders as a removable badge (unambiguous vs. the stale <option> of the same text).
@@ -54,14 +61,16 @@ test.describe('GM: crew sheet', () => {
     // All of it persists (DB-backed shared state).
     await gmPage.goto(gameUrl);
     await expect(gmPage.getByTestId('crew-heat')).toHaveText('1', { timeout: 15_000 });
-    await expect(gmPage.getByRole('checkbox', { name: /Deadly/ })).toBeChecked();
+    await expect(
+      gmPage.getByTestId('crew-abilities').getByText('Deadly', { exact: true })
+    ).toBeVisible();
     await expect(gmPage.getByRole('button', { name: 'Remove claim Lair' })).toBeVisible();
   });
 
   // XP round — crew advancement: mark XP on the clickable track (same boxes as a character
-  // sheet), the full track offers "Take advance", and BOTH the mark and the advance land in the
-  // shared campaign log (engine use-cases). The advance points the GM at the ability list.
-  test('GM marks crew XP to full, takes the advance, and both reach the campaign log', async ({
+  // sheet); a full track is SPENT in the advance picker on a new ability (RAW, round-3 #1), which
+  // clears the track in the same write — and both the mark and the advance reach the campaign log.
+  test('GM marks crew XP to full, spends the advance on a new ability, and both reach the log', async ({
     gmPage,
   }) => {
     await gmPage.goto('/rulesets');
@@ -86,13 +95,19 @@ test.describe('GM: crew sheet', () => {
     // The mark is table state — it lands in the shared campaign log.
     await expect(gmPage.getByText('Crew XP 8/8').first()).toBeVisible({ timeout: 10_000 });
 
-    // Take the advance: the track resets, the notice points at the ability list, and the
-    // advance itself is logged.
-    await track.getByRole('button', { name: /take advance/i }).click();
+    // Take the starting ability first (free), then spend the full track on a second one.
+    const picker = gmPage.getByTestId('crew-advance-picker');
+    await picker.getByRole('radio', { name: /No Traces/ }).check();
+    await picker.getByRole('button', { name: 'Take starting ability' }).click();
+    await expect(gmPage.getByText('Starting crew ability: No Traces').first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(track.getByText('8/8')).toBeVisible(); // the free pick leaves the track alone
+    await picker.getByRole('radio', { name: /The Network/ }).check();
+    await picker.getByRole('button', { name: 'Take advance' }).click();
     await expect(track.getByText('0/8')).toBeVisible({ timeout: 10_000 });
-    await expect(gmPage.getByText('Advance taken — pick a new crew ability below.')).toBeVisible();
     await expect(
-      gmPage.getByText('Crew advance taken — new crew ability unlocked').first()
+      gmPage.getByText('Crew advance — new special ability: The Network').first()
     ).toBeVisible({ timeout: 10_000 });
   });
 });
