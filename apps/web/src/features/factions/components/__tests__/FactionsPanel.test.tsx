@@ -104,7 +104,7 @@ describe('FactionsPanel — GM free-text add (F95)', () => {
 
   it('offers the full SRD status scale with names, defaulting to Neutral', () => {
     renderPanel();
-    const status = screen.getByLabelText('Starting status');
+    const status = screen.getByLabelText<HTMLSelectElement>('Starting status');
     expect(status.value).toBe('0');
     expect([...status.options].map(o => o.textContent)).toEqual([
       '+3 Allies',
@@ -115,7 +115,7 @@ describe('FactionsPanel — GM free-text add (F95)', () => {
       '−2 Hostile',
       '−3 War',
     ]);
-    const tier = screen.getByLabelText('Tier');
+    const tier = screen.getByLabelText<HTMLSelectElement>('Tier');
     expect([...tier.options].map(o => o.value)).toEqual(['0', '1', '2', '3', '4', '5', '6']);
   });
 

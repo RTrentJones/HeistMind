@@ -362,7 +362,9 @@
       "harmModerateHint": "Moderate harm — this roll loses 1 die.",
       "harmWaivedHint": "Harm penalty waived — the GM ruled the wound doesn't hinder this action.",
       "harmLesserHint": "Lesser harm — expect reduced effect.",
-      "harmSevereHint": "Severe harm — you can't act without help or pushing yourself."
+      "harmSevereHint": "Severe harm — you can't act without help or pushing yourself.",
+      "localNote": "Rolls here aren't saved anywhere — this character isn't in a campaign, so there's no campaign log. The stress a roll costs (pushing, resisting) is marked on this sheet.",
+      "localHistory": "This session's rolls"
     },
     "rollLog": {
       "empty": "No rolls yet.",

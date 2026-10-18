@@ -55,7 +55,9 @@ vi.mock('@/features/auth/stores/auth-store', () => ({
 // Campaign-scoped panels and the editor are their own components with their own seams — out of
 // scope for the error-split behavior under test.
 vi.mock('@/features/rolls/components/RollPanel', () => ({
-  RollPanel: () => <div data-testid='roll-panel' />,
+  RollPanel: ({ gameId }: { gameId: string | null }) => (
+    <div data-testid='roll-panel' data-game={gameId ?? 'standalone'} />
+  ),
 }));
 vi.mock('@/features/rolls/components/RollLog', () => ({ RollLog: () => null }));
 vi.mock('../CharacterEditor', () => ({ CharacterEditor: () => null }));
@@ -214,6 +216,15 @@ describe('CharacterSheet writes + read-only gating', () => {
     expect(screen.queryByTestId('roll-panel')).not.toBeInTheDocument();
     // The stress pips render but are inert for a read-only viewer.
     expect(screen.getByRole('button', { name: 'Set stress to 4' })).toBeDisabled();
+  });
+
+  // F95 — a standalone sheet rolls too ("sheet anywhere"): display-only (gameId null → no log),
+  // and the campaign-only pieces (flashback → feed beat, the shared log) stay hidden.
+  it('a standalone sheet offers display-only dice to its owner, without the campaign extras', () => {
+    renderSheet();
+    expect(screen.getByTestId('roll-panel')).toHaveAttribute('data-game', 'standalone');
+    expect(screen.getByRole('heading', { name: 'Dice' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Flashback')).not.toBeInTheDocument();
   });
 
   it('offers Delete character to the owner only — never the GM or a viewer (F94)', () => {
