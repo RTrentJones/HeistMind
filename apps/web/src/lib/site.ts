@@ -23,14 +23,26 @@ const CANONICAL_ORIGIN = 'https://www.heistmind.com';
  * subdomain). Fallbacks: the canonical origin on production, the per-deployment Vercel URL on a
  * preview, localhost in local dev.
  */
-function resolveSiteUrl(): string {
-  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, '');
-  if (IS_PRODUCTION) return CANONICAL_ORIGIN;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return `http://localhost:${process.env.PORT ?? 3000}`;
+export function resolveSiteUrl(input: {
+  siteUrl?: string;
+  deployEnv: string;
+  vercelUrl?: string;
+  port?: string;
+}): string {
+  if (input.siteUrl) return input.siteUrl.replace(/\/+$/, '');
+  if (input.deployEnv === 'production') return CANONICAL_ORIGIN;
+  if (input.vercelUrl) return `https://${input.vercelUrl}`;
+  return `http://localhost:${input.port ?? 3000}`;
 }
 
-export const SITE_URL = resolveSiteUrl();
+// Literal `process.env.X` reads (not a passed-through `process.env` object) so Next can inline
+// them into the edge-middleware bundle.
+export const SITE_URL = resolveSiteUrl({
+  siteUrl: process.env.SITE_URL,
+  deployEnv: DEPLOY_ENV,
+  vercelUrl: process.env.VERCEL_URL,
+  port: process.env.PORT,
+});
 
 /**
  * Only the production deployment may be indexed. Beta, previews and local builds emit

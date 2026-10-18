@@ -19,6 +19,7 @@ import {
   type BotContext,
 } from '@heist-mind/discord';
 import { createServiceRepositories } from '@/lib/auth/service-repositories';
+import { SITE_URL } from '@/lib/site';
 
 // Node runtime (webcrypto Ed25519 + the service-role Supabase client).
 export const runtime = 'nodejs';
@@ -27,7 +28,9 @@ function buildContext(): BotContext {
   return {
     realize: realizeD6,
     deploySha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
-    siteUrl: process.env.SITE_URL ?? 'http://localhost:3000',
+    // The shared resolver (SITE_URL → the canonical origin on production → this deployment's
+    // VERCEL_URL on a preview), so a bot link is never localhost on a deployment (F101).
+    siteUrl: SITE_URL,
     repos: createServiceRepositories(),
     // F66 — enables the thread-under-a-category-link retry; null (retry skipped) without a token.
     fetchChannelParent: makeChannelParentFetcher(process.env.DISCORD_BOT_TOKEN),
