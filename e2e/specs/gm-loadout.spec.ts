@@ -5,6 +5,7 @@
 // starter (it ships equipment with per-item load and playbook contacts).
 
 import { isLocalStack } from '../support/env';
+import { assignKnifeDots } from '../support/characters';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName } from '../support/rulesets';
 
@@ -39,7 +40,8 @@ test.describe('GM: loadout, coin & contacts (Brackwater)', () => {
     await gmPage.getByRole('button', { name: 'The Knife' }).click();
 
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
-    await next.click(); // → action ratings (leave at the seeded spread)
+    await next.click(); // → action ratings
+    await assignKnifeDots(gmPage);
     await next.click(); // → special abilities
     // One ability at creation (BitD); swap the seeded Scarred for Bulwark.
     await gmPage.getByRole('button', { name: /Bulwark/ }).click();

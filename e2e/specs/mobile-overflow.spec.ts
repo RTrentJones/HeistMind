@@ -6,6 +6,7 @@
 
 import type { Page } from '@playwright/test';
 import { isLocalStack } from '../support/env';
+import { assignKnifeDots } from '../support/characters';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName } from '../support/rulesets';
 
@@ -100,7 +101,9 @@ test.describe('360px: no horizontal overflow on any page (mobile-overflow)', () 
     await gmPage.getByLabel('Character name').fill(uniqueName('Phone'));
     await gmPage.getByRole('button', { name: 'The Knife' }).click();
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
-    for (let i = 0; i < 7; i++) await next.click();
+    await next.click(); // → action ratings
+    await assignKnifeDots(gmPage);
+    for (let i = 0; i < 6; i++) await next.click();
     await gmPage.getByRole('button', { name: 'Create character' }).click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f]{8}-[0-9a-f-]+$/, { timeout: 15_000 });
     await gmPage.setViewportSize({ width: WIDTH, height: 740 });

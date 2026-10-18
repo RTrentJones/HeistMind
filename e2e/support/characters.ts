@@ -16,12 +16,25 @@ export async function addBrackwater(page: Page) {
   return { name: 'Brackwater', version: '1.0.0', optionLabel: 'Brackwater (v1.0.0)' };
 }
 
+/**
+ * On the wizard's action-ratings step, place The Knife's 4 creation dots (RAW: all seven dots —
+ * 3 pre-placed + 4 — are assigned before Create; round-3 #2). One dot in each Cunning action.
+ */
+export async function assignKnifeDots(page: Page) {
+  await expect(page.getByText('3 / 7 action dots')).toBeVisible({ timeout: 10_000 });
+  for (const action of ['Track', 'Examine', 'Scout', 'Rig'])
+    await page.getByRole('button', { name: `Set ${action} to 1` }).click();
+  await expect(page.getByText('7 / 7 action dots')).toBeVisible();
+}
+
 /** Build a Brackwater character through the wizard mounted on the page (standalone or in-campaign). */
 export async function buildBrackwaterCharacter(page: Page, name: string) {
   await page.getByLabel('Character name').fill(name);
   await page.getByRole('button', { name: 'The Knife' }).click();
   const next = page.getByRole('button', { name: 'Next', exact: true });
-  for (let i = 0; i < 7; i++) await next.click();
+  await next.click(); // → action ratings
+  await assignKnifeDots(page);
+  for (let i = 0; i < 6; i++) await next.click();
   await page.getByRole('button', { name: 'Create character' }).click();
 }
 

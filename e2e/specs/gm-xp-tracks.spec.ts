@@ -4,6 +4,7 @@
 // drives that loop end-to-end and asserts the gating (an advance is blocked until its track fills).
 
 import { isLocalStack } from '../support/env';
+import { assignKnifeDots } from '../support/characters';
 import { test, expect } from '../support/fixtures';
 import { createCampaign, uniqueName } from '../support/rulesets';
 
@@ -36,6 +37,7 @@ test.describe('GM: XP tracks + advancement (Brackwater)', () => {
     await gmPage.getByRole('button', { name: 'The Knife' }).click();
     const next = gmPage.getByRole('button', { name: 'Next', exact: true });
     await next.click(); // → action ratings
+    await assignKnifeDots(gmPage);
     await next.click(); // → special abilities
     // One ability at creation (BitD); swap the seeded Scarred for Bulwark.
     await gmPage.getByRole('button', { name: /Bulwark/ }).click();

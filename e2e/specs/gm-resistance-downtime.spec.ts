@@ -34,6 +34,21 @@ test.describe('GM: resistance + downtime', () => {
     await gmPage.getByRole('link', { name: 'View' }).first().click();
     await gmPage.waitForURL(/\/characters\/[0-9a-f-]+$/);
 
+    // --- Round-3 #4: no vice set → Indulge vice is disabled, with the reason. Set one in the
+    // editor (cinders lists no vices → free text) and the sheet names it. ---
+    await expect(
+      gmPage.getByRole('button', { name: 'Indulge vice (clear stress)' })
+    ).toBeDisabled();
+    await expect(gmPage.getByTestId('indulge-vice-reason')).toContainText('Set a vice');
+    await gmPage.getByRole('button', { name: 'Edit build' }).click();
+    await gmPage.getByLabel('Vice', { exact: true }).fill('Gambling at the docks');
+    await gmPage.getByRole('button', { name: 'Save build' }).click();
+    await expect(gmPage.getByText('Vice: Gambling at the docks')).toBeVisible({ timeout: 10_000 });
+    await expect(gmPage.getByTestId('indulge-vice-reason')).toHaveCount(0);
+    // Close the editor (its own stress tracker would duplicate the pips below).
+    await gmPage.reload();
+    await expect(gmPage.getByText('Vice: Gambling at the docks')).toBeVisible({ timeout: 15_000 });
+
     // --- Raise stress to a KNOWN 3/9 on the live Condition tracker. Every stress assertion
     // below anchors on this — no tracker read-backs (they raced the post-mutation refetch). ---
     await expect(gmPage.getByRole('heading', { name: 'Condition' })).toBeVisible();
