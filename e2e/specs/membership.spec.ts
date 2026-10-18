@@ -144,6 +144,17 @@ test.describe('membership controls', () => {
       await player.page.waitForURL(/\/games\/[0-9a-f-]+\/characters\/[0-9a-f-]+$/, {
         timeout: 15_000,
       });
+
+      // Returned again and THEN leaving: the already-standalone character still opens (its
+      // owner gets their own copy of the ruleset once they can no longer read the GM's).
+      await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
+      await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
+      await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
+      await player.page.goto(campaign.hubUrl);
+      await player.page.getByRole('button', { name: 'Leave campaign' }).click();
+      await player.page.getByRole('button', { name: 'Confirm: leave campaign' }).click();
+      await player.page.waitForURL(/\/games$/, { timeout: 15_000 });
+      await expectStandaloneAndOpens(player.page, charName);
     } finally {
       await player.dispose();
       await gm.dispose();

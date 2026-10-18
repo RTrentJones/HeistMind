@@ -147,6 +147,8 @@ BEGIN
         END LOOP;
         UPDATE characters SET game_id = NULL, name = v_name, updated_at = NOW() WHERE id = r.id;
       END LOOP;
+      PERFORM rehome_standalone_characters(
+        p_player_id, (SELECT ruleset_id FROM games WHERE id = p_game_id));
 
       IF p_note IS NOT NULL AND btrim(p_note) <> '' THEN
         INSERT INTO rolls (game_id, user_id, kind, label, dice, results, outcome, note)
@@ -206,6 +208,8 @@ BEGIN
         END LOOP;
         UPDATE characters SET game_id = NULL, name = v_name, updated_at = NOW() WHERE id = r.id;
       END LOOP;
+      PERFORM rehome_standalone_characters(
+        v_user, (SELECT ruleset_id FROM games WHERE id = p_game_id));
 
     END;
     $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -221,6 +225,7 @@ BEGIN
     RETURNS trigger AS $fnbody$
     DECLARE
       r      RECORD;
+      m      RECORD;
       v_name TEXT;
       n      INTEGER;
     BEGIN
@@ -233,6 +238,9 @@ BEGIN
           n := n + 1; v_name := r.name || ' (' || n || ')';
         END LOOP;
         UPDATE characters SET game_id = NULL, name = v_name, updated_at = NOW() WHERE id = r.id;
+      END LOOP;
+      FOR m IN SELECT player_id FROM game_players WHERE game_id = OLD.id LOOP
+        PERFORM rehome_standalone_characters(m.player_id, OLD.ruleset_id);
       END LOOP;
       RETURN OLD;
     END;
@@ -295,8 +303,11 @@ BEGIN
   --    which therefore still sees the original binding.
   -- ---------------------------------------------------------------------------------------
   EXECUTE $create$
-    CREATE OR REPLACE FUNCTION characters_keep_ruleset()
-    RETURNS trigger AS $fnbody$
+    CREATE OR REPLACE FUNCTION ruleset_copy_for(p_user UUID, p_ruleset UUID)
+    RETURNS UUID AS $fnbody$
+    -- NULL when p_user needs no copy of p_ruleset (theirs, public, missing, or still readable as an
+    -- active member of a campaign on it — the campaign mid-delete excluded); otherwise their copy,
+    -- reused when one already exists (tagged `compatibility_flags.copiedFrom`).
     DECLARE
       rs     rulesets%ROWTYPE;
       v_id   UUID;
@@ -304,40 +315,77 @@ BEGIN
       v_deleting TEXT;
       n      INTEGER;
     BEGIN
-      IF OLD.game_id IS NULL OR NEW.game_id IS NOT NULL OR NEW.original_ruleset_id IS NULL THEN
-        RETURN NEW;
+      SELECT * INTO rs FROM rulesets WHERE id = p_ruleset;
+      IF NOT FOUND OR rs.created_by = p_user OR COALESCE(rs.is_public, false) THEN
+        RETURN NULL;
       END IF;
-      SELECT * INTO rs FROM rulesets WHERE id = NEW.original_ruleset_id;
-      IF NOT FOUND OR rs.created_by = NEW.created_by OR COALESCE(rs.is_public, false) THEN
-        RETURN NEW;
-      END IF;
-      -- Still readable (an active member of a campaign on it — e.g. "Return to My Characters"
-      -- without leaving)? Keep the binding, so the character can reattach to that campaign.
       v_deleting := NULLIF(current_setting('heistmind.deleting_game', true), '');
       IF EXISTS (SELECT 1 FROM games g JOIN game_players gp ON gp.game_id = g.id
-                 WHERE g.ruleset_id = rs.id AND gp.player_id = NEW.created_by
-                   AND gp.status = 'active'
+                 WHERE g.ruleset_id = rs.id AND gp.player_id = p_user AND gp.status = 'active'
                    AND (v_deleting IS NULL OR g.id::text <> v_deleting)) THEN
-        RETURN NEW;
+        RETURN NULL;
       END IF;
       SELECT id INTO v_id FROM rulesets
-        WHERE created_by = NEW.created_by AND content = rs.content
+        WHERE created_by = p_user AND content = rs.content
           AND compatibility_flags->>'copiedFrom' = rs.id::text
         LIMIT 1;
       IF v_id IS NULL THEN
         v_name := rs.name; n := 1;
-        WHILE EXISTS (SELECT 1 FROM rulesets WHERE created_by = NEW.created_by AND name = v_name) LOOP
+        WHILE EXISTS (SELECT 1 FROM rulesets WHERE created_by = p_user AND name = v_name) LOOP
           n := n + 1; v_name := rs.name || ' (' || n || ')';
         END LOOP;
         INSERT INTO rulesets (created_by, name, description, version, content, schema_version,
                               status, is_public, tags, compatibility_flags)
-          VALUES (NEW.created_by, v_name, rs.description, rs.version, rs.content,
+          VALUES (p_user, v_name, rs.description, rs.version, rs.content,
                   rs.schema_version, rs.status, false, rs.tags,
                   COALESCE(rs.compatibility_flags, '{}'::jsonb)
                     || jsonb_build_object('copiedFrom', rs.id::text))
           RETURNING id INTO v_id;
       END IF;
-      NEW.original_ruleset_id := v_id;
+      RETURN v_id;
+    END;
+    $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
+  $create$;
+
+  -- A membership ending must also cover characters that were ALREADY standalone (returned to My
+  -- Characters while still a member, so they kept the campaign's ruleset): once the owner can no
+  -- longer read it, those are re-bound to their copy too.
+  EXECUTE $create$
+    CREATE OR REPLACE FUNCTION rehome_standalone_characters(p_user UUID, p_ruleset UUID)
+    RETURNS VOID AS $fnbody$
+    DECLARE
+      v_id UUID;
+    BEGIN
+      IF p_ruleset IS NULL OR NOT EXISTS (
+        SELECT 1 FROM characters
+        WHERE created_by = p_user AND game_id IS NULL AND original_ruleset_id = p_ruleset
+      ) THEN
+        RETURN;
+      END IF;
+      v_id := ruleset_copy_for(p_user, p_ruleset);
+      IF v_id IS NOT NULL THEN
+        UPDATE characters SET original_ruleset_id = v_id
+          WHERE created_by = p_user AND game_id IS NULL AND original_ruleset_id = p_ruleset;
+      END IF;
+    END;
+    $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
+  $create$;
+
+  EXECUTE $create$
+    CREATE OR REPLACE FUNCTION characters_keep_ruleset()
+    RETURNS trigger AS $fnbody$
+    DECLARE
+      v_id UUID;
+    BEGIN
+      IF OLD.game_id IS NULL OR NEW.game_id IS NOT NULL OR NEW.original_ruleset_id IS NULL THEN
+        RETURN NEW;
+      END IF;
+      -- Still readable (e.g. "Return to My Characters" without leaving) → keep the binding, so
+      -- the character can reattach to that campaign; otherwise re-bind to the owner's copy.
+      v_id := ruleset_copy_for(NEW.created_by, NEW.original_ruleset_id);
+      IF v_id IS NOT NULL THEN
+        NEW.original_ruleset_id := v_id;
+      END IF;
       RETURN NEW;
     END;
     $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -402,10 +450,13 @@ BEGIN
   FOREACH fn IN ARRAY ARRAY['redeem_invite_code(text)', 'remove_game_player(uuid, uuid, text)',
                             'leave_game(uuid, text)', 'games_detach_characters()',
                             'rulesets_rehome_characters()', 'characters_keep_ruleset()',
-                            'attach_character_to_game(uuid, uuid)'] LOOP
+                            'attach_character_to_game(uuid, uuid)',
+                            'ruleset_copy_for(uuid, uuid)',
+                            'rehome_standalone_characters(uuid, uuid)'] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM PUBLIC, anon', target_schema, fn);
     IF fn IN ('games_detach_characters()', 'rulesets_rehome_characters()',
-              'characters_keep_ruleset()') THEN
+              'characters_keep_ruleset()', 'ruleset_copy_for(uuid, uuid)',
+              'rehome_standalone_characters(uuid, uuid)') THEN
       EXECUTE format('REVOKE ALL ON FUNCTION %I.%s FROM authenticated', target_schema, fn);
     ELSE
       EXECUTE format('GRANT EXECUTE ON FUNCTION %I.%s TO authenticated', target_schema, fn);
