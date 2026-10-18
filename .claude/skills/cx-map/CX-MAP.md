@@ -255,10 +255,21 @@ bootstrap).
     **resource-pool tracks** the ruleset defines (`crew.resourcePools`, e.g. Wicked Ones' hoard +
     threat); the section is hidden for rulesets without pools (BitD/Brackwater unchanged).
     **Crew advancement (XP round, F85):** the 8-box track is the same clickable `XpTrack` a
-    character sheet uses (GM marks; players see it read-only); marks and the "Take advance
-    (reset XP)" spend run through engine `markCrewXp`/`takeCrewAdvance` so both land in the
-    campaign log, the advance refuses a non-full track, and a post-advance notice points the GM
-    at the crew-ability list.
+    character sheet uses (GM marks; players see it read-only); marks run through engine
+    `markCrewXp` (feed-logged). **Crew abilities are RAW (F95, round 3):** they are never ticked.
+    The GM's **crew-advance picker** (`cards/CrewAdvancePicker.tsx`, a radio group + one button)
+    offers ONLY legal picks (core `takeableCrewAbilities`/`openCrewUpgrades`): a new crew chooses
+    its ONE **starting ability** from its own crew type's list ("Take starting ability" — the
+    track is untouched); afterwards a FULL track is spent ("Take advance") on a new special
+    ability from the crew's list — another type's only as **"via Veteran"** (Veteran + the pick in
+    one advance) — or **"Mark 2 upgrade boxes: Mastery (n/4)"** / "Mark 2 boxes on other upgrades".
+    The spend writes ability + track reset in one engine `takeCrewAdvance` call (feed note names
+    what was gained: "Starting crew ability: X", "Crew advance — new special ability: X",
+    "… marked 2 upgrade boxes on Mastery (2/4)", "… Mastery unlocked"); the crew repository
+    refuses any other ability write server-side. The **Crew Abilities** card is read-only for
+    everyone: held abilities with rules text, a **"Not on this crew's list"** flag on abilities an
+    older sheet holds (grandfathered), upgrade-box badges ("Mastery 2/4 upgrade boxes"), and a hint
+    for what comes next; the GM can **Remove** a held ability (two-click).
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
     _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
@@ -323,7 +334,10 @@ bootstrap).
   The step title is the page h1. Back is disabled (visibly — 50% + not-allowed) on step 1; a
   blocked Next/Create is visibly disabled too. A disabled
   Next/Create now shows the blocking reason in the footer (`stepError` → e.g. "Can't continue yet —
-  Assigned 8 of 7 action dots.").
+  Assigned 8 of 7 action dots."). **Every creation action dot must be placed (F95, RAW):** the
+  ratings step's Next and the review step's Create stay disabled until the full budget is spent —
+  "Can't continue yet — Assign all 7 action dots — 4 left to place." (an optional crew Deadly dot
+  is never owed).
 - **State:** `useCharacterCreationStore`
   (`apps/web/src/features/characters/stores/character-creation-store.ts`) persists draft to
   localStorage (auto-resume); the large `ruleset` object is re-supplied on mount, not persisted.
@@ -348,11 +362,23 @@ bootstrap).
   live re-validation fold in crew effects (Mule/Deadly) — mirroring the server's `advanceCharacter`.
 - **Actions:** edit name; ± stress / mark harm / mark XP; spend advances; **set the per-score loadout**
   (level + items, Save); roll an action **or resist** (stress applies live to the `StressTracker`);
-  **Indulge vice** (downtime) to clear stress to 0, logged to the feed; edit build.
+  **Indulge vice** (downtime) to clear stress to 0, logged to the feed — **disabled until the
+  character has a vice (F95)**, with the reason beside it ("Set a vice (Edit build → Identity) to
+  indulge it…"); the label shows the vice and its details ("Vice: Gambling — Dice at the Gull").
+  Edit build: identity uses **selects** for the ruleset's listed backgrounds/vices (BitD's 7 + 7;
+  a legacy free-text value stays selectable) plus **Background details** and **Vice details &
+  purveyor** fields; heritage stays free text when the ruleset lists none.
   **XP (XP round, F85):** the Experience card's tracks are gold `XpTrack` boxes with accessible
   per-box names; every mark goes through engine `markXp` (feed-logged, "Marked N XP — <track>"),
   and a FULL track grows a **"Take advance"** CTA that opens the editor directly on its
   Advancement tab (scrolled into view) — the spend is one click from where the XP was earned.
+  **XP triggers (F95, closing F92's deferred item):** an **End of session** block lists the
+  playbook's own trigger first (BitD Cutter: "You addressed a challenge with violence or
+  coercion.") then the common ones; a **"Mark end-of-session XP on"** select picks the track
+  (playbook or any attribute — RAW) and each trigger has **+1 / +2** buttons (2 if it happened a
+  lot). The desperate trigger is a note — it's marked **automatically**: a desperate ACTION roll in
+  the roll panel marks 1 XP in that action's attribute and says so ("Desperate roll — marked 1 XP
+  in Prowess (n on the track).").
 - **Role-gating (F42, 2026-07-01):** write affordances mirror the RLS policy — the **owner or the
   campaign's GM** sees the edit controls (rename, edit build, stress tracker, indulge vice, XP
   marking, loadout save); any other member gets a **read-only sheet** (values + trackers visible,
@@ -394,7 +420,8 @@ bootstrap).
   The tracker lengthens with ability stress boxes (BitD Survivor). **Advancement (F92):** the
   editor's ability list offers your playbook's roster plus other playbooks' abilities only while a
   Veteran slot is free (own Veteran, or a crew grant — F62); the rest are summarised as "N more
-  need a free Veteran slot". The repository refuses the same picks server-side.
+  need a free Veteran slot". The repository refuses the same picks server-side. A locked
+  ability's reason names its prerequisite ("Requires Veteran (second)", never the raw id — F95).
 - **Launch-review round (F91, 2026-10-17):** the character name is the page **h1**; status and
   playbook render translated/named. Stress clicks and XP marks patch only their own field onto the
   LIVE row (engine `setStress` / `markXp`); the build editor saves a **field-level patch** of what
@@ -403,7 +430,9 @@ bootstrap).
   flight. Clearing a wound (sheet box or editor ×) is a **two-click confirm**. The **Roll panel is
   only offered to someone who can edit** the character (owner/GM); read-only viewers keep the log.
   The newest roll result is announced via an `aria-live` region; the rename row is a real form.
-- _Last verified:_ 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire banner,
+- _Last verified:_ 2026-10-18 (round-3 rules F95: vice-gated Indulge vice, identity selects +
+  details, session-trigger track select, auto desperate XP, prerequisite names); 2026-10-17
+  (rules-accuracy round F92: stress→trauma prompt + retire banner,
   Veteran-gated advances; F91 launch-review frontend round; previously 2026-07-11 backlog rounds E+F)
 - **Delete (F94):** the owner (only — not the GM) gets a **Delete character** card at the bottom of
   the sheet: two-click confirm → `/characters`; log entries stay in the log.
@@ -636,15 +665,22 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    to it, the current pick can't be unclicked to zero. With limit > 1 it's a multi-select that
    disables the rest once full. _Valid at or under the choice limit (+1 per Veteran, cross-playbook
    only)._
-4. **Identity** — `steps/IdentityStep.tsx`. Either a card picker (if the step defines options for
-   heritage/background/vice) or free-text inputs. _Always valid (optional)._
+4. **Identity** — `steps/IdentityStep.tsx`. A single-field step (`heritage` / `background` /
+   `vice`) with options is a card picker — plus a **details** input for background ("Background
+   details") and vice ("Vice details & purveyor"); a single-field step with NO options is that one
+   free-text field; a combined `identity` step is all three free-text inputs. **BitD (F95):**
+   Heritage (free text — the book's heritages are setting content) → Background (Academic, Labor,
+   Law, Trade, Military, Noble, Underworld) → Vice (Faith, Gambling, Luxury, Obligation, Pleasure,
+   Stupor, Weird — SRD text). _Optional; a value that isn't one of the listed choices blocks the
+   step (`IDENTITY_UNKNOWN`)._
 5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`. _Valid
    only if name is non-empty, a playbook is chosen, and `validateCharacter(mode:'creation')`
-   passes._ "Create character" submits via
+   passes_ — including every creation action dot placed (F95; the footer names the count left). "Create character" submits via
    `getRepositories().characterManagement.createCharacterWithValidation`; on success the persisted
    draft (name, picks, step) is cleared so the next character starts fresh (F94).
 
-_Last verified:_ 2026-10-17 (F94: draft cleared after create, "playbook" not "crew role" copy;
+_Last verified:_ 2026-10-18 (F95: all creation dots required, BitD heritage/background/vice steps
+with details fields); 2026-10-17 (F94: draft cleared after create, "playbook" not "crew role" copy;
 rules-accuracy round F92: Veteran-gated other-playbook abilities,
 pre-placed dot floor; F93 stepper statuses + selected-playbook / derived-attribute badges; previously
 2026-06-27 @ 2535b31)
@@ -662,11 +698,13 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
 - **Linked account (web sign-in IS the link — `profiles.discord_id`):** `/character use|show|unset`
   (one ACTIVE character, `discord_players` pointer), sheet-rated `/roll action:` (autocomplete over
   the character's own ruleset, `push` **or** `bargain` (never both — RAW) plus `assist`, so at most
-  +2d (F92, replacing the old 0–3 `extra`); **moderate harm auto-applies −1d** — the title shows
+  +2d (F92, replacing the old 0–3 `extra`); a persisted **desperate** roll marks 1 xp in the
+  action's attribute track and the embed says so (F95); **moderate harm auto-applies −1d** — the title shows
   the malus, the note names it, severe adds a needs-help warning — F43), `/stress add|clear`,
   `/harm take|clear` (RAW escalation; `armor:true` spends a carried armor box so the harm lands
   one level lighter — lesser is absorbed outright, no armor phrases the refusal — F44),
-  `/vice indulge`, `/xp mark|advance` (the `advance` autocomplete offers only LEGAL picks —
+  `/vice indulge` (refused — ephemeral, with a sheet link — until the character has a vice;
+  F95), `/xp mark|advance` (the `advance` autocomplete offers only LEGAL picks —
   roster, or other playbooks' while a Veteran slot is free — F92) — the sheet commands
   feed-log via the same engine use-cases the web calls. A stress cost that marks the last box
   (`/stress add`, a pushed `/roll`, a persisted `/resist`) replies with the trauma prompt and a
@@ -686,8 +724,11 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
 - **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
   (`heat` takes −9..+9 — negative reduces heat; `tier` develops RAW: weak hold → strong, or pay
   new Tier × 8 coin with refusals phrased — F92)
-  (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, `advance` spends a FULL
-  track and refuses otherwise, both feed-logged; F86) · `/clock tick` (filling announces "It comes
+  (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, feed-logged; F86;
+  **`advance pick:`** (required, GM-gated autocomplete of LEGAL choices only — F95): a new crew's
+  starting ability from its own list, else with a full track a crew ability (another type's shown
+  "(via Veteran)") or "Mark 2 upgrade boxes: Mastery (n/4)" / other upgrades; refusals — track not
+  full, off-list, Mastery as an ability — are ephemeral and write nothing) · `/clock tick` (filling announces "It comes
   to a head!") · `/faction status`. GM-gated INCLUDING autocompletes — campaign state never leaks
   through suggestions.
 
@@ -700,7 +741,8 @@ category link) closed via the app's first bot-token fetch — a thread whose par
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
+_Last verified:_ 2026-10-18 (F95: `/crew advance pick:` + autocomplete, desperate-roll XP on
+`/roll`, `/vice` needs a vice); 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
 creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only
 `/xp advance`, RAW `/crew tier`, negative `/crew heat`, trauma replies);
 previously 2026-07-11 (rerun round: F66 thread-category link retry + signed `/crew xp|advance`
