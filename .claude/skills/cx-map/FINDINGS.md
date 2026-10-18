@@ -32,6 +32,90 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F94 — Launch product round: no bot install, no invite link, no deletes or membership controls, untrue copy
+
+- **severity:** S1 (Mode 2 couldn't start; nobody could delete anything) · **type:** CX-flaw —
+  from the 2026-10 launch PM / pixel / TPM reviews (`review-pm.md` #2, #4, #5, #7, #8, #10–#15;
+  `review-pixel.md` #14–#16; `review-tpm.md` #16)
+- **what was wrong:**
+  - **No way to add the bot** (#2) — no install link anywhere; F67's headline ask was residue.
+  - **Invite = a typed, case-sensitive code** (#7): no link; sign-in always dumped you on `/`, so a
+    shared link lost its intent; every failure read "check the code".
+  - **No membership controls** (#8): 20-use codes that never expire and can't be revoked; no kick,
+    no leave.
+  - **No deletes** (#5): character, campaign and ruleset were permanent (names squatted forever).
+  - **`/discord` guide wrong** (#10): `/heist log` (it's `/log`), missing unlink/about/account,
+    a "claim a character" step that doesn't exist, no "create + join on the web first"; unreachable
+    once signed in.
+  - **Untrue / inconsistent copy** (#4, #11–#15): "editable copy… reskin freely / edit your copy —
+    no JSON required" (no editor exists); "Welcome back" to newcomers; "Open a campaign to build your
+    scoundrel" (false since Phase 5) in one of three redundant empty states; "Upload a ruleset first"
+    above the one-click catalog; game/campaign, invite/join code, Roll Log/campaign log, crew
+    role/playbook; "Supabase is processing your OAuth tokens"; the callback rendered Discord's raw
+    `error_description` (attacker-controllable); the bot's "not a member" reply was a dead end;
+    dead off-brand i18n ("Live Sessions — Real-time collaboration", `preparingShadows`, about/role
+    selection/sign-up namespaces).
+  - **Legal accuracy** (TPM #16, PR #167): Terms §7 promised export; the AUP rule wasn't stated at
+    upload; Privacy didn't say what's shown (display name vs email) or what deletion keeps.
+  - **Heading order** (pixel #16): catalog/picker/upload card titles were h3 straight under the h1.
+  - **Found on the way (data bugs, fixed in 00023):** (a) deleting a campaign — or deleting a GM's
+    ACCOUNT, which cascades through it — failed with 23505 whenever a detached character's name
+    clashed with one of its owner's standalone characters; (b) a GM whose players had built
+    characters **could not delete their account at all** (characters.original_ruleset_id → the GM's
+    ruleset blocked the cascade); (c) any character leaving a campaign (detach, leave, remove,
+    campaign delete) kept pointing at the GM's ruleset, which its owner could no longer read — the
+    sheet broke; (d) after creating a character the wizard kept the draft, so the next character on
+    that ruleset reopened the just-created one at its Confirm step.
+- **fix:**
+  - **Install:** `DiscordInstallLinks` (server: `bot applications.commands`, permissions=0 — the bot
+    user only exists for the F66 category lookup; user install: `applications.commands`) from
+    `NEXT_PUBLIC_DISCORD_APP_ID` (in `.env.example`; hidden when unset) on `/discord`, the dashboard
+    first run and the hub's GM "Play this campaign on Discord" card (with the `/heist link` steps).
+  - **Invite link:** `/join/[code]` (`JoinInvite`): signed in → redeem → hub, specific errors;
+    signed out → explainer + sign-in that returns via a validated same-origin `next`
+    (`lib/auth/next-path.ts`: callback query + sessionStorage fallback; full URLs, `//host`,
+    backslashes, control chars, `/auth/*` refused). `SignInGate` now returns to the gated page; the
+    landing CTAs return GMs to `/games/new` and players to `/games#join`. Hub: Copy invite link,
+    "N of 20 uses left". `/games` box: "Join code", case-insensitive, accepts a pasted link.
+  - **00023** (`supabase/migrations/00023_membership_and_deletes.sql`, env-schema only, idempotent,
+    applied twice to stack2): case-insensitive `redeem_invite_code` with specific errors;
+    `remove_game_player` (GM-only; status removed; characters → standalone; feed note);
+    `leave_game` (member; row deleted; characters → standalone; GM can't leave); `games` BEFORE
+    DELETE detaches characters collision-safely; `rulesets` BEFORE DELETE gives other players'
+    bound characters a private copy; `characters` BEFORE UPDATE OF game_id gives a detached
+    character's owner a copy of a ruleset they can't read (reusing an identical one they own).
+    Privileges per 00022 B7 (no PUBLIC/anon; trigger functions service-only; pinned search_path).
+  - **UI:** two-click (`ConfirmButton`) Revoke, Remove, Leave, Delete character (list + sheet,
+    owner only), Delete campaign (with the what-happens explainer), Delete ruleset (plain-language
+    "still built on this ruleset" refusal). Repos: `delete` on characters/games/rulesets (asks for
+    the deleted id back — an RLS-filtered DELETE is NOT_FOUND, not silent success),
+    `gamePlayers.removePlayer/leave`.
+  - **Guide:** rebuilt from one `COMMANDS` array checked against `COMMAND_MANIFEST` both ways by a
+    unit test; real setup order; Discord in the signed-in nav, dashboard and hub. `packages/discord`
+    README gains `/heist account`; `copy.notMember` now says "Ask the GM for an invite link…".
+  - **Copy:** truth fixes above; terminology standardised in `en.json` (campaign · join code /
+    invite link · campaign log · playbook); dashboard Welcome vs Welcome back + single Start here
+    (4 steps incl. Discord); ~200 dead i18n leaves removed (shadowsGate, dualPath, features,
+    liveStats, about, home, roleSelection, signIn/signUp, forms labels/placeholders/validation…).
+  - **Legal:** Terms §7 "save" not "export"; the AUP rule line at upload (PR #167 intent, re-applied
+    on current code); Privacy §1/§5/§6/§7 accuracy (dated October 17, 2026).
+  - **Heading order:** catalog/picker/upload/My-Characters titles h2 under the h1
+    (`StarterCatalogInline`/`CharacterCard` take a heading level).
+  - **Wizard:** `submit()` clears name/draft/step on success.
+- **tests:** unit — next-path, discord-install, join-failure mapping, guide↔manifest, SignInGate
+  return-to, MembersPanel/InviteCodeSection, CharacterSheet owner-only delete, wizard draft reset,
+  database repository-surface + membership/deletes (database floors ratcheted to 64/75/78); e2e —
+  new `join-link`, `membership`, `deletion`, `heading-order` specs; updated auth-callback,
+  dashboard, discord-page, gm-games (the old invite `fixme` is now a real copy-link test),
+  signin-gates, tenant-isolation, join-via-code (lowercase code), discord-parity/gm-dice-rolls
+  ("Campaign log").
+- **residue / operator:** set `NEXT_PUBLIC_DISCORD_APP_ID` per Vercel target
+  (`RTrentJones.dev/infra/heistmind.tf`, dev app on preview/beta, prod app on prod) or the install
+  buttons stay hidden. Campaign **rename** not built. Codes still default to 20 uses / no expiry
+  (now revocable). The DMCA-page §512(c)(2) note from PR #167 (its "F85") is not re-filed here —
+  the number is taken on this branch; carry it as its own finding if still wanted.
+- **status:** fixed (branch `feat/launch-product`)
+
 ### F93 — Launch pixel pass: phone header, look-enabled disabled buttons, wizard stepper, contrast tokens, mobile clipping
 
 - **severity:** S2 · **type:** CX-flaw (visual / a11y) — from the 2026-10 launch pixel audit
