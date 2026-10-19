@@ -92,6 +92,8 @@ describe('Input Component', () => {
 
       const input = screen.getByTestId('input');
       expect(input).toHaveClass('h-8');
+      // 44px on phones, matching Button/Select `sm` beside it (round 6 P2-5).
+      expect(input).toHaveClass('max-sm:h-11');
     });
 
     it('applies large size styling', () => {
