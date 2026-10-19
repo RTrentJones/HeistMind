@@ -364,7 +364,10 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           {isOwner && (
             <>
               {' '}
-              <a href='#sheet-attach' className='font-medium underline underline-offset-2'>
+              <a
+                href='#sheet-attach'
+                className='font-medium underline underline-offset-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center'
+              >
                 {t('components.characterSheet.standaloneBannerLink')}
               </a>
             </>
