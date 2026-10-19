@@ -30,6 +30,21 @@ describe('IdentityStep (BitD)', () => {
     expect(store().draft.viceDetail).toBe('Old Mags');
   });
 
+  it('contacts: name-only options, the chosen one described under the select (round 6 P2-3)', async () => {
+    render(<IdentityStep step={step('vice')} />);
+    const friend = screen.getByLabelText('Close friend') as HTMLSelectElement;
+    const contact = BLADES!.playbooks
+      .find(p => p.id === 'cutter')!
+      .contacts!.find(c => c.description)!;
+    // The option (and so the select's trigger) is just the name — no " — description" tail.
+    expect(screen.getAllByRole('option', { name: contact.name }).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('contact-friend-description')).toBeNull();
+    await userEvent.selectOptions(friend, contact.name);
+    const hint = screen.getByTestId('contact-friend-description');
+    expect(hint).toHaveTextContent(contact.description!);
+    expect(friend).toHaveAttribute('aria-describedby', hint.id);
+  });
+
   it('heritage (no listed choices) is ONE free-text field, not all three', async () => {
     render(<IdentityStep step={step('heritage')} />);
     expect(screen.getByLabelText('Heritage')).toBeInTheDocument();
