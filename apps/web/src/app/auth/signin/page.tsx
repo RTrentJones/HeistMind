@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Button,
@@ -88,9 +89,9 @@ function SignInShell({ retry, retrying = false }: { retry?: () => void; retrying
                     {t('signin.noJsTitle')}
                   </Heading>
                   <Text variant='secondary'>{t('signin.noJs')}</Text>
-                  <a href='/' className='text-sm font-medium text-brand-primary underline'>
+                  <Link href='/' className='text-sm font-medium text-brand-primary underline'>
                     {t('signin.noJsHome')}
-                  </a>
+                  </Link>
                 </Stack>
               </noscript>
               <div className='signin-js-only contents'>

@@ -135,9 +135,14 @@ export function CrewAdvancePicker({
             {t('components.crewSheet.pickerGroupVeteranCount', { count: veteranRows.length })}
           </span>
         </span>
-        <span aria-hidden className='shrink-0 text-foreground-muted group-open/vet:rotate-180'>
-          ▾
-        </span>
+        <svg
+          aria-hidden='true'
+          viewBox='0 0 20 20'
+          fill='currentColor'
+          className='size-5 shrink-0 text-foreground-muted transition-transform group-open/vet:rotate-180'
+        >
+          <path d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z' />
+        </svg>
       </summary>
       <div
         role='group'
