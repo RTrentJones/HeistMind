@@ -145,7 +145,9 @@ test.describe('GM: dice rolls + roll log', () => {
     // The player rolls with the GM's character assisting.
     const assist = playerPage.getByRole('combobox', { name: 'Assist' });
     await expect(assist).toBeVisible({ timeout: 15_000 });
-    await assist.selectOption({ label: `Assist: ${helper} (+1d, they take 1 stress)` });
+    await assist.selectOption({ label: `Assist: ${helper} (+1d)` });
+    // Round 6 P2-2 — the helper's cost is on the pool line (a phone's select truncated it).
+    await expect(playerPage.getByTestId('roll-pool')).toContainText(`${helper} takes 1 stress`);
     await playerPage.getByRole('button', { name: 'Roll', exact: true }).click();
     await expect(playerPage.getByTestId('roll-stress-note')).toHaveText(
       `${helper} marked 1 stress for the assist — it’s on their sheet.`,
