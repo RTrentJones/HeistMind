@@ -329,15 +329,38 @@ describe('/crew advance autocomplete', () => {
     expect(values).toContain('ability:crew-veteran');
     expect(values).not.toContain('ability:crew-mastery');
     expect(values).not.toContain('upgrades');
+    // F103: seven per crew type → more than Discord's 25; the own list comes first, then
+    // Veteran routes (typing reaches the rest).
+    expect(starting.length).toBe(25);
+    expect(values.slice(0, 8)).toEqual(
+      expect.arrayContaining([
+        'ability:crew-network',
+        'ability:crew-everyone-steals',
+        'ability:crew-slippery',
+        'ability:crew-patron',
+        'ability:crew-veteran',
+      ])
+    );
     expect(starting.find(c => c.value === 'ability:crew-deadly')?.name).toBe(
       'Deadly (via Veteran)'
     );
+    const typedV = await crewAutocomplete(ctx(withCrew([], {})), auto('reav'));
+    expect(typedV.map(c => c.name)).toEqual(['Reavers (via Veteran)']);
     clearActorCache();
     const full = await crewAutocomplete(
       ctx(withCrew(['crew-second-story'], { 'crew-xp': 8 })),
-      auto('mark')
+      auto('mark 2')
     );
     expect(full.map(c => c.value)).toEqual(['upgrade:crew-mastery', 'upgrades']);
+    // On a full track the upgrade boxes come before the Veteran routes in the 25 shown.
+    clearActorCache();
+    const fullAll = await crewAutocomplete(
+      ctx(withCrew(['crew-second-story'], { 'crew-xp': 8 })),
+      auto('')
+    );
+    expect(fullAll.map(c => c.value)).toEqual(
+      expect.arrayContaining(['upgrade:crew-mastery', 'upgrades'])
+    );
     clearActorCache();
     expect(
       await crewAutocomplete(ctx(withCrew(['crew-second-story'], { 'crew-xp': 3 })), auto(''))

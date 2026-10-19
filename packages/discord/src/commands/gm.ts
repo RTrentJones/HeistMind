@@ -459,12 +459,17 @@ export async function crewAutocomplete(
       interaction as unknown as APIApplicationCommandInteraction,
       'pick'
     );
-    const choices: APIApplicationCommandOptionChoice[] = takeableCrewAbilities(content, c).map(
-      a => ({
-        name: crewVeteranGatewayFor(content, c, a.id) ? copy.crewPickViaVeteran(a.name) : a.name,
-        value: `ability:${a.id}`,
-      })
-    );
+    // Discord shows at most 25 choices. With a full BitD crew list (seven per type, F103) the
+    // "via Veteran" picks alone exceed that, so the crew's OWN list comes first, then upgrade
+    // boxes, then other types' abilities through Veteran — typing narrows the rest.
+    const own: APIApplicationCommandOptionChoice[] = [];
+    const viaVeteran: APIApplicationCommandOptionChoice[] = [];
+    for (const a of takeableCrewAbilities(content, c)) {
+      if (crewVeteranGatewayFor(content, c, a.id))
+        viaVeteran.push({ name: copy.crewPickViaVeteran(a.name), value: `ability:${a.id}` });
+      else own.push({ name: a.name, value: `ability:${a.id}` });
+    }
+    const choices: APIApplicationCommandOptionChoice[] = [...own];
     if (ready) {
       for (const u of openCrewUpgrades(content, c))
         choices.push({
@@ -477,6 +482,7 @@ export async function crewAutocomplete(
         });
       choices.push({ name: copy.crewPickOtherUpgrades, value: 'upgrades' });
     }
+    choices.push(...viaVeteran);
     return choices.filter(ch => ch.name.toLowerCase().includes(typed)).slice(0, 25);
   } catch {
     return [];
