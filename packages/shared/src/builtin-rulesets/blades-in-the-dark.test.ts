@@ -26,10 +26,11 @@ import { BLADES_IN_THE_DARK as BITD } from './blades-in-the-dark';
 const ability = (id: string) => BITD.specialAbilities.find(a => a.id === id);
 const codes = (r: { errors: { code: string }[] }) => r.errors.map(e => e.code);
 
-/** A creation-legal Cutter (Skirmish 2 + Command 1 pre-placed; 4 more assigned). */
+/** A creation-legal Cutter (Skirmish 2 + Command 1 pre-placed; 4 more assigned; a vice). */
 function cutter(o: Partial<CharacterData> = {}): CharacterData {
   return {
     playbook: 'cutter',
+    vice: 'Stupor',
     attributes: {},
     skills: { Skirmish: 2, Command: 1, Hunt: 2, Prowl: 2 },
     specialAbilities: ['cutter-battleborn'],
@@ -329,6 +330,14 @@ describe('BitD vices + backgrounds (round-3 #4)', () => {
     ]);
     // Heritage stays free text (BitD's heritages are setting content).
     expect(identityOptions(BITD, 'heritage')).toEqual([]);
+  });
+
+  it('the Vice step is REQUIRED at creation (round 4: it could be skipped while showing ✓)', () => {
+    expect(BITD.characterCreation?.steps?.find(st => st.id === 'vice')?.required).toBe(true);
+    const r = validateCharacter(BITD, cutter({ vice: '' }), { mode: 'creation' });
+    expect(r.errors.map(e => e.field)).toContain('steps.vice');
+    // A played sheet without a vice keeps working (live mode doesn't re-run creation steps).
+    expect(validateCharacter(BITD, cutter({ vice: '' }), { mode: 'live' }).isValid).toBe(true);
   });
 
   it('a new scoundrel picks a listed vice; the details/purveyor ride alongside', () => {

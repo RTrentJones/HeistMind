@@ -13,6 +13,7 @@ const base = createBaseConfig(__dirname, { environment: 'node' });
   '**/crews.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/factions.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
   '**/dice.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
+  '**/campaign.ts': { lines: 100, functions: 100, statements: 100, branches: 100 },
 };
 
 export default defineConfig(base);

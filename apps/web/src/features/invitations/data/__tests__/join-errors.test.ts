@@ -11,6 +11,11 @@ describe('joinFailureReason (the 00023 redeem_invite_code messages)', () => {
     ['Join code has expired', 'expired'],
     ['Join code has no uses left', 'usedUp'],
     ['You were removed from this campaign', 'removed'],
+    ['Campaign is full', 'full'],
+    [
+      'new row for relation "games" violates check constraint "development_games_current_players_check"',
+      'full',
+    ],
     ['fetch failed', 'generic'],
   ])('%s → %s', (message, reason) => {
     expect(joinFailureReason(new RepositoryError(message, 'P0002'))).toBe(reason);

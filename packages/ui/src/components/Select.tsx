@@ -71,6 +71,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         ref={ref}
         className={cn(
           selectVariants({ selectSize, state: error ? 'error' : 'default' }),
+          // Labelled: the control takes its own line under the (inline) label, like Input's.
+          showLabel && 'block',
           className
         )}
         aria-label={showLabel ? undefined : (ariaLabel ?? label)}
@@ -84,9 +86,14 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     if (!showLabel && !error) return control;
 
     return (
-      <div className='space-y-1'>
+      // Same label box + gap as Input (inline, leading-none, space-y-2) so a Select beside an Input
+      // lines up label-to-label and control-to-control (F99 — they sat ~4px apart).
+      <div className='space-y-2'>
         {showLabel && (
-          <label htmlFor={selectId} className='block text-sm font-medium text-foreground-primary'>
+          <label
+            htmlFor={selectId}
+            className='text-sm font-medium leading-none text-foreground-primary'
+          >
             {label}
           </label>
         )}

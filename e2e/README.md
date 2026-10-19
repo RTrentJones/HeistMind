@@ -2,11 +2,11 @@
 
 One Playwright suite that runs in two places, selected entirely by `PLAYWRIGHT_BASE_URL`:
 
-| Context                                     | `PLAYWRIGHT_BASE_URL`              | Backend                           | Gate             |
-| ------------------------------------------- | ---------------------------------- | --------------------------------- | ---------------- |
-| PR CI (`ci.yml` → `e2e` job)                | unset → boots `pnpm dev:web`       | local Supabase (`supabase start`) | blocks the PR    |
-| Greenlight deploy (`greenlight-verify.yml`) | the deployed preview/beta/prod URL | that env's Supabase               | blocks promotion |
-| Local dev                                   | a running app, or unset            | whatever the app points at        | —                |
+| Context                                     | `PLAYWRIGHT_BASE_URL`                         | Backend                           | Gate             |
+| ------------------------------------------- | --------------------------------------------- | --------------------------------- | ---------------- |
+| PR CI (`ci.yml` → `e2e` job)                | unset → boots `pnpm dev:web`                  | local Supabase (`supabase start`) | blocks the PR    |
+| Greenlight deploy (`greenlight-verify.yml`) | the deployed beta (`development`) or prod URL | that env's Supabase               | blocks promotion |
+| Local dev                                   | a running app, or unset                       | whatever the app points at        | —                |
 
 ## The auth problem, and how we solve it
 
@@ -101,3 +101,11 @@ suite against the deployed URL, injecting it as `PLAYWRIGHT_BASE_URL` (and `GREE
 pnpm + the chromium browser before invoking greenlight (the suite shells out to
 `pnpm exec playwright test`). The identical suite runs at PR time via `ci.yml` against a local
 Supabase stack — write once, gate everywhere.
+
+**Which deployments it gates (F101):** only the beta Preview built from `development` and the
+Production deployment from `main`. Feature-branch previews are not gated; PR CI covers them. Runs
+are serialized per target by a concurrency group and never cancelled, because the personas live
+in the project-global `auth.users` and two overlapping runs would sign each other out. A second
+Vercel deployment of an already-verified (env, sha) is skipped. The greenlight CLI is pinned
+(`GREENLIGHT_VERSION` in the workflow). Production also asserts supabase-ci's "Migrations applied
+(production)" check for the same commit before verifying.

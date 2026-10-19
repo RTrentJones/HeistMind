@@ -1123,7 +1123,8 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         description:
           'Choose your vice, then name its specifics and your vice purveyor (who and where).',
         order: 6,
-        required: false,
+        // RAW character creation includes choosing a vice — and with none, indulging is impossible.
+        required: true,
         options: [
           {
             id: 'faith',

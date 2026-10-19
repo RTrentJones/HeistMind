@@ -20,7 +20,7 @@ import {
 import { AuthErrorBanner } from '@/features/auth/components/AuthErrorBanner';
 import { AuthHeader } from '@/features/auth/components/AuthHeader';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
-import { useSignIn } from '@/features/auth/hooks/use-sign-in';
+import { SignInForm } from '@/features/auth/components/SignInForm';
 import { Footer } from '@/shared/components/Footer';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 
@@ -32,21 +32,22 @@ import { usePageTranslation } from '@/lib/i18n/hooks';
  */
 export function HomePage() {
   const { t } = usePageTranslation();
-  const { signIn: signInFlow } = useSignIn();
   // F94 — each CTA keeps its intent through OAuth: GMs land on "new campaign", players on the
-  // join-code box (the callback honours the validated `next`).
-  const signInGm = () => void signInFlow({ next: '/games/new' });
-  const signInPlayer = () => void signInFlow({ next: '/games#join' });
-
+  // join-code box (the callback honours the validated `next`). Real forms (P2-N2): a click before
+  // hydration submits to /auth/signin with the same `next` instead of doing nothing.
   const dualCta = (size: 'lg' | 'default') => (
     <Stack direction='column' gap='sm' align='center'>
       <Stack direction='row' gap='md' align='center' className='flex-wrap justify-center'>
-        <Button variant='ember' size={size} onClick={signInGm}>
-          {t('landing.cta.gm')}
-        </Button>
-        <Button variant='outline' size={size} onClick={signInPlayer}>
-          {t('landing.cta.player')}
-        </Button>
+        <SignInForm next='/games/new'>
+          <Button type='submit' variant='ember' size={size}>
+            {t('landing.cta.gm')}
+          </Button>
+        </SignInForm>
+        <SignInForm next='/games#join'>
+          <Button type='submit' variant='outline' size={size}>
+            {t('landing.cta.player')}
+          </Button>
+        </SignInForm>
       </Stack>
       <ClickwrapNotice className='text-center' />
     </Stack>

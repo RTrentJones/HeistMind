@@ -254,7 +254,26 @@ describe('BitD creation gates (round-3 #2 / #4)', () => {
 
     for (const action of ['Hunt', 'Prowl']) store().setActionRating(action, 2);
     expect(store().isStepValid(ratings)).toBe(true);
+    // Round 4: the Vice step is required too — Create stays blocked until one is chosen.
+    expect(store().canSubmit()).toBe(false);
+    store().setIdentityField('vice', 'Stupor');
     expect(store().canSubmit()).toBe(true);
+  });
+
+  it('a skipped Vice step is INCOMPLETE (never "✓ complete") and blocks Next with the reason', () => {
+    store().initFromRuleset(BITD);
+    store().setName('Silks');
+    store().setPlaybook('cutter');
+    for (const action of ['Hunt', 'Prowl']) store().setActionRating(action, 2);
+    const vice = stepIndex('vice');
+    expect(store().isStepValid(vice)).toBe(false);
+    expect(store().stepError(vice)).toMatch(/^Choose a vice/);
+    expect(store().isStepValid(stepIndex('review'))).toBe(false);
+    store().setIdentityField('vice', 'Weird');
+    expect(store().isStepValid(vice)).toBe(true);
+    // Heritage and background stay optional.
+    expect(store().isStepValid(stepIndex('heritage'))).toBe(true);
+    expect(store().isStepValid(stepIndex('background'))).toBe(true);
   });
 
   it('BitD splits identity into heritage (free text), background + vice (listed choices)', () => {

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Roll } from '@heist-mind/core';
 import { TooltipProvider } from '@heist-mind/ui';
 import '@/lib/i18n';
-import { entryWho } from '@/features/rolls/lib/labels';
+import { entryParts, entryWho } from '@/features/rolls/lib/labels';
 import { RollLog } from '../RollLog';
 
 const refetch = vi.fn();
@@ -140,5 +140,54 @@ describe('entryWho', () => {
     expect(entryWho('Prowl', 'Silks')).toBe('Silks');
     expect(entryWho(null, 'Silks')).toBe('Silks');
     expect(entryWho('Silks', '')).toBe('');
+  });
+});
+
+describe('entryParts (round 4 P2-N6: "Crew · GM · Crew XP 8/8 · Crew Crew")', () => {
+  const crewRow = (over: Partial<Roll>) =>
+    roll({
+      kind: 'crew',
+      characterId: null,
+      dice: 0,
+      results: [],
+      position: null,
+      effect: null,
+      ...over,
+    });
+  const renderLog = (rows: Roll[]) => {
+    rollsState = { isPending: false, isError: false, data: rows, refetch };
+    render(
+      <TooltipProvider>
+        <RollLog gameId='g1' />
+      </TooltipProvider>
+    );
+  };
+
+  it('an unnamed crew event is titled by what happened — no "GM", no repeated note', () => {
+    renderLog([crewRow({ label: 'Crew', note: 'Crew XP 8/8' })]);
+    // Title + the kind badge — and nothing else saying "Crew" or "GM".
+    expect(screen.getAllByText('Crew XP 8/8')).toHaveLength(1);
+    expect(screen.getAllByText('Crew')).toHaveLength(1); // the badge
+    expect(screen.queryByText('GM')).not.toBeInTheDocument();
+  });
+
+  it('a named crew keeps its name as the title and the note under it', () => {
+    renderLog([crewRow({ id: 'r2', label: 'The Lampblacks', note: 'Crew XP 8/8' })]);
+    expect(screen.getByText('The Lampblacks')).toBeInTheDocument();
+    expect(screen.getByText('Crew XP 8/8')).toBeInTheDocument();
+    expect(screen.queryByText('GM')).not.toBeInTheDocument();
+  });
+
+  it('a pure-function check of the fallbacks', () => {
+    const t = ((key: string) =>
+      key === 'components.enumLabels.rollKind.crew' || key === 'components.crewSheet.logLabel'
+        ? 'Crew'
+        : key) as unknown as Parameters<typeof entryParts>[2];
+    expect(entryParts({ kind: 'crew', label: null, note: null }, 'GM', t)).toEqual({
+      title: 'Crew',
+      who: '',
+      note: null,
+    });
+    expect(entryParts({ kind: 'action', label: null, note: ' ' }, 'Silks', t).note).toBeNull();
   });
 });

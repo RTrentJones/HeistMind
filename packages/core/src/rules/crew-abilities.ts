@@ -28,6 +28,13 @@ export interface CrewAbilityState {
 export const CREW_UPGRADE_BOXES_PER_ADVANCE = 2;
 /** `resources` key prefix the marked boxes of a modelled upgrade are stored under (no migration). */
 export const CREW_UPGRADE_KEY_PREFIX = 'crew-upgrade:';
+/**
+ * `resources` flag (1) recording that the crew has TAKEN its free creation pick (round 4 P2-N9).
+ * Without it "starting pick available" was inferred from holding no special ability, so a GM
+ * could remove every ability and re-pick any one for free — churning the free pick forever.
+ * One-way: once set it stays (`withCrewStartingPickSpent`), no migration (JSONB resources).
+ */
+export const CREW_STARTING_PICK_KEY = 'crew-starting-pick';
 
 type CrewRulesetSlice = Pick<RulesetContent, 'crew'> | null | undefined;
 
@@ -167,7 +174,33 @@ export function crewStartingPickAvailable(
   ruleset: CrewRulesetSlice,
   crew: CrewAbilityState
 ): boolean {
-  return heldSpecialAbilities(ruleset, crew).length === 0;
+  return !crewStartingPickSpent(ruleset, crew);
+}
+
+/**
+ * Whether the crew has used its free creation pick: the flag is set, or it holds a special
+ * ability (a crew that predates the flag — holding one means the pick was taken).
+ */
+export function crewStartingPickSpent(ruleset: CrewRulesetSlice, crew: CrewAbilityState): boolean {
+  return (
+    (crew.resources[CREW_STARTING_PICK_KEY] ?? 0) > 0 ||
+    heldSpecialAbilities(ruleset, crew).length > 0
+  );
+}
+
+/**
+ * `next` resources with the starting-pick flag carried over from `prior` (the repository applies
+ * it to every crew write): once the free pick is spent, no write — removing every ability, or a
+ * resources edit that drops the key — can make it available again.
+ */
+export function withCrewStartingPickSpent(
+  ruleset: CrewRulesetSlice,
+  prior: CrewAbilityState,
+  nextResources: Record<string, number>
+): Record<string, number> {
+  if (!crewStartingPickSpent(ruleset, prior) || (nextResources[CREW_STARTING_PICK_KEY] ?? 0) > 0)
+    return nextResources;
+  return { ...nextResources, [CREW_STARTING_PICK_KEY]: 1 };
 }
 
 /** Upgrade boxes marked toward a modelled upgrade (a held upgrade reads as full). */
@@ -243,7 +276,10 @@ export function planCrewAdvance(
     return {
       ok: true,
       crewAbilities: [...crew.crewAbilities, ...added],
-      resources: startingPick ? { ...crew.resources } : withCrewXp(crew.resources, 0),
+      // The free pick records itself, so removing the ability later can't re-open it.
+      resources: startingPick
+        ? { ...crew.resources, [CREW_STARTING_PICK_KEY]: 1 }
+        : withCrewXp(crew.resources, 0),
       startingPick,
       added,
     };
@@ -323,7 +359,8 @@ export type CrewProgressionCheck =
   | { ok: false; code: CrewAdvanceRefusal | 'ILLEGAL_PROGRESSION'; message: string };
 
 /**
- * The server-side write gate: is `next` a legal successor of `prior`? A write that ADDS no ability
+ * The repository write gate (server-side for the bot; in the browser for web writes — F100): is
+ * `next` a legal successor of `prior`? A write that ADDS no ability
  * and marks no upgrade box is always fine (removals are GM corrections; held abilities — even ones
  * a legacy sheet took before these rules — are grandfathered, mirroring the character-side
  * `grandfatherHeldAbilities`). Anything that does add must be exactly one {@link planCrewAdvance}

@@ -9,9 +9,10 @@ import {
   isAbilityUnlocked,
   type AbilityDefinition,
 } from '@heist-mind/core';
-import { Badge, Button, Card, Text } from '@heist-mind/ui';
+import { Badge, Button, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';
+import { SelectableCard, SelectableCardDescription } from './SelectableCard';
 
 /**
  * Special-abilities picker (multi-select), gated by the ruleset's choice limit + tier/prereqs.
@@ -85,52 +86,30 @@ export function AbilitiesStep() {
         : null;
 
     return (
-      <Card
+      <SelectableCard
         key={ab.id}
-        variant={isSelected ? 'success' : 'outline'}
-        role='button'
-        tabIndex={disabled ? -1 : 0}
-        aria-pressed={isSelected}
-        aria-disabled={disabled}
-        onClick={() => {
-          if (!disabled) toggle(ab.id);
-        }}
-        onKeyDown={e => {
-          if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            toggle(ab.id);
-          }
-        }}
-        className={disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
-      >
-        <div className='flex flex-wrap items-center gap-2.5'>
-          <span className='font-display' style={{ fontSize: 18 }}>
-            {ab.name}
-          </span>
-          {ab.tier != null && (
-            <Badge variant='gold' size='sm'>
-              {t('components.steps.abilities.tier', { tier: ab.tier })}
-            </Badge>
-          )}
-          {reason && (
-            <Badge variant='outline' size='sm'>
-              {t('components.steps.abilities.locked')}
-            </Badge>
-          )}
-          {isSelected && (
-            <span style={{ marginLeft: 'auto' }}>
-              <Badge variant='success' size='sm'>
-                {t('components.steps.abilities.chosen')}
+        selected={isSelected}
+        disabled={disabled}
+        onSelect={() => toggle(ab.id)}
+        title={ab.name}
+        titleSize={18}
+        selectedLabel={t('components.steps.abilities.chosen')}
+        tags={
+          <>
+            {ab.tier != null && (
+              <Badge variant='gold' size='sm'>
+                {t('components.steps.abilities.tier', { tier: ab.tier })}
               </Badge>
-            </span>
-          )}
-        </div>
-        <div
-          className='text-foreground-secondary'
-          style={{ fontSize: 13, marginTop: 9, lineHeight: 1.5 }}
-        >
-          {ab.description}
-        </div>
+            )}
+            {reason && (
+              <Badge variant='outline' size='sm'>
+                {t('components.steps.abilities.locked')}
+              </Badge>
+            )}
+          </>
+        }
+      >
+        <SelectableCardDescription>{ab.description}</SelectableCardDescription>
         {ab.rules && (
           <div
             className='text-foreground-muted'
@@ -144,7 +123,7 @@ export function AbilitiesStep() {
             {reason}
           </div>
         )}
-      </Card>
+      </SelectableCard>
     );
   };
 

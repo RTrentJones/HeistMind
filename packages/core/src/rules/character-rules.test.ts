@@ -45,6 +45,7 @@ import {
   abilityName,
   desperateRollTrigger,
   desperateRollXp,
+  desperateRollXpBlockedTrack,
   sessionXpTriggers,
   identityOptions,
   matchIdentityOption,
@@ -472,6 +473,29 @@ describe('validateCharacter — creation mode', () => {
       mode: 'creation',
     });
     expect(codes(ok)).not.toContain('STEP_INCOMPLETE');
+  });
+
+  it('blocks a required identity step until its field is set (round 4: vice was skippable)', () => {
+    const rs = ruleset({
+      characterCreation: {
+        steps: [
+          { id: 'vice', name: 'Vice', description: '', order: 1, required: true },
+          // A combined identity step is never blocking here; nor is an optional heritage.
+          { id: 'identity', name: 'Identity', description: '', order: 2, required: true },
+          { id: 'heritage', name: 'Heritage', description: '', order: 3, required: false },
+        ],
+      },
+    });
+    const r = validateCharacter(rs, character({ vice: '  ' }), { mode: 'creation' });
+    const incomplete = r.errors.filter(e => e.code === 'STEP_INCOMPLETE');
+    expect(incomplete.map(e => e.field)).toEqual(['steps.vice']);
+    expect(incomplete[0]?.message).toMatch(/^Choose a vice/);
+    const ok = validateCharacter(rs, character({ vice: 'Stupor' }), { mode: 'creation' });
+    expect(codes(ok)).not.toContain('STEP_INCOMPLETE');
+    // Live mode (a played sheet) never re-asks for it.
+    expect(codes(validateCharacter(rs, character({ vice: '' }), { mode: 'live' }))).not.toContain(
+      'STEP_INCOMPLETE'
+    );
   });
 
   it('enforces a max restriction and surfaces its message', () => {
@@ -1415,6 +1439,11 @@ describe('XP triggers (F92 deferred — desperate roll → the action’s attrib
     // A full attribute track can't take more.
     const full = character({ xp: { playbook: 0, attributes: { force: 6 } } });
     expect(desperateRollXp(rs, full, 'Clash')).toBeNull();
+    // …and says which track blocked it (round 4: the roller is told, not silently skipped).
+    expect(desperateRollXpBlockedTrack(rs, full, 'Clash')).toBe('force');
+    expect(desperateRollXpBlockedTrack(rs, character(), 'Clash')).toBeNull();
+    expect(desperateRollXpBlockedTrack(rs, full, 'Nope')).toBeNull();
+    expect(desperateRollXpBlockedTrack(trackRs([beliefs]), full, 'Clash')).toBeNull();
   });
 
   it('no desperate-roll trigger (custom ruleset) → nothing auto-marked; flat pool → the pool', () => {
@@ -1424,6 +1453,7 @@ describe('XP triggers (F92 deferred — desperate roll → the action’s attrib
       attributes: [{ id: 'grit', name: 'Grit', description: '', skills: ['Clash'] }],
     });
     expect(desperateRollXp(flat, character(), 'Clash')).toEqual({ track: null, amount: 1 });
+    expect(desperateRollXpBlockedTrack(flat, character(), 'Clash')).toBeNull();
   });
 
   it("sessionXpTriggers leads with the playbook's own trigger and drops the desperate one", () => {

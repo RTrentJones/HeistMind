@@ -167,4 +167,68 @@ test.describe('invite link /join/<code>', () => {
       await gm.dispose();
     }
   });
+
+  // Round 4 P1-N1 — the campaign used to cap silently at 5 players + the GM: the 6th join got
+  // "Something went wrong joining. Try again" while the invite promised 20. Now the GM sees and
+  // sets the PLAYER limit, a full campaign says so specifically (link + /games box), and raising
+  // the limit lets the same code in.
+  test('a full campaign says so; the GM raises the player limit and the code works', async ({
+    browser,
+  }) => {
+    const gm = await throwawayPage(browser);
+    const first = await throwawayPage(browser);
+    const second = await throwawayPage(browser);
+    try {
+      const campaign = await campaignWithJoinCode(gm.page, 'Full Table');
+      // A new campaign seats 20 players (never fewer than one code's 20 uses).
+      await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 20 players');
+      await expect(gm.page.getByTestId('invite-seats')).toContainText('0 of 20 player seats taken');
+
+      // The GM limits the table to one player.
+      const limit = gm.page.getByRole('spinbutton', { name: 'Player limit' });
+      await limit.fill('1');
+      await gm.page.getByRole('button', { name: 'Save limit' }).click();
+      await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 1 players', {
+        timeout: 15_000,
+      });
+
+      await joinViaLink(first.page, campaign);
+
+      // The next player is told the campaign is full — on the link…
+      const reason = second.page.getByTestId('join-error');
+      await second.page.goto(`/join/${campaign.code}`);
+      await expect(reason).toHaveAttribute('data-reason', 'full', { timeout: 20_000 });
+      await expect(reason).toContainText(/campaign is full/i);
+      // …and in the /games join box.
+      await second.page.goto('/games');
+      await second.page.getByLabel('Join code').fill(campaign.code);
+      await second.page.getByRole('button', { name: 'Join', exact: true }).click();
+      await expect(second.page.getByText(/This campaign is full/)).toBeVisible({ timeout: 20_000 });
+
+      // The GM sees it too, and can't go below the players already in.
+      await gm.page.reload();
+      await openCampaignSetup(gm.page);
+      await expect(gm.page.getByTestId('player-seats')).toHaveText(
+        '1 of 1 players — the campaign is full',
+        { timeout: 15_000 }
+      );
+      await expect(gm.page.getByTestId('invite-seats')).toContainText(
+        /All 1 player seats are taken/
+      );
+      await limit.fill('0');
+      await expect(gm.page.getByRole('button', { name: 'Save limit' })).toBeDisabled();
+      await limit.fill('6');
+      await gm.page.getByRole('button', { name: 'Save limit' }).click();
+      await expect(gm.page.getByTestId('player-seats')).toHaveText('1 of 6 players', {
+        timeout: 15_000,
+      });
+
+      // The waiting player retries from the same link and gets in.
+      await joinViaLink(second.page, campaign);
+    } finally {
+      await second.dispose();
+      await first.dispose();
+      await gm.dispose();
+    }
+  });
 });

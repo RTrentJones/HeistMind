@@ -56,7 +56,9 @@ describe('RollPanel — standalone (display-only) rolls', () => {
     fixDice(6);
     const user = userEvent.setup();
     renderLocal();
-    expect(screen.getByTestId('roll-local-note')).toHaveTextContent(/aren't saved anywhere/i);
+    expect(screen.getByTestId('roll-local-note')).toHaveTextContent(/aren't logged anywhere/i);
+    // Round 4 P2-N7: the note says what DOES land on the sheet — stress AND desperate-roll XP.
+    expect(screen.getByTestId('roll-local-note')).toHaveTextContent(/XP a desperate action roll/i);
     await user.click(screen.getByRole('button', { name: 'Roll' }));
     // Two sixes on Prowl 2 = critical.
     expect(await screen.findByTestId('roll-result')).toHaveTextContent(/critical/i);
@@ -76,6 +78,18 @@ describe('RollPanel — standalone (display-only) rolls', () => {
     expect(markDesperateXp.mutateAsync).toHaveBeenCalledWith({ userId: 'u1', action: 'Prowl' });
     expect(await screen.findByText(/marked 1 XP in Prowess/i)).toBeInTheDocument();
     expect(actionRoll.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('a failed local XP write still shows the roll and says to mark the XP (round 4)', async () => {
+    fixDice(2);
+    markDesperateXp.mutateAsync.mockRejectedValue(new Error('LOAD_OVER'));
+    const user = userEvent.setup();
+    renderLocal();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Position' }), 'desperate');
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toHaveTextContent('[2, 2]');
+    expect(await screen.findByText(/couldn't be marked \(LOAD_OVER\)/)).toBeInTheDocument();
+    expect(screen.queryByText('LOAD_OVER')).not.toBeInTheDocument();
   });
 
   it('a risky roll marks no desperate XP', async () => {

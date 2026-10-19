@@ -3,7 +3,7 @@
 // interactive (it used to unmount the whole sheet into the load-error screen, with a full
 // reload as the only recovery). The seam is mocked; the ruleset content is the real
 // DEFAULT_RULESET (fixture-provenance rule — never invent a content shape).
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterWithDetails } from '@heist-mind/core';
@@ -226,6 +226,26 @@ describe('CharacterSheet writes + read-only gating', () => {
     expect(screen.getByTestId('roll-panel')).toHaveAttribute('data-game', 'standalone');
     expect(screen.getByRole('heading', { name: 'Dice' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Flashback')).not.toBeInTheDocument();
+  });
+
+  // F99 (round-4 P1-2) — the standalone banner links to the attach card, and on phones that card
+  // is NOT reordered to the bottom (it was `order-3`, ~4000px below "the card below").
+  it('a standalone sheet links its banner to the attach card, kept high on phones', () => {
+    renderSheet();
+    const link = within(screen.getByTestId('standalone-banner')).getByRole('link', {
+      name: /Bring it to a campaign/,
+    });
+    expect(link).toHaveAttribute('href', '#sheet-attach');
+    const attach = document.getElementById('sheet-attach');
+    expect(attach).not.toBeNull();
+    expect(attach?.className).not.toMatch(/order-/);
+  });
+
+  it('an in-campaign sheet keeps move/return low on phones, with no standalone banner', () => {
+    characterQuery.data = { ...character, gameId: 'g1', game: { createdBy: 'gm' } } as never;
+    renderSheet();
+    expect(screen.queryByTestId('standalone-banner')).not.toBeInTheDocument();
+    expect(document.getElementById('sheet-attach')).toHaveClass('max-sm:order-3');
   });
 
   it('offers Delete character to the owner only — never the GM or a viewer (F94)', () => {

@@ -86,4 +86,28 @@ describe('rollPool', () => {
     });
     expect(rollPool({ mode: 'resistance', rating: 0 })).toEqual({ count: 2, zeroDice: true });
   });
+
+  it('bonus: ability dice (±Nd, the bot’s bonus:) on action + resistance; pool floor 0d', () => {
+    expect(rollPool({ mode: 'action', rating: 2, bonus: 1 })).toEqual({
+      count: 3,
+      zeroDice: false,
+    });
+    expect(rollPool({ mode: 'action', rating: 2, push: true, bonus: 2 })).toEqual({
+      count: 5,
+      zeroDice: false,
+    });
+    expect(rollPool({ mode: 'resistance', rating: 1, bonus: 1 })).toEqual({
+      count: 2,
+      zeroDice: false,
+    });
+    // A penalty below zero still rolls as 0d — 2 dice, take the lowest — never fewer.
+    expect(rollPool({ mode: 'resistance', rating: 1, bonus: -3 })).toEqual({
+      count: 2,
+      zeroDice: true,
+    });
+    expect(rollPool({ mode: 'action', rating: 1, bonus: -2, harmPenalty: 1 })).toEqual({
+      count: 2,
+      zeroDice: true,
+    });
+  });
 });

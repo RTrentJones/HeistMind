@@ -48,7 +48,9 @@
     },
     "inviteSection": {
       "title": "Invite players",
-      "description": "Send players an invite link (it works even if they haven't signed in yet), or the bare join code to type on the Campaigns page. Each code lets up to 20 players in; revoke it any time.",
+      "description": "Send players an invite link (it works even if they haven't signed in yet), or the bare join code to type on the Campaigns page. Each code works for up to 20 joins while the campaign has an open player seat; revoke it any time.",
+      "seatsOpen": "{{players}} of {{limit}} player seats taken — {{open}} open. Change the limit under Players.",
+      "seatsFull": "All {{limit}} player seats are taken, so no code will let anyone in until you raise the player limit under Players.",
       "generate": "Create a join code",
       "generateFailed": "Couldn't create a join code.",
       "copy": "Copy code",
@@ -150,6 +152,8 @@
         "abilities": "Special Abilities",
         "noneChosen": "None chosen.",
         "identity": "Identity",
+        "identityItem": "{{label}}: {{value}}",
+        "identityItemDetail": "{{label}}: {{value}} ({{detail}})",
         "identityNotSet": "Identity not set."
       }
     },
@@ -199,7 +203,8 @@
       "unmarkXpAria": "Unmark — back to {{count}} XP",
       "logXpMarkTrack": "Marked {{count}} XP — {{track}}",
       "logXpUnmarkTrack": "Removed {{count}} XP — {{track}}",
-      "standaloneBanner": "Standalone character — not in a campaign yet. Bring it to one from the card below.",
+      "standaloneBanner": "Standalone character — not in a campaign yet.",
+      "standaloneBannerLink": "Bring it to a campaign ↓",
       "takeHarmLabel": "Take harm",
       "clearHarmAria": "Clear harm: {{name}}",
       "logHarmTaken": "Took {{level}} harm: {{description}}",
@@ -378,9 +383,16 @@
       "harmWaivedHint": "Harm penalty waived — the GM ruled the wound doesn't hinder this action.",
       "harmLesserHint": "Lesser harm — expect reduced effect.",
       "harmSevereHint": "Severe harm — you can't act without help or pushing yourself.",
-      "localNote": "Rolls here aren't saved anywhere — this character isn't in a campaign, so there's no campaign log. The stress a roll costs (pushing, resisting) is marked on this sheet.",
+      "localNote": "Rolls here aren't logged anywhere — this character isn't in a campaign, so there's no campaign log. What a roll changes on the sheet is still marked here: the stress it costs (pushing, resisting) and the XP a desperate action roll earns.",
       "localHistory": "This session's rolls",
-      "desperateXpNote": "Desperate roll — marked 1 XP in {{attribute}} ({{marks}} on the track)."
+      "desperateXpNote": "Desperate roll — marked 1 XP in {{attribute}} ({{marks}} on the track).",
+      "desperateXpFull": "Desperate roll — your {{attribute}} XP track is already full ({{size}}/{{size}}), so nothing was marked. Take an advance to spend it.",
+      "desperateXpFailed": "The roll is saved, but its desperate-roll XP couldn't be marked ({{reason}}). Mark 1 XP on the sheet yourself.",
+      "bonusLabel": "Ability dice",
+      "bonusOption": "{{signed}}d from an ability",
+      "bonusNone": "No ability dice",
+      "bonusHint": "Dice an ability or crew upgrade adds or removes on this roll (Ambush +1d, Iron Will +1d, Daredevil −1d). The pool never drops below 0d.",
+      "abilityDiceNote": "Includes {{signed}}d from an ability or upgrade."
     },
     "rollLog": {
       "empty": "No rolls yet.",
@@ -552,6 +564,11 @@
       "pickerAdvanceTitle": "Crew advance: a new special ability or two upgrade boxes",
       "pickerAdvanceHelp": "Spending the advance clears the XP track. Abilities come from your crew type's list; Veteran opens one from another crew type.",
       "viaVeteran": "via Veteran",
+      "pickerGroupOwn": "From your crew's list",
+      "pickerGroupOwnNamed": "From your crew's list ({{type}})",
+      "pickerGroupVeteran": "Through Veteran — another crew type's ability",
+      "pickerGroupVeteranHelp": "Takes Veteran and this ability together in one pick.",
+      "pickerGroupUpgrades": "Upgrades — mark two boxes",
       "markUpgradeBoxes": "Mark 2 upgrade boxes: {{name}} ({{boxes}}/{{size}})",
       "markOtherUpgrades": "Mark 2 boxes on other upgrades",
       "markOtherUpgradesHelp": "Lair, training, cohorts and the rest — record them on your crew sheet.",
@@ -740,7 +757,16 @@
       "leaveHint": "Leaving keeps your characters — they move back to My Characters as standalone characters.",
       "leftNote": "left the campaign",
       "leftToast": "You left the campaign",
-      "leaveFailed": "Couldn't leave the campaign"
+      "leaveFailed": "Couldn't leave the campaign",
+      "seats": "{{players}} of {{limit}} players",
+      "seatsFull": "{{players}} of {{limit}} players — the campaign is full",
+      "limitLabel": "Player limit",
+      "limitSave": "Save limit",
+      "limitHelp": "How many players can join (you, the GM, aren't counted) — up to {{max}}.",
+      "limitRange": "Choose a whole number from {{min}} to {{max}}.",
+      "limitBelowPlayers": "{{players}} players are already in — remove someone first to go lower.",
+      "limitSaved": "Player limit set to {{limit}}",
+      "limitFailed": "Couldn't save the player limit."
     },
     "discordLink": {
       "title": "Play this campaign on Discord",
@@ -807,6 +833,11 @@
       "failed": "Discord sign-in didn't complete. Please try again.",
       "timeout": "Sign-in is taking too long. Please try again.",
       "cancelled": "You cancelled the Discord sign-in. No problem — sign in again whenever you're ready."
+    },
+    "signin": {
+      "title": "Taking you to Discord",
+      "waiting": "Starting your Discord sign-in — this usually takes a second.",
+      "retry": "Continue with Discord"
     }
   },
   "pages": {
@@ -889,6 +920,7 @@
       "recentActivity": "Recent activity",
       "noActivity": "No recent activity yet — rolls, results and changes in your campaigns show up here.",
       "activityIn": "in {{campaign}}",
+      "activityMoreCrew": "+{{count}} earlier on the crew sheet",
       "yourCampaigns": "Your campaigns",
       "yourCharacters": "Your characters",
       "viewAll": "View all",
@@ -1040,6 +1072,7 @@
         "expired": "This join code has expired. Ask your GM for a new invite link.",
         "usedUp": "This join code has been used up. Ask your GM for a new invite link.",
         "removed": "The GM removed you from this campaign, so this link can't add you back. Talk to your GM if that was a mistake.",
+        "full": "This campaign is full — every player seat is taken. Ask your GM to raise the player limit on the campaign page, then try again.",
         "generic": "Something went wrong joining. Try again in a moment."
       }
     },

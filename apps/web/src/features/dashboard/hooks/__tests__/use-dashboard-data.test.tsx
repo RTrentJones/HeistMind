@@ -11,7 +11,7 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 // eslint-disable-next-line no-restricted-imports
 import { getRepositories } from '@/lib/auth';
 import '@/lib/i18n';
-import { useDashboardData } from '../use-dashboard-data';
+import { collapseCrewRuns, useDashboardData, type DashboardActivity } from '../use-dashboard-data';
 
 const GAME = { id: 'g1', name: 'The Docks', createdBy: 'u1' };
 const ROLL = { id: 'r1', gameId: 'g1', kind: 'note', createdAt: new Date().toISOString() };
@@ -48,6 +48,28 @@ describe('useDashboardData', () => {
     expect(result.current.activity.map(a => a.roll.id)).toEqual(['r1']);
   });
 
+  it("resolves names for other players' characters from that campaign's roster only", async () => {
+    const findByGame = vi.fn(() => ok([{ id: 'c9', name: 'Asher Vane' }]));
+    vi.mocked(getRepositories).mockReturnValue({
+      games: { findByCreator: () => ok([GAME]), findByPlayer: () => ok([]) },
+      characters: { findByPlayer: () => ok([{ id: 'c1', name: 'Mine' }]), findByGame },
+      rolls: {
+        findByGame: () =>
+          ok([
+            { ...ROLL, id: 'r1', characterId: 'c9' },
+            { ...ROLL, id: 'r2', characterId: 'c1' },
+          ]),
+      },
+    } as unknown as DatabaseRepositories);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useDashboardData('u1'), { wrapper: wrapper(qc) });
+
+    await waitFor(() => expect(result.current.activityStatus.loading).toBe(false));
+    expect(result.current.characterNames).toEqual({ c9: 'Asher Vane', c1: 'Mine' });
+    expect(findByGame).toHaveBeenCalledTimes(1);
+    expect(findByGame).toHaveBeenCalledWith('g1');
+  });
+
   it('surfaces a joined-campaigns failure as an error with retry, not "no campaigns"', async () => {
     const findByPlayer = vi.fn(() =>
       Promise.resolve({ success: false, error: { message: 'joined failed' } })
@@ -68,5 +90,34 @@ describe('useDashboardData', () => {
 
     result.current.campaignsStatus.retry();
     await waitFor(() => expect(findByPlayer).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe('collapseCrewRuns (round 4 P2-N6: crew XP flooding Recent activity)', () => {
+  const entry = (id: string, kind: string, gameId = 'g1'): DashboardActivity =>
+    ({ roll: { id, kind, gameId }, gameName: 'The Docks' }) as unknown as DashboardActivity;
+
+  it('folds a back-to-back crew run in one campaign into its newest row with a count', () => {
+    const out = collapseCrewRuns([
+      entry('c3', 'crew'),
+      entry('c2', 'crew'),
+      entry('c1', 'crew'),
+      entry('r1', 'action'),
+      entry('c0', 'crew'),
+    ]);
+    expect(out.map(e => [e.roll.id, e.collapsed ?? 0])).toEqual([
+      ['c3', 2],
+      ['r1', 0],
+      ['c0', 0],
+    ]);
+  });
+
+  it('never folds across campaigns or non-crew rows', () => {
+    const out = collapseCrewRuns([
+      entry('a', 'crew', 'g1'),
+      entry('b', 'crew', 'g2'),
+      entry('x', 'xp'),
+    ]);
+    expect(out).toHaveLength(3);
   });
 });

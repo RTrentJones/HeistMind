@@ -60,6 +60,8 @@ describe('ConfirmButton (two-click armed confirm)', () => {
     const ghost = button.querySelector('[aria-hidden="true"]');
     expect(ghost).toHaveTextContent('Delete for good');
     expect(ghost).toHaveClass('invisible');
+    // F99 — a wrapped reserve label must not push the visible one to the top of the box.
+    expect(ghost?.parentElement).toHaveClass('place-items-center');
 
     fireEvent.click(button);
     const armed = screen.getByRole('button', { name: 'Delete “The Job” for good' });

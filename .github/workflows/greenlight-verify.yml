@@ -1,4 +1,7 @@
 name: greenlight-verify
+# The run title carries the target + commit so the once-per-commit dedupe below can find an
+# earlier green run for the same (env, sha) through the Actions API.
+run-name: verify ${{ github.event.deployment.environment }} ${{ github.event.deployment.sha }}
 
 # Vercel deploys heistmind on push and posts a deployment_status to GitHub; we verify the exact
 # deployed URL with `greenlight verify` (verify/heistmind.config.ts). One call runs every mode in
@@ -10,41 +13,115 @@ name: greenlight-verify
 #   - agent-web  : an LLM smoke, only when ANTHROPIC_API_KEY is set.
 # Auth-gated specs skip themselves when this env's SUPABASE_SERVICE_ROLE_KEY secret is absent, so the
 # gate still passes on the public surface until those secrets are wired.
+#
+# WHICH deployments (F101): only (a) the beta deployment — a Preview built from `development` — and
+# (b) the Production deployment from `main`. Feature-branch previews are NOT gated here (PR CI's
+# `e2e` job runs the same suite against a local stack), and a second Vercel deployment of an
+# already-verified (env, sha) is skipped. Before F101 every deployment_status ran the full gate, so
+# one merge produced 2 concurrent runs sharing the same personas on the one Supabase project, and a
+# sign-out in one invalidated the other's session (1d40c00: 1 of 2 runs failed).
 on:
   deployment_status:
 
 permissions:
   contents: read
   statuses: write
+  actions: read # the once-per-commit dedupe lists this workflow's earlier runs
+  checks: read # Production asserts supabase-ci's "Migrations applied (production)" check on the same commit
+
+env:
+  # Exact pin, never `@latest`: the gate's behavior must not change under a commit. Lockstep with
+  # the greenlight version the RTrentJones.dev wrapper + infra `?ref=` run (v0.10.0); bump
+  # deliberately, together with supabase-ci.yml's GREENLIGHT_VERSION.
+  GREENLIGHT_VERSION: '0.10.0'
 
 jobs:
   verify:
-    if: ${{ github.event.deployment_status.state == 'success' }}
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      ((github.event.deployment.environment == 'Production' && github.event.deployment.ref == 'main') ||
+       (github.event.deployment.environment != 'Production' && github.event.deployment.ref == 'development'))
     runs-on: ubuntu-latest
+    # One gate at a time per target: the personas live in the project-global auth.users, so two
+    # beta runs must never overlap (cancel-in-progress: false → queue, never kill a running gate).
+    concurrency:
+      group: greenlight-verify-${{ github.event.deployment.environment == 'Production' && 'prod' || 'beta' }}
+      cancel-in-progress: false
     steps:
+      - name: Skip if this commit is already verified on this target
+        id: dedupe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.deployment.sha }}
+          TITLE: verify ${{ github.event.deployment.environment }} ${{ github.event.deployment.sha }}
+        run: |
+          # Vercel can post more than one successful deployment for the same commit (a redeploy, a
+          # second build of the same sha). The artifact is identical, so one green gate is enough.
+          # Runs are serialized by the concurrency group, so an earlier run has finished by now.
+          prior="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/greenlight-verify.yml/runs?head_sha=${SHA}&status=success&per_page=50" \
+            --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .display_title == \"${TITLE}\")] | length" 2>/dev/null)" || prior=0
+          if [ "${prior:-0}" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "✅ ${TITLE} already passed in an earlier run; skipping this duplicate deployment."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.dedupe.outputs.skip != 'true'
+
       - uses: actions/setup-node@v4
+        if: steps.dedupe.outputs.skip != 'true'
         with:
           node-version: '24' # the greenlight CLI's floor — intentionally newer than the app's .nvmrc
+
+      # Prod ordering backstop (F101). The Vercel production build already waits for this check
+      # (vercel.json `ignoreCommand` → scripts/vercel-migration-gate.mjs); this re-asserts it so a
+      # Production deployment whose `production` schema migrations did not apply turns this gate
+      # RED (e.g. the Vercel gate was switched off). Same script; exit 1 = "migrations applied".
+      - name: Production — assert "Migrations applied (production)" on this commit
+        if: steps.dedupe.outputs.skip != 'true' && github.event.deployment.environment == 'Production'
+        env:
+          VERCEL_ENV: production
+          VERCEL_GIT_COMMIT_SHA: ${{ github.event.deployment.sha }}
+          VERCEL_GIT_REPO_OWNER: ${{ github.repository_owner }}
+          VERCEL_GIT_REPO_SLUG: ${{ github.event.repository.name }}
+          GITHUB_CHECKS_TOKEN: ${{ github.token }}
+          HEISTMIND_MIGRATION_GATE_TIMEOUT_S: '900'
+          HEISTMIND_MIGRATION_GATE_INTERVAL_S: '20'
+        run: |
+          set +e
+          node scripts/vercel-migration-gate.mjs
+          rc=$?
+          set -e
+          if [ "$rc" -ne 1 ]; then
+            echo "::error title=Prod schema not confirmed::supabase-ci's \"Migrations applied (production)\" check is not green for ${VERCEL_GIT_COMMIT_SHA}. The web code may be live ahead of its schema; re-run Supabase CI/CD for this commit."
+            exit 1
+          fi
 
       # The playwright mode shells out to `pnpm exec playwright test`, so deps + the browser must be
       # present before greenlight runs.
       - name: Setup pnpm
+        if: steps.dedupe.outputs.skip != 'true'
         uses: pnpm/action-setup@v4
         with:
           version: '9.15.0'
           run_install: false
       - name: Install dependencies
+        if: steps.dedupe.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
       # The e2e suite imports workspace packages (discord.spec.ts seeds the builtin ruleset from
       # @heist-mind/shared — the fixture-provenance rule), and workspace imports resolve to
       # dist/, which a bare install doesn't produce. `...` builds the package plus its deps.
       - name: Build workspace packages the e2e suite imports
+        if: steps.dedupe.outputs.skip != 'true'
         run: pnpm exec turbo run build --filter="@heist-mind/shared..."
       - name: Install Playwright browser
+        if: steps.dedupe.outputs.skip != 'true'
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Greenlight verify (api + playwright + agent-web)
+        if: steps.dedupe.outputs.skip != 'true'
         env:
           # Per-tool secret (the bypass value is per Vercel project) → no collision if another vercel
           # tool is added; the env var the spec reads stays generic.
@@ -65,10 +142,11 @@ jobs:
           # Artifact identity: the commit Vercel built. The spec asserts /__version serves exactly
           # this (through the protection bypass); --expect-sha arms the harness's own probe too.
           GREENLIGHT_EXPECTED_SHA: ${{ github.event.deployment.sha }}
-        run: npx -y @rtrentjones/greenlight@latest verify --url "${{ github.event.deployment_status.target_url }}" --spec verify/heistmind.config.ts --expect-sha "$GREENLIGHT_EXPECTED_SHA"
+          TARGET_URL: ${{ github.event.deployment_status.target_url }}
+        run: npx -y "@rtrentjones/greenlight@${GREENLIGHT_VERSION}" verify --url "$TARGET_URL" --spec verify/heistmind.config.ts --expect-sha "$GREENLIGHT_EXPECTED_SHA"
 
       - name: Upload Playwright report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.dedupe.outputs.skip != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ github.event.deployment_status.id }}
