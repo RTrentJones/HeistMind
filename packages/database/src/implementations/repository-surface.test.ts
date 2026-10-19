@@ -227,4 +227,37 @@ describe('SupabaseRulesetRepository + SupabaseGameRepository', () => {
     expect(moved.success && moved.data.state).toBe('active');
     expect((await g(fail('x')).updateState('g1', 'gm', 'active')).success).toBe(false);
   });
+
+  it('game setPlayerLimit stores seats (players + the GM), defaults new campaigns to the DB', async () => {
+    // Round 4 P1-N1: no client-side 6-seat default on create — the DB default (00026) applies.
+    const created = stub(ok(GAME));
+    await new SupabaseGameRepository(created.client, 'development').create('gm', {
+      name: 'Docks',
+      rulesetId: 'r1',
+    });
+    const insert = created.calls.find(c => c.method === 'insert')?.args[0] as object;
+    expect(insert).not.toHaveProperty('max_players');
+    const read = await new SupabaseGameRepository(stub(ok(GAME)).client, 'development').findById(
+      'g1'
+    );
+    expect(read.success && read.data?.maxPlayers).toBe(21);
+
+    const set = stub(ok({ ...GAME, max_players: 9 }));
+    const out = await new SupabaseGameRepository(set.client, 'development').setPlayerLimit('g1', 8);
+    expect(out.success && out.data.maxPlayers).toBe(9);
+    expect(set.calls.find(c => c.method === 'update')?.args[0]).toEqual({ max_players: 9 });
+
+    for (const bad of [0, 31, 2.5]) {
+      const refused = await new SupabaseGameRepository(
+        stub(ok(GAME)).client,
+        'development'
+      ).setPlayerLimit('g1', bad);
+      expect(refused.success).toBe(false);
+    }
+    const dbRefusal = await new SupabaseGameRepository(
+      stub(fail('Player limit is below the players already in the campaign', 'P0001')).client,
+      'development'
+    ).setPlayerLimit('g1', 3);
+    expect(!dbRefusal.success && dbRefusal.error.message).toMatch(/below the players/);
+  });
 });
