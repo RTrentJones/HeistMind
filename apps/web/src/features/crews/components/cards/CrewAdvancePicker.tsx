@@ -39,6 +39,7 @@ function decode(value: string): CrewAdvanceChoice | null {
  * F99 — presentation only (the legal set is still exactly core's): options are grouped under
  * headings — the crew's OWN list first (the picks a GM is looking for), then other types' abilities
  * reachable through Veteran, then the upgrade-box options — and each is a ≥44px tappable row.
+ * F102 — the Veteran group is a disclosure, collapsed by default.
  */
 export function CrewAdvancePicker({
   crew,
@@ -53,6 +54,7 @@ export function CrewAdvancePicker({
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState('');
+  const [veteranOpen, setVeteranOpen] = useState(false);
   const rs = { crew: crewRules };
   const starting = crewStartingPickAvailable(rs, crew);
   const ready = crewAdvanceReady(crew.resources);
@@ -90,6 +92,8 @@ export function CrewAdvancePicker({
     </label>
   );
 
+  // Group headings: plain sans text-sm (the small-caps display face wrapped to 2–3 lines at 360).
+  const headingClass = 'text-sm font-semibold text-foreground-secondary';
   const group = (id: string, heading: string, rows: React.ReactNode[], help?: string) =>
     rows.length > 0 && (
       <div
@@ -99,10 +103,7 @@ export function CrewAdvancePicker({
         data-testid={id}
       >
         <div>
-          <span
-            id={`${id}-${crew.id}`}
-            className='block font-display text-xs uppercase tracking-wider text-foreground-secondary'
-          >
+          <span id={`${id}-${crew.id}`} className={`block ${headingClass}`}>
             {heading}
           </span>
           {help && <span className='block text-xs text-foreground-muted'>{help}</span>}
@@ -110,6 +111,47 @@ export function CrewAdvancePicker({
         {rows}
       </div>
     );
+
+  // F102 — the Veteran routes (13 rows on BitD) are a native disclosure, collapsed by default, so
+  // the upgrades + "Take advance" aren't ~4,900px down the page at 360. <details>/<summary> is
+  // keyboard-operable as is (Enter/Space toggles).
+  const veteranRows = viaVeteran.map(a =>
+    option(`ability:${a.id}`, a.name, a.description, t('components.crewSheet.viaVeteran'))
+  );
+  const veteranId = `crew-advance-veteran-${crew.id}`;
+  const veteran = veteranRows.length > 0 && (
+    <details
+      open={veteranOpen}
+      onToggle={e => setVeteranOpen(e.currentTarget.open)}
+      className='group/vet rounded-md border border-border-primary'
+      data-testid='crew-advance-veteran-disclosure'
+    >
+      <summary className='flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary [&::-webkit-details-marker]:hidden'>
+        <span className='min-w-0'>
+          <span id={veteranId} className={`block ${headingClass}`}>
+            {t('components.crewSheet.pickerGroupVeteran')}
+          </span>
+          <span className='block text-xs text-foreground-muted'>
+            {t('components.crewSheet.pickerGroupVeteranCount', { count: veteranRows.length })}
+          </span>
+        </span>
+        <span aria-hidden className='shrink-0 text-foreground-muted group-open/vet:rotate-180'>
+          ▾
+        </span>
+      </summary>
+      <div
+        role='group'
+        aria-labelledby={veteranId}
+        className='flex flex-col gap-2 px-3 pb-3'
+        data-testid='crew-advance-veteran'
+      >
+        <span className='block text-xs text-foreground-muted'>
+          {t('components.crewSheet.pickerGroupVeteranHelp')}
+        </span>
+        {veteranRows}
+      </div>
+    </details>
+  );
 
   return (
     <fieldset
@@ -134,14 +176,7 @@ export function CrewAdvancePicker({
             : t('components.crewSheet.pickerGroupOwn'),
           own.map(a => option(`ability:${a.id}`, a.name, a.description))
         )}
-        {group(
-          'crew-advance-veteran',
-          t('components.crewSheet.pickerGroupVeteran'),
-          viaVeteran.map(a =>
-            option(`ability:${a.id}`, a.name, a.description, t('components.crewSheet.viaVeteran'))
-          ),
-          t('components.crewSheet.pickerGroupVeteranHelp')
-        )}
+        {veteran}
         {group('crew-advance-upgrades', t('components.crewSheet.pickerGroupUpgrades'), [
           ...upgrades.map(u =>
             option(

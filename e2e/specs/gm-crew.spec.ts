@@ -181,7 +181,11 @@ test.describe('GM: crew sheet', () => {
 
     const own = picker.getByRole('group', { name: "From your crew's list (Shadows)" });
     await expect(own.getByRole('radio', { name: /^Second Story/ })).toBeVisible();
-    const veteran = picker.getByRole('group', { name: /Through Veteran/ });
+    // F102 — the Veteran routes are a disclosure, collapsed by default; the keyboard opens it.
+    const veteran = picker.getByTestId('crew-advance-veteran');
+    await expect(veteran.getByRole('radio', { name: /^Deadly/ })).toBeHidden();
+    await picker.getByTestId('crew-advance-veteran-disclosure').locator('summary').focus();
+    await gmPage.keyboard.press('Enter');
     await expect(veteran.getByRole('radio', { name: /^Deadly/ })).toBeVisible();
     // Own list renders above the Veteran routes.
     const ownBox = await own.boundingBox();

@@ -568,6 +568,8 @@
       "pickerGroupOwnNamed": "From your crew's list ({{type}})",
       "pickerGroupVeteran": "Through Veteran — another crew type's ability",
       "pickerGroupVeteranHelp": "Takes Veteran and this ability together in one pick.",
+      "pickerGroupVeteranCount_one": "{{count}} ability from another crew type",
+      "pickerGroupVeteranCount_other": "{{count}} abilities from other crew types",
       "pickerGroupUpgrades": "Upgrades — mark two boxes",
       "markUpgradeBoxes": "Mark 2 upgrade boxes: {{name}} ({{boxes}}/{{size}})",
       "markOtherUpgrades": "Mark 2 boxes on other upgrades",
