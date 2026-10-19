@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   harmDicePenalty,
   resistanceStress,
@@ -144,6 +144,15 @@ export function RollPanel({
   const historySeq = useRef(0);
   // RAW feedback: what the desperate roll just marked (the attribute XP track).
   const [desperateNote, setDesperateNote] = useState<string | null>(null);
+  // F99 — on a phone the result can land below the fold / under the fixed thumb bar: bring it
+  // into view (nearest edge, honouring the region's scroll margin) whenever a new roll lands.
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!last || typeof window === 'undefined') return;
+    if (!window.matchMedia?.('(max-width: 639px)').matches) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    resultRef.current?.scrollIntoView?.({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }, [last]);
   const attributeName = (id: string) => attributes?.find(a => a.id === id)?.name ?? id;
 
   // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
@@ -530,7 +539,17 @@ export function RollPanel({
       )}
       {/* Always-mounted polite live region: the newest result is ANNOUNCED to screen-reader users
           (the app's core action had no feedback for them — review item 8). */}
-      <div role='status' aria-live='polite' aria-atomic='true' data-testid='roll-result'>
+      {/* F99 — the desperate-XP note rides INSIDE the live region, directly under the result (it
+          rendered last, below the "not saved" note — under the phone thumb bar and unannounced).
+          `scroll-mb-20` + the effect below bring a new result above that bar on phones. */}
+      <div
+        ref={resultRef}
+        role='status'
+        aria-live='polite'
+        aria-atomic='true'
+        data-testid='roll-result'
+        className='flex scroll-mb-20 flex-col gap-2'
+      >
         {last && (
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             {last.stress != null ? (
@@ -549,6 +568,18 @@ export function RollPanel({
               [{last.results.join(', ')}]
             </Text>
           </Stack>
+        )}
+        {desperateNote && last?.kind === 'action' && (
+          // Announced by the enclosing live region — not a nested one of its own.
+          <Alert
+            variant='info'
+            size='sm'
+            role='note'
+            aria-live='off'
+            data-testid='desperate-xp-note'
+          >
+            {desperateNote}
+          </Alert>
         )}
       </div>
       {local && (
@@ -578,11 +609,6 @@ export function RollPanel({
       )}
       {/* F52 — a partial/bad ACTION result is where consequences land; scaffold the next moves
           instead of leaving the roller at a dead end. */}
-      {desperateNote && last?.kind === 'action' && (
-        <Alert variant='info' size='sm' data-testid='desperate-xp-note'>
-          {desperateNote}
-        </Alert>
-      )}
       {last?.kind === 'action' && (last.outcome === 'partial' || last.outcome === 'bad') && (
         <Alert variant='warning' size='sm'>
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>

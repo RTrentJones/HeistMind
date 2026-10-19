@@ -46,5 +46,10 @@ describe('RollPanel — desperate-roll XP', () => {
     expect(await screen.findByTestId('desperate-xp-note')).toHaveTextContent(
       'marked 1 XP in Prowess (3 on the track)'
     );
+    // F99 — the note sits inside the result's live region (announced with the result, right
+    // under it), not after the static footnotes where it hid under the phone thumb bar.
+    expect(screen.getByTestId('roll-result')).toContainElement(
+      screen.getByTestId('desperate-xp-note')
+    );
   });
 });
