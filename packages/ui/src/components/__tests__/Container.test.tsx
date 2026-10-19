@@ -2,13 +2,12 @@
  * @vitest-environment jsdom
  */
 
-import React from 'react';
 import { Container } from '../Container';
 import { render, screen } from '../../lib/test-utils';
 
-// F99 — the page container's entrance is opacity-only. The old 10px slide-up was still in flight
-// when page content resolved into the box, and Chrome scored the in-flight translate against the
-// grown box as layout shift (hub CLS 0.17–0.23 at 768).
+// F99 — the page container's entrance is opacity-only: a box that is still translating when page
+// content resolves into it can be scored as layout shift. (The hub's measured shift turned out to
+// be its loading state's narrower Container — fixed in the hub page — but a fade never moves.)
 describe('Container entrance', () => {
   it('fades in without translating the box', () => {
     render(<Container data-testid='page'>Content</Container>);

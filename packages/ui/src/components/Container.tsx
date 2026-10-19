@@ -122,9 +122,8 @@ const Container = React.forwardRef<HTMLDivElement, ContainerProps>(
         ref={ref}
         className={cn(containerVariants({ maxWidth, padding, center }), className)}
         style={customStyle}
-        // Opacity-only entrance (F99): the old 10px slide-up was still in flight when page
-        // content resolved into the container, so Chrome scored the translate against the grown
-        // box as layout shift (hub CLS 0.17–0.23 at 768). A fade never moves the box.
+        // Opacity-only entrance (F99): a 10px slide-up still in flight when page content resolves
+        // into the container can be scored as layout shift; a fade never moves the box.
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: 'easeOut' }}
