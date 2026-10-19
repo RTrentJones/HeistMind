@@ -107,5 +107,5 @@ Production deployment from `main`. Feature-branch previews are not gated; PR CI 
 are serialized per target by a concurrency group and never cancelled, because the personas live
 in the project-global `auth.users` and two overlapping runs would sign each other out. A second
 Vercel deployment of an already-verified (env, sha) is skipped. The greenlight CLI is pinned
-(`GREENLIGHT_VERSION` in the workflow). Production also asserts supabase-ci's "Migrations applied"
-check for the same commit before verifying.
+(`GREENLIGHT_VERSION` in the workflow). Production also asserts supabase-ci's "Migrations applied
+(production)" check for the same commit before verifying.

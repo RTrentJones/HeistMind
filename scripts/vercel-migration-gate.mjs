@@ -5,8 +5,8 @@
 // Why: prod web deploys ride Vercel's git integration on `main`, and the migration deploy is a
 // separate GitHub Actions job (supabase-ci.yml). Without a gate the two race, and a flake in the
 // migration job (F101: registry rate limits) let new web code go live against a schema that lacks
-// its RPCs. This script waits for the always-present "Migrations applied" check run
-// (supabase-ci.yml's `migrations-applied` job) on VERCEL_GIT_COMMIT_SHA:
+// its RPCs. This script waits for the "Migrations applied (production)" check run (supabase-ci.yml's
+// `migrations-applied` job on a main push) on VERCEL_GIT_COMMIT_SHA:
 //   success                  → build (exit 1)
 //   failure/cancelled/...    → cancel this build (exit 0); prod stays on the previous deployment
 //   still pending at timeout → cancel (fail CLOSED); re-deploy once the migration job is green
@@ -26,7 +26,9 @@
 
 import { pathToFileURL } from 'node:url';
 
-export const CHECK_NAME = 'Migrations applied';
+// The production-schema check only. main and development share a sha after a fast-forward
+// promotion, so development's "Migrations applied (development)" must never vouch for production.
+export const CHECK_NAME = 'Migrations applied (production)';
 
 export const BUILD = 1;
 export const SKIP = 0;

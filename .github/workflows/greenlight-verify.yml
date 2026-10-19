@@ -27,7 +27,7 @@ permissions:
   contents: read
   statuses: write
   actions: read # the once-per-commit dedupe lists this workflow's earlier runs
-  checks: read # Production asserts supabase-ci's "Migrations applied" check on the same commit
+  checks: read # Production asserts supabase-ci's "Migrations applied (production)" check on the same commit
 
 env:
   # Exact pin, never `@latest`: the gate's behavior must not change under a commit. Lockstep with
@@ -79,7 +79,7 @@ jobs:
       # (vercel.json `ignoreCommand` → scripts/vercel-migration-gate.mjs); this re-asserts it so a
       # Production deployment whose `production` schema migrations did not apply turns this gate
       # RED (e.g. the Vercel gate was switched off). Same script; exit 1 = "migrations applied".
-      - name: Production — assert "Migrations applied" on this commit
+      - name: Production — assert "Migrations applied (production)" on this commit
         if: steps.dedupe.outputs.skip != 'true' && github.event.deployment.environment == 'Production'
         env:
           VERCEL_ENV: production
@@ -95,7 +95,7 @@ jobs:
           rc=$?
           set -e
           if [ "$rc" -ne 1 ]; then
-            echo "::error title=Prod schema not confirmed::supabase-ci's \"Migrations applied\" check is not green for ${VERCEL_GIT_COMMIT_SHA}. The web code may be live ahead of its schema; re-run Supabase CI/CD for this commit."
+            echo "::error title=Prod schema not confirmed::supabase-ci's \"Migrations applied (production)\" check is not green for ${VERCEL_GIT_COMMIT_SHA}. The web code may be live ahead of its schema; re-run Supabase CI/CD for this commit."
             exit 1
           fi
 

@@ -63,11 +63,13 @@ start` (ci.yml). It exits 75 only when every attempt died pulling images.
     skipped with a warning, and the deploy **still runs**. It stays gated on the static checks and
     the dangerous-SQL scan; the hosted apply is `ON_ERROR_STOP`; and on `main` the same files have
     already applied to `development`.
-  - **"Migrations applied"**: a stable, always-reported job in supabase-ci. The push trigger lost
+  - **"Migrations applied (<schema>)"**: a stable, always-reported job in supabase-ci, named
+    `(production)` on main and `(development)` on development. A fast-forward gives both branches
+    the same sha, so a bare name let development's check vouch for production (Codex, PR #181). The push trigger lost
     its `paths` filter (the `changes` job decides): always on `main`, which re-asserts the
     idempotent `production` schema, and on `development` when a DB file changed.
   - **Prod ordering:** `vercel.json` `ignoreCommand` → `scripts/vercel-migration-gate.mjs`. A
-    **production** build waits for "Migrations applied" on the same commit. Green → build. Red or
+    **production** build waits for "Migrations applied (production)" on the same commit. Green → build. Red or
     still unresolved after 25 min → the build is cancelled (fail closed), and prod stays on the
     previous deployment. Previews are never gated. There's a break-glass switch,
     `HEISTMIND_MIGRATION_GATE=off`. greenlight-verify re-asserts the check on Production
@@ -84,15 +86,17 @@ start` (ci.yml). It exits 75 only when every attempt died pulling images.
 - **tests:** `scripts/vercel-migration-gate.test.mjs` (`pnpm test:scripts`, in `pnpm validate` +
   ci.yml); `lib/__tests__/site.test.ts`; `api/discord/__tests__/route.test.ts`. Workflows were
   actionlint-clean apart from pre-existing notes. The retry script was exercised with stub
-  commands (infra → 75, rotation success, real failure → its own exit code).
+  commands (infra → 75, rotation success, real failure → its own exit code, and a real failure
+  followed by registry failures → the real exit code, never 75).
 - **owner steps (not enforceable in-repo):**
   - Vercel: confirm which `vercel.json` the project reads (root vs `apps/web`, per its Root
     Directory; both carry the gate) and that the first production build log shows
     `[migration-gate]`.
   - Vercel: add `GITHUB_CHECKS_TOKEN` (fine-grained, this repo, Checks: read) to the
     **Production** env, and keep "Automatically expose System Environment Variables" on.
-  - GitHub: mark **"Migrations applied"** a required status check on `main`. Optionally, Vercel
-    Deployment Checks on "Migrations applied" as a second lock.
+  - Do **not** make the check a required status on `main`: "(production)" only exists after the
+    push lands, so it would reject the promotion fast-forward itself. Optionally, Vercel
+    Deployment Checks on "Migrations applied (production)" as a second lock.
 - **residue:** none of this has run in real CI yet. Unverified until then: Vercel's
   `deployment.ref` is the branch name (the run history's `head_branch` says so); the ghcr.io
   mirror carries every image tag the CLI pins; there is no time limit on Vercel's

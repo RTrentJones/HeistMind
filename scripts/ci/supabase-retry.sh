@@ -14,7 +14,7 @@
 #
 # Exit status:
 #   0    the command succeeded
-#   75   EX_TEMPFAIL — every attempt failed on an image pull / registry / network error. This is a
+#   75   EX_TEMPFAIL — EVERY attempt failed on an image pull / registry / network error. This is a
 #        CI-INFRASTRUCTURE failure, not a verdict on the code; callers decide the policy.
 #   *    the command's own exit status for any other (real) failure, e.g. a migration that does
 #        not apply during `supabase start`. Retried once (health-check flakes), then returned.
@@ -47,6 +47,7 @@ trap 'rm -f "$log"' EXIT
 
 attempts=${#registries[@]}
 other_failures=0
+real_rc=0
 rc=1
 for ((i = 0; i < attempts; i++)); do
   registry="${registries[$i]}"
@@ -73,6 +74,7 @@ for ((i = 0; i < attempts; i++)); do
     echo "::warning::Image/registry failure via $label (attempt $((i + 1))/$attempts)."
   else
     other_failures=$((other_failures + 1))
+    real_rc=$rc
     if [ "$other_failures" -ge 2 ]; then
       echo "❌ '$*' failed twice for a non-registry reason — not retrying (exit $rc)."
       exit "$rc"
@@ -90,6 +92,12 @@ for ((i = 0; i < attempts; i++)); do
   fi
 done
 
+# 75 only when EVERY failed attempt was infrastructure: a real failure on an earlier attempt must
+# not be masked as "degraded" just because the later retries hit a registry limit.
+if [ "$other_failures" -gt 0 ]; then
+  echo "❌ '$*' failed for a non-registry reason (exit $real_rc); later attempts could not pull images."
+  exit "$real_rc"
+fi
 if grep -Eiq "$infra_pattern" "$log"; then
   echo "::error::'$*' could not pull its images from any registry (${registries[*]}) — CI infrastructure failure."
   exit 75

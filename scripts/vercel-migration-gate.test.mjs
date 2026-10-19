@@ -1,5 +1,6 @@
 // node --test scripts/vercel-migration-gate.test.mjs (wired as `pnpm test:scripts`).
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   BUILD,
@@ -82,6 +83,21 @@ test('production builds once the migration check goes green', async () => {
   );
   assert.ok(h.calls[0].url.includes(`check_name=${encodeURIComponent(CHECK_NAME)}`));
   assert.equal(h.calls[0].init.headers.Authorization, 'Bearer tok');
+});
+
+test('the gate only trusts the production-schema check, never development or validation', () => {
+  // main and development share a sha after a fast-forward promotion; supabase-ci names the job per
+  // target schema, and only the main push reports "(production)".
+  assert.equal(CHECK_NAME, 'Migrations applied (production)');
+  const job = readFileSync(
+    new URL('../.github/workflows/supabase-ci.yml', import.meta.url),
+    'utf8'
+  );
+  assert.ok(
+    job.includes(
+      "name: Migrations applied (${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && 'production' ||"
+    )
+  );
 });
 
 test('production is cancelled when the migration check fails', async () => {

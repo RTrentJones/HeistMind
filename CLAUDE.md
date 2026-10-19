@@ -201,15 +201,18 @@ issue you find in `FINDINGS.md`. It's the guide for user validation and for deci
   registry rotation (`scripts/ci/supabase-retry.sh`). A registry outage runs the deploy on
   **degraded** validation (static checks + the dangerous-SQL scan). A real validation failure
   blocks it.
-- **"Migrations applied"** is the stable gate check. Keep the job name: the Vercel production
-  build waits for it on the same commit (`vercel.json` `ignoreCommand` →
+- **"Migrations applied (<schema>)"** is the stable gate check, named per target schema
+  (`production` on main, `development` on development) because a fast-forward gives both branches
+  the same sha. Keep the names: the Vercel production build waits for "(production)" on the same
+  commit (`vercel.json` `ignoreCommand` →
   `scripts/vercel-migration-gate.mjs`, which fails closed), and greenlight-verify re-asserts it for
   Production. Break-glass: Vercel env `HEISTMIND_MIGRATION_GATE=off`.
 - **Deploy gate:** `greenlight-verify.yml` gates only the `development` Preview (beta) and the
   `main` Production deployment. It runs once per (env, sha), serialized, and pins
   `GREENLIGHT_VERSION` (bump it with supabase-ci's, in lockstep with the RTrentJones.dev wrapper).
-- **Owner settings** (outside the repo): mark "Migrations applied" a required check on `main`, and
-  set `GITHUB_CHECKS_TOKEN` (Checks: read) in Vercel's Production env.
+- **Owner settings** (outside the repo): set `GITHUB_CHECKS_TOKEN` (Checks: read) in Vercel's
+  Production env. Don't make the check a required status on `main`: "(production)" only exists
+  after the push, so a required check would reject the promotion fast-forward itself.
 
 ## Greenlight loop (deploy → verify → promote)
 

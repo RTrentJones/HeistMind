@@ -1,7 +1,7 @@
 name: Supabase CI/CD
 
 on:
-  # No `paths` filter on push (F101): the `migrations-applied` job ("Migrations applied") must
+  # No `paths` filter on push (F101): the `migrations-applied` job ("Migrations applied (<schema>)") must
   # report on EVERY main/development push, because the Vercel production build waits for it
   # (scripts/vercel-migration-gate.mjs). A path-filtered workflow would leave that check missing
   # and the gate would time out. The `changes` job decides whether the heavy validation + deploy run:
@@ -758,14 +758,16 @@ jobs:
             echo "Please check the logs above for error details." >> $GITHUB_STEP_SUMMARY
           fi
 
-  # The stable, always-reported gate check ("Migrations applied"). Vercel's production build waits
-  # for it on the same commit (scripts/vercel-migration-gate.mjs via vercel.json `ignoreCommand`),
-  # greenlight-verify asserts it before verifying a Production deployment, and it is the check to
-  # mark REQUIRED on `main`. Green = this commit's schema is in place (or it needed no DB work);
-  # red = a migration deploy was needed and did not succeed. Keep the job NAME stable: the gate
-  # script and greenlight-verify look it up by name.
+  # The stable, always-reported gate check. Its name carries the TARGET SCHEMA: "Migrations applied
+  # (production)" only on a push/dispatch to main, "(development)" on development, "(validation)"
+  # elsewhere. A fast-forward promotion gives main and development the same sha, so a bare name
+  # would let development's green check vouch for the production schema. Vercel's production build
+  # waits for "(production)" on the same commit (scripts/vercel-migration-gate.mjs via vercel.json
+  # `ignoreCommand`), and greenlight-verify asserts it before verifying a Production deployment.
+  # Green = this commit's schema is in place (or it needed no DB work); red = a migration deploy was
+  # needed and did not succeed. Keep the names stable: the gate script looks them up by name.
   migrations-applied:
-    name: Migrations applied
+    name: Migrations applied (${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && 'production' || github.event_name != 'pull_request' && github.ref == 'refs/heads/development' && 'development' || 'validation' }})
     runs-on: ubuntu-latest
     needs: [changes, validate, security-scan, deploy]
     if: always()

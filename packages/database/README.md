@@ -185,8 +185,9 @@ import type { Profile } from './domain-types';
 - **Deploy to development | production**: applies every migration file, in order, to the env
   schema over the session pooler. It runs on `development` pushes that touch a DB file and on
   every `main` push. The migrations are idempotent.
-- **Migrations applied**: the stable gate check, reported on every main/development push. The
-  Vercel **production** build waits for it on the same commit (`scripts/vercel-migration-gate.mjs`
+- **Migrations applied (production | development)**: the stable gate check, reported on every
+  main/development push and named for the schema it vouches for. The Vercel **production** build
+  waits for "(production)" on the same commit (`scripts/vercel-migration-gate.mjs`
   via `vercel.json` `ignoreCommand`), so prod web code never goes live ahead of its schema.
 
 Generated types are **not** auto-committed: regenerate them with `pnpm db:types` (or
