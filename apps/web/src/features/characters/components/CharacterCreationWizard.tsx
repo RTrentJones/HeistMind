@@ -22,8 +22,10 @@ const STEP_BADGE: Record<StepStatus, 'default' | 'success' | 'warning' | 'outlin
 const STEP_BADGE_CLASS: Record<StepStatus, string> = {
   // brand-secondary, not the brand-primary fill: white on brand-primary is only 4.2:1.
   current: 'bg-brand-secondary ring-2 ring-brand-primary/40',
-  complete: '',
-  incomplete: '',
+  // Round 6 P2-9 — no hover tint on the done/invalid chips: the Badge's /30 hover fill dropped the
+  // light-mode success text to 4.27:1. The hover cue is the border instead (text contrast intact).
+  complete: 'hover:bg-semantic-success/20 hover:border-semantic-success/70',
+  incomplete: 'hover:bg-semantic-warning/20 hover:border-semantic-warning/70',
   upcoming: 'text-foreground-muted',
 };
 

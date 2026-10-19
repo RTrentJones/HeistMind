@@ -2,7 +2,7 @@
 // - the blocking reason is its own full-width row below `md` (it was truncated to "Can't co…"),
 // - the shared SelectableCard gives identity picks the F93 ring + green ✓ badge,
 // - the review labels its identity chips.
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Ruleset } from '@heist-mind/core';
@@ -46,6 +46,17 @@ describe('CharacterCreationWizard footer', () => {
     expect(nav).toContainElement(screen.getByRole('button', { name: 'Next' }));
     // Cancel stays outside the group (it's the one that may sit on a row of its own).
     expect(nav).not.toContainElement(screen.getByRole('button', { name: 'Cancel' }));
+  });
+});
+
+describe('CharacterCreationWizard stepper', () => {
+  it('a completed chip keeps its fill on hover (light-mode contrast, round 6 P2-9)', async () => {
+    render(<CharacterCreationWizard ruleset={RULESET} />);
+    act(() => store().setPlaybook('cutter'));
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    const done = screen.getByText(/\(complete\)/).closest('[class*="bg-semantic-success"]');
+    expect(done).toHaveClass('hover:bg-semantic-success/20');
+    expect(done).not.toHaveClass('hover:bg-semantic-success/30');
   });
 });
 
