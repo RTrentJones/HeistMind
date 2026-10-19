@@ -4,7 +4,9 @@
 // deterministic and unit-testable.
 import {
   desperateRollXp,
+  desperateRollXpBlockedTrack,
   markXpTrack,
+  xpTrackSize,
   resistanceStress,
   type Result,
   type Roll,
@@ -54,6 +56,12 @@ export interface DesperateXpMark {
   amount: number;
   /** Marks in that track after the roll (the pool total on a flat-pool ruleset). */
   marks: number;
+  /**
+   * The track was ALREADY full, so nothing was marked (`amount` 0, `marks` = the track size) —
+   * RAW the XP is earned but has nowhere to go until the player takes an advance. Clients say so
+   * ("Prowess track full — take an advance") instead of staying silent (round 4 P2-N4).
+   */
+  trackFull?: boolean;
 }
 
 const PUSH_STRESS_COST = 2;
@@ -65,13 +73,20 @@ export type ActionRollOutcome = Roll & {
   pushStress: StressOutcome | null;
   /** The desperate-roll XP marked with this roll (null when none applied). */
   desperateXp: DesperateXpMark | null;
+  /**
+   * The roll (and its stress) LANDED, but marking its desperate XP failed (e.g. the sheet fails a
+   * live validation). Reported separately so a client never calls an already-saved roll "failed"
+   * — it tells the player to mark the XP on the sheet instead. Null when nothing went wrong.
+   */
+  desperateXpError: string | null;
 };
 
 /**
  * RAW ([SRD, Advancement](https://bladesinthedark.com/advancement)): "Every time you make a
  * desperate action roll, mark 1 xp in the attribute for the action you rolled." Marks it through
- * the validated write path. Silently skips (null) when the ruleset has no desperate-roll trigger,
- * the track is already full, or the roller may not write the character — the roll itself stands.
+ * the validated write path. Skips (null) when the ruleset has no desperate-roll trigger or the
+ * roller may not write the character; a FULL track comes back as `trackFull` (nothing marked) so
+ * the client can tell the player — the roll itself stands either way.
  */
 async function markDesperateXp(
   repos: DatabaseRepositories,
@@ -86,7 +101,15 @@ async function markDesperateXp(
   if (!char || notOwnerOrGm(char, input.userId)) return { success: true, data: null };
   const content = char.ruleset.content;
   const earned = desperateRollXp(content, char.characterData, input.action);
-  if (!earned) return { success: true, data: null };
+  if (!earned) {
+    const full = desperateRollXpBlockedTrack(content, char.characterData, input.action);
+    return full === null
+      ? { success: true, data: null }
+      : {
+          success: true,
+          data: { track: full, amount: 0, marks: xpTrackSize(content, full), trackFull: true },
+        };
+  }
   if (earned.track === null) {
     const added = await repos.characters.addExperience(
       char.id,
@@ -173,10 +196,19 @@ export async function rollAction(
       return assisted as Result<never>;
     }
   }
-  // Desperate-roll XP lands AFTER the stress costs, so it is marked on the freshest row.
+  // Desperate-roll XP lands AFTER the stress costs, so it is marked on the freshest row. It is a
+  // SIDE EFFECT of a roll that is already persisted: a failed XP write is reported next to the
+  // roll (desperateXpError), never as the roll failing — the log already shows it.
   const desperate = await markDesperateXp(repos, input);
-  if (!desperate.success) return desperate as Result<never>;
-  return { success: true, data: { ...created.data, pushStress, desperateXp: desperate.data } };
+  return {
+    success: true,
+    data: {
+      ...created.data,
+      pushStress,
+      desperateXp: desperate.success ? desperate.data : null,
+      desperateXpError: desperate.success ? null : desperate.error.message || 'XP not marked',
+    },
+  };
 }
 
 export interface ResistanceRollInput {
@@ -187,6 +219,8 @@ export interface ResistanceRollInput {
   dice: number;
   results: number[];
   zeroDice: boolean;
+  /** Free-text note persisted with the roll (e.g. "Includes +1d from an ability or upgrade."). */
+  note?: string;
   /** Feed copy when the resistance cost marks the last stress box (→ trauma). */
   traumaLog?: TraumaLogCopy;
 }
@@ -210,6 +244,7 @@ export async function rollResistance(
     dice: input.dice,
     results: input.results,
     zeroDice: input.zeroDice,
+    ...(input.note !== undefined ? { note: input.note } : {}),
   });
   if (!created.success) return created as Result<never>;
   let trauma = false;

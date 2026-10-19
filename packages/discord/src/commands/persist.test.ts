@@ -227,7 +227,13 @@ describe('/resist — persisted (Phase 2)', () => {
     // Rating 1 + bonus 1 = 2 dice; the highest (4) costs 2 stress.
     expect(r.rolls.create).toHaveBeenCalledWith(
       'p1',
-      expect.objectContaining({ kind: 'resistance', dice: 2, results: [4, 2] })
+      expect.objectContaining({
+        kind: 'resistance',
+        dice: 2,
+        results: [4, 2],
+        // Round 4: the bonus is persisted on the log row, as on the web.
+        note: 'Includes +1d from an ability or upgrade.',
+      })
     );
     expect(r.characterManagement.updateCharacterWithValidation).toHaveBeenCalledWith(
       'c1',
@@ -382,6 +388,45 @@ describe('/roll position:desperate — desperate-roll XP (F92 deferred, round-3 
       })
     );
     expect(firstEmbed(calls).description).toContain('marked 1 xp in **Prowess** (1/6)');
+  });
+
+  it('a full attribute track says so instead of staying silent (round 4)', async () => {
+    const full = characterOn(BITD, {
+      characterData: { skills: { Skirmish: 2 }, xp: { playbook: 0, attributes: { prowess: 6 } } },
+    });
+    const r = repos({}, full);
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [3, 2]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: 'Skirmish' },
+          { name: 'position', type: 3, value: 'desperate' },
+        ])
+      )
+    );
+    expect(r.characterManagement.updateCharacterWithValidation).not.toHaveBeenCalled();
+    expect(firstEmbed(calls).description).toContain('**Prowess** xp track is already full (6/6)');
+  });
+
+  it('a failed xp write keeps the logged roll and says the xp needs marking (round 4)', async () => {
+    const r = repos({}, bitdCutter);
+    vi.mocked(r.characterManagement.updateCharacterWithValidation).mockResolvedValue({
+      success: false,
+      error: { message: 'Carrying 7 load exceeds the normal limit of 5.', code: 'LOAD_OVER' },
+    });
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [3, 2]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: 'Skirmish' },
+          { name: 'position', type: 3, value: 'desperate' },
+        ])
+      )
+    );
+    expect(r.rolls.create).toHaveBeenCalled();
+    const embed = firstEmbed(calls);
+    expect(embed.footer?.text).toBe('Logged to The Docks Job');
+    expect(embed.description).toContain('xp couldn’t be marked');
   });
 
   it('a risky roll marks nothing', async () => {

@@ -294,8 +294,9 @@ describe('rollResistance', () => {
 
   it('charges nothing on a single 6 (resists for free)', async () => {
     const update = vi.fn();
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
     const r = repos({
-      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+      rolls: { create },
       characterManagement: { updateCharacterWithValidation: update },
     });
     const out = await rollResistance(r, {
@@ -305,9 +306,15 @@ describe('rollResistance', () => {
       dice: 2,
       results: [6, 3],
       zeroDice: false,
+      note: 'Includes +1d from an ability or upgrade.',
     });
     expect(out.success && out.data.stress).toBe(0);
     expect(update).not.toHaveBeenCalled();
+    // An ability's bonus dice persist as the roll's note (round 4 — web/bot parity).
+    expect(create).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ note: 'Includes +1d from an ability or upgrade.' })
+    );
   });
 
   it('a CRITICAL resist (two 6s) CLEARS 1 stress, per RAW', async () => {
@@ -697,7 +704,13 @@ describe('rollAction — desperate-roll XP (BitD: the rolled action’s attribut
       }),
       { ...roll, position: 'desperate' }
     );
-    expect(full.success && full.data.desperateXp).toBeNull();
+    // Round 4: a full track marks nothing but SAYS so (track full → take an advance).
+    expect(full.success && full.data.desperateXp).toEqual({
+      track: 'prowess',
+      amount: 0,
+      marks: 6,
+      trackFull: true,
+    });
     const other = await rollAction(
       repos({
         rolls: { create },
@@ -708,6 +721,39 @@ describe('rollAction — desperate-roll XP (BitD: the rolled action’s attribut
     );
     expect(other.success && other.data.desperateXp).toBeNull();
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('a failed XP write never turns the saved roll into a failure (round 4 P2-N4)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1', outcome: 'partial' }));
+    const update = vi.fn().mockResolvedValue({
+      success: false,
+      error: { message: 'Carrying 7 load exceeds…', code: 'LOAD_OVER' },
+    });
+    const out = await rollAction(
+      repos({
+        rolls: { create },
+        characters: { findWithDetails: vi.fn().mockResolvedValue(ok(bitdChar())) },
+        characterManagement: { updateCharacterWithValidation: update },
+      }),
+      { ...roll, position: 'desperate' }
+    );
+    expect(out.success).toBe(true);
+    expect(out.success && out.data.id).toBe('r1');
+    expect(out.success && out.data.desperateXp).toBeNull();
+    expect(out.success && out.data.desperateXpError).toMatch(/load/);
+    // A lookup failure is reported the same way; a clean roll reports no error.
+    const lookup = await rollAction(
+      repos({
+        rolls: { create },
+        characters: {
+          findWithDetails: vi.fn().mockResolvedValue({ success: false, error: { message: '' } }),
+        },
+      }),
+      { ...roll, position: 'desperate' }
+    );
+    expect(lookup.success && lookup.data.desperateXpError).toBe('XP not marked');
+    const risky = await rollAction(repos({ rolls: { create } }), { ...roll, position: 'risky' });
+    expect(risky.success && risky.data.desperateXpError).toBeNull();
   });
 });
 
@@ -1100,7 +1146,8 @@ describe('crew progression', () => {
     expect(out.success).toBe(true);
     expect(update).toHaveBeenCalledWith('cr1', {
       crewAbilities: ['crew-second-story'],
-      resources: {},
+      // The free pick records itself (round 4) so removing the ability can't re-open it.
+      resources: { 'crew-starting-pick': 1 },
     });
   });
 });

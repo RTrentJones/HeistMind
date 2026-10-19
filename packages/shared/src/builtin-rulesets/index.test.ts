@@ -9,6 +9,7 @@ import {
   actionDotsSpent,
   deriveAttributes,
   usesActionRatings,
+  identityOptions,
 } from '@heist-mind/core';
 
 /**
@@ -49,6 +50,8 @@ function buildCharacter(
     coins: 0,
     contacts: [],
     custom: {},
+    // A ruleset that lists vices (BitD — a required step since round 4) gets its first one.
+    vice: identityOptions(ruleset, 'vice')[0]?.name ?? '',
   };
   return { ...base, attributes: deriveAttributes(ruleset, base) };
 }

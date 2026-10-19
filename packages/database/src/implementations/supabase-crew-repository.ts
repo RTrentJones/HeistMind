@@ -1,7 +1,12 @@
 // Supabase CrewRepository — the one shared crew sheet per game. Stats are clamped server-side
 // through the pure crew bounds (in the adapter); the DB CHECK constraints are the backstop. RLS
 // restricts writes to the game's GM.
-import { checkCrewProgression, clampRep } from '@heist-mind/core';
+import {
+  CREW_STARTING_PICK_KEY,
+  checkCrewProgression,
+  clampRep,
+  withCrewStartingPickSpent,
+} from '@heist-mind/core';
 import type {
   Crew,
   CreateCrewData,
@@ -19,6 +24,17 @@ import {
 } from '../adapters/crew-adapter';
 import { failFromError } from './result-helpers';
 import { SupabaseRepositoryBase } from './repository-base';
+
+/** `data` whose resources carry the starting-pick latch (core `withCrewStartingPickSpent`). */
+function latchedPatch(
+  ruleset: RulesetContent | null,
+  prior: Crew,
+  data: UpdateCrewData,
+  resources: Record<string, number>
+): UpdateCrewData {
+  const latched = withCrewStartingPickSpent(ruleset, prior, resources);
+  return latched === resources ? data : { ...data, resources: latched };
+}
 
 export class SupabaseCrewRepository extends SupabaseRepositoryBase implements CrewRepository {
   /** The game's crew, or null when none has been created yet. */
@@ -64,19 +80,23 @@ export class SupabaseCrewRepository extends SupabaseRepositoryBase implements Cr
   }
 
   /**
-   * Server-side crew-ability gate (core `checkCrewProgression`): a write that ADDS a crew ability or
+   * Crew-ability gate (core `checkCrewProgression`) — server-side for the bot's writes, but it runs
+   * in the browser for the web's (RLS lets the GM update any crew column directly; F100). A write that ADDS a crew ability or
    * marks an upgrade box must be exactly one legal advance from the stored crew — the free creation
    * pick, or a full advancement track spent on an own-list ability (another type's only via a crew
    * Veteran slot) or on two upgrade boxes. Removals and held legacy abilities pass (grandfathered).
-   * Null when the write is legal; the refusal otherwise.
+   *
+   * Every ability/resources write also carries the free-starting-pick latch forward (round 4
+   * P2-N9: removing every ability used to re-open the free pick): the returned patch is `data`
+   * with `resources` latched when the pick was already spent. A refusal otherwise.
    */
-  private async refuseIllegalProgression(
+  private async gateProgression(
     id: string,
     data: UpdateCrewData
-  ): Promise<Result<never> | null> {
-    if (data.crewAbilities === undefined && data.resources === undefined) return null;
+  ): Promise<{ refused: Result<never> } | { patch: UpdateCrewData }> {
+    if (data.crewAbilities === undefined && data.resources === undefined) return { patch: data };
     const { data: row, error } = await this.db.from('crews').select('*').eq('id', id).single();
-    if (error) return failFromError(error);
+    if (error) return { refused: failFromError(error) };
     const prior = fromSupabaseCrew(row);
     const next = {
       crewAbilities: data.crewAbilities ?? prior.crewAbilities,
@@ -84,25 +104,32 @@ export class SupabaseCrewRepository extends SupabaseRepositoryBase implements Cr
     };
     const added = next.crewAbilities.some(a => !prior.crewAbilities.includes(a));
     const touchesUpgrades = Object.keys(next.resources).some(k => k.startsWith('crew-upgrade:'));
-    if (!added && !touchesUpgrades) return null;
+    const flagged = (prior.resources[CREW_STARTING_PICK_KEY] ?? 0) > 0;
+    // The ruleset is needed to judge an addition, or to tell whether a legacy crew's held
+    // abilities include a special ability (its free pick, spent before the latch existed).
+    const needsRuleset = added || touchesUpgrades || (!flagged && prior.crewAbilities.length > 0);
+    if (!needsRuleset) return { patch: latchedPatch(null, prior, data, next.resources) };
     const ruleset = await this.rulesetForGame(prior.gameId);
-    if (!ruleset.success) return ruleset as Result<never>;
-    const check = checkCrewProgression(
-      ruleset.data,
-      { ...prior, crewType: data.crewType ?? prior.crewType },
-      next
-    );
-    if (check.ok) return null;
-    return { success: false, error: { message: check.message, code: check.code } };
+    if (!ruleset.success) return { refused: ruleset as Result<never> };
+    if (added || touchesUpgrades) {
+      const check = checkCrewProgression(
+        ruleset.data,
+        { ...prior, crewType: data.crewType ?? prior.crewType },
+        next
+      );
+      if (!check.ok)
+        return { refused: { success: false, error: { message: check.message, code: check.code } } };
+    }
+    return { patch: latchedPatch(ruleset.data, prior, data, next.resources) };
   }
 
   async update(id: string, data: UpdateCrewData): Promise<Result<Crew>> {
     return this.run(async () => {
-      const refused = await this.refuseIllegalProgression(id, data);
-      if (refused) return refused;
+      const gated = await this.gateProgression(id, data);
+      if ('refused' in gated) return gated.refused;
       // Rep is capped at the tracker length — 12 less held turf (RAW: "12 is the max", no carry).
       // The cap depends on the claims, so a rep write reads them unless the same patch sets them.
-      let patch = data;
+      let patch = gated.patch;
       if (data.rep !== undefined) {
         let claims = data.claims;
         if (claims === undefined) {
@@ -114,7 +141,7 @@ export class SupabaseCrewRepository extends SupabaseRepositoryBase implements Cr
           if (readErr) return failFromError(readErr);
           claims = parseSupabaseJson<string[]>(cur.claims, []);
         }
-        patch = { ...data, rep: clampRep(data.rep, claims) };
+        patch = { ...patch, rep: clampRep(data.rep, claims) };
       }
       const { data: row, error } = await this.db
         .from('crews')

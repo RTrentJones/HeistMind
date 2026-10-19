@@ -149,7 +149,8 @@ export interface TakeCrewAdvanceInput extends Omit<CrewLogInput, 'logNote'> {
  * from the crew's own list (another type's only through a crew Veteran slot) or for two upgrade
  * boxes (BitD Mastery unlocks at four). Refusals come back with the core code (`TRACK_NOT_FULL`,
  * `ABILITY_LOCKED`, `ABILITY_HELD`, `UPGRADE_COMPLETE`…) and nothing is written or logged. The
- * crew repository re-checks the transition server-side (`checkCrewProgression`).
+ * crew repository re-checks the transition (`checkCrewProgression`; server-side only for the
+ * bot — F100).
  */
 export function takeCrewAdvance(
   repos: DatabaseRepositories,

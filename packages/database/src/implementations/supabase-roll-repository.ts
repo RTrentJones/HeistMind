@@ -1,5 +1,6 @@
-// Supabase RollRepository — the per-game, append-only dice-roll log. The outcome is recomputed
-// server-side from the dice faces (rollOutcome), so a client can't persist a fake result.
+// Supabase RollRepository — the per-game, append-only dice-roll log. The outcome is recomputed from
+// the dice faces (rollOutcome) here, so a client going through the repository can't persist a fake
+// result. For web writes this runs in the browser (F100 — not a server-side check).
 import type { Roll, CreateRollData, Result } from '@heist-mind/core';
 import type { RollRepository } from '../repositories';
 import { rollOutcome } from '@heist-mind/core';

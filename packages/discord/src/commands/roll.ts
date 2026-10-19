@@ -151,11 +151,13 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
         if (xp?.track) {
           const content = character.ruleset.content;
           const attr = content.attributes.find(a => a.id === xp.track);
-          desperateNote = copy.desperateXp(
-            attr?.name ?? xp.track,
-            xp.marks,
-            xpTrackSize(content, xp.track)
-          );
+          const size = xpTrackSize(content, xp.track);
+          desperateNote = xp.trackFull
+            ? copy.desperateXpFull(attr?.name ?? xp.track, size)
+            : copy.desperateXp(attr?.name ?? xp.track, xp.marks, size);
+        } else if (logged.data.desperateXpError) {
+          // The roll is logged; only its XP side effect failed — say that, not "something broke".
+          desperateNote = copy.desperateXpFailed;
         }
         if (push) {
           pushNote = copy.pushedCharged; // the engine really charged the 2 stress

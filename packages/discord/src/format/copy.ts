@@ -208,6 +208,10 @@ export const copy = {
     `Set a vice on your sheet first — you indulge YOUR vice at your purveyor. Pick one here: ${sheetUrl}`,
   desperateXp: (attribute: string, marks: number, size: number) =>
     `Desperate roll — marked 1 xp in **${attribute}** (${marks}/${size})`,
+  desperateXpFull: (attribute: string, size: number) =>
+    `Desperate roll — your **${attribute}** xp track is already full (${size}/${size}), so nothing was marked. Take an advance on your sheet.`,
+  desperateXpFailed:
+    'Desperate roll — the roll is logged, but its xp couldn’t be marked. Mark it on your sheet.',
   xpMarked: (name: string, amount: number, total: number) =>
     `**${name}** marks ${amount} XP — **${total}** banked.`,
   xpMarkedTrack: (name: string, amount: number, trackLabel: string, marks: number, size: number) =>

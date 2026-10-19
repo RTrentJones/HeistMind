@@ -1,6 +1,8 @@
-// Supabase CharacterManagementRepository — the server-side enforcement of character validity.
-// Every create/update/advance runs the SAME pure rules as the UI (`character-rules.ts`), so a
-// tampered client can't persist an illegal build. Loads the ruleset via character→game→ruleset
+// Supabase CharacterManagementRepository — the repository-layer enforcement of character validity.
+// Every create/update/advance runs the SAME pure rules as the UI (`character-rules.ts`). WHERE it
+// runs matters (round 4, F100): on the server for the Discord bot's writes, but in the BROWSER for
+// the web's — RLS lets an owner write their own `character_data` directly through PostgREST, so
+// for web writes this is a consistency gate, not a security boundary. Loads the ruleset via character→game→ruleset
 // (the env schema), mirroring the stitch in SupabaseCharacterRepository.findWithDetails.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase-types';
