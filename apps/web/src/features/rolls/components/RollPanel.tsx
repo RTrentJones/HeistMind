@@ -337,9 +337,30 @@ export function RollPanel({
     }
   };
 
-  // Rating-0 actions roll 2 dice and take the lowest — surface that so it doesn't read as a bug.
-  const isZeroDiceAction =
-    mode === 'action' && (actions?.find(a => a.name === action)?.rating ?? 1) + bonus <= 0;
+  // F102 — the pool the Roll button will throw, shown beside it, so every modifier (ability dice,
+  // push / bargain, assist, harm) visibly changes the count ("Hunt (0d)" + "+2d" used to read 0d).
+  // Same `rollPool` inputs as `roll` / `rollLocally` (standalone sheets have no assist).
+  const isActionMode = mode === 'action';
+  const pool =
+    mode === 'resistance'
+      ? rollPool({
+          mode,
+          rating: (resistOptions.find(o => o.name === resist) ?? resistOptions[0])?.rating ?? 0,
+          bonus,
+        })
+      : rollPool({
+          mode,
+          rating: isActionMode ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune,
+          push,
+          bargain,
+          assist: !local && isActionMode && !!teammates?.some(tm => tm.id === assistId),
+          harmPenalty: isActionMode ? appliedHarmPenalty : 0,
+          fortune,
+          bonus: isActionMode ? bonus : 0,
+        });
+  const poolDice = pool.zeroDice ? 0 : pool.count;
+  // A 0-dice pool rolls 2 and takes the lowest — surface that so it doesn't read as a bug.
+  const isZeroDiceAction = mode !== 'fortune' && pool.zeroDice;
 
   return (
     <Stack direction='column' gap='sm'>
@@ -548,11 +569,16 @@ export function RollPanel({
             ))}
           </Select>
         )}
-        <Button variant='ember' onClick={roll} loading={rolling}>
-          {mode === 'resistance'
-            ? t('components.rollPanel.resistButton')
-            : t('components.rollPanel.rollButton')}
-        </Button>
+        <span className='inline-flex items-center gap-2'>
+          <Button variant='ember' onClick={roll} loading={rolling}>
+            {mode === 'resistance'
+              ? t('components.rollPanel.resistButton')
+              : t('components.rollPanel.rollButton')}
+          </Button>
+          <Text as='span' size='sm' variant='muted' data-testid='roll-pool'>
+            {t('components.rollPanel.poolPreview', { count: poolDice })}
+          </Text>
+        </span>
       </Stack>
       {isZeroDiceAction && (
         <Text size='sm' variant='muted'>
