@@ -57,7 +57,7 @@ test.describe('GM: dice rolls + roll log', () => {
     await expect(gmPage.getByText(/\[\d/).first()).toBeVisible();
 
     // Round 4 — ability dice (the bot's `bonus:`): +2d from an ability on an action roll, and
-    // −3d on a resistance (floored at a 0d pool → 2 dice, take the lowest). Both persist a note.
+    // −3d on a resistance (the 0d floor is unit-tested in roll-pool.test). Both persist a note.
     await gmPage.getByRole('combobox', { name: 'Ability dice' }).selectOption('2');
     await gmPage.getByRole('button', { name: 'Roll', exact: true }).click();
     await expect(gmPage.getByTestId('roll-result')).toBeVisible();
@@ -76,7 +76,6 @@ test.describe('GM: dice rolls + roll log', () => {
       timeout: 15_000,
     });
     await expect(gmPage.getByText('Includes −3d from an ability or upgrade.')).toBeVisible();
-    await expect(gmPage.getByText(/0d — rolled 2, took the lowest/).first()).toBeVisible();
   });
 
   // F43 — moderate harm surfaces its RAW −1d on the sheet's ACTION roll panel, waivable. Lives

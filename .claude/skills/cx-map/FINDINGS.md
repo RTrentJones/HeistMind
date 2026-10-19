@@ -32,6 +32,135 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F100 — Round-4 product: a hidden 5-player cap, skippable vice, dead pre-hydration sign-in, silent desperate XP, no web ability dice, "Crew Crew" rows, free-pick churn, overstated "server-side" gates
+
+- **severity:** S1 (P1-N1: every campaign silently capped at 5 players + the GM — a launch blocker
+  for Mode 2 Discord tables) · S3 (the rest) · **type:** CX-flaw + FitD-gap + doc-accuracy — from
+  the round-4 launch review (P1-N1, P2-N1/N2/N4/N5/N6/N7/N8/N9). Each verified first (repro below).
+- **what was wrong (verified):**
+  1. **Player cap (P1-N1).** `games.max_players` defaulted to 6 (adapter `?? 6` + column default)
+     and counts the GM's seat; `CHECK (current_players <= max_players)` fired inside the
+     player-count trigger, so the 6th joiner's `redeem_invite_code` died with a raw 23514 → HTTP
+     400 → "Something went wrong joining. Try again in a moment." Nobody could see or change the
+     cap; the hub promised "Each code lets up to 20 players in". Reproduced on stack2 before the fix
+     (the scenario's 6th redeem failed with `development_games_current_players_check`).
+  2. **Vice skippable (P2-N1).** BitD's Vice step was `required: false` and the validator only
+     refused an UNLISTED vice, so an empty one passed: the stepper showed "✓ Vice (complete)" and
+     Create succeeded — a scoundrel who can never indulge.
+  3. **Pre-hydration sign-in (P2-N2).** The F98 SSR header (and the landing CTAs) look live before
+     React hydrates, but their `onClick` isn't attached yet — an early "Sign Up with Discord" did
+     nothing (seen on beta; `auth-discord.spec` flaked 2/2 locally for this reason).
+  4. **Desperate XP (P2-N4).** A full attribute track skipped the XP silently (no "take an advance"
+     cue), and `rollAction` returned FAILURE when the XP write failed — after the roll row and the
+     push/assist stress were already persisted — so the web showed "Roll failed" (and the bot
+     "something broke") for a roll that was in the log.
+  5. **No web ability dice (P2-N5).** The bot had `/roll bonus:` and `/resist bonus:` (−3…+3); the
+     web roll panel had no equivalent, so Second Story / Iron Will / Daredevil couldn't be rolled.
+     (`/resist bonus:` also never persisted its note, unlike `/roll`.)
+  6. **Crew log rows (P2-N6).** An unnamed crew's events read "Crew · GM · Crew XP 8/8 · Crew Crew"
+     (log label "Crew", who "GM", the kind badge "Crew"), and every crew-XP box was its own row,
+     flooding the dashboard's six-row Recent activity.
+  7. **Standalone note (P2-N7).** "Rolls here aren't saved anywhere… The stress a roll costs… is
+     marked on this sheet" omitted that a desperate roll also writes XP to the sheet.
+  8. **Free-pick churn (P2-N9).** "Starting pick available" was inferred from "holds no special
+     ability", so the GM could Remove every crew ability and take any one for free again — the F97
+     picker's legality bypassed in two clicks.
+  9. **"Server-side" overstated (P2-N8).** F97 (and code comments) called `checkCrewProgression` /
+     `characterManagement` the "server-side gate", but for WEB writes the repositories run in the
+     browser: RLS lets the GM `UPDATE` any crew column (`<env>_crews_update_policy` =
+     `is_game_gm`) and an owner write their own `character_data` straight through PostgREST. The
+     same is true of the roll repository's outcome recompute. Server-side only for the bot route.
+- **fix:**
+  1. **Migration `00026_campaign_player_limit.sql`** (idempotent, re-applied every deploy; no
+     column added → no types regen): CHECK `max_players BETWEEN 1 AND 31` (GM + up to 30 players;
+     was ≤ 20; rebuilt only when its definition differs); column default **21** (GM + 20 — never
+     undercuts one join code); a **one-shot backfill** 6 → 21 of the old hidden default, latched by
+     a column comment so a GM who later CHOOSES 5 players isn't reset on the next deploy;
+     `games_guard_player_limit` (BEFORE UPDATE OF max_players) turns a limit below the seats taken
+     into P0001 "Player limit is below the players already in the campaign"; `redeem_invite_code`
+     (00025 + a capacity check that locks the campaign row so concurrent joins queue instead of
+     racing into the CHECK) and `accept_invitation` raise **P0001 "Campaign is full"** (HTTP 400),
+     consuming no use; a member re-opening a full campaign's link is still idempotent. Core
+     `rules/campaign.ts` (`campaignCapacity`, `playerLimitRefusal`, `MAX_PLAYER_LIMIT` 30,
+     `DEFAULT_PLAYER_LIMIT` 20, `JOIN_CODE_USES` 20; 100% coverage gate); repository
+     `games.setPlayerLimit(players)` (stores seats = players + 1); the adapter no longer sends 6 on
+     create. Web: `PlayerLimitControl` in the Players card ("N of M players", GM number field 1–30,
+     floor = players in, specific errors), invite card copy "works for up to 20 joins while the
+     campaign has an open player seat" + a seats line; `joinFailureReason` → `full` (also matches
+     the raw pre-00026 CHECK name) on `/join/[code]` (with Try again) and the `/games` join box.
+  2. BitD Vice step `required: true`; core `validateCharacter` (creation) treats a required
+     per-field identity step (`heritage`/`background`/`vice`, `isIdentityField`) as incomplete until
+     that field is set ("Choose a vice — "Vice" must be completed."). The wizard's per-step validity
+     already keys off `steps.<id>` errors, so the stepper, Next and Create agree. Live mode never
+     re-asks (played sheets keep working). Existing users get it with "Refresh my copy".
+  3. `SignInForm`: the header's two sign-in buttons and both landing CTAs are submit buttons in a
+     real GET form to the new **`/auth/signin?next=…`** page (which starts the same `useSignIn`
+     OAuth once hydrated, or forwards a signed-in visitor to `next`); after hydration `onSubmit`
+     intercepts and signs in in place. No disabled flash, `next` validated by `safeNextPath`, F98's
+     auth-hint SSR untouched (the forms are `display: contents` inside the same `data-auth-only`
+     span).
+  4. Engine: `DesperateXpMark.trackFull` (core `desperateRollXpBlockedTrack`) — a full track comes
+     back as "nothing marked, track full" instead of null; `rollAction` never fails on the XP side
+     effect — it returns the saved roll with `desperateXpError`. Web roll panel (logic only — the
+     note's placement belongs to the parallel pixel pass): "your Prowess XP track is already full
+     (6/6)… Take an advance" / "The roll is saved, but its desperate-roll XP couldn't be marked (…).
+     Mark 1 XP on the sheet yourself." (the standalone path catches the XP write the same way);
+     `/roll` says the same.
+  5. Web **Ability dice** select (−3…+3) on action and resistance rolls (`rollPool({ bonus })`, pool
+     floor 0d → 2 take-lowest), note "Includes +Nd from an ability or upgrade." persisted with the
+     roll (engine `ResistanceRollInput.note`); `/resist bonus:` now persists the same note.
+  6. Shared `entryParts()` (RollLog + dashboard): crew rows are titled by the crew's name, or —
+     unnamed — by the note ("Crew XP 8/8"), with no "GM" and no repeated note; dashboard
+     `collapseCrewRuns` folds back-to-back crew events of one campaign into the newest row + "+N
+     earlier on the crew sheet".
+  7. Standalone note: "…What a roll changes on the sheet is still marked here: the stress it costs
+     (pushing, resisting) and the XP a desperate action roll earns."
+  8. Core `CREW_STARTING_PICK_KEY` (`resources['crew-starting-pick']`, no migration):
+     `planCrewAdvance` records the free pick; `crewStartingPickAvailable` = not spent (flag OR a held
+     special ability — legacy crews count); `withCrewStartingPickSpent` + the crew repository carry
+     the latch on EVERY crew write (removing all abilities, or a resources edit dropping the key,
+     keeps it), so the churned pick is refused `TRACK_NOT_FULL`.
+  9. **Decision: correct the documentation, log the gap — no DB enforcement this round.** Real
+     server-side enforcement would mean re-implementing `checkCrewProgression` /
+     `validateCharacter` in PL/pgSQL (a second rules engine to keep in lockstep — the exact
+     duplication the core package exists to prevent) or moving web writes behind a server
+     boundary, which CODE-QUALITY lists as a separate, deliberate project. A partial DB trigger
+     (e.g. only latching the starting-pick flag) would be theatre while the same GM can PATCH
+     `crew_abilities` directly. Impact is low and self-contained: the actor is the campaign's own
+     GM bending their own table (or an owner editing their own sheet) — no cross-tenant reach (RLS
+     holds). So: code comments (core rules, crew/character-management/roll repositories, engine)
+     now say "server-side for the bot; in the browser for web writes", and the residue is the
+     proposal below.
+- **tests:** core `campaign.test.ts` (new, 100% gate), character-rules (required identity step,
+  blocked desperate track), crew-abilities (starting-pick latch, churn refused); shared BitD
+  (vice required; fixtures now carry a vice); engine (full track → `trackFull`, XP-write failure
+  keeps the roll, resistance note, starting pick records itself); database (setPlayerLimit + no
+  client 6-seat default, crew latch on removal / resources edit, churn refused before writing);
+  discord (`/roll` full track + failed XP write keep the logged roll, `/resist bonus:` note); web
+  (PlayerLimitControl + invite seats, `full` join reason, wizard vice gate, `SignInForm`, roll
+  panel ability dice + desperate reporting incl. standalone, `entryParts`, `collapseCrewRuns`,
+  local-note copy). **SQL scenarios** on stack2 (00026 applied twice + the full 00001–00026 chain
+  re-applied — no second backfill): default 21, old 6s moved, ≤31 CHECK, 8 players join past the
+  old cap, GM limit below seats → P0001, a 9th join → "Campaign is full" P0001 with no use consumed,
+  member re-redeem idempotent, targeted invite refused then accepted after raising, all 20 code uses
+  land. **e2e:** join-link "a full campaign says so; the GM raises the player limit" (hub seats,
+  link + `/games` box `full`, floor, retry), auth-discord pre-hydration click (JS disabled →
+  `/auth/signin` → authorize with `next`), gm-dice-rolls ability dice (+2d action, −3d resist → 0d,
+  notes in the log), gm-crew (crew log row without "GM"; remove-all keeps the pick spent),
+  standalone-dice (note names XP).
+- **residue / not done:**
+  - **F100-R1 (proposal) — server-side rules for web writes.** Route crew-ability/upgrade and
+    character-sheet writes through a Next route handler (or Server Action) that builds the
+    repositories with the caller's JWT and runs the same core gate, then REVOKE direct UPDATE of
+    `crews.crew_abilities`/`resources` and `characters.character_data` from `authenticated`
+    (column grants, like F89's profiles work) so PostgREST can't bypass it. Same shape for the
+    roll outcome (or a BEFORE INSERT trigger recomputing `outcome` from `results` + `zero_dice` —
+    small and pure enough to duplicate). Folds into CODE-QUALITY's "server-side data boundary".
+  - The player limit has no bot command (`/heist` shows no seats); `max_players` still counts the
+    GM's seat in the DB (the UI hides it). Removing a crew ability is still not logged to the feed.
+  - Existing BitD rulesets keep `required: false` on Vice until the GM/player refreshes their copy.
+- **status:** fixed (branch `feat/product-r4`)
+
 ### F98 — Round-3 pixel UX: signed-out flash, "Bring to a campaign" dead end, quiet danger, top-heavy hub
 
 _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
@@ -93,6 +222,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
   ~300ms while the profile loads and picks "Welcome"/"Welcome back" before lists load (P2-18,
   P1-8); card-title hierarchy (P2-17) and the `/discord` grid (P2-22) not touched.
 - **status:** fixed (branch `feat/ux-r3`)
+
 ### F97 — Round-3 rules: free crew-ability ticking, unspent creation dots, desperate XP on the wrong track, no vice/background choices
 
 - **severity:** S1 (crew abilities / creation dots broke "every action offered is legal") · S2
@@ -180,6 +310,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
   re-verified here) and Brackwater keeps its own playbook-track desperate trigger (original
   content — neither sets `kind`, so neither auto-marks).
 - **status:** fixed (branch `feat/rules-r3`)
+
 ### F96 — Round-3 launch review: no way to add a faction on BitD; standalone sheets can't roll; copy polish
 
 - **severity:** S1 (a BitD GM could never add a faction) · **type:** CX-flaw + FitD-gap — from the
@@ -234,6 +365,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
     from `discordAppId()`; unit tests cover both states. (Operator follow-up still open: set
     `NEXT_PUBLIC_DISCORD_APP_ID` on the Vercel beta/prod targets.)
 - **status:** fixed @feat/product-r3 (pending merge)
+
 ### F95 — Discord identity squatting through the signup trigger (launch security round 3)
 
 - **severity:** S1 · **type:** security — **(verified: reproduced on the local stack through the
