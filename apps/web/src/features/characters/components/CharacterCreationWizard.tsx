@@ -131,7 +131,7 @@ export function CharacterCreationWizard({
 
   const footer = (
     <footer
-      className='flex items-center gap-3'
+      className='flex flex-wrap items-center gap-x-3 gap-y-2'
       style={{
         position: 'fixed',
         bottom: 0,
@@ -160,13 +160,21 @@ export function CharacterCreationWizard({
       >
         {cancelArmed ? t('components.wizard.cancelConfirm') : t('common.actions.cancel')}
       </Button>
-      {!canAdvance && blockingReason ? (
-        <Text size='sm' role='status' className='min-w-0 flex-1 truncate text-semantic-warning'>
+      {/* F99 — below `md` the blocking reason gets its own full-width row above the buttons
+          (it was a `truncate` flex child squeezed to "Can't co…" at 360). From `md` up it sits
+          inline between Cancel and Back, where it fits. */}
+      {!canAdvance && blockingReason && (
+        <Text
+          size='sm'
+          role='status'
+          data-testid='wizard-blocking-reason'
+          className='order-first basis-full whitespace-normal text-semantic-warning md:order-none md:min-w-0 md:flex-1 md:basis-auto md:truncate'
+        >
           {t('components.wizard.cantContinue')} {blockingReason}
         </Text>
-      ) : (
-        <div style={{ flex: 1 }} />
       )}
+      <div className={!canAdvance && blockingReason ? 'flex-1 md:hidden' : 'flex-1'} />
+
       <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
         {t('common.actions.back')}
       </Button>
