@@ -530,6 +530,10 @@ jobs:
     # environment tracking/protection isn't used here (none configured), and prod is gated via
     # workflow_dispatch above. So we omit `environment:` to avoid the spurious app-verify run.
     timeout-minutes: 20
+    # `applied` is "true" only when the hosted apply actually ran to the end. The creds-guard skip
+    # succeeds without touching the schema, so `migrations-applied` must not read job success alone.
+    outputs:
+      applied: ${{ steps.apply.outputs.applied }}
     # Prevent concurrent deployments to the same environment. If a newer deploy supersedes a queued
     # one, nothing is lost: every deploy applies ALL migration files (idempotent), in order.
     concurrency:
@@ -658,6 +662,7 @@ jobs:
           done
 
       - name: Deploy migrations to the target schema
+        id: apply
         # schema-per-env in ONE project can't go through `supabase db push`: its migration history
         # is global, so a migration applied to the development schema reads as "done" and never
         # populates production. So we apply the SQL directly, per schema, over a SESSION-mode
@@ -727,6 +732,7 @@ jobs:
                 | psql "$DB_URL" -v ON_ERROR_STOP=1 -q
             done
             echo "✅ Migrations applied to the '$TARGET_SCHEMA' schema."
+            echo "applied=true" >> "$GITHUB_OUTPUT"
           fi
 
       # NOTE: no post-deploy "regenerate + commit types" step. It pushed to `main` as
@@ -782,8 +788,9 @@ jobs:
           VALIDATION: ${{ needs.validate.outputs.validation }}
           SCAN: ${{ needs.security-scan.result }}
           DEPLOY: ${{ needs.deploy.result }}
+          APPLIED: ${{ needs.deploy.outputs.applied }}
         run: |
-          echo "changes=$CHANGES needed=$NEEDED validate=$VALIDATE ($VALIDATION) scan=$SCAN deploy=$DEPLOY"
+          echo "changes=$CHANGES needed=$NEEDED validate=$VALIDATE ($VALIDATION) scan=$SCAN deploy=$DEPLOY applied=${APPLIED:-false}"
           if [ "$CHANGES" != "success" ]; then
             echo "❌ Change detection failed: cannot tell whether migrations were needed."
             exit 1
@@ -805,9 +812,15 @@ jobs:
             echo "❌ Validation did not pass."
             exit 1
           fi
-          if [ "$DEPLOY" = "success" ]; then
+          if [ "$DEPLOY" = "success" ] && [ "$APPLIED" = "true" ]; then
             echo "✅ Migrations applied for $REF (validation: $VALIDATION)."
             exit 0
+          fi
+          if [ "$DEPLOY" = "success" ]; then
+            # The creds-guard skipped the apply: the job is green but the schema was never touched,
+            # so this check must stay red or the production gate would open on no evidence.
+            echo "❌ The deploy job skipped the apply (no DB credentials): nothing reached the schema on $REF."
+            exit 1
           fi
           echo "❌ A migration deploy was needed on $REF and did not succeed (deploy=$DEPLOY)."
           echo "   The production web build is held until this check is green (F101)."

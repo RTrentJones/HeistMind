@@ -63,7 +63,8 @@ start` (ci.yml). It exits 75 only when every attempt died pulling images.
     skipped with a warning, and the deploy **still runs**. It stays gated on the static checks and
     the dangerous-SQL scan; the hosted apply is `ON_ERROR_STOP`; and on `main` the same files have
     already applied to `development`.
-  - **"Migrations applied (<schema>)"**: a stable, always-reported job in supabase-ci, named
+  - **"Migrations applied (<schema>)"**: green only when the deploy step reports `applied=true`
+    (a creds-guard skip keeps it red, Codex PR #181). A stable, always-reported job in supabase-ci, named
     `(production)` on main and `(development)` on development. A fast-forward gives both branches
     the same sha, so a bare name let development's check vouch for production (Codex, PR #181). The push trigger lost
     its `paths` filter (the `changes` job decides): always on `main`, which re-asserts the
@@ -89,8 +90,8 @@ start` (ci.yml). It exits 75 only when every attempt died pulling images.
   commands (infra → 75, rotation success, real failure → its own exit code, and a real failure
   followed by registry failures → the real exit code, never 75).
 - **owner steps (not enforceable in-repo):**
-  - Vercel: confirm which `vercel.json` the project reads (root vs `apps/web`, per its Root
-    Directory; both carry the gate) and that the first production build log shows
+  - Vercel: the project's Root Directory is `apps/web` (per the Vercel bot's PR metadata), so
+    `apps/web/vercel.json` carries the live gate. Confirm the first production build log shows
     `[migration-gate]`.
   - Vercel: add `GITHUB_CHECKS_TOKEN` (fine-grained, this repo, Checks: read) to the
     **Production** env, and keep "Automatically expose System Environment Variables" on.
