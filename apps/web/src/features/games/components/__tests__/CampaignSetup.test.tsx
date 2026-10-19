@@ -35,6 +35,17 @@ describe('CampaignSetup', () => {
     expect(line.closest('summary')).not.toBeNull();
   });
 
+  it('pluralises the full line on the limit, like the invite + Players cards (round 6 P2-1)', () => {
+    render(
+      <CampaignSetup initiallyOpen={false} capacity={{ players: 1, limit: 1, open: 0, full: true }}>
+        <p>Players</p>
+      </CampaignSetup>
+    );
+    expect(screen.getByTestId('campaign-full')).toHaveTextContent(
+      'Full — 1 of 1 player. Raise the player limit under Players'
+    );
+  });
+
   it('still opens for a GM alone in the campaign (no capacity passed)', () => {
     render(
       <CampaignSetup initiallyOpen>

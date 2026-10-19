@@ -1067,7 +1067,7 @@
       "joinedDismiss": "Dismiss",
       "setupTitle": "Campaign setup",
       "setupSummary": "Invite players, see who's in, and put the campaign on Discord.",
-      "setupFull": "Full — {{players}} of {{limit}} players. Raise the player limit under Players to let anyone else in.",
+      "setupFull": "Full — {{summary}}. Raise the player limit under Players to let anyone else in.",
       "peopleTitle": "People"
     },
     "join": {
