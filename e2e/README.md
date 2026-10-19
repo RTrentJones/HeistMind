@@ -102,10 +102,15 @@ pnpm + the chromium browser before invoking greenlight (the suite shells out to
 `pnpm exec playwright test`). The identical suite runs at PR time via `ci.yml` against a local
 Supabase stack — write once, gate everywhere.
 
-**Which deployments it gates (F101):** only the beta Preview built from `development` and the
-Production deployment from `main`. Feature-branch previews are not gated; PR CI covers them. Runs
+**Which deployments it gates (F101, fixed F103):** only the beta deployment (a non-Production
+deployment whose sha is `development`'s tip or an ancestor of it) and a Production deployment whose
+sha is on `main`. Vercel posts the commit SHA as `deployment.ref`, so the workflow's `resolve` job
+reads those branch facts from the GitHub API (`scripts/verify-target.mjs`). Feature-branch previews
+are not gated (PR CI covers them) and skip visibly with a notice + job summary; a Production
+deployment of a sha not on `main` fails the run. Runs
 are serialized per target by a concurrency group and never cancelled, because the personas live
 in the project-global `auth.users` and two overlapping runs would sign each other out. A second
-Vercel deployment of an already-verified (env, sha) is skipped. The greenlight CLI is pinned
+Vercel deployment of an already-verified (target, sha) is skipped (an earlier green `gate (<target>)`
+check run on the sha). The greenlight CLI is pinned
 (`GREENLIGHT_VERSION` in the workflow). Production also asserts supabase-ci's "Migrations applied
 (production)" check for the same commit before verifying.

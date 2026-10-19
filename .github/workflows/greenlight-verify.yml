@@ -1,6 +1,6 @@
 name: greenlight-verify
-# The run title carries the target + commit so the once-per-commit dedupe below can find an
-# earlier green run for the same (env, sha) through the Actions API.
+# The run title names the Vercel environment + commit for humans. The beta/prod TARGET is resolved
+# at runtime (job `resolve`) and shows as the gate job's name: `gate (beta)` / `gate (prod)`.
 run-name: verify ${{ github.event.deployment.environment }} ${{ github.event.deployment.sha }}
 
 # Vercel deploys heistmind on push and posts a deployment_status to GitHub; we verify the exact
@@ -14,20 +14,24 @@ run-name: verify ${{ github.event.deployment.environment }} ${{ github.event.dep
 # Auth-gated specs skip themselves when this env's SUPABASE_SERVICE_ROLE_KEY secret is absent, so the
 # gate still passes on the public surface until those secrets are wired.
 #
-# WHICH deployments (F101): only (a) the beta deployment — a Preview built from `development` — and
-# (b) the Production deployment from `main`. Feature-branch previews are NOT gated here (PR CI's
-# `e2e` job runs the same suite against a local stack), and a second Vercel deployment of an
-# already-verified (env, sha) is skipped. Before F101 every deployment_status ran the full gate, so
-# one merge produced 2 concurrent runs sharing the same personas on the one Supabase project, and a
-# sign-out in one invalidated the other's session (1d40c00: 1 of 2 runs failed).
+# WHICH deployments (F101, fixed F103): only (a) the beta deployment — a non-Production deployment
+# whose sha is `development`'s tip or an ancestor of it — and (b) a Production deployment whose sha
+# is on `main`. Vercel posts the COMMIT SHA as `deployment.ref` (never the branch), so the branch
+# facts are resolved from the GitHub API by scripts/verify-target.mjs (unit-tested in
+# `pnpm test:scripts`) — F101's `deployment.ref == 'development'` filter skipped every gate.
+# Feature-branch previews are NOT gated here (PR CI's `e2e` job runs the same suite against a local
+# stack); they skip VISIBLY (a notice + job summary). A Production deployment of a sha not on main
+# fails the run RED. A second Vercel deployment of an already-verified (target, sha) is skipped
+# (dedupe on the earlier `gate (<target>)` check run). Before F101 every deployment_status ran the
+# full gate, so one merge produced 2 concurrent runs sharing the same personas on the one Supabase
+# project, and a sign-out in one invalidated the other's session (1d40c00: 1 of 2 runs failed).
 on:
   deployment_status:
 
 permissions:
   contents: read
   statuses: write
-  actions: read # the once-per-commit dedupe lists this workflow's earlier runs
-  checks: read # Production asserts supabase-ci's "Migrations applied (production)" check on the same commit
+  checks: read # dedupe reads earlier `gate (<target>)` check runs; Production asserts supabase-ci's "Migrations applied (production)" check
 
 env:
   # Exact pin, never `@latest`: the gate's behavior must not change under a commit. Lockstep with
@@ -36,39 +40,48 @@ env:
   GREENLIGHT_VERSION: '0.10.0'
 
 jobs:
+  # Which gate (if any) this deployment gets. Cheap and unserialized: it only reads branch facts.
+  resolve:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      target: ${{ steps.target.outputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Resolve the gate target from the deployment (beta | prod | none)
+        id: target
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEPLOY_ENVIRONMENT: ${{ github.event.deployment.environment }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+        run: node scripts/verify-target.mjs resolve
+
   verify:
-    if: >-
-      github.event.deployment_status.state == 'success' &&
-      ((github.event.deployment.environment == 'Production' && github.event.deployment.ref == 'main') ||
-       (github.event.deployment.environment != 'Production' && github.event.deployment.ref == 'development'))
+    needs: resolve
+    if: needs.resolve.outputs.target == 'beta' || needs.resolve.outputs.target == 'prod'
+    # The dedupe below finds earlier passes by THIS name's check run on the sha — keep them in step.
+    name: gate (${{ needs.resolve.outputs.target }})
     runs-on: ubuntu-latest
     # One gate at a time per target: the personas live in the project-global auth.users, so two
     # beta runs must never overlap (cancel-in-progress: false → queue, never kill a running gate).
     concurrency:
-      group: greenlight-verify-${{ github.event.deployment.environment == 'Production' && 'prod' || 'beta' }}
+      group: greenlight-verify-${{ needs.resolve.outputs.target }}
       cancel-in-progress: false
     steps:
+      # Inside the concurrency group, so an earlier gate for the same (target, sha) has finished.
+      - uses: actions/checkout@v4
       - name: Skip if this commit is already verified on this target
         id: dedupe
         env:
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event.deployment.sha }}
-          TITLE: verify ${{ github.event.deployment.environment }} ${{ github.event.deployment.sha }}
-        run: |
-          # Vercel can post more than one successful deployment for the same commit (a redeploy, a
-          # second build of the same sha). The artifact is identical, so one green gate is enough.
-          # Runs are serialized by the concurrency group, so an earlier run has finished by now.
-          prior="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/greenlight-verify.yml/runs?head_sha=${SHA}&status=success&per_page=50" \
-            --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .display_title == \"${TITLE}\")] | length" 2>/dev/null)" || prior=0
-          if [ "${prior:-0}" -gt 0 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "✅ ${TITLE} already passed in an earlier run; skipping this duplicate deployment."
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: actions/checkout@v4
-        if: steps.dedupe.outputs.skip != 'true'
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET: ${{ needs.resolve.outputs.target }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+        run: node scripts/verify-target.mjs dedupe
 
       - uses: actions/setup-node@v4
         if: steps.dedupe.outputs.skip != 'true'
@@ -80,7 +93,7 @@ jobs:
       # Production deployment whose `production` schema migrations did not apply turns this gate
       # RED (e.g. the Vercel gate was switched off). Same script; exit 1 = "migrations applied".
       - name: Production — assert "Migrations applied (production)" on this commit
-        if: steps.dedupe.outputs.skip != 'true' && github.event.deployment.environment == 'Production'
+        if: steps.dedupe.outputs.skip != 'true' && needs.resolve.outputs.target == 'prod'
         env:
           VERCEL_ENV: production
           VERCEL_GIT_COMMIT_SHA: ${{ github.event.deployment.sha }}
@@ -134,11 +147,11 @@ jobs:
           E2E_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           E2E_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           # Authenticated journeys are a PRE-PROD gate: only inject the (RLS-bypassing) service-role
-          # key on non-Production deploys. auth.users is project-global, so this keeps the prod
+          # key on the beta gate. auth.users is project-global, so this keeps the prod
           # deployment_status from creating personas; Preview/beta still exercises the full auth flow,
-          # and global-teardown deletes them afterwards. `!= 'Production' && … || ''` avoids the
+          # and global-teardown deletes them afterwards. `== 'beta' && … || ''` avoids the
           # empty-string falsy trap of the usual `&& '' || …` ternary.
-          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event.deployment_status.environment != 'Production' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ needs.resolve.outputs.target == 'beta' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
           # Artifact identity: the commit Vercel built. The spec asserts /__version serves exactly
           # this (through the protection bypass); --expect-sha arms the harness's own probe too.
           GREENLIGHT_EXPECTED_SHA: ${{ github.event.deployment.sha }}

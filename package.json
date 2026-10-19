@@ -20,7 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate": "pnpm lint && pnpm type-check && pnpm test && pnpm test:scripts",
-    "test:scripts": "node --test scripts/vercel-migration-gate.test.mjs",
+    "test:scripts": "node --test scripts/vercel-migration-gate.test.mjs scripts/verify-target.test.mjs",
     "build:ui": "turbo build --filter=@heist-mind/ui",
     "build:web": "turbo build --filter=@heist-mind/web",
     "design:bundle": "pnpm build:ui && node design-sync/build.mjs",
