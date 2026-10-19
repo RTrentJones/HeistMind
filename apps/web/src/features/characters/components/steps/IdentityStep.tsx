@@ -94,9 +94,14 @@ function ContactsPicker() {
 
   const current = (rel: string) => picked.find(c => c.relationship === rel)?.name ?? '';
   const row = (rel: 'friend' | 'rival', label: string) => (
+    // F102 — full width of the (max-w-lg) column: the options carry "name — description", and a
+    // native select otherwise sizes to the longest one (418px — the page went 438px wide at 360
+    // and the fixed Cancel/Back/Next footer slid off-screen). The trigger truncates; the picker wraps.
     <Select
       label={label}
       selectSize='sm'
+      className='w-full'
+      wrapperClassName='w-full'
       value={current(rel)}
       onChange={e => setContact(rel, contacts.find(c => c.name === e.target.value) ?? null)}
     >

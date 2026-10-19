@@ -49,4 +49,18 @@ describe('Select', () => {
     expect(screen.getByLabelText('Faction status')).toBeInTheDocument();
     expect(screen.queryByText('Faction status')).not.toBeInTheDocument();
   });
+
+  // F102 — a native select sizes to its longest option; capped, it can't widen its container
+  // (the BitD wizard's contact pickers pushed a 360px phone page to 438px).
+  it('never grows past its container: capped, shrinkable, truncating — wrapper included', () => {
+    render(
+      <Select label='Close friend' wrapperClassName='w-full' className='w-full'>
+        <option value=''>None</option>
+        <option value='a'>A pet hound or hawk — Loyal, and a useful set of senses.</option>
+      </Select>
+    );
+    const control = screen.getByLabelText('Close friend');
+    expect(control).toHaveClass('max-w-full', 'min-w-0', 'truncate', 'w-full');
+    expect(control.parentElement).toHaveClass('max-w-full', 'min-w-0', 'w-full');
+  });
 });
