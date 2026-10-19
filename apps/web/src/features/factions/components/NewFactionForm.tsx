@@ -82,7 +82,9 @@ export function NewFactionForm({
         <Text as='strong' id='new-faction-heading'>
           {t('components.factionsPanel.newHeading')}
         </Text>
-        <Stack direction='row' gap='sm' align='end' className='flex-wrap [&>*]:min-w-0'>
+        {/* F99 — top-aligned with one control height (h-10 = the Input's): with `align='end'`
+            the ~32px selects sat beside the 40px input, labels ~4px apart. */}
+        <Stack direction='row' gap='sm' align='start' className='flex-wrap [&>*]:min-w-0'>
           <Input
             label={t('components.factionsPanel.nameLabel')}
             placeholder={t('components.factionsPanel.namePlaceholder')}
@@ -93,6 +95,7 @@ export function NewFactionForm({
           />
           <Select
             label={t('components.factionsPanel.tierLabel')}
+            className='h-10'
             value={tier}
             onChange={e => setTier(Number(e.target.value))}
           >
@@ -104,6 +107,7 @@ export function NewFactionForm({
           </Select>
           <Select
             label={t('components.factionsPanel.statusLabel')}
+            className='h-10'
             value={status}
             onChange={e => setStatus(Number(e.target.value))}
           >

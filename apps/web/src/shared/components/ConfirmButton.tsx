@@ -70,7 +70,10 @@ export function ConfirmButton({
       }}
     >
       {reserveWidth ? (
-        <span className='grid'>
+        // place-items-center: when the reserved (wider) label wraps in a narrow cell, the visible
+        // one centres in that box instead of riding its top line (Revoke sat ~8px above its
+        // neighbour "Copy code" at 360 — F99).
+        <span className='grid place-items-center text-center'>
           <span className='[grid-area:1/1]'>{armed ? confirmLabel : children}</span>
           <span aria-hidden='true' className='invisible [grid-area:1/1]'>
             {armed ? children : confirmLabel}
