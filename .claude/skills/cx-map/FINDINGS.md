@@ -32,6 +32,198 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F105 — Round-6 product: the assist charge wasn't bound to an assist (stress drain + log impersonation); friend = rival; untruthful assist rows; armed detach
+
+- **severity:** S1 (P1-1, security: a SECURITY DEFINER write across the "you only write your own
+  characters" boundary) · S3 (the rest) · **type:** security + CX-flaw + FitD-gap — from the
+  round-6 launch review (P1-1, P2-1, P2-2, P2-6, P2-7). Each verified first.
+- **what was wrong (verified):**
+  1. **P1-1.** `charge_assist_stress` (00027) checked the caller made a recent action roll in a
+     campaign they belong to and that the helper was someone else's character there — never that
+     the roll HAD an assist, which helper it named, or that it had a character. Any member could
+     `POST /rest/v1/rolls {kind:'action', character_id:null, results:[6], outcome:'success'}`
+     and charge it to any co-member's character, eight times → 8/9 stress; the free `p_note` was
+     inserted as a `note` row under the victim's character ("Cy Marrow · Note"). Reproduced with
+     the new rls-api test against stack2 at df61f98's schema: three bare rolls → `charged`,
+     `charged`, `charged` (`scratchpad/p6-attack-before.log`). The attacker's bare rolls also
+     rendered as **"GM · [6]"** — `RollLog` (and the dashboard) labelled every characterless
+     non-fortune row "GM".
+  2. **P2-1 (FitD-gap).** The same contact could be picked as both close friend and rival (BitD
+     playbooks list two contacts); nothing in core, the wizard or the sheet editor stopped it.
+  3. **P2-2.** The roll row said "Assisted by Bo (+1d, **1 stress**)" even when the charge was
+     held back near the limit or failed, and nothing told Bo he owed it; an own-alt assist that
+     marked the last box never mentioned the trauma (and logged it before the assist); the
+     "mark it yourself" notes used the same `info` style as success.
+  4. **P2-6.** A failed resistance stress write still showed the red "N stress" badge; a failed
+     critical clear would have read "its −1 stress".
+  5. **P2-7.** `AttachToCampaign` never reset its "Confirm — remove from campaign" arm after a
+     detach or a campaign change, so a reused instance came back one tap from a destructive
+     action; `membership.spec:124` raced the attachable-campaigns refetch.
+- **fix:**
+  1. **Migration `00028_assist_bound_to_roll.sql`** (idempotent single-DO-block, per-env schema,
+     re-applies cleanly): `rolls.assist_character_id` (FK → characters, ON DELETE SET NULL),
+     validated by its own BEFORE INSERT trigger `rolls_guard_assist` (kept apart from 00022's
+     guard so a re-run of 00022 can't drop it): only an **action** roll **with a character**
+     takes an assist, the helper must be a character **in that campaign** and not the rolling
+     character (the rolling character is already "yours or you GM it" via 00022). Rolls stay
+     append-only for clients. `charge_assist_stress` (same signature) now also requires
+     `assist_character_id = p_character_id` and the roll's character owned by the caller (or the
+     caller GMs the campaign); keeps 00027's once-per-roll / 15-minute / near_limit /
+     active-member checks; **ignores `p_note`** and writes the note itself from trusted names —
+     author (`user_id`) = roller, `character_id`/label = helper: "Bo marked 1 stress assisting
+     Ana." or, at the last box, "Bo owes 1 stress for assisting Ana — one box from trauma, so
+     it's theirs to mark on their own sheet." (the helper is now told). 00027 is edited to
+     create its function only when missing, so a deploy's re-run of 00027 can't put the unbound
+     body back for the seconds before 00028. The log notes are server-side English (the app has
+     one locale).
+  2. Engine `rollAction` stores `assistCharacterId` on the roll (action rolls with a character
+     only); `rolls.chargeAssistStress(rollId, characterId)` sends no note. `supabase-types.ts`:
+     the column + FK for both env schemas — **hand-spliced** from a `supabase gen types --local`
+     run against stack2 (stack2 has no `production` schema, so a straight regen would have dropped
+     it; the regenerated `development` rolls block was copied to both).
+  3. `rollWho` (labels.ts): a characterless row reads "GM" only when `userId` is the campaign's
+     GM, else the player's display name / "Player" (RollLog via the campaign detail, dashboard via
+     the campaign's `createdBy`).
+  4. P2-1: core `friendIsRival` + `CONTACT_FRIEND_IS_RIVAL` (creation error, live warning so old
+     sheets still save stress/XP); the wizard's `ContactsPicker` and the editor's `GearCard` leave
+     out the other slot's pick; the creation store moves a contact rather than doubling it.
+  5. P2-2: "Assisted by Bo (+1d)"; engine `applyStress({ causeLog })` writes the own-alt/GM
+     assist line before any trauma note; a failed charge logs "Bo owes 1 stress for assisting Ana
+     — …" (on the helper when the roller may write it, else on the roller's character);
+     `assistChargedTrauma` copy for an own-alt assist that marked the last box; action-needed notes
+     render as `warning`. P2-6: neutral "N stress — not marked" / "critical — stress not cleared"
+     badge and a clear-specific note. P2-7: `setConfirmingDetach(false)` after a detach and on
+     `character.gameId` change; the spec waits for the post-attach render (no move picker) and the
+     un-armed button.
+- **tests:** core (friend = rival: creation error, live warning, distinct/one/none ok); database
+  (`chargeAssistStress` sends no note; adapter writes `assist_character_id`); engine (helper on
+  the roll only for action+character, RPC gets no note and the engine logs nothing for it, own-alt
+  trauma logs cause → trauma → retire, failed charge logs the owed line on the right row); web
+  (assist copy/tones incl. trauma, roll note without "1 stress", logNote/owedLogNote name the
+  roller, neutral failed-resistance + crit badges, `rollWho`, dashboard GM vs player, contact
+  pickers in the wizard + editor, store move). **SQL scenarios** (`scratchpad/p6-00028-scenarios.sql`,
+  stack2 `development`, 00027 → 00028 applied twice, rolled back): bare roll refused (no
+  assist), victim untouched, spoof text never logged; insert guard refuses fortune+assist,
+  characterless+assist, self-assist, cross-campaign helper, someone else's character; a different
+  helper refused; recorded helper charged once (0 → 1), server-built note with author = roller;
+  replay refused; 8/9 → `near_limit` + "owes" note, stress stays 8; 7/9 → 8; own alt through
+  the RPC refused; GM's character assisting a player charged; GM rolling a player's character
+  with another player assisting charged; > 15 min refused; another member / outsider / kicked
+  roller / anon refused — all ok. **e2e** (own dev server :3122, stack2, serial): rls-api (the
+  review's attack — fails on df61f98's schema with `charged ×3`, passes after; plus the insert
+  guard, wrong helper, server-built note, replay/borrowed/anon), gm-dice-rolls (the server-built
+  line + "Assisted by X (+1d)"), membership (hardened :124), standalone-characters,
+  gm-character-validation, player-characters, discord, discord-parity. `greenlight migrations
+scan`: no findings in 00027/00028.
+- **residue / not done:** by design (owner decision, no pending-charge consent), a roller can
+  still name a co-member as the helper on their OWN character's real action rolls and charge +1
+  each (never trauma); it is now attributable — the roll says "Assisted by Bo" and the server line
+  names the roller. Not done from the round-6 report: P2-3 (Container `padding='lg'` on phones),
+  P2-4 (`/join/<code>` without JS), P2-5 (bot `assist:` names/charges no helper — it would need a
+  `helper:` option + autocomplete; the bot path is service-role and would also need its own
+  charge path since the RPC needs `auth.uid()`). The UX items (sign-in no-JS, seat plural, assist
+  option truncation, wizard footer, player-limit input, crew picker) are F104.
+
+### F104 — Round-6 pixel UX: a JS-off sign-in that painted nothing, assist cost cut on phones, a duplicated Veteran, a 10k px picker
+
+- **severity:** S2 for the JS-off blank page (F102 listed it as fixed) · S3 for the rest · **type:**
+  CX-flaw, plus one FitD-gap (bare Veteran) — from the round-6 pixel audit (`round6-pixel.md`
+  P1-1, P2-1…P2-7, P2-9…P2-11)
+- **what was wrong:**
+  - **JS-off sign-in (P1-1):** F102's "Sign-in needs JavaScript" message sat inside the shared
+    animated `Card`, whose framer-motion entrance server-renders as inline
+    `style="opacity:0;transform:translateY(20px)"` and only fades in once JS runs. With JS off the
+    page was the hero gradient only, at every width, local and beta. The 404 card (and any SSR'd
+    `Card` / `Container` / `Heading` / `Section` entrance) had the same problem. The F102 e2e passed
+    because Playwright's `toBeVisible()` counts `opacity: 0` as visible.
+  - **Full summary (P2-1):** "Full — 1 of 1 players" above cards reading "1 of 1 player".
+  - **Assist (P2-2):** the capped select showed "Assist: Silas Crane (+1d, they…" at 360 — the
+    cost was the part cut.
+  - **Contacts (P2-3):** the capped Close friend / Rival selects cut "name — description" mid-word.
+  - **Wizard footer (P2-4):** on the last step at 360 "Create character" wrapped alone, under Cancel
+    and left-aligned.
+  - **Player limit (P2-5):** a 32px field beside the 44px "Save limit" on phones.
+  - **Crew picker (P2-6, P2-7):** the legend was still in the wrapping small-caps face; opened, the
+    Veteran group was one list of 32 described rows (10,281px at 360); and the starting pick
+    offered **Veteran twice** — a bare "Veteran" row on the crew's own list AND the "Through
+    Veteran" routes. The duplicate came from core `takeableCrewAbilities`, not the UI: it offered
+    the Veteran gateway itself as a pick, though RAW taking Veteran IS taking the other ability (a
+    bare pick spends an advance on an empty slot). The bot's `/crew advance` suggestions had it too.
+  - **Stepper chip hover (P2-9):** a completed chip's hover fill put light-mode text at 4.27:1.
+  - **Dashboard (P2-10):** at 360 one character card kept View inline and the next dropped it (the
+    wrap depended on the name's length); section headers squeezed onto two lines beside "View all".
+  - **Crew type (P2-11):** the select sat ~32px tall beside the 40px "Create crew".
+- **fix:**
+  - Root layout `<head>`: `<noscript><style>` with `lib/noscript-reveal.ts` —
+    `[style*="opacity:0;"],[style$="opacity:0"]{opacity:1!important;transform:none!important}`. It
+    applies only with scripting off, matches framer-motion's exact SSR serialisation (never
+    `opacity:0.5`), and lands every entrance at its end state. Every SSR'd animated component is
+    covered, not just the sign-in card.
+  - `CampaignSetup`: `game.setupFull` takes `{{summary}}` from the shared `seatSummary()`.
+  - `RollPanel`: option "Assist: <name> (+1d)"; once chosen the pool line reads "Pool: Nd · <name>
+    takes 1 stress" (`poolPreviewAssist`).
+  - `IdentityStep`: name-only contact options; the chosen contact's description renders under the
+    select as its `aria-describedby`.
+  - Wizard footer: Back + Next/Create in one `ml-auto shrink-0` group (`data-testid=wizard-nav`).
+  - `packages/ui` `Input` `sm`: `h-8 max-sm:h-11`, like Button/Select `sm` (also the harm,
+    flashback and bargain fields).
+  - `CrewAdvancePicker`: legend `text-sm font-semibold`; Veteran routes grouped by source crew type,
+    each its own collapsed `<details>` ("Assassins · 6 abilities"). Core `takeableCrewAbilities`
+    drops a Veteran-granting ability whenever it is the gateway for an offered pick (kept when it
+    opens nothing). `planCrewAdvance` (the repository gate) still accepts an explicit bare Veteran.
+  - Stepper: complete/incomplete chips keep their /20 fill on hover and darken the border instead.
+  - `CharacterCard`: identity block `min-w-0 flex-1 basis-48`, actions `shrink-0`; dashboard headers
+    `flex-wrap`.
+  - `CrewSheet`: crew-type select `min-h-10`.
+- **measured** (prod build `next start` :3121 from the worktree against stack2, `capture-u6.mjs` =
+  `capture-r6.mjs` + a type-opened Veteran route, 13 routes × 360/768/1440 × light/dark = 78 shots,
+  vs `pixel-round6/metrics-final.json`; element probe `u6-el.mjs`):
+  - JS-off sign-in: blank gradient → the "Sign-in needs JavaScript" card painted, at every width and
+    both themes (`pixel-u6/auth-signin-nojs-*`); 404 painted with JS off (e2e). Still two h1s in
+    the DOM in that state (the hidden JS-only "Taking you to Discord" is `display:none`).
+  - Veteran opened: page 15,815 → **7,750px** at 360, 8,165 → 5,188 at 768, 7,939 → 5,102 at 1440;
+    the opened disclosure is 448px at 360 (352 at 1440) and one opened type 2,154px (918). Collapsed
+    crew hubs −75…−123px (no bare Veteran row); 0 bare Veteran radios.
+  - Assist at 360: the chosen "Assist: Silas Crane (+1d)" needs 161px of 181 (was 283 of 226,
+    truncated); pool line "Pool: 0d · Silas Crane takes 1 stress".
+  - Player limit at 360: field 44px = Save 44px (was 32 vs 44); 1440 32 = 32.
+  - Crew type vs Create crew: 40 = 40 at 1440, 44 = 44 at 360 (was ~32 vs ~38).
+  - Dashboard at 360: both cards 161px with View on its own row (was one inline, one below); 1440
+    both inline. Page +119px at 360 (headers' button below the heading).
+  - Wizard last step at 360: Back + Create bottom-right together (`wizard-fresh-7-review-360-*`).
+  - axe: the stepper-chip `color-contrast` hit on `wizard-fresh-6-vice-360-light` is gone; 0
+    violations on all 78 shots. No overflow past the visual viewport; one h1 everywhere except the
+    known JS-off sign-in pair; CLS ≤ 0.027.
+  - `sheet-assist-armed` grew 650–1,450px: the seeded campaign log has more rows (seed artifact).
+- **tests:** unit — `noscript-reveal` (selector matches the SSR styles, not `opacity:0.5`),
+  `CampaignSetup` ("Full — 1 of 1 player."), `RollPanel` (short option; cost on the pool line,
+  cleared with the assist), `IdentityStep` (name-only options, description hint +
+  `aria-describedby`), `CharacterCreationWizard` (nav group; done chip hover keeps its fill),
+  `Input` (`max-sm:h-11`), `CrewAdvancePicker` (sans legend; no bare Veteran; per-type collapsed
+  groups; pick through a type), `CharacterCard` (layout classes), core `crew-abilities`
+  (Veteran offered only as a route, kept when it opens nothing, gate still accepts it), shared BitD
+  (Cult + Shadows starting picks), discord `/crew advance` autocomplete (no bare Veteran). e2e —
+  `auth-discord` new "with JavaScript off, SSR-animated cards are actually painted" checks
+  EFFECTIVE opacity (own × ancestors, `e2e/support/a11y.ts` `effectiveOpacity`): **FAILED on the
+  pre-fix code** ("Expected: 1, Received: 0" on the sign-in h1, while `toBeVisible()` passed) and
+  passes after; `join-link`, `gm-dice-rolls` and `gm-crew` updated for the new copy / groups.
+  Targeted e2e serially on :3120 dev against stack2 (17 specs). Green: auth-discord, join-link,
+  gm-crew (after a locator fix for the nested summaries), gm-crew-grant, mobile-overflow,
+  gm-loadout, dashboard, player-characters, standalone-characters, ssr-hydration, heading-order,
+  mobile-sheet, discord, signin-gates (its Discord-nav test timed out on a cold dev compile once,
+  green warm), join-via-code. Not green, not from this change: `gm-dice-rolls` assist — stack2
+  carries an unmerged 00028 `charge_assist_stress` ("That roll had no assist" unless the roll
+  records `assist_character_id`), which this branch's 00027-era client doesn't write; the new
+  pool-line assertion before it passed. `membership` "Return to My Characters…" times out with
+  the confirm armed (same 4.0m timeout in earlier rounds' logs). `pnpm validate` green.
+- **residue / skipped:** P2-8 (two log rows per assist): they are genuinely two events on two
+  characters — the roll on the roller and a `note` row on the helper written by the 00027 RPC. That
+  row has no link to its roll, so one row needs a roll reference on the note (SQL/RPC), or a
+  text/time match. Left for a product call. The crew legend still takes two lines at 360 (now sans
+  text-sm). The JS-off theme is always dark (no theme class without the init script).
+  P2-12/P2-13 (expected console errors, earlier carry-overs) and P1-2 (Discord app id, operator).
+- **status:** fixed (branch `feat/ux-r6`)
+
 ### F103 — Round-5 product: a deploy gate that never ran, sticky one-shot roll moves, an invisible full campaign, saved rolls called "failed", uncharged assists, thin BitD crew lists
 
 - **severity:** S1 (P1-1: the beta/prod deploy gate — and with it the prod migration backstop —
@@ -100,7 +292,13 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
      overflow point, so this can never force trauma); at the last box it writes nothing and
      returns `near_limit` (the owner marks it and picks the trauma). It logs a note row for the
      helper with the roller's copy. Repository `rolls.chargeAssistStress` (untyped RPC — no types
-     regen). Engine `ActionRollOutcome.assist` = `charged | near_limit | failed` (own/GM helpers
+     regen). **Correction (round 6, F105):** as shipped, 00027 did NOT check that the roll had an
+     assist, which helper it named, or that the roll had a character at all, and the "roller's
+     copy" was a free caller-supplied `p_note` — so any member could charge a co-member +1 per
+     bare REST roll (0 → 8, never trauma) and post arbitrary text as that character's note. The
+     guarantee described above ("an assist's 1 stress, charged to the helper") only holds since
+     00028, which binds the charge to `rolls.assist_character_id` and builds the note
+     server-side — see F105. Engine `ActionRollOutcome.assist` = `charged | near_limit | failed` (own/GM helpers
      still use the validated write, now logged the same way). Web: the option reads "Assist: Bo
      (+1d, they take 1 stress)", the log note "Assisted by Bo (+1d, 1 stress)", and the roller sees
      "Bo marked 1 stress for the assist — it's on their sheet." / the near-limit / failure copy.
@@ -225,7 +423,10 @@ add`, flashback). Engine, discord and web tests cover push and resistance in bot
     phones, two from `md`, `h-28`, `role=status aria-busy`).
   - `/auth/signin` + `/auth/callback`: `Section as='main'`, `px-4` gutter, `max-w-md` card;
     `/auth/signin` adds a `<noscript>` block ("Sign-in needs JavaScript" + Back to HeistMind) that
-    hides the spinner. `AuthHeader` passes the current path as `next` (not on `/` or `/auth/*`).
+    hides the spinner. **Correction (F104):** that message was in the DOM but never painted — it
+    sits in the animated `Card`, which SSRs at inline `opacity:0` and only fades in with JS, so
+    the JS-off page stayed blank. The e2e passed because Playwright's `toBeVisible()` counts
+    `opacity: 0` as visible. Fixed in F104. `AuthHeader` passes the current path as `next` (not on `/` or `/auth/*`).
   - **Methodology:** `mobile-overflow.spec.ts` now runs in a real phone context (`isMobile` +
     `hasTouch`, devtools bubble hidden) and compares against `visualViewport.width`; it walks every
     Brackwater wizard step AT 360, and a new BitD test reaches the vice step, picks the long

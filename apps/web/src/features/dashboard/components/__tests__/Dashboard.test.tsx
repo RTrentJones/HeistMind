@@ -127,6 +127,32 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('dashboard-activity-list')).toHaveTextContent('Asher Vane');
   });
 
+  // Round 6 P1-1 — a player's characterless roll is not the GM's.
+  it('activity says "GM" only for the GM\'s own characterless rows', () => {
+    const bare = (id: string, userId: string) => ({
+      gameName: 'The Ledger',
+      gmId: 'gm-1',
+      roll: {
+        id,
+        gameId: 'g1',
+        characterId: null,
+        userId,
+        kind: 'action',
+        label: id === 'r1' ? 'Skirmish' : 'Hunt',
+        results: [6],
+        createdAt: new Date().toISOString(),
+      },
+    });
+    data = empty({
+      campaigns: [{ game: { id: 'g1', name: 'The Ledger' }, role: 'player' }],
+      activity: [bare('r1', 'p-bo'), bare('r2', 'gm-1')],
+    });
+    render(<Dashboard />);
+    const list = screen.getByTestId('dashboard-activity-list');
+    expect(list).toHaveTextContent(/Skirmish\s*in The Ledger · Player/);
+    expect(list).toHaveTextContent(/Hunt\s*in The Ledger · GM/);
+  });
+
   it('the Start here Discord step points at a button only when one renders', () => {
     vi.stubEnv('NEXT_PUBLIC_DISCORD_APP_ID', '');
     const { unmount } = render(<Dashboard />);

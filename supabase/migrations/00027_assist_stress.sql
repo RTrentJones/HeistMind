@@ -27,6 +27,11 @@
 --     so the charge is visible in the campaign log to everyone, including the helper.
 -- Returns 'charged' | 'near_limit'. Refusals raise P0001 (bad roll / helper) or 42501 (not yours,
 -- not a member) — PostgREST maps both to 4xx.
+--
+-- SUPERSEDED (round 6, P1-1 / F105): this version never checked that the roll HAD an assist, or
+-- whose, and logged the caller's free `p_note` under the helper's name. 00028 binds the charge to
+-- rolls.assist_character_id and builds the note server-side; the function below is only the
+-- fresh-schema bootstrap that 00028 replaces.
 
 DO $do$
 DECLARE
@@ -51,8 +56,13 @@ BEGIN
   EXECUTE format('GRANT ALL ON TABLE %I.assist_charges TO service_role', target_schema);
 
   -- ---------------------------------------------------------------------------------------
-  -- 2. The narrow cross-player charge.
+  -- 2. The narrow cross-player charge. Created only when MISSING: 00028 (round 6, P1-1) replaces
+  --    it with the version bound to the roll's recorded assist, and this file re-runs BEFORE
+  --    00028 on every deploy — an unconditional CREATE OR REPLACE here would put the unbound
+  --    body back for the seconds between the two. (On a fresh schema this creates it and 00028
+  --    replaces it in the same deploy.)
   -- ---------------------------------------------------------------------------------------
+  IF to_regprocedure(format('%I.charge_assist_stress(uuid, uuid, text)', target_schema)) IS NULL THEN
   EXECUTE $create$
     CREATE OR REPLACE FUNCTION charge_assist_stress(p_roll_id UUID, p_character_id UUID,
                                                     p_note TEXT DEFAULT NULL)
@@ -130,6 +140,7 @@ BEGIN
     END;
     $fnbody$ LANGUAGE plpgsql SECURITY DEFINER;
   $create$;
+  END IF;
 
   -- ---------------------------------------------------------------------------------------
   -- 3. Privileges (00022 B7 discipline).

@@ -223,7 +223,7 @@ test.describe('invite link /join/<code>', () => {
       // The GM sees it too, and can't go below the players already in. Round 5 P2-4: "full" is
       // on the setup summary (visible while folded) and the panel opens by itself.
       await gm.page.reload();
-      await expect(gm.page.getByTestId('campaign-full')).toContainText('Full — 1 of 1 players', {
+      await expect(gm.page.getByTestId('campaign-full')).toContainText('Full — 1 of 1 player.', {
         timeout: 15_000,
       });
       await expect(gm.page.getByTestId('campaign-setup')).toHaveAttribute('open', '');

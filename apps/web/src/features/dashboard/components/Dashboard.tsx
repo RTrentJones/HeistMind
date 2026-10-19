@@ -7,7 +7,7 @@ import { PageShell } from '@/shared/components/AppShell';
 import { discordAppId } from '@/lib/discord-install';
 import { DiscordInstallLinks } from '@/shared/components/DiscordInstallLinks';
 import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
-import { entryParts } from '@/features/rolls/lib/labels';
+import { entryParts, rollWho } from '@/features/rolls/lib/labels';
 import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
@@ -106,9 +106,7 @@ export function Dashboard() {
       a.roll,
       a.roll.characterId
         ? (charNameById.get(a.roll.characterId) ?? '')
-        : a.roll.kind === 'fortune'
-          ? t('components.rollLog.fortune')
-          : t('components.rollLog.gm'),
+        : rollWho(a.roll, { characterName: () => undefined, gmId: a.gmId }, t),
       t
     );
     const who = parts.who;
@@ -243,8 +241,15 @@ export function Dashboard() {
 
           {!firstRun && (
             <>
-              {/* Your campaigns */}
-              <Stack direction='row' justify='between' align='center'>
+              {/* Your campaigns. Round 6 P2-10 — section headers wrap: the heading keeps its one
+                  line and "View all" / "My characters" drop below it, instead of squeezing the
+                  heading onto two lines beside the button at 360. */}
+              <Stack
+                direction='row'
+                justify='between'
+                align='center'
+                className='flex-wrap gap-x-3 gap-y-1'
+              >
                 <Heading level='h2' variant='primary'>
                   {t('pages.dashboard.yourCampaigns')}
                 </Heading>
@@ -279,7 +284,12 @@ export function Dashboard() {
               )}
 
               {/* Your characters */}
-              <Stack direction='row' justify='between' align='center'>
+              <Stack
+                direction='row'
+                justify='between'
+                align='center'
+                className='flex-wrap gap-x-3 gap-y-1'
+              >
                 <Heading level='h2' variant='primary'>
                   {t('pages.dashboard.yourCharacters')}
                 </Heading>

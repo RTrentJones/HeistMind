@@ -48,4 +48,15 @@ describe('roll adapter', () => {
     const insert = toSupabaseRollInsert({ ...CREATE, zeroDice: undefined }, 'u1', 'bad', null);
     expect(insert.zero_dice).toBe(false);
   });
+
+  it('records the assisting character on the roll (00028), null when there is none', () => {
+    expect(toSupabaseRollInsert(CREATE, 'u1', 'bad', null).assist_character_id).toBeNull();
+    const assisted = toSupabaseRollInsert(
+      { ...CREATE, kind: 'action', assistCharacterId: 'c9' },
+      'u1',
+      'bad',
+      null
+    );
+    expect(assisted.assist_character_id).toBe('c9');
+  });
 });

@@ -7,6 +7,7 @@
 // round-trip stays a documented manual check (see e2e/README.md).
 
 import { test, expect } from '../support/fixtures';
+import { effectiveOpacity } from '../support/a11y';
 import { onComingSoon } from '../support/coming-soon';
 
 test.describe('Discord sign-in wiring', () => {
@@ -77,6 +78,30 @@ test.describe('Discord sign-in wiring', () => {
       expect(redirectTo.searchParams.get('next')).toBe('/games/new');
     } finally {
       await ctx.close();
+    }
+  });
+
+  // Round 6 P1-1 — F102's JS-off message was in the DOM but INVISIBLE: it sat inside the shared
+  // Card, whose framer-motion entrance SSRs at `opacity: 0` and only fades in once JS runs. The
+  // page was a blank gradient. `toBeVisible()` passes on opacity 0, so this checks the EFFECTIVE
+  // opacity — on the sign-in page and on another SSR'd Card page (the 404) the reset also covers.
+  test('with JavaScript off, SSR-animated cards are actually painted', async ({ browser }) => {
+    const noJs = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      const page = await noJs.newPage();
+      await page.goto('/auth/signin?next=%2Fgames%2Fnew');
+      const heading = page.getByRole('heading', { level: 1, name: 'Sign-in needs JavaScript' });
+      await expect(heading).toBeVisible();
+      expect(await effectiveOpacity(heading)).toBe(1);
+      const back = page.getByRole('link', { name: 'Back to HeistMind' });
+      expect(await effectiveOpacity(back)).toBe(1);
+
+      await page.goto('/this-page-does-not-exist-u6');
+      const notFound = page.getByRole('heading', { level: 1 });
+      await expect(notFound).toBeVisible();
+      expect(await effectiveOpacity(notFound)).toBe(1);
+    } finally {
+      await noJs.close();
     }
   });
 });

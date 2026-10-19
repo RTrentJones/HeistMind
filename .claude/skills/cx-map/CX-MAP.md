@@ -197,7 +197,14 @@ bootstrap).
   (one card on phones, two from `md`, `h-28`) as an `aria-busy` status instead of a one-line
   spinner / "Loading…" that grew into the grid and pushed everything below ~90–180px at 768
   (dashboard 768 CLS 0.04–0.08 → 0.01–0.03).
-- _Last verified:_ 2026-10-19 (F103: crew folding only within one kind of event; F102: list
+- **Card + header layout (F104):** character cards share one layout — the identity block flexes
+  (min 12rem, its name wraps inside) and the actions never shrink, so View sits beside or below by
+  the actions' width, not the name's (at 360 "Mara Thistle" kept View inline while "Asher Vane ·
+  The Bluecoat Ledger" dropped it; the shared `CharacterCard`, so the roster and My Characters
+  too). The "Your campaigns" / "Your characters" headers wrap their "View all" / "My characters"
+  below the heading instead of squeezing it onto two lines.
+- _Last verified:_ 2026-10-19 (F105: a characterless activity row says "GM" only for the GM's
+  own rows, else "Player"; F104: card + header layout); 2026-10-19 (F103: crew folding only within one kind of event; F102: list
   skeletons; F100: pre-hydration sign-in forms, crew activity rows + folding;
   F99: reserved quick-action space, activity names every character); 2026-10-18 (F98: no
   signed-out flash; F96: "Your dashboard" title, PageShell, Start here first without quick actions,
@@ -233,10 +240,15 @@ bootstrap).
   Discord** retry. Redirected to `/` by the coming-soon gate like every app route.
 - **JavaScript off (F102):** the OAuth is client-side PKCE, so it can't start — a `<noscript>` block
   hides the spinner and says **"Sign-in needs JavaScript"** (turn it on or try another browser) with
-  **Back to HeistMind** (`/`), instead of pulsing forever.
+  **Back to HeistMind** (`/`), instead of pulsing forever. **F104:** that message was in the DOM
+  but **invisible** until now — it sits in the shared animated `Card`, whose framer-motion entrance
+  server-renders at inline `opacity:0` and only fades in with JS, so the JS-off page was a blank
+  gradient. The root layout's `<head>` carries a `<noscript><style>` (`lib/noscript-reveal.ts`)
+  that lands every inline `opacity:0` entrance at its end state when scripting is off.
 - **Layout (F102):** a `<main>` landmark (axe `landmark-one-main` / `region`) and a `max-w-md` card
   with a 16px gutter (it ran edge to edge at 360).
-- _Last verified:_ 2026-10-19 (F102: no-JS fallback, landmark, gutter; F100)
+- _Last verified:_ 2026-10-19 (F104: the no-JS message is actually painted; F102: no-JS fallback,
+  landmark, gutter; F100)
 
 ### `/join/[code]` — Invite link (F94)
 
@@ -302,7 +314,8 @@ bootstrap).
   a mid-session join doesn't snap it shut). **F103:** when the campaign is **full** the summary line
   (visible while folded) adds "Full — N of N players. Raise the player limit under Players to let
   anyone else in." and the disclosure starts open — the player at the door is told to ask for
-  exactly that → **Characters** → crew, clocks, factions, score, log →
+  exactly that (**F104:** the count is the shared `seatSummary`, pluralised on the limit — "Full —
+  1 of 1 player." — the same phrasing as the invite and Players cards under it) → **Characters** → crew, clocks, factions, score, log →
   players' **Players** card (with Leave) → the GM's **Delete campaign**. Characters used to start at
   y≈1130 under three setup cards. (`AppShell`'s `main` is at least a viewport tall, so the footer
   isn't dragged around as panels resolve — CLS.)
@@ -331,7 +344,8 @@ bootstrap).
     **Player limit (F100, `PlayerLimitControl`):** everyone sees **"N of M players"** ("— the
     campaign is full" at the limit; F102: pluralised on the limit — "1 of 1 player"); the GM gets a
     **Player limit** number field (1–30, never below the players already in — the GM's own seat
-    isn't counted) + **Save limit**. **F102 order:** members → "Removed: …" → the "Removing a player
+    isn't counted) + **Save limit** (**F104:** the field is 44px tall on phones like the button —
+    design-system `Input` `sm` is `max-sm:h-11`; it sat 32px beside the 44px Save). **F102 order:** members → "Removed: …" → the "Removing a player
     hands their characters back…" explainer → a divided **Player limit** sub-section (h3 heading,
     seats line, field + Save, help); the limit used to sit between the list and the explainer for
     its Remove buttons. Players see the seats line right under the list. Hint/errors use the error
@@ -375,7 +389,14 @@ bootstrap).
     sit in a native `<details>` disclosure, **collapsed by default** — summary "Through Veteran —
     another crew type's ability / N abilities from other crew types" + chevron, Enter/Space toggles —
     so the upgrades and "Take advance" are no longer ~4,900px down at 360; group headings are
-    `text-sm` sans, not wrapping small caps. The held-abilities list's GM **Remove** is `shrink-0`
+    `text-sm` sans, not wrapping small caps. **F104:** the fieldset legend is `text-sm` sans too;
+    opened, the Veteran routes are grouped by the **crew type each comes from**, every type its own
+    collapsed `<details>` ("Assassins · 6 abilities") — one 32-row described list was 10,281px at
+    360; and **Veteran is offered only as those routes**, never also as a bare row on the crew's
+    own list (core `takeableCrewAbilities` drops a Veteran-granting ability that is the gateway for
+    an offered pick — RAW, taking Veteran IS taking the other ability; the bot's suggestions share
+    it; the repository gate still accepts an explicit bare Veteran). The **Crew type** select is
+    `min-h-10`, as tall as **Create crew** beside it. The held-abilities list's GM **Remove** is `shrink-0`
     beside a shrinking description — it was clipped to 42px at 360) offers ONLY legal picks (core `takeableCrewAbilities`/`openCrewUpgrades`): a new crew chooses
     its ONE **starting ability** from its own crew type's list ("Take starting ability" — the
     track is untouched); afterwards a FULL track is spent ("Take advance") on a new special
@@ -392,8 +413,8 @@ bootstrap).
     repository carries that latch on every crew write, so removing every ability no longer
     re-opens a free pick (the picker stays hidden until a full track). **F103:** the BitD builtin
     now carries **seven special abilities per crew type** (+ the shared Veteran) — the starting
-    pick offers the type's seven (+ Patron where the type has it) and Veteran, and the "Through
-    Veteran" group grows accordingly (≈36 other-type options). Existing copies get it via
+    pick offers the type's seven (+ Patron where the type has it), and the "Through Veteran"
+    group grows accordingly (≈32–36 other-type options; F104: grouped by type, no bare Veteran). Existing copies get it via
     "Refresh my copy" (content v1.2.0).
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
@@ -444,15 +465,31 @@ bootstrap).
     push/resistance stress write keeps the saved roll and says "The roll is saved, but its N stress
     couldn't be marked (…). Mark it on the sheet yourself."; when the stress WAS marked but its
     trauma log note failed, it says only that the note couldn't be added (no re-mark). **Assist (F103):** the option reads
-    "Assist: Bo (+1d, they take 1 stress)" and the helper's stress is really charged — another
+    "Assist: Bo (+1d)" (**F104:** the cost moved to the pool line — "Pool: 3d · Bo takes 1 stress" —
+    because the capped select cut "(+1d, they take 1 stress)" to "(+1d, they…" at 360) and the helper's stress is really charged — another
     player's character through 00027 `charge_assist_stress` (+1, once per roll, logged "Bo marked
     1 stress for an assist."); the roller sees "Bo marked 1 stress for the assist — it's on their
     sheet." When Bo is one box from trauma nothing is written and the roller is told Bo marks it
-    on their own sheet (the trauma is the owner's call). **`AddResultForm`**: record a
+    on their own sheet (the trauma is the owner's call). **Round 6 (F105):** the helper is
+    recorded ON the roll (`rolls.assist_character_id`, 00028) and the cross-player charge only
+    ever charges that helper, for the roller's own character's action roll; its log line is
+    built by the server from the two names — "Bo marked 1 stress assisting Ana." / "Bo owes 1
+    stress for assisting Ana — one box from trauma, so it's theirs to mark on their own sheet."
+    (a failed write logs the same "owes" line from the client, on the helper when the roller may
+    write it, else on the roller's character). The roll's own note now reads "Assisted by Bo
+    (+1d)" (it used to claim "1 stress" even when nothing was charged). An own-alt / GM assist
+    that marks the helper's last box tells the roller "…their last box, so they take a trauma.
+    Pick the condition on their sheet." and logs the assist BEFORE the trauma. Notes that ask
+    someone to act (stress not marked, near limit, failed, trauma) use the **warning** style;
+    plain reports stay info. A resistance roll whose stress write failed shows a neutral "N
+    stress — not marked" badge (or "critical — stress not cleared"), never the red "applied" one.
+    **`AddResultForm`**: record a
     result that was **settled elsewhere — in person or on Discord** (writes a `note` event,
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
-    player sees it on load): shows **who** (character name; "Fortune"/"GM") and **when** (relative time
+    player sees it on load): shows **who** (character name; "Fortune"; for a characterless row
+    "GM" ONLY when the campaign's GM wrote it, otherwise the player's display name / "Player" —
+    F105: a player's bare rolls used to read "GM · [6]") and **when** (relative time
     - timestamp tooltip), annotates resistance ("resisted — N stress"; zero-dice resists ride the
       persisted `zero_dice` flag since audit P2, so the displayed cost matches the sheet), and
       renders non-dice events (downtime / loadout / score / **crew** / **faction** / **clock** /
@@ -485,7 +522,11 @@ bootstrap).
 - **No load jump (F99):** the hub's loading state uses the same `4xl` container as the loaded hub
   (the 448px loading box being reused at full width was the hub's main layout shift: CLS 0.18 →
   0.04 at 768); page `Container`s also fade in opacity-only (no slide-up).
-- _Last verified:_ 2026-10-19 (F103: full campaign on the setup summary, one-shot roll moves,
+- _Last verified:_ 2026-10-19 (F105: assist bound to the roll + server-built charge line,
+  truthful assist row/notes + warning style, neutral failed-resistance badge, "GM" only for the
+  GM's rows; F104: full line via seatSummary, 44px limit field on phones, assist cost on the pool
+  line, crew picker legend sans + Veteran routes grouped by type with no bare Veteran, crew-type
+  select height; F103: full campaign on the setup summary, one-shot roll moves,
   assist stress charged, saved-roll stress errors, BitD seven crew abilities per type; F102: one
   pluralised seat phrasing, Player limit sub-section after the explainer, error-text token,
   collapsed Veteran disclosure, crew Remove not clipped, pool preview; F100:
@@ -613,7 +654,12 @@ bootstrap).
   The newest roll result is announced via an `aria-live` region; the rename row is a real form.
 - **Trauma count (F96):** the Condition card always shows **"Trauma n / max"** (e.g. "Trauma 2 /
   4", "None." at zero) — the count is the mechanic (the last box retires the character).
-- _Last verified:_ 2026-10-19 (F103: the Dice card's one-shot moves reset after a roll, assist
+- **Friend ≠ rival (F105):** the sheet editor's Close friend / Rival selects each leave out the
+  other slot's pick; a sheet already saved with one contact as both keeps working (live
+  validation only warns) until the owner changes it.
+- _Last verified:_ 2026-10-19 (F105: assist/stress notes truthful + warning style, friend ≠ rival
+  in the editor, see the hub's `RollPanel`; F104: assist option "Assist: Bo (+1d)", cost on the
+  pool line); 2026-10-19 (F103: the Dice card's one-shot moves reset after a roll, assist
   stress charged to the helper, stress-write failures reported with the saved roll — see the hub's
   `RollPanel`); 2026-10-18 (F97 round-3 rules: vice-gated Indulge vice, identity selects +
   details, session-trigger track select, auto desperate XP, prerequisite names; F96: trauma
@@ -741,7 +787,10 @@ bootstrap).
   move/return low on phones. The desperate-roll XP note sits inside the result's live region,
   right under the result (announced with it), and a new result scrolls into view above the thumb
   bar on phones.
-- _Last verified:_ 2026-10-19 (F99: attach card high on phones + banner link, desperate note under
+- **Detach confirm (F105):** "Return to My Characters" arms a crimson "Confirm — remove from
+  campaign"; the arm now resets after a successful detach and whenever the character's campaign
+  changes, so a re-attached sheet never opens one tap from removing it.
+- _Last verified:_ 2026-10-19 (F105: detach confirm disarms on a campaign change); 2026-10-19 (F99: attach card high on phones + banner link, desperate note under
   the result); 2026-10-18 (F98: attach across content-identical ruleset copies, truthful
   linked empty state, danger delete card)
 
@@ -842,8 +891,11 @@ help` and `packages/discord/README.md`.
 - **F91 (2026-10-17):** the 404, route-error, sign-in-gate, auth-callback and wizard-step titles
   are the page's `<h1>` (kept visually at h2 size); in-page `Alert`s use `role="alert"` only for
   errors (hints/warnings are polite `status`).
+- **JavaScript off (F104):** the 404 card (and every other SSR'd animated `Card` / `Container` /
+  heading) used to stay at its framer-motion `opacity:0`; the root `<noscript><style>` reveal
+  paints it.
 
-_Last verified:_ 2026-10-17 (F90: every route server-renders real content — i18n gate removed,
+_Last verified:_ 2026-10-19 (F104: painted with JS off); 2026-10-17 (F90: every route server-renders real content — i18n gate removed,
 post-mount auth-store hydration, per-page metadata + OG card, robots/sitemap, security headers,
 env-flag coming-soon gate). Previously 2026-07-11 (backlog rounds A+B: GM campaign-state Select on the hub (F32); home
 surfaces auth errors as a dismissible banner (F40); faction WAR callout at −3 (F47); zero-dice
@@ -902,11 +954,16 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    Stupor, Weird — SRD text). The background/vice cards use the shared `SelectableCard` (F99 —
    they had regressed to a ring-less grey card with a red "Selected" badge). _Heritage/background
    are optional; a value that isn't one of the listed choices blocks the step (`IDENTITY_UNKNOWN`)._
-   **Close friend / Rival (F12)** ride the vice step as two full-width selects whose options read
-   "name — description"; **F102:** they are `w-full` and the design-system `Select` is
+   **Close friend / Rival (F12)** ride the vice step as two full-width selects (**F104:** options
+   carry the contact's NAME only, and the chosen contact's description shows under the select,
+   wired as its `aria-describedby` — "name — description" was cut mid-word in the capped trigger
+   at 360); **F102:** they are `w-full` and the design-system `Select` is
    `min-w-0 max-w-full truncate` (wrapper too), so a long option truncates in the trigger instead
    of sizing the control to it — it was 418px, the page 438px wide at 360, and the fixed
-   Cancel/Back/Next footer sat off-screen and untappable.
+   Cancel/Back/Next footer sat off-screen and untappable. **F105:** RAW they are two different
+   people — each select leaves out the other's pick (BitD playbooks list two contacts, so picking
+   one leaves the other for the rival), and core creation validation refuses the same contact as
+   both (`CONTACT_FRIEND_IS_RIVAL`).
    **BitD's Vice step is REQUIRED (F100):** skipping it used to show "✓ Vice (complete)" and create
    a vice-less scoundrel; now the step is amber/incomplete, Next and Create are blocked with "Choose
    a vice — "Vice" must be completed." (core: a required per-field identity step needs that field —
@@ -919,7 +976,14 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    `getRepositories().characterManagement.createCharacterWithValidation`; on success the persisted
    draft (name, picks, step) is cleared so the next character starts fresh (F94).
 
-_Last verified:_ 2026-10-19 (F102: contact selects capped — the phone page no longer widens past
+**Footer & stepper (F104):** Back and the primary action (Next / **Create character**) are one
+`ml-auto shrink-0` group: when the row is too narrow (the last step at 360) they wrap together and
+stay bottom-right — "Create character" used to wrap alone, under Cancel and left-aligned. Completed
+/ incomplete step chips keep their fill on hover and darken the border instead (the Badge's /30
+hover fill put light-mode success text at 4.27:1).
+
+_Last verified:_ 2026-10-19 (F105: close friend ≠ rival; F104: name-only contact options +
+description hint, footer nav group, stepper chip hover; F102: contact selects capped — the phone page no longer widens past
 360; F100: BitD vice required, step status consistent with validation;
 F99: phone footer reason row, shared SelectableCard, labelled review identity); 2026-10-18 (F97:
 all creation dots required, BitD heritage/background/vice steps
@@ -978,7 +1042,8 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   (advancement XP on the 8-box track — `xp` adds/unmarks clamped marks, feed-logged; F86;
   **`advance pick:`** (required, GM-gated autocomplete of LEGAL choices only — F97): a new crew's
   starting ability from its own list, else with a full track a crew ability (another type's shown
-  "(via Veteran)") or "Mark 2 upgrade boxes: Mastery (n/4)" / other upgrades; refusals — track not
+  "(via Veteran)"; F104: Veteran itself is suggested only as those routes, never bare) or "Mark 2
+  upgrade boxes: Mastery (n/4)" / other upgrades; refusals — track not
   full, off-list, Mastery as an ability — are ephemeral and write nothing) · `/clock tick` (filling announces "It comes
   to a head!") · `/faction status`. GM-gated INCLUDING autocompletes — campaign state never leaks
   through suggestions.
@@ -992,7 +1057,7 @@ category link) closed via the app's first bot-token fetch — a thread whose par
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-10-19 (F103: penalty wording, desperate XP logged, saved-roll stress
+_Last verified:_ 2026-10-19 (F104: no bare Veteran in `/crew advance` suggestions; F103: penalty wording, desperate XP logged, saved-roll stress
 errors); 2026-10-18 (F97: `/crew advance pick:` + autocomplete, desperate-roll XP on
 `/roll`, `/vice` needs a vice; F95: complete `/heist help`, verified-only Discord link); 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
 creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only

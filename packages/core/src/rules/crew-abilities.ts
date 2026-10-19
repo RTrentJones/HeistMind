@@ -319,18 +319,30 @@ export function planCrewAdvance(
   };
 }
 
-/** The special abilities a crew may take right now (own list, plus Veteran-reachable picks). */
+/**
+ * The special abilities a crew may take right now (own list, plus Veteran-reachable picks).
+ *
+ * RAW, taking Veteran IS taking another crew's ability (one advance), so a Veteran-granting
+ * ability that opens some other pick here is offered only AS that route ("Deadly via Veteran"),
+ * never also as a bare pick: alone it would spend an advance on an empty slot, and the picker
+ * showed the same choice twice — a "Veteran" row on the crew's own list AND the "Through
+ * Veteran" group (round 6 P2-7). The repository gate ({@link planCrewAdvance}) still accepts an
+ * explicit bare Veteran — this is the OFFERED set the sheet and the bot's suggestions share.
+ */
 export function takeableCrewAbilities(
   ruleset: CrewRulesetSlice,
   crew: CrewAbilityState
 ): CrewAbilityDefinition[] {
-  return (ruleset?.crew?.abilities ?? []).filter(
-    a =>
-      !crew.crewAbilities.includes(a.id) &&
-      !isCrewUpgrade(a) &&
-      (isCrewAbilityUnlocked(ruleset, crew, a.id) ||
-        crewVeteranGatewayFor(ruleset, crew, a.id) !== null)
-  );
+  const gateways = new Set<string>();
+  const candidates = (ruleset?.crew?.abilities ?? []).filter(a => {
+    if (crew.crewAbilities.includes(a.id) || isCrewUpgrade(a)) return false;
+    if (isCrewAbilityUnlocked(ruleset, crew, a.id)) return true;
+    const gate = crewVeteranGatewayFor(ruleset, crew, a.id);
+    if (gate === null) return false;
+    gateways.add(gate);
+    return true;
+  });
+  return candidates.filter(a => !gateways.has(a.id));
 }
 
 /** The modelled upgrades still short of their boxes (an upgrades advance may mark them). */

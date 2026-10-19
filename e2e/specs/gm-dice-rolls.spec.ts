@@ -145,7 +145,9 @@ test.describe('GM: dice rolls + roll log', () => {
     // The player rolls with the GM's character assisting.
     const assist = playerPage.getByRole('combobox', { name: 'Assist' });
     await expect(assist).toBeVisible({ timeout: 15_000 });
-    await assist.selectOption({ label: `Assist: ${helper} (+1d, they take 1 stress)` });
+    await assist.selectOption({ label: `Assist: ${helper} (+1d)` });
+    // Round 6 P2-2 — the helper's cost is on the pool line (a phone's select truncated it).
+    await expect(playerPage.getByTestId('roll-pool')).toContainText(`${helper} takes 1 stress`);
     await playerPage.getByRole('button', { name: 'Roll', exact: true }).click();
     await expect(playerPage.getByTestId('roll-stress-note')).toHaveText(
       `${helper} marked 1 stress for the assist — it’s on their sheet.`,
@@ -153,11 +155,14 @@ test.describe('GM: dice rolls + roll log', () => {
     );
     // One-shot: the assist resets after the roll.
     await expect(assist).toHaveValue('');
-    // The campaign log carries the charge, which the helper's owner sees.
+    // The campaign log carries the charge, which the helper's owner sees — a line the SERVER
+    // builds from the two characters' names (round 6 P1-1: no client-supplied text), and the
+    // roll's own note no longer claims the stress was paid (P2-2).
     await gmPage.goto(gameUrl);
-    await expect(gmPage.getByText(`${helper} marked 1 stress for an assist.`)).toBeVisible({
+    await expect(gmPage.getByText(`${helper} marked 1 stress assisting ${roller}.`)).toBeVisible({
       timeout: 15_000,
     });
+    await expect(gmPage.getByText(`Assisted by ${helper} (+1d)`)).toBeVisible();
   });
 
   // F43 — moderate harm surfaces its RAW −1d on the sheet's ACTION roll panel, waivable. Lives

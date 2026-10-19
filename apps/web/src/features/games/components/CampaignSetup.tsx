@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from 'react';
 import type { CampaignCapacity } from '@heist-mind/core';
 import { Heading, Text } from '@heist-mind/ui';
-import { usePageTranslation } from '@/lib/i18n/hooks';
+import { useComponentTranslation, usePageTranslation } from '@/lib/i18n/hooks';
+import { seatSummary } from './PlayerLimitControl';
 
 /**
  * UX r3 — the GM's setup cards (Invite players, Players, Discord) folded into ONE disclosure at
@@ -27,6 +28,7 @@ export function CampaignSetup({
   children: ReactNode;
 }) {
   const { t } = usePageTranslation();
+  const { t: tc } = useComponentTranslation();
   const full = capacity?.full === true;
   const [open, setOpen] = useState(initiallyOpen || full);
   return (
@@ -46,7 +48,8 @@ export function CampaignSetup({
           </Text>
           {full && capacity && (
             <Text as='span' size='sm' className='font-medium' data-testid='campaign-full'>
-              {t('game.setupFull', { players: capacity.players, limit: capacity.limit })}
+              {/* Round 6 P2-1 — the shared seat phrasing ("1 of 1 player"), like the cards below. */}
+              {t('game.setupFull', { summary: seatSummary(tc, capacity, false) })}
             </Text>
           )}
         </span>

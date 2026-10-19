@@ -146,6 +146,7 @@ function renderWithTeam() {
         actions={[{ name: 'Skirmish', rating: 2 }]}
         attributes={[{ id: 'prowess', name: 'Prowess', rating: 1 }]}
         teammates={[{ id: 'c9', name: 'Bo Silt' }]}
+        characterName='Ana Rook'
       />
     </TooltipProvider>
   );
@@ -159,6 +160,19 @@ const ROLLED = {
   stressError: null,
   assist: null,
 };
+
+describe('RollPanel — the assist option and its cost (round 6 P2-2)', () => {
+  it('the option is short; the helper’s 1 stress shows on the pool line once chosen', async () => {
+    renderWithTeam();
+    const assist = screen.getByRole('combobox', { name: 'Assist' });
+    expect(screen.getByRole('option', { name: 'Assist: Bo Silt (+1d)' })).toBeInTheDocument();
+    expect(screen.getByTestId('roll-pool')).toHaveTextContent(/^Pool: 2d$/);
+    await userEvent.selectOptions(assist, 'c9');
+    expect(screen.getByTestId('roll-pool')).toHaveTextContent('Pool: 3d · Bo Silt takes 1 stress');
+    await userEvent.selectOptions(assist, '');
+    expect(screen.getByTestId('roll-pool')).toHaveTextContent(/^Pool: 2d$/);
+  });
+});
 
 describe('RollPanel — one-shot moves reset after a roll (round 5 P1-2)', () => {
   it('a campaign action roll clears push, bargain, assist and ability dice; a second roll does not push', async () => {
@@ -319,24 +333,74 @@ describe('RollPanel — stress side effects of a SAVED roll (round 5 P2-5 / P2-6
     );
   });
 
+  // Round 6 P2-2 — the roll's own note no longer claims the stress was paid (the charge's own
+  // log line says what happened); a note that asks for action is a WARNING, a report is info.
   it.each([
-    ['charged', /Bo Silt marked 1 stress for the assist/],
-    ['near_limit', /Bo Silt is one stress box from trauma.*They mark it on their own sheet/],
-    ['failed', /Bo Silt’s assist stress couldn’t be marked \(too old\)/],
-  ])('tells the roller what happened to the assist stress (%s)', async (status, copy) => {
-    actionRoll.mutateAsync.mockReset().mockResolvedValue({
-      ...ROLLED,
-      assist: { characterId: 'c9', status, ...(status === 'failed' ? { error: 'too old' } : {}) },
+    ['charged', false, /Bo Silt marked 1 stress for the assist — it’s on their sheet/, 'info'],
+    ['charged', true, /Bo Silt marked 1 stress for the assist — their last box.*trauma/, 'warning'],
+    ['near_limit', false, /Bo Silt is one stress box from trauma.*own sheet/, 'warning'],
+    ['failed', false, /Bo Silt’s assist stress couldn’t be marked \(too old\)/, 'warning'],
+  ])(
+    'tells the roller what happened to the assist stress (%s, trauma %s)',
+    async (status, trauma, copy, tone) => {
+      actionRoll.mutateAsync.mockReset().mockResolvedValue({
+        ...ROLLED,
+        assist: {
+          characterId: 'c9',
+          status,
+          ...(trauma ? { trauma: true } : {}),
+          ...(status === 'failed' ? { error: 'too old' } : {}),
+        },
+      });
+      renderWithTeam();
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Assist' }), 'c9');
+      await userEvent.click(screen.getByRole('button', { name: 'Roll' }));
+      const note = await screen.findByTestId('roll-stress-note');
+      expect(note).toHaveTextContent(copy);
+      expect(note.className).toContain(tone === 'warning' ? 'semantic-warning' : 'semantic-info');
+      expect(actionRoll.mutateAsync).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          note: 'Assisted by Bo Silt (+1d)',
+          assist: {
+            characterId: 'c9',
+            logNote: 'Bo Silt marked 1 stress assisting Ana Rook.',
+            owedLogNote: expect.stringMatching(/^Bo Silt owes 1 stress for assisting Ana Rook/),
+          },
+        })
+      );
+    }
+  );
+
+  // Round 6 P2-6 — a resistance roll whose stress write failed must not wear the red "applied" badge.
+  it('a failed resistance write shows a neutral "not marked" badge; a failed crit clear says clear', async () => {
+    resistanceRoll.mutateAsync.mockResolvedValueOnce({
+      roll: { outcome: 'partial', results: [4] },
+      stress: 2,
+      stressError: 'boom',
     });
-    renderWithTeam();
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Assist' }), 'c9');
-    await userEvent.click(screen.getByRole('button', { name: 'Roll' }));
-    expect(await screen.findByTestId('roll-stress-note')).toHaveTextContent(copy);
-    expect(actionRoll.mutateAsync).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        note: 'Assisted by Bo Silt (+1d, 1 stress)',
-        assist: { characterId: 'c9', logNote: 'Bo Silt marked 1 stress for an assist.' },
-      })
+    renderPanel();
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Roll type' }),
+      'resistance'
     );
+    await userEvent.click(screen.getByRole('button', { name: /resist/i }));
+    expect(await screen.findByText('2 stress — not marked')).toBeInTheDocument();
+    expect(screen.queryByText('2 stress')).not.toBeInTheDocument();
+    expect(screen.getByTestId('roll-stress-note').className).toContain('semantic-warning');
+
+    resistanceRoll.mutateAsync.mockResolvedValueOnce({
+      roll: { outcome: 'crit', results: [6, 6] },
+      stress: -1,
+      stressError: 'boom',
+    });
+    await userEvent.click(screen.getByRole('button', { name: /resist/i }));
+    await waitFor(() =>
+      expect(screen.getByTestId('roll-stress-note')).toHaveTextContent(
+        /critical couldn’t clear 1 stress \(boom\)/
+      )
+    );
+    expect(screen.getByTestId('roll-stress-note')).not.toHaveTextContent('−1');
+    expect(screen.getByText('critical — stress not cleared')).toBeInTheDocument();
+    expect(screen.queryByText('critical — cleared 1 stress')).not.toBeInTheDocument();
   });
 });

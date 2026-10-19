@@ -99,6 +99,9 @@ describe('contacts (setContact — F12)', () => {
       { name: OTHER.name, description: OTHER.description, relationship: 'friend' },
     ]);
 
+    // Round 6 P2-1 — OTHER was the rival: one person can't be both, so it MOVED to friend.
+    expect(store().draft.contacts.some(c => c.relationship === 'rival')).toBe(false);
+    store().setContact('rival', CONTACT);
     store().setContact('rival', null);
     expect(store().draft.contacts.some(c => c.relationship === 'rival')).toBe(false);
   });

@@ -41,6 +41,12 @@ export interface ApplyStressInput {
   stress: number;
   /** Feed copy for an overflow → trauma. Omitted = the trauma still lands, unlogged. */
   traumaLog?: TraumaLogCopy;
+  /**
+   * Feed copy for WHY the stress changed (e.g. "Bo marked 1 stress assisting Ana."), logged once
+   * the write lands and BEFORE any trauma note, so the log reads cause → effect (round 6 P2-2).
+   * Only logged when the character is in a campaign. Omitted = no cause line.
+   */
+  causeLog?: string;
 }
 
 export interface StressOutcome {
@@ -100,9 +106,13 @@ export async function applyStress(
   // `logError` next to the applied outcome — never as the stress failing (callers would tell the
   // player to mark it again: a double charge).
   let logError: string | undefined;
-  if (change.trauma && input.traumaLog && char.gameId !== null) {
-    const notes = [input.traumaLog.note(char.name)];
+  const notes: string[] = [];
+  if (input.causeLog) notes.push(input.causeLog);
+  if (change.trauma && input.traumaLog) {
+    notes.push(input.traumaLog.note(char.name));
     if (change.mustRetire) notes.push(input.traumaLog.retireNote(char.name));
+  }
+  if (char.gameId !== null) {
     for (const note of notes) {
       const logged = await repos.rolls.create(input.userId, {
         gameId: char.gameId,

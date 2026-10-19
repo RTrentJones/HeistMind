@@ -444,6 +444,7 @@ export type Database = {
       }
       rolls: {
         Row: {
+          assist_character_id: string | null
           character_id: string | null
           created_at: string | null
           dice: number
@@ -461,6 +462,7 @@ export type Database = {
           zero_dice: boolean
         }
         Insert: {
+          assist_character_id?: string | null
           character_id?: string | null
           created_at?: string | null
           dice?: number
@@ -478,6 +480,7 @@ export type Database = {
           zero_dice?: boolean
         }
         Update: {
+          assist_character_id?: string | null
           character_id?: string | null
           created_at?: string | null
           dice?: number
@@ -495,6 +498,13 @@ export type Database = {
           zero_dice?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "rolls_assist_character_id_fkey"
+            columns: ["assist_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rolls_character_id_fkey"
             columns: ["character_id"]
@@ -1204,6 +1214,7 @@ export type Database = {
       }
       rolls: {
         Row: {
+          assist_character_id: string | null
           character_id: string | null
           created_at: string | null
           dice: number
@@ -1221,6 +1232,7 @@ export type Database = {
           zero_dice: boolean
         }
         Insert: {
+          assist_character_id?: string | null
           character_id?: string | null
           created_at?: string | null
           dice?: number
@@ -1238,6 +1250,7 @@ export type Database = {
           zero_dice?: boolean
         }
         Update: {
+          assist_character_id?: string | null
           character_id?: string | null
           created_at?: string | null
           dice?: number
@@ -1255,6 +1268,13 @@ export type Database = {
           zero_dice?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "rolls_assist_character_id_fkey"
+            columns: ["assist_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rolls_character_id_fkey"
             columns: ["character_id"]

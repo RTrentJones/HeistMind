@@ -22,8 +22,10 @@ const STEP_BADGE: Record<StepStatus, 'default' | 'success' | 'warning' | 'outlin
 const STEP_BADGE_CLASS: Record<StepStatus, string> = {
   // brand-secondary, not the brand-primary fill: white on brand-primary is only 4.2:1.
   current: 'bg-brand-secondary ring-2 ring-brand-primary/40',
-  complete: '',
-  incomplete: '',
+  // Round 6 P2-9 — no hover tint on the done/invalid chips: the Badge's /30 hover fill dropped the
+  // light-mode success text to 4.27:1. The hover cue is the border instead (text contrast intact).
+  complete: 'hover:bg-semantic-success/20 hover:border-semantic-success/70',
+  incomplete: 'hover:bg-semantic-warning/20 hover:border-semantic-warning/70',
   upcoming: 'text-foreground-muted',
 };
 
@@ -175,18 +177,22 @@ export function CharacterCreationWizard({
       )}
       <div className={!canAdvance && blockingReason ? 'flex-1 md:hidden' : 'flex-1'} />
 
-      <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
-        {t('common.actions.back')}
-      </Button>
-      {isLast ? (
-        <Button variant='ember' loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
-          {t('components.wizard.createCharacter')}
+      {/* Round 6 P2-4 — Back + the primary action wrap as ONE right-aligned group: on the last
+          step at 360 "Create character" used to wrap alone, under Cancel and left-aligned. */}
+      <div className='ml-auto flex shrink-0 items-center gap-3' data-testid='wizard-nav'>
+        <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
+          {t('common.actions.back')}
         </Button>
-      ) : (
-        <Button variant='default' disabled={!canAdvance} onClick={goNext}>
-          {t('common.actions.next')}
-        </Button>
-      )}
+        {isLast ? (
+          <Button variant='ember' loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
+            {t('components.wizard.createCharacter')}
+          </Button>
+        ) : (
+          <Button variant='default' disabled={!canAdvance} onClick={goNext}>
+            {t('common.actions.next')}
+          </Button>
+        )}
+      </div>
     </footer>
   );
 

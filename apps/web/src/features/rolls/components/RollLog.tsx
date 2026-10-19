@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { resistanceStress, type Roll } from '@heist-mind/core';
 import { Badge, Card, Stack, Text, Tooltip } from '@heist-mind/ui';
 import { useCharactersByGame } from '@/features/characters/data/queries';
+import { useGameDetail } from '@/features/games/data/queries';
 import { useRollsByGame } from '@/features/rolls/data/queries';
 import { useScoresByGame } from '@/features/scores/data/queries';
 import { useTranslation } from '@/lib/i18n/hooks';
@@ -14,6 +15,7 @@ import {
   outcomeLabel,
   positionLabel,
   entryParts,
+  rollWho,
 } from '@/features/rolls/lib/labels';
 
 // Non-dice campaign events — shown with a neutral kind badge instead of a dice outcome.
@@ -48,11 +50,20 @@ export function RollLog({ gameId }: { gameId: string }) {
   const rollsQuery = useRollsByGame(gameId, 25);
   const charsQuery = useCharactersByGame(gameId);
   const scoresQuery = useScoresByGame(gameId);
+  // Who wrote a characterless row: the GM, or which player (round 6 P1-1 — not always "GM").
+  const gameQuery = useGameDetail(gameId);
 
   // Resolve characterId → name (who made each roll) and scoreId → name (group the feed by operation).
   const charNames = useMemo(
     () => Object.fromEntries((charsQuery.data ?? []).map(c => [c.id, c.name])),
     [charsQuery.data]
+  );
+  const playerNames = useMemo(
+    () =>
+      Object.fromEntries(
+        (gameQuery.data?.players ?? []).map(p => [p.playerId, p.profile.username ?? ''])
+      ),
+    [gameQuery.data]
   );
   const scoreNames = useMemo(
     () => Object.fromEntries((scoresQuery.data ?? []).map(s => [s.id, s.name ?? ''])),
@@ -86,11 +97,15 @@ export function RollLog({ gameId }: { gameId: string }) {
   const now = Date.now();
 
   const renderRoll = (r: Roll) => {
-    const who = r.characterId
-      ? (charNames[r.characterId] ?? t('components.rollLog.unknownPlayer'))
-      : r.kind === 'fortune'
-        ? t('components.rollLog.fortune')
-        : t('components.rollLog.gm');
+    const who = rollWho(
+      r,
+      {
+        characterName: id => charNames[id],
+        gmId: gameQuery.data?.createdBy,
+        playerName: id => playerNames[id],
+      },
+      t
+    );
     // Only join position/effect with a slash when both are present (no trailing "position/").
     const pos = positionLabel(r.position, t);
     const eff = effectLabel(r.effect, t);

@@ -26,8 +26,14 @@ export function GearCard({
     const { playbookContacts, onPatch } = edit;
     const contactName = (rel: 'friend' | 'rival') =>
       data.contacts.find(c => c.relationship === rel)?.name ?? '';
+    // Round 6 P2-1 — a close friend and a rival are two different people: each select leaves out
+    // the other slot's pick, and picking it anyway (a stale sheet) moves it rather than doubling.
+    const otherPick = (rel: 'friend' | 'rival') =>
+      contactName(rel === 'friend' ? 'rival' : 'friend');
     const setContact = (rel: 'friend' | 'rival', name: string) => {
-      const others = data.contacts.filter(c => c.relationship !== rel);
+      const others = data.contacts.filter(
+        c => c.relationship !== rel && !(name && c.name === name)
+      );
       if (!name) {
         onPatch({ contacts: others });
         return;
@@ -65,11 +71,13 @@ export function GearCard({
                 onChange={e => setContact('friend', e.target.value)}
               >
                 <option value=''>—</option>
-                {playbookContacts.map(c => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+                {playbookContacts
+                  .filter(c => c.name !== otherPick('friend'))
+                  .map(c => (
+                    <option key={c.name} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
               </Select>
               <Select
                 label={t('components.characterEditor.rival')}
@@ -77,11 +85,13 @@ export function GearCard({
                 onChange={e => setContact('rival', e.target.value)}
               >
                 <option value=''>—</option>
-                {playbookContacts.map(c => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+                {playbookContacts
+                  .filter(c => c.name !== otherPick('rival'))
+                  .map(c => (
+                    <option key={c.name} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
               </Select>
             </Stack>
           </>

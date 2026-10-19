@@ -216,17 +216,14 @@ export interface RollRepository {
   create(userId: string, data: CreateRollData): Promise<Result<Roll>>;
   findByGame(gameId: string, limit?: number): Promise<Result<Roll[]>>;
   /**
-   * Charge an ASSIST's 1 stress to ANOTHER player's character (00027 `charge_assist_stress`, the
-   * one narrow cross-player write): only for the caller's own action roll from the last 15
-   * minutes, once per roll, and only while +1 stays below the ruleset's base stress max —
-   * otherwise `near_limit` (nothing written; the owner marks it, trauma is their call). Logs a
-   * note row (`note`) for the helper's character.
+   * Charge an ASSIST's 1 stress to ANOTHER player's character (`charge_assist_stress`, 00027 →
+   * 00028, the one narrow cross-player write): only the helper RECORDED on the roll
+   * (`CreateRollData.assistCharacterId`), for the caller's own character's action roll from the
+   * last 15 minutes, once per roll, and only while +1 stays below the ruleset's base stress max —
+   * otherwise `near_limit` (nothing written; the owner marks it, trauma is their call). The RPC
+   * logs the note row for the helper itself, built from the characters' names — no client text.
    */
-  chargeAssistStress(
-    rollId: string,
-    characterId: string,
-    note: string
-  ): Promise<Result<AssistCharge>>;
+  chargeAssistStress(rollId: string, characterId: string): Promise<Result<AssistCharge>>;
 }
 
 /** Per-game progress clocks. Members read; the game's GM creates / ticks / removes them. */

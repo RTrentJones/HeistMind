@@ -58,7 +58,9 @@ const inputVariants = cva(
         ],
       },
       size: {
-        sm: 'h-8 px-2 py-1 text-xs',
+        // Round 6 P2-5 — a 44px tap target on phones, like Button/Select `sm` (the Player limit
+        // field sat 32px tall beside a 44px "Save limit").
+        sm: 'h-8 max-sm:h-11 px-2 py-1 text-xs',
         default: 'h-10 px-3 py-2',
         lg: 'h-12 px-4 py-3 text-base',
         xl: 'h-14 px-5 py-4 text-lg',

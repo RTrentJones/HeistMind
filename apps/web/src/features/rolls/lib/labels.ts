@@ -118,3 +118,27 @@ export function entryParts(
   }
   return { title: roll.label ?? kindLabel, who: entryWho(roll.label, who), note };
 }
+
+/**
+ * The "who" of a log / activity row. A character's row is that character; a characterless one is
+ * "Fortune" for a fortune roll, "GM" ONLY when the campaign's GM wrote it, and otherwise the player
+ * who did (their display name, else "Player"). Round 6 P1-1: every characterless row used to read
+ * "GM", so a player's bare rolls passed as the GM's. `gmId` undefined (campaign still loading) →
+ * no "who" rather than a guess.
+ */
+export function rollWho(
+  roll: Pick<Roll, 'characterId' | 'kind' | 'userId'>,
+  ctx: {
+    characterName: (id: string) => string | undefined;
+    gmId: string | undefined;
+    playerName?: (userId: string) => string | undefined;
+  },
+  t: TranslationFunction
+): string {
+  if (roll.characterId)
+    return ctx.characterName(roll.characterId) ?? t('components.rollLog.unknownPlayer');
+  if (roll.kind === 'fortune') return t('components.rollLog.fortune');
+  if (ctx.gmId === undefined) return '';
+  if (roll.userId === ctx.gmId) return t('components.rollLog.gm');
+  return ctx.playerName?.(roll.userId) || t('components.rollLog.player');
+}

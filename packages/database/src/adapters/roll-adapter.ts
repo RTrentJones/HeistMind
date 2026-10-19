@@ -48,6 +48,7 @@ export function toSupabaseRollInsert(
     position: data.position ?? null,
     effect: data.effect ?? null,
     note: data.note ?? null,
+    assist_character_id: data.assistCharacterId ?? null,
     score_id: scoreId,
   };
 }
