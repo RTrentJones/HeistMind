@@ -175,18 +175,22 @@ export function CharacterCreationWizard({
       )}
       <div className={!canAdvance && blockingReason ? 'flex-1 md:hidden' : 'flex-1'} />
 
-      <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
-        {t('common.actions.back')}
-      </Button>
-      {isLast ? (
-        <Button variant='ember' loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
-          {t('components.wizard.createCharacter')}
+      {/* Round 6 P2-4 — Back + the primary action wrap as ONE right-aligned group: on the last
+          step at 360 "Create character" used to wrap alone, under Cancel and left-aligned. */}
+      <div className='ml-auto flex shrink-0 items-center gap-3' data-testid='wizard-nav'>
+        <Button variant='outline' onClick={goBack} disabled={stepIndex === 0}>
+          {t('common.actions.back')}
         </Button>
-      ) : (
-        <Button variant='default' disabled={!canAdvance} onClick={goNext}>
-          {t('common.actions.next')}
-        </Button>
-      )}
+        {isLast ? (
+          <Button variant='ember' loading={isLoading} disabled={!canAdvance} onClick={handleFinish}>
+            {t('components.wizard.createCharacter')}
+          </Button>
+        ) : (
+          <Button variant='default' disabled={!canAdvance} onClick={goNext}>
+            {t('common.actions.next')}
+          </Button>
+        )}
+      </div>
     </footer>
   );
 

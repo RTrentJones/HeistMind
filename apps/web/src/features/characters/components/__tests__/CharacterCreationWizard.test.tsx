@@ -37,6 +37,16 @@ describe('CharacterCreationWizard footer', () => {
     expect(reason.closest('footer')).toHaveClass('flex-wrap');
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
+
+  it('keeps Back + the primary action together, right-aligned when they wrap (round 6 P2-4)', () => {
+    render(<CharacterCreationWizard ruleset={RULESET} />);
+    const nav = screen.getByTestId('wizard-nav');
+    expect(nav).toHaveClass('ml-auto', 'shrink-0', 'flex');
+    expect(nav).toContainElement(screen.getByRole('button', { name: 'Back' }));
+    expect(nav).toContainElement(screen.getByRole('button', { name: 'Next' }));
+    // Cancel stays outside the group (it's the one that may sit on a row of its own).
+    expect(nav).not.toContainElement(screen.getByRole('button', { name: 'Cancel' }));
+  });
 });
 
 describe('SelectableCard in the identity pickers', () => {
