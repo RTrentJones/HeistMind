@@ -147,6 +147,10 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
     pending-charge flow — not built.
   - The UX pass owns the crew picker's Veteran disclosure; the "Through Veteran" group is now
     ≈36 options on BitD.
+  - The one-shot reset runs when the roll lands, so an option changed while a roll is still in
+    flight (e.g. switching to a resistance roll and picking −3d) is cleared by it. The e2e now
+    waits for the roll to land; disabling the roll form while a roll is pending would close it
+    for players too (not done).
 - **status:** fixed (branch `feat/product-r5`)
 
 ### F102 — Round-5 pixel UX: phone wizard wider than the phone, dark error text, seat copy, sign-in gaps

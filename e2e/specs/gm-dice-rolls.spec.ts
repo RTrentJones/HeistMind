@@ -71,7 +71,12 @@ test.describe('GM: dice rolls + roll log', () => {
     await expect(abilityDice).toHaveValue('0');
     // The result region shows the new roll's faces (5 dice: rating + push + 2).
     await expect(faces).not.toHaveText(before ?? '', { timeout: 10_000 });
+    const afterFirst = await faces.textContent();
     await gmPage.getByRole('button', { name: 'Roll', exact: true }).click();
+    // Wait for the second roll to land before changing the form: its success reset clears the
+    // one-shot options, and switching to a resistance roll first would let that reset wipe the
+    // −3d chosen below.
+    await expect(faces).not.toHaveText(afterFirst ?? '', { timeout: 10_000 });
     await expect(push).not.toBeChecked();
     await gmPage.getByRole('combobox', { name: 'Roll type' }).selectOption('resistance');
     await gmPage.getByRole('combobox', { name: 'Ability dice' }).selectOption('-3');
