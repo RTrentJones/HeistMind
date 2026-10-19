@@ -35,6 +35,12 @@ export interface CreateRollData {
   effect?: string;
   note?: string;
   /**
+   * The ASSISTING character (an action roll with a character only — round 6 P1-1). Stored on the
+   * roll (`rolls.assist_character_id`, validated on insert) so the cross-player assist charge
+   * (`charge_assist_stress`) can only ever charge the helper this roll actually named.
+   */
+  assistCharacterId?: string;
+  /**
    * The score to tag this event with. Omit (undefined) to let the repository auto-tag the campaign's
    * active score; pass an explicit id (e.g. a score's own start/end event) or null to skip tagging.
    */

@@ -75,6 +75,7 @@ export function RollPanel({
   attributes,
   harm,
   teammates,
+  characterName,
 }: {
   /** The campaign whose log the roll lands in; `null` = standalone, display-only (F96). */
   gameId: string | null;
@@ -86,10 +87,13 @@ export function RollPanel({
   harm?: CharacterHarm;
   /** Campaign teammates for the ASSIST move (F10): +1d, the helper marks 1 stress. */
   teammates?: { id: string; name: string }[];
+  /** The rolling character's name — the assist feed lines name who was helped (round 6 P2-2). */
+  characterName?: string;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const local = gameId === null;
+  const rollerName = characterName ?? t('components.rollLog.unknownPlayer');
   // Hooks are unconditional; the campaign writers are simply never called in local mode.
   const actionRoll = useActionRoll(gameId ?? '');
   const resistanceRoll = useResistanceRoll(gameId ?? '');
@@ -146,6 +150,8 @@ export function RollPanel({
     outcome: keyof typeof OUTCOME_KEY;
     results: number[];
     stress?: number;
+    /** The roll is saved but its stress write failed (round 6 P2-6) — not shown as applied. */
+    stressUnmarked?: boolean;
     kind?: RollMode;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -157,8 +163,11 @@ export function RollPanel({
   // RAW feedback: what the desperate roll just marked (the attribute XP track).
   const [desperateNote, setDesperateNote] = useState<string | null>(null);
   // F103 — what happened to the stress a SAVED roll charged: a failed push/resistance write, and
-  // the assist's 1 stress on the helper. Shown with the result, never as "Roll failed".
-  const [stressNotes, setStressNotes] = useState<string[]>([]);
+  // the assist's 1 stress on the helper. Shown with the result, never as "Roll failed". Round 6
+  // P2-2: a note that asks someone to DO something (mark stress by hand, pick a trauma) is a
+  // `warning`; a plain report stays `info`.
+  type StressNote = { text: string; tone: 'info' | 'warning' };
+  const [stressNotes, setStressNotes] = useState<StressNote[]>([]);
 
   /**
    * P1-2 — push, a devil's bargain, an assist, ability dice and a harm waiver are ONE-SHOT moves:
@@ -229,16 +238,34 @@ export function RollPanel({
   /** What happened to the helper's 1 stress (F103) — the roller tells the table. */
   const assistCopy = (
     name: string,
-    a: { status: 'charged' | 'near_limit' | 'failed'; error?: string }
-  ): string =>
+    a: { status: 'charged' | 'near_limit' | 'failed'; trauma?: boolean; error?: string }
+  ): StressNote =>
     a.status === 'charged'
-      ? t('components.rollPanel.assistCharged', { name })
+      ? a.trauma
+        ? // Round 6 P2-2 — an own-alt / GM assist that marked the helper's LAST box.
+          { text: t('components.rollPanel.assistChargedTrauma', { name }), tone: 'warning' }
+        : { text: t('components.rollPanel.assistCharged', { name }), tone: 'info' }
       : a.status === 'near_limit'
-        ? t('components.rollPanel.assistNearLimit', { name })
-        : t('components.rollPanel.assistFailed', {
-            name,
-            reason: a.error ?? t('components.rollPanel.rollFailed'),
-          });
+        ? { text: t('components.rollPanel.assistNearLimit', { name }), tone: 'warning' }
+        : {
+            text: t('components.rollPanel.assistFailed', {
+              name,
+              reason: a.error ?? t('components.rollPanel.rollFailed'),
+            }),
+            tone: 'warning',
+          };
+  /** A saved roll whose stress write failed: the player marks (or clears) it by hand. */
+  const stressNotMarkedNote = (stress: number, reason: string): StressNote => ({
+    text:
+      stress < 0
+        ? t('components.rollPanel.stressClearNotMarked', { reason })
+        : t('components.rollPanel.stressNotMarked', { count: stress, reason }),
+    tone: 'warning',
+  });
+  const logNotWrittenNote = (): StressNote => ({
+    text: t('components.rollPanel.stressLogNotWritten'),
+    tone: 'info',
+  });
 
   // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
   const traumaLog = {
@@ -344,13 +371,18 @@ export function RollPanel({
           ...(bonusNote ? { note: bonusNote } : {}),
           traumaLog,
         });
-        setLast({ outcome: created.outcome, results: created.results, stress });
+        setLast({
+          outcome: created.outcome,
+          results: created.results,
+          stress,
+          ...(stressError ? { stressUnmarked: true } : {}),
+        });
         setDesperateNote(null);
         setStressNotes(
           stressError
-            ? [t('components.rollPanel.stressNotMarked', { count: stress, reason: stressError })]
+            ? [stressNotMarkedNote(stress, stressError)]
             : logError
-              ? [t('components.rollPanel.stressLogNotWritten')]
+              ? [logNotWrittenNote()]
               : []
         );
         resetOneShots('resistance', sent);
@@ -418,7 +450,16 @@ export function RollPanel({
           ? {
               assist: {
                 characterId: assistant.id,
-                logNote: t('components.rollPanel.assistChargedLogNote', { name: assistant.name }),
+                // Feed lines for the paths the CLIENT logs (own alt / GM write, or a failed
+                // write); another player's helper is logged by the server from trusted names.
+                logNote: t('components.rollPanel.assistChargedLogNote', {
+                  name: assistant.name,
+                  roller: rollerName,
+                }),
+                owedLogNote: t('components.rollPanel.assistOwedLogNote', {
+                  name: assistant.name,
+                  roller: rollerName,
+                }),
               },
             }
           : {}),
@@ -430,12 +471,13 @@ export function RollPanel({
       setStressNotes(
         [
           created.stressError
-            ? t('components.rollPanel.stressNotMarked', { count: 2, reason: created.stressError })
+            ? stressNotMarkedNote(2, created.stressError)
             : created.pushStress?.logError
-              ? t('components.rollPanel.stressLogNotWritten')
+              ? logNotWrittenNote()
               : null,
           assistant && created.assist ? assistCopy(assistant.name, created.assist) : null,
-        ].filter((n): n is string => n !== null)
+          created.assist?.logError ? logNotWrittenNote() : null,
+        ].filter((n): n is StressNote => n !== null)
       );
       resetOneShots(mode, sent);
     } catch (e) {
@@ -728,7 +770,15 @@ export function RollPanel({
         {last && (
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             {last.stress != null ? (
-              last.stress < 0 ? (
+              last.stressUnmarked ? (
+                // Round 6 P2-6 — the write failed: neutral, never the red "applied" (or gold
+                // "cleared") badge; the warning note below says what to do.
+                <Badge variant='steel'>
+                  {last.stress < 0
+                    ? t('components.rollPanel.stressClearNotApplied')
+                    : t('components.rollPanel.stressNotApplied', { count: last.stress })}
+                </Badge>
+              ) : last.stress < 0 ? (
                 // A critical resistance CLEARS 1 stress (negative delta) — celebrate, don't alarm.
                 <Badge variant='gold'>{t('components.rollPanel.stressCleared')}</Badge>
               ) : (
@@ -759,14 +809,14 @@ export function RollPanel({
         {last &&
           stressNotes.map(note => (
             <Alert
-              key={note}
-              variant='info'
+              key={note.text}
+              variant={note.tone}
               size='sm'
               role='note'
               aria-live='off'
               data-testid='roll-stress-note'
             >
-              {note}
+              {note.text}
             </Alert>
           ))}
       </div>

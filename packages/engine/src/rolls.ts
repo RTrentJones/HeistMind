@@ -36,12 +36,18 @@ export interface ActionRollInput {
    * ROLLER may write that character (their own alt, or the GM) it goes through the normal
    * validated write (overflow → trauma included). Ownership is a hard security boundary, so when
    * the helper belongs to ANOTHER player the engine uses the one narrow cross-player write
-   * (`rolls.chargeAssistStress`, 00027): +1 stress, once per roll, held back (`near_limit`) when
-   * it would mark the helper's last box — trauma is the owner's moment. `logNote` is the feed
-   * copy for that charge ("Bo marked 1 stress for the assist"). Either way the roll lands, and
-   * `assist` on the outcome says what happened so the client can tell the table (F103).
+   * (`rolls.chargeAssistStress`, 00027/00028): +1 stress, once per roll, held back (`near_limit`)
+   * when it would mark the helper's last box — trauma is the owner's moment. That write is bound
+   * to the helper RECORDED on the roll (round 6 P1-1), so the engine stores `characterId` on the
+   * roll itself (`assistCharacterId` — action rolls with a character only), and the server writes
+   * that charge's log line from the characters' names. Either way the roll lands, and `assist` on
+   * the outcome says what happened so the client can tell the table (F103).
+   *
+   * Feed copy (client-localized) for the paths the CLIENT writes: `logNote` — the helper marked it
+   * through the validated write (own alt / GM); `owedLogNote` — the write FAILED, so the log says
+   * the helper still owes it (round 6 P2-2).
    */
-  assist?: { characterId: string; logNote?: string };
+  assist?: { characterId: string; logNote?: string; owedLogNote?: string };
   /** Feed copy when a push/assist cost marks someone's last stress box (→ trauma). */
   traumaLog?: TraumaLogCopy;
   /**
@@ -88,6 +94,8 @@ export interface AssistStressOutcome {
   status: 'charged' | 'near_limit' | 'failed';
   trauma?: boolean;
   error?: string;
+  /** The stress WAS marked, but its feed note failed (nothing to re-mark). */
+  logError?: string;
 }
 
 /** A persisted action roll plus what its push cost actually did to the roller's stress. */
@@ -230,6 +238,10 @@ export async function rollAction(
     ...(input.position !== undefined ? { position: input.position } : {}),
     ...(input.effect !== undefined ? { effect: input.effect } : {}),
     ...(input.note !== undefined ? { note: input.note } : {}),
+    // Round 6 P1-1 — the helper is recorded WITH the roll; the cross-player charge is bound to it.
+    ...(input.assist !== undefined && input.kind === 'action' && input.characterId !== undefined
+      ? { assistCharacterId: input.assist.characterId }
+      : {}),
   });
   if (!created.success) return created as Result<never>;
   // Everything below is a SIDE EFFECT of a roll that is already in the log: a failed write is
@@ -275,36 +287,54 @@ async function chargeAssist(
     userId: input.userId,
     stress: ASSIST_STRESS_COST,
     ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
+    // The same feed line as the cross-player charge, so the log always names who paid the assist —
+    // written before any trauma note it causes (cause → effect, round 6 P2-2).
+    ...(input.assist?.logNote ? { causeLog: input.assist.logNote } : {}),
   });
   if (assisted.success) {
-    // Same feed line as the cross-player charge, so the log always names who paid the assist.
-    const helper = assisted.data?.character;
-    if (helper && helper.gameId !== null && input.assist?.logNote) {
-      await repos.rolls.create(input.userId, {
-        gameId: helper.gameId,
-        characterId: helper.id,
-        kind: 'note',
-        label: helper.name,
-        dice: 0,
-        results: [],
-        note: input.assist.logNote,
-      });
-    }
-    return { characterId, status: 'charged', trauma: assisted.data?.trauma ?? false };
+    return {
+      characterId,
+      status: 'charged',
+      trauma: assisted.data?.trauma ?? false,
+      ...(assisted.data?.logError ? { logError: assisted.data.logError } : {}),
+    };
   }
   if (assisted.error.code !== 'NOT_OWNER') {
+    // The roller may write this helper — the write itself failed: log that they still owe it.
+    await logAssistOwed(repos, input, characterId);
     return { characterId, status: 'failed', error: assisted.error.message || 'Stress not marked' };
   }
-  // Another player's helper → the narrow cross-player charge (RLS would refuse a plain write).
-  const charged = await repos.rolls.chargeAssistStress(
-    rollId,
-    characterId,
-    input.assist?.logNote ?? ''
-  );
+  // Another player's helper → the narrow cross-player charge (RLS would refuse a plain write). It
+  // writes its own log line (charged / owed) server-side from trusted names (00028).
+  const charged = await repos.rolls.chargeAssistStress(rollId, characterId);
   if (!charged.success) {
+    // RLS won't let the roller log against the helper's character: the owed line goes on the
+    // ROLLING character (the roller's own row), still naming the helper.
+    await logAssistOwed(repos, input, input.characterId);
     return { characterId, status: 'failed', error: charged.error.message || 'Stress not marked' };
   }
   return { characterId, status: charged.data };
+}
+
+/**
+ * Best effort: the assist's stress was NOT marked, so the campaign log says the helper still owes
+ * it (round 6 P2-2 — the roll's own "Assisted by …" note no longer claims the stress was paid).
+ */
+async function logAssistOwed(
+  repos: DatabaseRepositories,
+  input: ActionRollInput,
+  onCharacterId: string | undefined
+): Promise<void> {
+  const note = input.assist?.owedLogNote;
+  if (!note || onCharacterId === undefined) return;
+  await repos.rolls.create(input.userId, {
+    gameId: input.gameId,
+    characterId: onCharacterId,
+    kind: 'note',
+    dice: 0,
+    results: [],
+    note,
+  });
 }
 
 export interface ResistanceRollInput {

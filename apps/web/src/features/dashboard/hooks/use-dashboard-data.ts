@@ -18,6 +18,8 @@ export type DashboardCampaign = GameWithRole;
 export interface DashboardActivity {
   roll: Roll;
   gameName: string;
+  /** The campaign's GM — a characterless row reads "GM" only when they wrote it (round 6 P1-1). */
+  gmId?: string;
   /** Older crew updates folded into this (newest) crew row — round 4 P2-N6. */
   collapsed?: number;
 }
@@ -114,8 +116,11 @@ export function useDashboardData(userId: string | undefined): DashboardData {
   const activity = useMemo<DashboardActivity[]>(() => {
     const merged: DashboardActivity[] = [];
     activityQueries.forEach((q, i) => {
-      const gameName = activityGames[i]?.game.name ?? '';
-      for (const roll of q.data ?? []) merged.push({ roll, gameName });
+      const game = activityGames[i]?.game;
+      const gameName = game?.name ?? '';
+      const gmId = game?.createdBy;
+      for (const roll of q.data ?? [])
+        merged.push({ roll, gameName, ...(gmId !== undefined ? { gmId } : {}) });
     });
     return collapseCrewRuns(
       merged.sort(

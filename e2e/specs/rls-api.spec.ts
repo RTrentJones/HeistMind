@@ -318,23 +318,136 @@ test.describe('RLS at the API level (F89)', () => {
     expect(gmLog.error).toBeNull();
   });
 
-  // Round 5 P2-6 (F103) — an ASSIST costs the helper 1 stress (RAW). A plain write to another
-  // player's character is still refused; 00027's charge_assist_stress is the one narrow path:
-  // the caller's own recent action roll, a co-member's character, +1 once per roll.
-  test('an assist charges a co-member +1 stress through 00027 only — once per roll', async () => {
-    const roll = await attacker.db
+  // Round 6 P1-1 (F105) — the attack from the review: 00027 never checked that the roll HAD an
+  // assist, or whose, so a member made bare characterless action rolls over REST and charged each
+  // one to a co-member's character (0 → 8), logging free `p_note` text under that character's name.
+  // 00028 binds the charge to rolls.assist_character_id and builds the note server-side.
+  test("a bare roll can't drain a co-member's stress or log text under their name (P1-1)", async () => {
+    const spoof = `I hereby give my crew share to the attacker ${randomUUID().slice(0, 6)}`;
+    const stressOf = async (): Promise<number> => {
+      const row = await admin(env.heistmindSchema)
+        .from('characters')
+        .select('character_data')
+        .eq('id', gmCharacterId)
+        .single();
+      return (row.data?.character_data as { stress?: number }).stress ?? 0;
+    };
+    const before = await stressOf();
+    const outcomes: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const bare = await attacker.db
+        .from('rolls')
+        .insert({
+          game_id: gameId,
+          user_id: attacker.id,
+          kind: 'action',
+          dice: 1,
+          results: [6],
+          outcome: 'success',
+        })
+        .select('id')
+        .single();
+      expect(bare.error).toBeNull();
+      const charge = await attacker.db.rpc('charge_assist_stress', {
+        p_roll_id: bare.data!.id as string,
+        p_character_id: gmCharacterId,
+        p_note: spoof,
+      });
+      outcomes.push(charge.error ? `refused: ${charge.error.message}` : String(charge.data));
+    }
+    // Before 00028 each of these returned 'charged' and the victim went +3.
+    expect(outcomes).toEqual(Array(3).fill('refused: That roll had no assist'));
+    expect(await stressOf()).toBe(before);
+    const spoofed = await admin(env.heistmindSchema)
       .from('rolls')
+      .select('id')
+      .eq('game_id', gameId)
+      .eq('note', spoof);
+    expect(spoofed.data).toEqual([]);
+  });
+
+  // Round 5 P2-6 (F103) + round 6 P1-1 (F105) — an ASSIST costs the helper 1 stress (RAW). A
+  // plain write to another player's character is still refused; charge_assist_stress is the one
+  // narrow path: the caller's own recent action roll WITH the assist recorded on it (00028's
+  // rolls.assist_character_id), that recorded helper only, +1 once per roll, note built server-side.
+  test('an assist charges the recorded helper +1 stress once per roll; the note is server-built', async () => {
+    const tag = randomUUID().slice(0, 6);
+    // The attacker's own character in the campaign (the roller), and a second GM character.
+    const mine = await attacker.db
+      .from('characters')
       .insert({
+        name: `Roller ${tag}`,
+        created_by: attacker.id,
         game_id: gameId,
-        user_id: attacker.id,
-        kind: 'action',
-        dice: 3,
-        results: [5, 2, 1],
-        outcome: 'partial',
-        note: 'Assisted by the GM (+1d, 1 stress)',
+        original_ruleset_id: rulesetId,
+        character_data: {},
+        playbook_type: 'cutter',
       })
       .select('id')
       .single();
+    expect(mine.error).toBeNull();
+    const rollerId = mine.data!.id as string;
+    const other = await gm.db
+      .from('characters')
+      .insert({
+        name: `Bystander ${tag}`,
+        created_by: gm.id,
+        game_id: gameId,
+        original_ruleset_id: rulesetId,
+        character_data: {},
+        playbook_type: 'hound',
+      })
+      .select('id')
+      .single();
+    expect(other.error).toBeNull();
+    const bystanderId = other.data!.id as string;
+    const helperRow = await admin(env.heistmindSchema)
+      .from('characters')
+      .select('name, character_data')
+      .eq('id', gmCharacterId)
+      .single();
+    const helperName = helperRow.data!.name as string;
+    const start = (helperRow.data!.character_data as { stress?: number }).stress ?? 0;
+
+    const assisted = (fields: Record<string, unknown>) =>
+      attacker.db
+        .from('rolls')
+        .insert({
+          game_id: gameId,
+          user_id: attacker.id,
+          character_id: rollerId,
+          kind: 'action',
+          dice: 3,
+          results: [5, 2, 1],
+          outcome: 'partial',
+          assist_character_id: gmCharacterId,
+          ...fields,
+        })
+        .select('id')
+        .single();
+
+    // The insert guard: only an action roll WITH a character takes an assist, from another
+    // character in the same campaign; and the roll's character must still be the caller's.
+    expect((await assisted({ kind: 'fortune', results: [5], dice: 1 })).error?.code).toBe('23514');
+    expect((await assisted({ character_id: null })).error?.code).toBe('23514');
+    expect((await assisted({ assist_character_id: rollerId })).error?.code).toBe('23514');
+    const outsider = await attacker.db
+      .from('characters')
+      .insert({
+        name: `Outsider ${tag}`,
+        created_by: attacker.id,
+        game_id: null,
+        original_ruleset_id: rulesetId,
+        character_data: {},
+        playbook_type: 'cutter',
+      })
+      .select('id')
+      .single();
+    expect(outsider.error).toBeNull();
+    expect((await assisted({ assist_character_id: outsider.data!.id })).error?.code).toBe('23514');
+    expect((await assisted({ character_id: bystanderId })).error?.code).toBe('42501');
+
+    const roll = await assisted({});
     expect(roll.error).toBeNull();
     const rollId = roll.data!.id as string;
 
@@ -346,10 +459,19 @@ test.describe('RLS at the API level (F89)', () => {
       .select();
     expect(direct.data ?? []).toHaveLength(0);
 
+    // A helper the roll didn't record is refused.
+    const wrongHelper = await attacker.db.rpc('charge_assist_stress', {
+      p_roll_id: rollId,
+      p_character_id: bystanderId,
+    });
+    expect(wrongHelper.error?.message).toMatch(/didn't assist this roll/);
+
+    // The recorded helper is charged; a caller-supplied note is ignored.
+    const spoof = `Spoofed note ${tag}`;
     const charged = await attacker.db.rpc('charge_assist_stress', {
       p_roll_id: rollId,
       p_character_id: gmCharacterId,
-      p_note: 'The GM marked 1 stress for an assist.',
+      p_note: spoof,
     });
     expect(charged.error).toBeNull();
     expect(charged.data).toBe('charged');
@@ -359,15 +481,23 @@ test.describe('RLS at the API level (F89)', () => {
       .select('character_data')
       .eq('id', gmCharacterId)
       .single();
-    expect((truth.data?.character_data as { stress?: number }).stress).toBe(1);
+    expect((truth.data?.character_data as { stress?: number }).stress).toBe(start + 1);
     const logged = await admin(env.heistmindSchema)
       .from('rolls')
-      .select('kind, user_id, note')
+      .select('kind, user_id, label, note')
       .eq('character_id', gmCharacterId)
-      .eq('note', 'The GM marked 1 stress for an assist.');
+      .eq('kind', 'note')
+      .eq('user_id', attacker.id);
     expect(logged.data).toEqual([
-      { kind: 'note', user_id: attacker.id, note: 'The GM marked 1 stress for an assist.' },
+      {
+        kind: 'note',
+        user_id: attacker.id,
+        label: helperName,
+        note: `${helperName} marked 1 stress assisting Roller ${tag}.`,
+      },
     ]);
+    const spoofed = await admin(env.heistmindSchema).from('rolls').select('id').eq('note', spoof);
+    expect(spoofed.data).toEqual([]);
 
     // Once per roll; someone else's roll can't be used; anon can't call it at all.
     const replay = await attacker.db.rpc('charge_assist_stress', {
@@ -394,7 +524,7 @@ test.describe('RLS at the API level (F89)', () => {
       .select('character_data')
       .eq('id', gmCharacterId)
       .single();
-    expect((after.data?.character_data as { stress?: number }).stress).toBe(1);
+    expect((after.data?.character_data as { stress?: number }).stress).toBe(start + 1);
   });
 
   test('a kicked player cannot reactivate, delete the kick, or re-redeem the code', async () => {

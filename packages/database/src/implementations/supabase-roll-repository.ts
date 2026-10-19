@@ -35,16 +35,12 @@ export class SupabaseRollRepository extends SupabaseRepositoryBase implements Ro
     });
   }
 
-  async chargeAssistStress(
-    rollId: string,
-    characterId: string,
-    note: string
-  ): Promise<Result<AssistCharge>> {
+  async chargeAssistStress(rollId: string, characterId: string): Promise<Result<AssistCharge>> {
     return this.run(async () => {
+      // No note: since 00028 the RPC builds the log line itself from trusted names (P1-1).
       const { data, error } = await this.rpcUntyped('charge_assist_stress', {
         p_roll_id: rollId,
         p_character_id: characterId,
-        p_note: note,
       });
       if (error) return failFromError(error);
       if (data === 'charged' || data === 'near_limit') return { success: true, data };

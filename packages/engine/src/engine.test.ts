@@ -525,12 +525,116 @@ describe('rollAction — assist (F10)', () => {
       assist: { characterId: 'c9', logNote: 'Bo marked 1 stress for the assist' },
     });
     expect(out.success && out.data.assist).toEqual({ characterId: 'c9', status: 'charged' });
-    expect(chargeAssistStress).toHaveBeenCalledWith(
-      'r1',
-      'c9',
-      'Bo marked 1 stress for the assist'
+    // Round 6 P1-1 — the helper rides ON the roll, and the RPC gets no client note text.
+    expect(create).toHaveBeenNthCalledWith(
+      1,
+      'u1',
+      expect.objectContaining({ kind: 'action', characterId: 'c1', assistCharacterId: 'c9' })
     );
+    expect(chargeAssistStress).toHaveBeenCalledWith('r1', 'c9');
     expect(update).not.toHaveBeenCalled(); // RLS boundary: no direct write to their row
+    // The server writes the charge's log line; the engine writes no note for it.
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('records the helper only on an action roll made with a character (the insert guard rule)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      rolls: {
+        create,
+        chargeAssistStress: vi.fn().mockResolvedValue(fail('That roll had no assist')),
+      },
+      characters: {
+        findWithDetails: vi.fn().mockResolvedValue(ok({ ...CHARACTER, id: 'c9', createdBy: 'u9' })),
+      },
+    });
+    const { characterId: _omit, ...noCharacter } = baseInput;
+    await rollAction(r, { ...noCharacter, assist: { characterId: 'c9' } });
+    await rollAction(r, { ...baseInput, kind: 'fortune', assist: { characterId: 'c9' } });
+    for (const call of create.mock.calls) {
+      expect(call[1]).not.toHaveProperty('assistCharacterId');
+    }
+  });
+
+  it('an own-alt assist that marks the last box logs the assist BEFORE the trauma (cause → effect)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const helper = {
+      ...CHARACTER,
+      id: 'c2',
+      name: 'Bo Alt',
+      createdBy: 'u1',
+      gameId: 'g1',
+      // Three trauma marked: this overflow fills the track, so the retirement note follows too.
+      characterData: {
+        ...CHARACTER.characterData,
+        stress: 8,
+        trauma: ['Cold', 'Haunted', 'Obsessed'],
+      },
+    } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(helper)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(ok(helper as Character)),
+      },
+    });
+    const out = await rollAction(r, {
+      ...baseInput,
+      assist: { characterId: 'c2', logNote: 'Bo Alt marked 1 stress assisting Ana.' },
+      traumaLog: { note: n => `${n} trauma`, retireNote: n => `${n} retires` },
+    });
+    expect(out.success && out.data.assist).toEqual({
+      characterId: 'c2',
+      status: 'charged',
+      trauma: true,
+    });
+    const notes = create.mock.calls
+      .map(c => c[1] as { kind: string; note?: string })
+      .filter(d => d.kind === 'note')
+      .map(d => d.note);
+    expect(notes).toEqual([
+      'Bo Alt marked 1 stress assisting Ana.',
+      'Bo Alt trauma',
+      'Bo Alt retires',
+    ]);
+  });
+
+  it('a failed assist logs that the helper still owes it (helper row when writable, else the roller)', async () => {
+    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const r = repos({
+      rolls: { create, chargeAssistStress: vi.fn().mockResolvedValue(fail('boom')) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(foreign)) },
+    });
+    await rollAction(r, {
+      ...baseInput,
+      assist: { characterId: 'c9', owedLogNote: 'Cy owes 1 stress for assisting Ana.' },
+    });
+    expect(create).toHaveBeenLastCalledWith(
+      'u1',
+      expect.objectContaining({
+        kind: 'note',
+        characterId: 'c1',
+        note: 'Cy owes 1 stress for assisting Ana.',
+      })
+    );
+    const own = { ...CHARACTER, id: 'c2', createdBy: 'u1' } as CharacterWithDetails;
+    const create2 = vi.fn().mockResolvedValue(ok({ id: 'r2' }));
+    const r2 = repos({
+      rolls: { create: create2 },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(own)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(fail('Load exceeds 5')),
+      },
+    });
+    await rollAction(r2, {
+      ...baseInput,
+      assist: { characterId: 'c2', owedLogNote: 'Bo Alt owes 1 stress.' },
+    });
+    expect(create2).toHaveBeenLastCalledWith(
+      'u1',
+      expect.objectContaining({ kind: 'note', characterId: 'c2', note: 'Bo Alt owes 1 stress.' })
+    );
   });
 
   it('an assister one box from trauma is held back (near_limit) — the roll still stands', async () => {

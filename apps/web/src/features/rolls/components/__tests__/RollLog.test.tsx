@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Roll } from '@heist-mind/core';
 import { TooltipProvider } from '@heist-mind/ui';
 import '@/lib/i18n';
-import { entryParts, entryWho } from '@/features/rolls/lib/labels';
+import { entryParts, entryWho, rollWho } from '@/features/rolls/lib/labels';
 import { RollLog } from '../RollLog';
 
 const refetch = vi.fn();
@@ -18,6 +18,10 @@ vi.mock('@/features/characters/data/queries', () => ({
 }));
 vi.mock('@/features/scores/data/queries', () => ({
   useScoresByGame: () => ({ data: [] }),
+}));
+let gameState: Record<string, unknown> = {};
+vi.mock('@/features/games/data/queries', () => ({
+  useGameDetail: () => gameState,
 }));
 
 const roll = (over: Partial<Roll>): Roll =>
@@ -41,6 +45,16 @@ const roll = (over: Partial<Roll>): Roll =>
 
 beforeEach(() => {
   refetch.mockReset();
+  gameState = {
+    data: {
+      createdBy: 'gm-1',
+      players: [
+        { playerId: 'gm-1', profile: { username: 'Gail' } },
+        { playerId: 'p-bo', profile: { username: 'bo_plays' } },
+        { playerId: 'p-anon', profile: { username: null } },
+      ],
+    },
+  };
 });
 
 describe('RollLog', () => {
@@ -189,5 +203,46 @@ describe('entryParts (round 4 P2-N6: "Crew · GM · Crew XP 8/8 · Crew Crew")',
       note: null,
     });
     expect(entryParts({ kind: 'action', label: null, note: ' ' }, 'Silks', t).note).toBeNull();
+  });
+});
+
+// Round 6 P1-1 — a player's characterless (bare) action roll rendered as "GM · [6]", so a spoofed
+// roll passed as the GM's. "GM" now means the GM wrote it; otherwise the player who did.
+describe('rollWho — who a characterless row belongs to', () => {
+  const bare = (userId: string, over: Partial<Roll> = {}) =>
+    roll({ id: `r-${userId}`, characterId: null, userId, results: [6], ...over });
+
+  it('labels the GM only when the GM wrote it; a player by their name', () => {
+    rollsState = {
+      isPending: false,
+      isError: false,
+      data: [bare('p-bo'), bare('gm-1', { id: 'r-gm', results: [2] })],
+      refetch,
+    };
+    render(
+      <TooltipProvider>
+        <RollLog gameId='g1' />
+      </TooltipProvider>
+    );
+    expect(screen.getByText('bo_plays · [6] · Risky/Standard')).toBeInTheDocument();
+    expect(screen.getByText('GM · [2] · Risky/Standard')).toBeInTheDocument();
+  });
+
+  it('falls back to "Player", says "Fortune" for fortune rolls, and guesses nothing while loading', () => {
+    const t = ((key: string) =>
+      ({
+        'components.rollLog.gm': 'GM',
+        'components.rollLog.player': 'Player',
+        'components.rollLog.fortune': 'Fortune',
+        'components.rollLog.unknownPlayer': 'Unknown',
+      })[key] ?? key) as unknown as Parameters<typeof rollWho>[2];
+    const ctx = { characterName: (id: string) => (id === 'c1' ? 'Silks' : undefined) };
+    expect(rollWho(bare('p-x'), { ...ctx, gmId: 'gm-1' }, t)).toBe('Player');
+    expect(rollWho(bare('p-x'), { ...ctx, gmId: 'gm-1', playerName: () => '' }, t)).toBe('Player');
+    expect(rollWho(bare('gm-1'), { ...ctx, gmId: 'gm-1' }, t)).toBe('GM');
+    expect(rollWho(bare('p-x', { kind: 'fortune' }), { ...ctx, gmId: 'gm-1' }, t)).toBe('Fortune');
+    expect(rollWho(bare('p-x'), { ...ctx, gmId: undefined }, t)).toBe('');
+    expect(rollWho(roll({ characterId: 'c1' }), { ...ctx, gmId: undefined }, t)).toBe('Silks');
+    expect(rollWho(roll({ characterId: 'zz' }), { ...ctx, gmId: 'gm-1' }, t)).toBe('Unknown');
   });
 });

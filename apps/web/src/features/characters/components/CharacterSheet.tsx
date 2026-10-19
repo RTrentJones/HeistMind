@@ -687,6 +687,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
               <RollPanel
                 gameId={character.gameId ?? null}
                 characterId={character.id}
+                characterName={character.name}
                 actions={rulesetActions(sheetContent).map(name => ({
                   name,
                   rating: character.characterData?.skills?.[name] ?? 0,

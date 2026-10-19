@@ -7,7 +7,7 @@ import { PageShell } from '@/shared/components/AppShell';
 import { discordAppId } from '@/lib/discord-install';
 import { DiscordInstallLinks } from '@/shared/components/DiscordInstallLinks';
 import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
-import { entryParts } from '@/features/rolls/lib/labels';
+import { entryParts, rollWho } from '@/features/rolls/lib/labels';
 import { playbookLabel } from '@/features/characters/lib/playbook-label';
 import { useTranslation } from '@/lib/i18n/hooks';
 import type { TranslationFunction } from '@/lib/i18n/translations';
@@ -106,9 +106,7 @@ export function Dashboard() {
       a.roll,
       a.roll.characterId
         ? (charNameById.get(a.roll.characterId) ?? '')
-        : a.roll.kind === 'fortune'
-          ? t('components.rollLog.fortune')
-          : t('components.rollLog.gm'),
+        : rollWho(a.roll, { characterName: () => undefined, gmId: a.gmId }, t),
       t
     );
     const who = parts.who;
