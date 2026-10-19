@@ -184,14 +184,14 @@ test.describe('GM: crew sheet', () => {
     // F102 — the Veteran routes are a disclosure, collapsed by default; the keyboard opens it.
     const veteran = picker.getByTestId('crew-advance-veteran');
     await expect(veteran.getByRole('radio', { name: /^Deadly/ })).toBeHidden();
-    await picker.getByTestId('crew-advance-veteran-disclosure').locator('summary').focus();
+    await picker.getByTestId('crew-advance-veteran-disclosure').locator(':scope > summary').focus();
     await gmPage.keyboard.press('Enter');
     // Round 6 P2-7 — opened, the routes are grouped by source crew type, each collapsed (one
     // 32-row list was ~10k px at 360); and Veteran is never ALSO a bare own-list row.
     const assassins = veteran.getByTestId('crew-advance-veteran-type-assassins');
-    await expect(assassins.locator('summary')).toBeVisible();
+    await expect(assassins.locator(':scope > summary')).toBeVisible();
     await expect(veteran.getByRole('radio', { name: /^Deadly/ })).toBeHidden();
-    await assassins.locator('summary').focus();
+    await assassins.locator(':scope > summary').focus();
     await gmPage.keyboard.press('Enter');
     await expect(veteran.getByRole('radio', { name: /^Deadly/ })).toBeVisible();
     await expect(picker.getByRole('radio', { name: /^Veteran/ })).toHaveCount(0);
