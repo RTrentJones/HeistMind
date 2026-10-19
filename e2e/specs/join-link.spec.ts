@@ -205,8 +205,13 @@ test.describe('invite link /join/<code>', () => {
       await second.page.getByRole('button', { name: 'Join', exact: true }).click();
       await expect(second.page.getByText(/This campaign is full/)).toBeVisible({ timeout: 20_000 });
 
-      // The GM sees it too, and can't go below the players already in.
+      // The GM sees it too, and can't go below the players already in. Round 5 P2-4: "full" is
+      // on the setup summary (visible while folded) and the panel opens by itself.
       await gm.page.reload();
+      await expect(gm.page.getByTestId('campaign-full')).toContainText('Full — 1 of 1 players', {
+        timeout: 15_000,
+      });
+      await expect(gm.page.getByTestId('campaign-setup')).toHaveAttribute('open', '');
       await openCampaignSetup(gm.page);
       await expect(gm.page.getByTestId('player-seats')).toHaveText(
         '1 of 1 players — the campaign is full',

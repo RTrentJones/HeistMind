@@ -472,6 +472,42 @@ describe('rollAction — assist (F10)', () => {
     expect(update).toHaveBeenCalledWith('c2', 'u1', {
       characterData: expect.objectContaining({ stress: 7 }),
     });
+    expect(out.success && out.data.assist).toEqual({
+      characterId: 'c2',
+      status: 'charged',
+      trauma: false,
+    });
+  });
+
+  it('an own/GM assist charge is logged with the client copy, like the cross-player one', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const helper = {
+      ...CHARACTER,
+      id: 'c2',
+      createdBy: 'u1',
+      gameId: 'g1',
+    } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(helper)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi
+          .fn()
+          .mockResolvedValue(ok({ id: 'c2', name: 'Bo', gameId: 'g1' } as Character)),
+      },
+    });
+    await rollAction(r, {
+      ...baseInput,
+      assist: { characterId: 'c2', logNote: 'Bo marked 1 stress for an assist.' },
+    });
+    expect(create).toHaveBeenLastCalledWith(
+      'u1',
+      expect.objectContaining({
+        kind: 'note',
+        characterId: 'c2',
+        note: 'Bo marked 1 stress for an assist.',
+      })
+    );
   });
 
   it("another player's assister goes through the narrow 00027 charge, never a plain write", async () => {

@@ -32,6 +32,123 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F103 — Round-5 product: a deploy gate that never ran, sticky one-shot roll moves, an invisible full campaign, saved rolls called "failed", uncharged assists, thin BitD crew lists
+
+- **severity:** S1 (P1-1: the beta/prod deploy gate — and with it the prod migration backstop —
+  never ran; P1-2: a second unchanged roll pushed again and kept bonus dice) · S3 (the rest) ·
+  **type:** ops + CX-flaw + FitD-gap — from the round-5 launch review (P1-1, P1-2, P2-4, P2-5,
+  P2-6, P2-7, P2-8). Each verified first (repro below).
+- **what was wrong (verified):**
+  1. **Deploy gate skipped (P1-1, F101 regression).** `greenlight-verify.yml`'s job `if:` compared
+     `github.event.deployment.ref` to `development`/`main`, but Vercel posts the **commit SHA** as
+     the deployment `ref` (`gh api …/deployments` → deployment 7164273008: `ref` =
+     `0546e9ec…` = sha, environment `Preview`). Every run was a grey "skipped" — 0546e9e on
+     `development` included — and the Production job, with its "Migrations applied (production)"
+     backstop, had the same filter. The dedupe also keyed on the run title, so a skipped run (whose
+     conclusion is "success") could have vouched for a real one.
+  2. **Sticky one-shot moves (P1-2).** `RollPanel.roll()` never reset Push, Devil's bargain (+
+     note), Assist, Ability dice or the harm waiver: a second unchanged roll pushed again (stress
+     2 → 4), kept the +Nd and charged the helper again, and the log said so.
+  3. **Full campaign invisible to the GM (P2-4).** "Campaign setup" folds once players are in and
+     nothing outside it said "full", while the player at the door was told to ask the GM to raise
+     the limit "under Players" (inside the closed panel).
+  4. **Post-roll stress turned a saved roll into "Roll failed" (P2-5).** `rollAction`'s push and
+     assist stress and `rollResistance`'s stress ran after `rolls.create` and returned FAILURE on a
+     live-validation error — the F100 desperate-XP class, unfixed for stress (web "Roll failed",
+     bot "something broke"; the natural retry duplicates the roll).
+  5. **Assist from another player never charged (P2-6).** RAW the helper takes 1 stress; the engine
+     swallowed `NOT_OWNER` (RLS rightly refuses a write to someone else's sheet), so Bo's stress
+     stayed 0 → 0 and nobody was told.
+  6. **Thin BitD crew lists (P2-7).** The builtin carried only the SRD's 18 example crew abilities
+     (+ Patron): 1–4 own abilities per type (Cult: just Anointed) where the book has seven.
+  7. **Polish (P2-8).** Negative ability dice read "−3d from an ability"; desperate-roll XP never
+     reached the log (the sheet said "marked 1 XP in Prowess", the GM saw nothing); the dashboard
+     folded DIFFERENT crew events together, hiding a starting-ability pick behind "+N earlier".
+- **fix:**
+  1. **`scripts/verify-target.mjs`** (node built-ins, unit-tested in `pnpm test:scripts`): a
+     `resolve` job reads branch facts from the GitHub compare API at event time — **prod** =
+     environment `Production` and `compare/{sha}...main` is `identical`/`ahead` (main's tip or an
+     ancestor: a redeploy of an earlier prod commit is still prod); **beta** = any other environment
+     and the sha is `development`'s tip or an ancestor (the merge was superseded mid-build);
+     anything else is a feature-branch preview and skips **visibly** (a `::notice` annotation + a
+     job summary naming why). A Production deployment of a sha NOT on main is an `::error` and the
+     run goes red. Transient API errors retry, then fail red (never a silent skip). The gate job is
+     named **`gate (beta|prod)`**, keeps the per-target concurrency queue, the pinned
+     `GREENLIGHT_VERSION` and the prod "Migrations applied (production)" backstop (now keyed on
+     the resolved target), and dedupes on an earlier green **`gate (<target>)` check run** on the
+     sha (a skipped run can no longer vouch). The service-role key is injected only for `beta`.
+     CLAUDE.md F101 section + e2e/README updated. Checked against the real API with the `gh` CLI:
+     0546e9e Preview → beta (tip), 1d40c00 → beta (ancestor), fe4469f Production → prod,
+     0546e9e as Production → error (not on main).
+  2. `RollPanel`: `resetOneShots()` after a SUCCESSFUL roll — action rolls clear push, bargain +
+     note, assist, ability dice and the harm waiver; resistance clears its ability dice; the
+     standalone path does the same. A thrown (failed) roll keeps them for the retry;
+     action/position/effect stay.
+  3. `CampaignSetup` takes the campaign capacity: when full, the always-visible summary adds
+     "Full — N of N players. Raise the player limit under Players to let anyone else in." and the
+     disclosure starts open.
+  4. Engine: `ActionRollOutcome.stressError` (push) and `rollResistance(...).stressError` — the
+     saved roll is returned, the failure reported next to it. Web: "The roll is saved, but its N
+     stress couldn't be marked (…). Mark it on the sheet yourself." Bot (`/roll push`, `/resist`):
+     "The roll is logged, but its N stress couldn't be marked. Mark it on your sheet."
+  5. **Migration `00027_assist_stress.sql`** (idempotent single-DO-block, per-env schema): table
+     `assist_charges` (RLS on, no policies, no client grants) + SECURITY DEFINER
+     **`charge_assist_stress(roll, character, note)`** — the caller's own ACTION roll from the
+     last 15 minutes, the caller an active member, the helper another character in the roll's
+     campaign (own characters take the normal write), **once per roll**, exactly **+1** stress and
+     only while it stays below the ruleset's base `stress.max` (ability/crew boxes only raise the
+     overflow point, so this can never force trauma); at the last box it writes nothing and
+     returns `near_limit` (the owner marks it and picks the trauma). It logs a note row for the
+     helper with the roller's copy. Repository `rolls.chargeAssistStress` (untyped RPC — no types
+     regen). Engine `ActionRollOutcome.assist` = `charged | near_limit | failed` (own/GM helpers
+     still use the validated write, now logged the same way). Web: the option reads "Assist: Bo
+     (+1d, they take 1 stress)", the log note "Assisted by Bo (+1d, 1 stress)", and the roller sees
+     "Bo marked 1 stress for the assist — it's on their sheet." / the near-limit / failure copy.
+     (The bot's `assist:` is a boolean with no helper named, so there is nothing to charge there.)
+  6. Shared: the other **22 book crew abilities** (Emberdeath, Vipers; Dangerous, Blood Brothers,
+     Door Kickers; Chosen, Bound in Darkness, Conviction, Glory Incarnate, Sealed in Blood,
+     Zealotry; Silver Tongues, Ghost Market, Hooked; Everyone Steals, Ghost Echoes, Slippery;
+     Renegades, Like Part of the Family, Ghost Passage, Leverage, Reavers) — seven per type plus
+     Veteran. **Provenance:** the SRD does not print these, so (the file's existing rule for
+     playbook abilities) they are original, setting-neutral paraphrases of the mechanic under
+     their book names; SRD-printed abilities keep the SRD's wording; the header + crew comment
+     say so. The five +1-action-rating abilities reuse Deadly's structured effects. Content
+     v1.1.0 → **1.2.0**; existing copies get it via "Refresh my copy". `/crew advance`
+     autocomplete now lists the crew's own abilities first, then upgrade boxes, then "via
+     Veteran" picks — the longer list overflowed Discord's 25 and cut the own list off.
+  7. Negative ability dice: "−3d (penalty)" / "Includes −3d (penalty)." (web + bot); engine
+     `desperateXpLog` copy logs an `xp` row "Desperate roll — marked 1 XP in Prowess" (web + bot);
+     dashboard `crewEventKey` folds only same-kind crew runs.
+- **tests:** `scripts/verify-target.test.mjs` (13: development merge, superseded merge, feature
+  push, prod FF of a sha also on development, redeploy, off-main Production, retries, dedupe,
+  summary/annotations, workflow wiring); engine (cross-player assist → RPC, near_limit, failed
+  charge keeps the roll, own-assist logged, push/resistance `stressError`, desperate XP logged);
+  database (`chargeAssistStress`); discord (`/roll push` + `/resist` stress failure keep the
+  logged roll, penalty wording, autocomplete order + typed reach); web (one-shot reset on
+  campaign action/bargain/resistance + kept on failure + standalone, stress/assist notes,
+  `CampaignSetup` full, `crewEventKey`); shared (seven per crew type, Deadly-shaped effects,
+  ruleset validation, Cult starting pick). **SQL scenarios** on stack2 `development` (00027
+  applied twice): charged 3 → 4 + note logged, replay refused, `assist_charges` unreadable,
+  own character / fortune roll / someone else's roll / 1-hour-old roll refused, stress 8 of 9 →
+  `near_limit` (nothing written), anon has no EXECUTE. **e2e** (own dev server :3118, stack2,
+  serial): gm-dice-rolls (push + ability dice reset, one pushed row in the log, penalty note; a
+  player's roll with the GM's character assisting charges it through 00027 and the log names
+  it), rls-api (00027 at the API level: plain write refused, charged once, replay/borrowed/anon
+  refused), join-link (full campaign on the setup summary, panel open), plus gm-crew,
+  gm-crew-grant, discord, discord-parity, standalone-dice, dashboard, gm-resistance-downtime,
+  gm-harm-stress, gm-campaign-log, player-characters — all green.
+- **residue / not done:**
+  - The resolver can only see branch state at event time: a feature-branch preview whose status
+    arrives (or is re-run) after that branch was merged is gated as beta (same code, serialized,
+    harmless). Needs one real deployment to confirm end to end (the first `development` merge
+    after this lands should show `resolve` → `gate (beta)` green).
+  - Assist consent: the roller charges the helper (bounded: +1, once per logged roll, never the
+    last box, visible in the log). If tables want the helper to confirm first, that's a
+    pending-charge flow — not built.
+  - The UX pass owns the crew picker's Veteran disclosure; the "Through Veteran" group is now
+    ≈36 options on BitD.
+- **status:** fixed (branch `feat/product-r5`)
+
 ### F101 — Ops: migration deploy skipped on registry rate limits; prod web not ordered after its schema; double-run deploy gate
 
 - **severity:** S1 (a flaky migration job on the first `main` promotion would put prod web code

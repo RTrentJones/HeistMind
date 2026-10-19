@@ -180,7 +180,9 @@ bootstrap).
   what happened ("Crew XP 8/8"), a named crew's by its name with the note under it, never "GM" or a
   second "Crew" (it read "Crew · GM · Crew XP 8/8 · Crew Crew"). A run of back-to-back crew events
   in one campaign folds into its newest row with **"+N earlier on the crew sheet"**
-  (`collapseCrewRuns`), so marking crew XP box by box no longer floods the six-row feed.
+  (`collapseCrewRuns`), so marking crew XP box by box no longer floods the six-row feed. **F103:**
+  only back-to-back crew events of the SAME kind fold (`crewEventKey`: the note before any `:`,
+  numbers masked), so "Starting crew ability: X" is never hidden behind later "Crew XP n/8" rows.
 - **Signed-in first paint (F98):** the server HTML carries the marketing page AND a hidden neutral
   dashboard skeleton (`HomeSwitch`); the auth-hint script picks which paints, so a returning user
   never sees the marketing page / Sign In header (it used to show for ~1.3s). After hydration:
@@ -191,7 +193,8 @@ bootstrap).
   band for under a second before Start here replaces it. Activity rows now name **other players'
   characters** too (the GM's feed read "Prowess in … · resisted" with no who): the dashboard loads
   the roster of each campaign whose recent activity mentions a character the viewer doesn't own.
-- _Last verified:_ 2026-10-19 (F100: pre-hydration sign-in forms, crew activity rows + folding;
+- _Last verified:_ 2026-10-19 (F103: crew folding only within one kind of event; F100:
+  pre-hydration sign-in forms, crew activity rows + folding;
   F99: reserved quick-action space, activity names every character); 2026-10-18 (F98: no
   signed-out flash; F96: "Your dashboard" title, PageShell, Start here first without quick actions,
   load-gated subtitle, no email; previously F94 Start here / CTA intents, F91)
@@ -284,7 +287,10 @@ bootstrap).
 - **Layout (F98):** title → (after a join) the **"You're in"** banner → for the GM, ONE
   **"Campaign setup"** disclosure (`CampaignSetup`, `<details>`) holding Invite players, Players and
   the Discord card — **open while the GM is alone, folded once players are in** (initial state only;
-  a mid-session join doesn't snap it shut) → **Characters** → crew, clocks, factions, score, log →
+  a mid-session join doesn't snap it shut). **F103:** when the campaign is **full** the summary line
+  (visible while folded) adds "Full — N of N players. Raise the player limit under Players to let
+  anyone else in." and the disclosure starts open — the player at the door is told to ask for
+  exactly that → **Characters** → crew, clocks, factions, score, log →
   players' **Players** card (with Leave) → the GM's **Delete campaign**. Characters used to start at
   y≈1130 under three setup cards. (`AppShell`'s `main` is at least a viewport tall, so the footer
   isn't dragged around as panels resolve — CLS.)
@@ -360,7 +366,11 @@ bootstrap).
     for what comes next; the GM can **Remove** a held ability (two-click). **F100:** the free
     starting pick is spent once — it records itself (`resources['crew-starting-pick']`) and the
     repository carries that latch on every crew write, so removing every ability no longer
-    re-opens a free pick (the picker stays hidden until a full track).
+    re-opens a free pick (the picker stays hidden until a full track). **F103:** the BitD builtin
+    now carries **seven special abilities per crew type** (+ the shared Veteran) — the starting
+    pick offers the type's seven (+ Patron where the type has it) and Veteran, and the "Through
+    Veteran" group grows accordingly (≈36 other-type options). Existing copies get it via
+    "Refresh my copy" (content v1.2.0).
   - `ClocksPanel` (`apps/web/src/features/clocks/components/ClocksPanel.tsx`) — standalone progress
     clocks (filters out faction-linked clocks); create / tick / untick / delete. GM-editable.
     _(Clocks/Factions/Score panels all show a "Loading …" placeholder before their empty state —
@@ -397,7 +407,19 @@ bootstrap).
     reporting (F100):** a full attribute track says "your Prowess XP track is already full (6/6),
     so nothing was marked. Take an advance" (it used to stay silent), and a failed XP write
     reports "The roll is saved, but its desperate-roll XP couldn't be marked (…)" instead of
-    calling the already-logged roll "Roll failed" (engine `desperateXpError`; same on `/roll`). **`AddResultForm`**: record a
+    calling the already-logged roll "Roll failed" (engine `desperateXpError`; same on `/roll`).
+    **One-shot moves (F103):** after a roll SUCCEEDS, Push, Devil's bargain (+ its note), Assist,
+    Ability dice and the harm waiver reset (action/position/effect stay); a failed roll keeps them
+    for the retry. Same on the standalone sheet. Negative ability dice read "−Nd (penalty)" (log:
+    "Includes −Nd (penalty)."). A desperate roll's XP is now also logged ("Desperate roll — marked
+    1 XP in Prowess", an `xp` row on the character). **Stress side effects (F103):** a failed
+    push/resistance stress write keeps the saved roll and says "The roll is saved, but its N stress
+    couldn't be marked (…). Mark it on the sheet yourself." **Assist (F103):** the option reads
+    "Assist: Bo (+1d, they take 1 stress)" and the helper's stress is really charged — another
+    player's character through 00027 `charge_assist_stress` (+1, once per roll, logged "Bo marked
+    1 stress for an assist."); the roller sees "Bo marked 1 stress for the assist — it's on their
+    sheet." When Bo is one box from trauma nothing is written and the roller is told Bo marks it
+    on their own sheet (the trauma is the owner's call). **`AddResultForm`**: record a
     result that was **settled elsewhere — in person or on Discord** (writes a `note` event,
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
@@ -434,7 +456,9 @@ bootstrap).
 - **No load jump (F99):** the hub's loading state uses the same `4xl` container as the loaded hub
   (the 448px loading box being reused at full width was the hub's main layout shift: CLS 0.18 →
   0.04 at 768); page `Container`s also fade in opacity-only (no slide-up).
-- _Last verified:_ 2026-10-19 (F100: player limit + seats, truthful invite copy, crew log rows,
+- _Last verified:_ 2026-10-19 (F103: full campaign on the setup summary, one-shot roll moves,
+  assist stress charged, saved-roll stress errors, BitD seven crew abilities per type; F100:
+  player limit + seats, truthful invite copy, crew log rows,
   web ability dice, desperate-XP reporting, starting-pick latch; F99: grouped crew-advance picker,
   faction form alignment, Revoke alignment, opacity-only entrance, loading width); 2026-10-18 (F98:
   setup disclosure, joined banner, danger affordances, invite row,
@@ -558,7 +582,9 @@ bootstrap).
   The newest roll result is announced via an `aria-live` region; the rename row is a real form.
 - **Trauma count (F96):** the Condition card always shows **"Trauma n / max"** (e.g. "Trauma 2 /
   4", "None." at zero) — the count is the mechanic (the last box retires the character).
-- _Last verified:_ 2026-10-18 (F97 round-3 rules: vice-gated Indulge vice, identity selects +
+- _Last verified:_ 2026-10-19 (F103: the Dice card's one-shot moves reset after a roll, assist
+  stress charged to the helper, stress-write failures reported with the saved roll — see the hub's
+  `RollPanel`); 2026-10-18 (F97 round-3 rules: vice-gated Indulge vice, identity selects +
   details, session-trigger track select, auto desperate XP, prerequisite names; F96: trauma
   marked/max, standalone dice); 2026-10-17 (rules-accuracy round F92: stress→trauma prompt + retire
   banner, Veteran-gated advances; F91 launch-review frontend round; previously 2026-07-11 backlog
@@ -647,7 +673,8 @@ bootstrap).
 
 ### `/characters/[characterId]` — Standalone character sheet
 
-- _Last verified:_ 2026-10-19 (F100: local-note copy names XP, ability dice); 2026-10-18 (F96:
+- _Last verified:_ 2026-10-19 (F103: push + ability dice reset after a local roll; F100:
+  local-note copy names XP, ability dice); 2026-10-18 (F96:
   display-only dice)
 
 - **File:** `apps/web/src/app/characters/[characterId]/page.tsx` — reuses `CharacterSheet`. With no
@@ -902,7 +929,11 @@ The bot (`packages/discord`, served by `/api/discord`) is a full gameplay client
   that campaign (embed footer says "Logged to …" or exactly why not); a persisted `/resist` rolls
   the named attribute's rating **from the sheet** (`attribute:` required there; a typed `dice:` only
   drives the display-only form — F92; `bonus:` −3…+3 applies a claimed ability/upgrade ±Nd such as
-  Iron Will or Daredevil, shown on the embed; `/roll action:` takes the same `bonus:` for e.g. Ambush); `/log` (attributed,
+  Iron Will or Daredevil, shown on the embed; `/roll action:` takes the same `bonus:` for e.g. Ambush;
+  F103: a negative `bonus:` reads "Includes −Nd (penalty).", a persisted desperate roll also logs
+  its XP to the campaign, and a failed push/resist stress write keeps the logged roll — "The roll
+  is logged, but its N stress couldn't be marked. Mark it on your sheet." instead of "something
+  broke"); `/log` (attributed,
   score-tagged); `/heist status` (member snapshot).
 - **GM, in the linked channel:** `/score start|end` · `/crew heat|tier|incarcerate|xp|advance`
   (`heat` takes −9..+9 — negative reduces heat; `tier` develops RAW: weak hold → strong, or pay
@@ -924,7 +955,8 @@ category link) closed via the app's first bot-token fetch — a thread whose par
 CATEGORY-linked now resolves (best-effort; no `DISCORD_BOT_TOKEN` → the old "not linked"); F65
 (web harm parity) and F67 (docs page: **`/discord`**) closed 2026-07-11.
 
-_Last verified:_ 2026-10-18 (F97: `/crew advance pick:` + autocomplete, desperate-roll XP on
+_Last verified:_ 2026-10-19 (F103: penalty wording, desperate XP logged, saved-roll stress
+errors); 2026-10-18 (F97: `/crew advance pick:` + autocomplete, desperate-roll XP on
 `/roll`, `/vice` needs a vice; F95: complete `/heist help`, verified-only Discord link); 2026-10-18 (`/resist` + `/roll action:` `bonus:` for claimed ability dice); 2026-10-17 (F89 security round: link/unlink Discord-permission gates, GM = campaign
 creator; rules-accuracy round F92: `/roll` push|bargain + assist, sheet-rated `/resist`, legal-only
 `/xp advance`, RAW `/crew tier`, negative `/crew heat`, trauma replies);

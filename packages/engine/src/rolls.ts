@@ -277,6 +277,19 @@ async function chargeAssist(
     ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
   });
   if (assisted.success) {
+    // Same feed line as the cross-player charge, so the log always names who paid the assist.
+    const helper = assisted.data?.character;
+    if (helper && helper.gameId !== null && input.assist?.logNote) {
+      await repos.rolls.create(input.userId, {
+        gameId: helper.gameId,
+        characterId: helper.id,
+        kind: 'note',
+        label: helper.name,
+        dice: 0,
+        results: [],
+        note: input.assist.logNote,
+      });
+    }
     return { characterId, status: 'charged', trauma: assisted.data?.trauma ?? false };
   }
   if (assisted.error.code !== 'NOT_OWNER') {
