@@ -48,6 +48,28 @@ describe('useDashboardData', () => {
     expect(result.current.activity.map(a => a.roll.id)).toEqual(['r1']);
   });
 
+  it("resolves names for other players' characters from that campaign's roster only", async () => {
+    const findByGame = vi.fn(() => ok([{ id: 'c9', name: 'Asher Vane' }]));
+    vi.mocked(getRepositories).mockReturnValue({
+      games: { findByCreator: () => ok([GAME]), findByPlayer: () => ok([]) },
+      characters: { findByPlayer: () => ok([{ id: 'c1', name: 'Mine' }]), findByGame },
+      rolls: {
+        findByGame: () =>
+          ok([
+            { ...ROLL, id: 'r1', characterId: 'c9' },
+            { ...ROLL, id: 'r2', characterId: 'c1' },
+          ]),
+      },
+    } as unknown as DatabaseRepositories);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useDashboardData('u1'), { wrapper: wrapper(qc) });
+
+    await waitFor(() => expect(result.current.activityStatus.loading).toBe(false));
+    expect(result.current.characterNames).toEqual({ c9: 'Asher Vane', c1: 'Mine' });
+    expect(findByGame).toHaveBeenCalledTimes(1);
+    expect(findByGame).toHaveBeenCalledWith('g1');
+  });
+
   it('surfaces a joined-campaigns failure as an error with retry, not "no campaigns"', async () => {
     const findByPlayer = vi.fn(() =>
       Promise.resolve({ success: false, error: { message: 'joined failed' } })

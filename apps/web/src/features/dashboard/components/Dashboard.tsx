@@ -51,11 +51,23 @@ function relativeTime(date: Date, now: number, t: TranslationFunction): string {
 export function Dashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const { campaigns, characters, activity, campaignsStatus, charactersStatus, activityStatus } =
-    useDashboardData(user?.id);
+  const {
+    campaigns,
+    characters,
+    characterNames,
+    activity,
+    campaignsStatus,
+    charactersStatus,
+    activityStatus,
+  } = useDashboardData(user?.id);
 
   const gameNameById = new Map(campaigns.map(c => [c.game.id, c.game.name]));
-  const charNameById = new Map(characters.map(c => [c.id, c.name]));
+  // Own characters plus every roster character an activity row mentions (P2-15: the GM's feed
+  // read "Prowess in … · resisted" with no who for a player's character).
+  const charNameById = new Map([
+    ...Object.entries(characterNames ?? {}),
+    ...characters.map(c => [c.id, c.name] as const),
+  ]);
   const now = Date.now();
   // First run = both lists loaded, no errors, nothing yet. "Welcome back" is only for people who
   // have something to come back to (F94); a newcomer gets "Start here" INSTEAD of three empty
@@ -65,8 +77,12 @@ export function Dashboard() {
   const returning = campaigns.length > 0 || characters.length > 0;
   const firstRun = loaded && !returning;
   // F96 — first run leads with Start here; the quick actions (which repeat its steps) are for
-  // returning users, and wait for the lists so they never flash in and then vanish.
-  const showQuickActions = settled && !firstRun;
+  // returning users, and wait for the lists so they never flash in and then vanish. F99 — while
+  // the lists load they hold their space INVISIBLY (inert, hidden from AT) instead of being
+  // inserted above the lists afterwards: the late insert shoved every section ~224px down at 360
+  // (CLS 0.26). Returning users are the majority; a first-run user loses a blank band for <1s.
+  const showQuickActions = !firstRun;
+  const quickActionsPending = !settled;
   const hasDiscordInstall = discordAppId() !== null;
 
   const campaignCard = (c: DashboardCampaign) => (
@@ -155,8 +171,10 @@ export function Dashboard() {
             <Stack
               direction='row'
               gap='sm'
-              className='flex-wrap'
+              className={quickActionsPending ? 'invisible flex-wrap' : 'flex-wrap'}
               data-testid='dashboard-quick-actions'
+              aria-hidden={quickActionsPending || undefined}
+              inert={quickActionsPending || undefined}
             >
               <Button asChild variant='ember'>
                 <Link href='/games/new'>{t('pages.dashboard.actions.createGame')}</Link>

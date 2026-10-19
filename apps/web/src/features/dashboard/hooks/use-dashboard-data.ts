@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import type { Character, Roll } from '@heist-mind/core';
 import i18n from '@/lib/i18n';
-import { useCharactersByPlayer } from '@/features/characters/data/queries';
+import { characterQueries, useCharactersByPlayer } from '@/features/characters/data/queries';
 import {
   rolesFor,
   useGamesByCreator,
@@ -33,6 +33,11 @@ export interface SectionStatus {
 export interface DashboardData {
   campaigns: DashboardCampaign[];
   characters: Character[];
+  /**
+   * Names for every character an activity row references — the viewer's own plus the rosters of
+   * campaigns whose feed mentions a character the viewer doesn't own (a GM sees players' rolls).
+   */
+  characterNames: Record<string, string>;
   activity: DashboardActivity[];
   campaignsStatus: SectionStatus;
   charactersStatus: SectionStatus;
@@ -83,6 +88,28 @@ export function useDashboardData(userId: string | undefined): DashboardData {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityQueries.map(q => q.dataUpdatedAt).join(','), campaigns]);
 
+  // Rosters for the campaigns whose recent activity names a character the viewer doesn't own —
+  // only those games, so a player-only dashboard costs no extra queries.
+  const ownCharacters = charactersQuery.data;
+  const rosterGameIds = useMemo(() => {
+    const own = new Set((ownCharacters ?? []).map(c => c.id));
+    const ids = new Set<string>();
+    for (const a of activity) {
+      if (a.roll.characterId && !own.has(a.roll.characterId)) ids.add(a.roll.gameId);
+    }
+    return [...ids].sort();
+  }, [activity, ownCharacters]);
+  const rosterQueries = useQueries({
+    queries: rosterGameIds.map(id => ({ ...characterQueries.byGame(id), enabled: !!userId })),
+  });
+  const characterNames = useMemo<Record<string, string>>(() => {
+    const names: Record<string, string> = {};
+    for (const q of rosterQueries) for (const c of q.data ?? []) names[c.id] = c.name;
+    for (const c of ownCharacters ?? []) names[c.id] = c.name;
+    return names;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rosterQueries.map(q => q.dataUpdatedAt).join(','), ownCharacters]);
+
   const loadFailed = i18n.t('pages:dashboard.loadFailed');
   const campaignsLoading = created.isLoading || joined.isLoading;
   const campaignsError = created.error ?? joined.error;
@@ -106,7 +133,11 @@ export function useDashboardData(userId: string | undefined): DashboardData {
   // flashes between the two (F79 residue, review item 7).
   const activityError = campaignsError ?? activityQueries.find(q => q.isError)?.error ?? null;
   const activityStatus: SectionStatus = {
-    loading: campaignsLoading || activityQueries.some(q => q.isLoading),
+    // …and the rosters that name other players' characters, so a row never gains its "who" late.
+    loading:
+      campaignsLoading ||
+      activityQueries.some(q => q.isLoading) ||
+      rosterQueries.some(q => q.isLoading),
     error: activityError ? activityError.message || loadFailed : null,
     retry: () => {
       campaignsStatus.retry();
@@ -117,6 +148,7 @@ export function useDashboardData(userId: string | undefined): DashboardData {
   return {
     campaigns,
     characters: charactersQuery.data ?? [],
+    characterNames,
     activity,
     campaignsStatus,
     charactersStatus,
