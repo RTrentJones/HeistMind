@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  crewAbilityTypes,
   crewAdvanceReady,
   crewStartingPickAvailable,
   crewUpgradeBoxes,
@@ -112,12 +113,60 @@ export function CrewAdvancePicker({
       </div>
     );
 
-  // F102 — the Veteran routes (13 rows on BitD) are a native disclosure, collapsed by default, so
-  // the upgrades + "Take advance" aren't ~4,900px down the page at 360. <details>/<summary> is
+  // F102 — the Veteran routes are a native disclosure, collapsed by default, so the upgrades +
+  // "Take advance" aren't thousands of px down the page at 360. <details>/<summary> is
   // keyboard-operable as is (Enter/Space toggles).
-  const veteranRows = viaVeteran.map(a =>
-    option(`ability:${a.id}`, a.name, a.description, t('components.crewSheet.viaVeteran'))
+  // Round 6 P2-7 — opened, the routes were ONE list of 32 described rows (10,281px at 360). They
+  // are grouped by the crew type each comes from, every type its own collapsed disclosure: the
+  // opened panel is a short list of types, and a type opens to its seven-odd abilities.
+  const typeOrder = crewRules.types.map(ct => ct.id);
+  const sourceType = (a: (typeof viaVeteran)[number]) =>
+    crewAbilityTypes(a)
+      .filter(id => id !== crew.crewType)
+      .sort((x, y) => typeOrder.indexOf(x) - typeOrder.indexOf(y))[0] ?? '';
+  const byType = new Map<string, typeof viaVeteran>();
+  for (const a of viaVeteran) {
+    const key = sourceType(a);
+    byType.set(key, [...(byType.get(key) ?? []), a]);
+  }
+  const veteranTypes = [...byType.entries()].sort(
+    ([x], [y]) => typeOrder.indexOf(x) - typeOrder.indexOf(y)
   );
+  const chevron = (groupClass: string) => (
+    <svg
+      aria-hidden='true'
+      viewBox='0 0 20 20'
+      fill='currentColor'
+      className={`size-5 shrink-0 text-foreground-muted transition-transform ${groupClass}`}
+    >
+      <path d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z' />
+    </svg>
+  );
+  const veteranRows = veteranTypes.map(([typeId, list]) => {
+    const typeName = crewRules.types.find(ct => ct.id === typeId)?.name ?? typeId;
+    return (
+      <details
+        key={typeId || 'untyped'}
+        className='group/type rounded-md border border-border-primary bg-background-primary/40'
+        data-testid={`crew-advance-veteran-type-${typeId}`}
+      >
+        <summary className='flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary [&::-webkit-details-marker]:hidden'>
+          <span className='min-w-0'>
+            <span className='font-semibold text-foreground-secondary'>{typeName}</span>
+            <span className='ml-1.5 text-xs text-foreground-muted'>
+              · {t('components.crewSheet.pickerVeteranTypeCount', { count: list.length })}
+            </span>
+          </span>
+          {chevron('group-open/type:rotate-180')}
+        </summary>
+        <div className='flex flex-col gap-2 px-2 pb-2'>
+          {list.map(a =>
+            option(`ability:${a.id}`, a.name, a.description, t('components.crewSheet.viaVeteran'))
+          )}
+        </div>
+      </details>
+    );
+  });
   const veteranId = `crew-advance-veteran-${crew.id}`;
   const veteran = veteranRows.length > 0 && (
     <details
@@ -132,17 +181,10 @@ export function CrewAdvancePicker({
             {t('components.crewSheet.pickerGroupVeteran')}
           </span>
           <span className='block text-xs text-foreground-muted'>
-            {t('components.crewSheet.pickerGroupVeteranCount', { count: veteranRows.length })}
+            {t('components.crewSheet.pickerGroupVeteranCount', { count: viaVeteran.length })}
           </span>
         </span>
-        <svg
-          aria-hidden='true'
-          viewBox='0 0 20 20'
-          fill='currentColor'
-          className='size-5 shrink-0 text-foreground-muted transition-transform group-open/vet:rotate-180'
-        >
-          <path d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z' />
-        </svg>
+        {chevron('group-open/vet:rotate-180')}
       </summary>
       <div
         role='group'

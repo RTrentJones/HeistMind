@@ -582,6 +582,8 @@
       "pickerGroupVeteranHelp": "Takes Veteran and this ability together in one pick.",
       "pickerGroupVeteranCount_one": "{{count}} ability from another crew type",
       "pickerGroupVeteranCount_other": "{{count}} abilities from other crew types",
+      "pickerVeteranTypeCount_one": "{{count}} ability",
+      "pickerVeteranTypeCount_other": "{{count}} abilities",
       "pickerGroupUpgrades": "Upgrades — mark two boxes",
       "markUpgradeBoxes": "Mark 2 upgrade boxes: {{name}} ({{boxes}}/{{size}})",
       "markOtherUpgrades": "Mark 2 boxes on other upgrades",
