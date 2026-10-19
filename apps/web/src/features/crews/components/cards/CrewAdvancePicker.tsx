@@ -163,7 +163,9 @@ export function CrewAdvancePicker({
       className='rounded-md border border-border-primary p-3'
       data-testid='crew-advance-picker'
     >
-      <legend className='px-1 font-display'>
+      {/* Round 6 P2-6 — sans text-sm like the group headings (F102): the small-caps display face
+          wrapped this title to two lines in the 244px card at 360. */}
+      <legend className='px-1 text-sm font-semibold'>
         {starting
           ? t('components.crewSheet.pickerStartingTitle')
           : t('components.crewSheet.pickerAdvanceTitle')}

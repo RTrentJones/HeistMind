@@ -26,7 +26,11 @@ describe('CrewAdvancePicker', () => {
     render(
       <CrewAdvancePicker crew={crew([])} crewRules={crewRules} busy={false} onTake={onTake} />
     );
-    expect(screen.getByText("Choose the crew's starting special ability")).toBeInTheDocument();
+    const legend = screen.getByText("Choose the crew's starting special ability");
+    // Round 6 P2-6 — plain sans like the group headings, not the wrapping small-caps face.
+    expect(legend.tagName).toBe('LEGEND');
+    expect(legend).toHaveClass('text-sm', 'font-semibold');
+    expect(legend).not.toHaveClass('font-display');
     expect(screen.getByRole('radio', { name: /Pack Rats/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /^Patron/ })).toBeInTheDocument();
     // Another type's ability is offered only as a Veteran route; Mastery never as an ability.
