@@ -11,7 +11,12 @@ import type { DatabaseRepositories } from '@heist-mind/database';
 // eslint-disable-next-line no-restricted-imports
 import { getRepositories } from '@/lib/auth';
 import '@/lib/i18n';
-import { collapseCrewRuns, useDashboardData, type DashboardActivity } from '../use-dashboard-data';
+import {
+  collapseCrewRuns,
+  crewEventKey,
+  useDashboardData,
+  type DashboardActivity,
+} from '../use-dashboard-data';
 
 const GAME = { id: 'g1', name: 'The Docks', createdBy: 'u1' };
 const ROLL = { id: 'r1', gameId: 'g1', kind: 'note', createdAt: new Date().toISOString() };
@@ -110,6 +115,29 @@ describe('collapseCrewRuns (round 4 P2-N6: crew XP flooding Recent activity)', (
       ['r1', 0],
       ['c0', 0],
     ]);
+  });
+
+  it('folds only the SAME kind of crew event (round 5 P2-8)', () => {
+    const crew = (id: string, note: string): DashboardActivity =>
+      ({
+        roll: { id, kind: 'crew', gameId: 'g1', note },
+        gameName: 'The Docks',
+      }) as unknown as DashboardActivity;
+    const out = collapseCrewRuns([
+      crew('x8', 'Crew XP 8/8'),
+      crew('x7', 'Crew XP 7/8'),
+      crew('s', 'Starting crew ability: Pack Rats'),
+      crew('x6', 'Crew XP 6/8'),
+    ]);
+    expect(out.map(e => [e.roll.id, e.collapsed ?? 0])).toEqual([
+      ['x8', 1],
+      ['s', 0],
+      ['x6', 0],
+    ]);
+    expect(crewEventKey('Heat marked — heat 3, wanted 0')).toBe(
+      crewEventKey('Heat marked — heat 4, wanted 1')
+    );
+    expect(crewEventKey(null)).toBe('');
   });
 
   it('never folds across campaigns or non-crew rows', () => {

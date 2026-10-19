@@ -158,7 +158,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
         </Suspense>
 
         {isGm && (
-          <CampaignSetup initiallyOpen={!hasPlayers}>
+          <CampaignSetup initiallyOpen={!hasPlayers} capacity={campaignCapacity(game)}>
             <InviteCodeSection gameId={gameId} capacity={campaignCapacity(game)} />
             <MembersPanel game={game} userId={user?.id} />
             <DiscordLinkCard campaignName={game.name} />
