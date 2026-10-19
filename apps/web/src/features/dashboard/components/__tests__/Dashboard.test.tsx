@@ -73,6 +73,22 @@ describe('Dashboard', () => {
     expect(screen.queryByTestId('dashboard-start-here')).toBeNull();
   });
 
+  // F102 — the lists' loading state holds a card row's height (a one-line spinner grew into the
+  // grid and pushed every section below ~90–180px at 768).
+  it('reserves a card-row skeleton for each list while it loads, announced as busy', () => {
+    data = empty({
+      campaignsStatus: status({ loading: true }),
+      charactersStatus: status({ loading: true }),
+    });
+    render(<Dashboard />);
+    for (const id of ['dashboard-campaigns-loading', 'dashboard-characters-loading']) {
+      const skeleton = screen.getByTestId(id);
+      expect(skeleton).toHaveAttribute('role', 'status');
+      expect(skeleton).toHaveAttribute('aria-busy', 'true');
+      expect(skeleton.querySelectorAll('.h-28')).toHaveLength(2);
+    }
+  });
+
   it('a returning user gets the quick actions and the sections, not Start here', () => {
     data = empty({
       campaigns: [{ game: { id: 'g1', name: 'Job' }, role: 'gm' }],
