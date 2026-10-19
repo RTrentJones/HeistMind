@@ -51,13 +51,14 @@ export function useCharacterSummary(): CharacterSummary {
         .filter(([, value]) => !!value?.trim())
         .map(([labelKey, value, detail]) => {
           const label = t(`components.steps.identity.${labelKey}`);
+          const shown = value?.trim() ?? '';
           return detail?.trim()
             ? t('components.steps.review.identityItemDetail', {
                 label,
-                value: value?.trim(),
+                value: shown,
                 detail: detail.trim(),
               })
-            : t('components.steps.review.identityItem', { label, value: value?.trim() });
+            : t('components.steps.review.identityItem', { label, value: shown });
         }),
     };
   }, [name, draft, ruleset, t]);
