@@ -92,6 +92,12 @@ export interface GameRepository {
   /** No web caller yet — the campaign-lifecycle contract (pause/complete) for GM tooling + the bot. */
   updateState(id: string, userId: string, state: GameState): Promise<Result<Game>>;
   /**
+   * GM: set how many PLAYERS the campaign seats (the GM's seat is added on top — stored as
+   * `max_players` seats, 00026). Refuses an out-of-range limit or one below the players already
+   * in (`playerLimitRefusal`); the DB re-checks both (CHECK + the 00026 guard trigger).
+   */
+  setPlayerLimit(id: string, players: number): Promise<Result<Game>>;
+  /**
    * Resolve a Discord surface to its linked campaign (bot phase 2). `candidateChannelIds` are
    * tried in precedence order (the channel, then its category); a guild-wide default link
    * (channelId NULL) is the fallback. Null = nothing linked here.

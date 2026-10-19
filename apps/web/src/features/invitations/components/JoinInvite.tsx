@@ -143,7 +143,8 @@ export function JoinInvite({ rawCode }: { rawCode: string }) {
               {t(`join.errors.${failure}`)}
             </Text>
             <Stack direction='row' gap='sm' className='flex-wrap'>
-              {failure === 'generic' && (
+              {/* "Full" can clear the moment the GM raises the limit — offer the retry too. */}
+              {(failure === 'generic' || failure === 'full') && (
                 <Button variant='default' onClick={() => void redeem()} loading={join.isPending}>
                   {t('join.retry')}
                 </Button>

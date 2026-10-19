@@ -291,7 +291,10 @@ export async function markXp(
 export interface AdvanceCharacterInput {
   characterId: string;
   userId: string;
-  /** The advancement to purchase — cost/prereq/track gating runs server-side in the repository. */
+  /**
+   * The advancement to purchase — cost/prereq/track gating runs in the repository (server-side
+   * for the bot only — F100).
+   */
   advancement: CharacterAdvancement;
   /** Log-event copy — the client's localized strings (the engine never owns copy). */
   logLabel: string;

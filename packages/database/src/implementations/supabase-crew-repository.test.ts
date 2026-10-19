@@ -119,7 +119,8 @@ describe('SupabaseCrewRepository.update — crew ability gate', () => {
   });
 
   it('lets writes that add no ability through without reading the ruleset', async () => {
-    const { c, update, from } = client(crewRow(['crew-second-story', 'crew-deadly'], {}));
+    const flagged = { 'crew-starting-pick': 1 };
+    const { c, update, from } = client(crewRow(['crew-second-story', 'crew-deadly'], flagged));
     const out = await new SupabaseCrewRepository(c, 'development').update('cr1', {
       crewAbilities: ['crew-second-story'],
     });
@@ -129,6 +130,34 @@ describe('SupabaseCrewRepository.update — crew ability gate', () => {
     // Non-ability writes skip the gate entirely.
     await new SupabaseCrewRepository(c, 'development').update('cr1', { heat: 2 });
     expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  it('round 4 P2-N9: removing every ability keeps the spent free pick — no re-pick churn', async () => {
+    // A legacy crew (picked before the latch): the removal write records the spent pick…
+    const legacy = client(crewRow(['crew-second-story'], {}));
+    const removed = await new SupabaseCrewRepository(legacy.c, 'development').update('cr1', {
+      crewAbilities: [],
+    });
+    expect(removed.success).toBe(true);
+    expect(legacy.update.mock.calls[0]?.[0]).toMatchObject({
+      crew_abilities: [],
+      resources: { 'crew-starting-pick': 1 },
+    });
+    // …and a resources edit that drops the key keeps it.
+    const flagged = client(crewRow([], { 'crew-starting-pick': 1 }));
+    await new SupabaseCrewRepository(flagged.c, 'development').update('cr1', {
+      resources: { 'crew-xp': 3 },
+    });
+    expect(flagged.update.mock.calls[0]?.[0]).toMatchObject({
+      resources: { 'crew-xp': 3, 'crew-starting-pick': 1 },
+    });
+    // With the pick spent, an emptied crew can't take a "starting" ability for free.
+    const churn = client(crewRow([], { 'crew-starting-pick': 1 }));
+    const out = await new SupabaseCrewRepository(churn.c, 'development').update('cr1', {
+      crewAbilities: ['crew-network'],
+    });
+    expect(out.success ? null : out.error.code).toBe('TRACK_NOT_FULL');
+    expect(churn.update).not.toHaveBeenCalled();
   });
 
   it('gates upgrade boxes too: a mark without a spent track is refused', async () => {

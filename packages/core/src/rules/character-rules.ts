@@ -1,6 +1,7 @@
 // Character validity rules — the single source of truth for "is this character config legal
 // under its ruleset?". Pure (no I/O), so both the web UI (creation wizard + editor) and the DB
-// layer (characterManagement, server-side enforcement) run the exact same checks.
+// layer (characterManagement — server-side for the bot, in the browser for web writes; F100) run
+// the exact same checks.
 //
 // Lives in @heist-mind/core with the rest of the rules engine: zero dependencies, so every
 // client (web, the future Discord bot) and the DB layer import the exact same checks.
@@ -669,6 +670,22 @@ export function desperateRollXp(
 }
 
 /**
+ * The attribute track a desperate roll of `action` WOULD have marked, when it can't because that
+ * track is already full (round 4 P2-N4 — tell the roller "track full, take an advance" instead of
+ * skipping silently). Null whenever `desperateRollXp` would mark, or no trigger/track applies.
+ */
+export function desperateRollXpBlockedTrack(
+  ruleset: RulesetContent,
+  data: CharacterData,
+  action: string
+): string | null {
+  const trigger = desperateRollTrigger(ruleset);
+  if (!trigger || trigger.value <= 0 || !usesXpTracks(ruleset)) return null;
+  const owner = (ruleset.attributes ?? []).find(a => (a.skills ?? []).includes(action));
+  return owner && xpTrackFull(ruleset, data, owner.id) ? owner.id : null;
+}
+
+/**
  * The END-OF-SESSION XP triggers for a character: the playbook's own trigger first (BitD: "You
  * addressed a challenge with violence or coercion."), then the ruleset's common ones. Desperate-
  * roll triggers are excluded — they fire with the roll, not at session end. RAW: each is worth 1
@@ -700,6 +717,13 @@ export function sessionXpTriggers(ruleset: RulesetContent, playbookId: string): 
  */
 export function identityOptions(ruleset: RulesetContent, field: IdentityField): CreationOption[] {
   return ruleset.characterCreation?.steps?.find(s => s.id === field)?.options ?? [];
+}
+
+const IDENTITY_FIELDS: readonly string[] = ['heritage', 'background', 'vice'];
+
+/** Whether a creation-step id IS an identity field (BitD's per-field heritage/background/vice). */
+export function isIdentityField(id: string): id is IdentityField {
+  return IDENTITY_FIELDS.includes(id);
 }
 
 /** The listed option an identity value names (by name or id, case-insensitive), if any. */
@@ -1085,10 +1109,20 @@ export function validateCharacter(
           Object.values(data.attributes).some(v => v > 0) ||
           Object.values(data.skills ?? {}).some(v => v > 0);
       else if (kind === 'choice') satisfied = isNonEmpty(data.custom?.[step.id]);
-      // identity/abilities/review steps are not blocking here (name is enforced by the UI).
+      // A required per-field identity step (BitD's Vice) needs that field set; a combined
+      // `identity` step and the abilities/review steps aren't blocking here (the UI enforces the
+      // name).
+      else if (kind === 'identity' && isIdentityField(step.id))
+        satisfied = isNonEmpty(data[step.id]);
       if (!satisfied)
         errors.push(
-          err(`steps.${step.id}`, 'STEP_INCOMPLETE', `"${step.name}" must be completed.`)
+          err(
+            `steps.${step.id}`,
+            'STEP_INCOMPLETE',
+            kind === 'identity'
+              ? `Choose a ${step.name.toLowerCase()} — "${step.name}" must be completed.`
+              : `"${step.name}" must be completed.`
+          )
         );
     }
 

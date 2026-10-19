@@ -8,7 +8,9 @@ import {
   consumesCrewVeteranSlot,
   crewAbilityName,
   crewAbilityTypes,
+  CREW_STARTING_PICK_KEY,
   crewStartingPickAvailable,
+  crewStartingPickSpent,
   crewUpgradeBoxes,
   crewVeteranGatewayFor,
   isCrewAbilityUnlocked,
@@ -16,6 +18,7 @@ import {
   openCrewUpgrades,
   planCrewAdvance,
   takeableCrewAbilities,
+  withCrewStartingPickSpent,
   type CrewAbilityState,
 } from './crew-abilities';
 
@@ -194,6 +197,51 @@ describe('planCrewAdvance (RAW: one pick at creation; then a full track → abil
       resources: { 'crew-xp': 0 },
       added: [],
     });
+  });
+});
+
+describe('the free starting pick is spent once (round 4 P2-N9: remove-all + re-pick churn)', () => {
+  it('the starting pick records itself in resources', () => {
+    const plan = planCrewAdvance(rs, crew({ crewAbilities: [] }), {
+      kind: 'ability',
+      abilityId: 'pack-rats',
+    });
+    expect(plan.ok && plan.resources[CREW_STARTING_PICK_KEY]).toBe(1);
+  });
+
+  it('removing every ability does NOT re-open a free pick once it was spent', () => {
+    const emptied = crew({ crewAbilities: [], resources: { [CREW_STARTING_PICK_KEY]: 1 } });
+    expect(crewStartingPickSpent(rs, emptied)).toBe(true);
+    expect(crewStartingPickAvailable(rs, emptied)).toBe(false);
+    expect(planCrewAdvance(rs, emptied, { kind: 'ability', abilityId: 'pack-rats' })).toEqual({
+      ok: false,
+      code: 'TRACK_NOT_FULL',
+    });
+    // The gate refuses the churned free pick; a full track still buys one.
+    expect(
+      checkCrewProgression(rs, emptied, {
+        crewAbilities: ['pack-rats'],
+        resources: { [CREW_STARTING_PICK_KEY]: 1 },
+      })
+    ).toMatchObject({ ok: false, code: 'TRACK_NOT_FULL' });
+  });
+
+  it('withCrewStartingPickSpent latches the flag on any write after the pick (legacy crews too)', () => {
+    // A legacy crew (picked before the flag existed) holding an ability → the next write records it.
+    expect(withCrewStartingPickSpent(rs, crew(), {})).toEqual({ [CREW_STARTING_PICK_KEY]: 1 });
+    // A write that drops the key keeps it.
+    const flagged = crew({ crewAbilities: [], resources: { [CREW_STARTING_PICK_KEY]: 1 } });
+    expect(withCrewStartingPickSpent(rs, flagged, { 'crew-xp': 2 })).toEqual({
+      'crew-xp': 2,
+      [CREW_STARTING_PICK_KEY]: 1,
+    });
+    // Already flagged → unchanged object; a fresh crew → nothing to latch.
+    const next = { [CREW_STARTING_PICK_KEY]: 1 };
+    expect(withCrewStartingPickSpent(rs, flagged, next)).toBe(next);
+    const fresh = crew({ crewAbilities: [] });
+    expect(withCrewStartingPickSpent(rs, fresh, { 'crew-xp': 1 })).toEqual({ 'crew-xp': 1 });
+    // Holding only an UPGRADE (Mastery) isn't a spent special-ability pick.
+    expect(crewStartingPickSpent(rs, crew({ crewAbilities: ['mastery'] }))).toBe(false);
   });
 });
 

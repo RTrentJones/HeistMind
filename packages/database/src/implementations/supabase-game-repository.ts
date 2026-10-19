@@ -10,6 +10,12 @@ import type {
   Profile,
   Result,
 } from '@heist-mind/core';
+import {
+  MAX_PLAYER_LIMIT,
+  MIN_PLAYER_LIMIT,
+  playerLimitRefusal,
+  seatsForPlayerLimit,
+} from '@heist-mind/core';
 import type { GameRepository } from '../repositories';
 import {
   fromSupabaseGame,
@@ -146,6 +152,30 @@ export class SupabaseGameRepository extends SupabaseRepositoryBase implements Ga
       const { data: row, error } = await this.db
         .from('games')
         .update(toSupabaseGameUpdate({ state }))
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) return failFromError(error);
+      return { success: true, data: fromSupabaseGame(row) };
+    });
+  }
+
+  async setPlayerLimit(id: string, players: number): Promise<Result<Game>> {
+    return this.run(async () => {
+      // Range-check before the round trip (the playersIn re-check is the DB guard's — the count
+      // the client saw may be stale, and the 00026 trigger reads the locked row).
+      const refusal = playerLimitRefusal(players, 0);
+      if (refusal)
+        return {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: `The player limit must be a whole number from ${MIN_PLAYER_LIMIT} to ${MAX_PLAYER_LIMIT}.`,
+          },
+        };
+      const { data: row, error } = await this.db
+        .from('games')
+        .update(toSupabaseGameUpdate({ maxPlayers: seatsForPlayerLimit(players) }))
         .eq('id', id)
         .select()
         .single();

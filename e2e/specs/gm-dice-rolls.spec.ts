@@ -56,10 +56,26 @@ test.describe('GM: dice rolls + roll log', () => {
     });
     await expect(gmPage.getByText(/\[\d/).first()).toBeVisible();
 
+    // Round 4 — ability dice (the bot's `bonus:`): +2d from an ability on an action roll, and
+    // −3d on a resistance (the 0d floor is unit-tested in roll-pool.test). Both persist a note.
+    await gmPage.getByRole('combobox', { name: 'Ability dice' }).selectOption('2');
+    await gmPage.getByRole('button', { name: 'Roll', exact: true }).click();
+    await expect(gmPage.getByTestId('roll-result')).toBeVisible();
+    await gmPage.getByRole('combobox', { name: 'Roll type' }).selectOption('resistance');
+    await gmPage.getByRole('combobox', { name: 'Ability dice' }).selectOption('-3');
+    await gmPage.getByRole('button', { name: 'Resist', exact: true }).click();
+    await expect(gmPage.getByTestId('roll-result').getByText(/stress|Cleared/i)).toBeVisible({
+      timeout: 10_000,
+    });
+
     // The roll is on the campaign's shared, DB-backed log (and survives navigation).
     await gmPage.goto(gameUrl);
     await expect(gmPage.getByRole('heading', { name: 'Campaign log' })).toBeVisible();
     await expect(gmPage.getByText(/\[\d/).first()).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.getByText('Includes +2d from an ability or upgrade.')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(gmPage.getByText('Includes −3d from an ability or upgrade.')).toBeVisible();
   });
 
   // F43 — moderate harm surfaces its RAW −1d on the sheet's ACTION roll panel, waivable. Lives

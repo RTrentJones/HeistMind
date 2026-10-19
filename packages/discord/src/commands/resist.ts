@@ -123,6 +123,8 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
       dice: roll.count,
       results: roll.results,
       zeroDice: roll.zeroDice,
+      // The ability's bonus dice land in the campaign log too (web parity).
+      ...(bonus !== 0 ? { note: copy.abilityDiceNote(bonus) } : {}),
       traumaLog: TRAUMA_LOG,
     });
     if (!logged.success) return failEphemeral(followUp, copy.somethingBroke);

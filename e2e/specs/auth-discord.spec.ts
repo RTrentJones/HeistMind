@@ -26,4 +26,43 @@ test.describe('Discord sign-in wiring', () => {
     expect(url.searchParams.get('provider')).toBe('discord');
     expect(url.searchParams.get('redirect_to') ?? '').toMatch(/\/auth\/callback/);
   });
+
+  // Round 4 P2-N2 — the header paints from SSR, so a click can land BEFORE React hydrates. It used
+  // to do nothing. The buttons are now a real GET form to /auth/signin (JS disabled stands in for
+  // "not hydrated yet": no onClick exists), and that page starts the same OAuth once it runs.
+  test('a click before hydration still starts the Discord sign-in', async ({ browser }) => {
+    const noJs = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      const page = await noJs.newPage();
+      await page.goto('/');
+      const signUp = page.getByRole('button', { name: /sign up with discord/i });
+      test.skip(await onComingSoon(page, signUp), 'prod coming-soon gate — sign-in is not shown');
+      await signUp.click();
+      await page.waitForURL(/\/auth\/signin/, { timeout: 15_000 });
+
+      // The landing CTA keeps its intent through the no-JS path too.
+      await page.goto('/');
+      await page.getByRole('button', { name: 'Run a campaign' }).first().click();
+      await page.waitForURL(/\/auth\/signin\?next=%2Fgames%2Fnew/, { timeout: 15_000 });
+    } finally {
+      await noJs.close();
+    }
+
+    // Hydrated, /auth/signin hands off to GoTrue's authorize endpoint with the same `next`.
+    const ctx = await browser.newContext();
+    try {
+      const page = await ctx.newPage();
+      const authorizeRequest = page.waitForRequest(req => /\/auth\/v1\/authorize/.test(req.url()), {
+        timeout: 20_000,
+      });
+      await page.goto('/auth/signin?next=%2Fgames%2Fnew');
+      const url = new URL((await authorizeRequest).url());
+      expect(url.searchParams.get('provider')).toBe('discord');
+      const redirectTo = new URL(url.searchParams.get('redirect_to') ?? '');
+      expect(redirectTo.pathname).toBe('/auth/callback');
+      expect(redirectTo.searchParams.get('next')).toBe('/games/new');
+    } finally {
+      await ctx.close();
+    }
+  });
 });

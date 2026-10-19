@@ -2,7 +2,7 @@
 // roll outcomes, roll/event kinds, position/effect, game lifecycle state, and character status.
 // Every map holds STATIC keys so they stay inside the typed TranslationKey union — never build a
 // key with a template string.
-import type { CharacterStatus, GameState, RollKind, RollOutcome } from '@heist-mind/core';
+import type { CharacterStatus, GameState, Roll, RollKind, RollOutcome } from '@heist-mind/core';
 import type { TranslationFunction } from '@/lib/i18n/translations';
 
 export const OUTCOME_VARIANT = {
@@ -90,4 +90,31 @@ export const characterStatusLabel = (s: CharacterStatus, t: TranslationFunction)
 export function entryWho(label: string | null | undefined, who: string): string {
   if (!label || !who) return who;
   return label.trim().toLowerCase() === who.trim().toLowerCase() ? '' : who;
+}
+
+/**
+ * The three text parts of a log / activity row — title, "who", and the note line — for every
+ * roll kind (round 4 P2-N6). Crew events read "Crew · GM · Crew XP 8/8 · Crew Crew": an unnamed
+ * crew's log label IS the word "Crew" (the kind badge says it again) and only the GM can touch the
+ * crew sheet, so "GM" adds nothing. A crew event is titled by the crew's NAME when it has one,
+ * otherwise by what happened (its note — "Crew XP 8/8"), with no who and no repeated note.
+ */
+export function entryParts(
+  roll: Pick<Roll, 'kind' | 'label' | 'note'>,
+  who: string,
+  t: TranslationFunction
+): { title: string; who: string; note: string | null } {
+  const kindLabel = rollKindLabel(roll.kind, t);
+  const note = roll.note?.trim() ? roll.note : null;
+  if (roll.kind === 'crew') {
+    const label = roll.label?.trim() ?? '';
+    const generic =
+      !label ||
+      [kindLabel, t('components.crewSheet.logLabel')].some(
+        g => g.trim().toLowerCase() === label.toLowerCase()
+      );
+    if (generic) return { title: note ?? kindLabel, who: '', note: null };
+    return { title: label, who: '', note };
+  }
+  return { title: roll.label ?? kindLabel, who: entryWho(roll.label, who), note };
 }

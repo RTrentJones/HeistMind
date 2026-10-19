@@ -56,6 +56,8 @@ const FORTUNE_TYPE_KEY = {
   engagement: 'components.rollPanel.fortuneType.engagement',
   gatherInfo: 'components.rollPanel.fortuneType.gatherInfo',
 } as const;
+/** Ability / upgrade dice offered (the bot's `bonus:` range, −3…+3). */
+const BONUS_DICE = [-3, -2, -1, 0, 1, 2, 3] as const;
 /** How many display-only rolls the standalone panel keeps on screen. */
 const LOCAL_HISTORY = 5;
 
@@ -128,6 +130,11 @@ export function RollPanel({
   const worstHarm = harm ? worstHarmLevel({ harm }) : null;
   const harmPenalty = harm ? harmDicePenalty({ harm }) : 0;
   const [waiveHarm, setWaiveHarm] = useState(false);
+  // Round 4 — ability / upgrade dice (the bot's `bonus:`), signed −3…+3, action + resistance.
+  const [bonus, setBonus] = useState(0);
+  const signedDice = (n: number) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+  const bonusNote =
+    bonus !== 0 ? t('components.rollPanel.abilityDiceNote', { signed: signedDice(bonus) }) : null;
   const appliedHarmPenalty = waiveHarm ? 0 : harmPenalty;
   const [rolling, setRolling] = useState(false);
   const [last, setLast] = useState<{
@@ -145,6 +152,23 @@ export function RollPanel({
   // RAW feedback: what the desperate roll just marked (the attribute XP track).
   const [desperateNote, setDesperateNote] = useState<string | null>(null);
   const attributeName = (id: string) => attributes?.find(a => a.id === id)?.name ?? id;
+  /** What a desperate roll did to the XP track — marked, already full, or (rare) failed. */
+  const desperateCopy = (
+    xp: { track: string | null; marks: number; trackFull?: boolean } | null,
+    failure?: string | null
+  ): string | null => {
+    if (xp?.track)
+      return xp.trackFull
+        ? t('components.rollPanel.desperateXpFull', {
+            attribute: attributeName(xp.track),
+            size: xp.marks,
+          })
+        : t('components.rollPanel.desperateXpNote', {
+            attribute: attributeName(xp.track),
+            marks: xp.marks,
+          });
+    return failure ? t('components.rollPanel.desperateXpFailed', { reason: failure }) : null;
+  };
 
   // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
   const traumaLog = {
@@ -170,7 +194,7 @@ export function RollPanel({
     let kind: RollMode = mode;
     if (mode === 'resistance') {
       const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
-      ({ count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0 }));
+      ({ count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0, bonus }));
       label = opt?.name ?? t(MODE_KEY.resistance);
     } else {
       const isActionRoll = mode === 'action';
@@ -182,6 +206,7 @@ export function RollPanel({
         bargain,
         harmPenalty: isActionRoll ? appliedHarmPenalty : 0,
         fortune,
+        bonus: isActionRoll ? bonus : 0,
       }));
       label = isActionRoll ? action : t(FORTUNE_TYPE_KEY[fortuneType]);
       kind = isActionRoll ? 'action' : 'fortune';
@@ -195,19 +220,19 @@ export function RollPanel({
       // Pushing yourself costs 2 stress, win or lose (RAW).
       await chargeStress(userId, 2);
     }
-    // A desperate action roll marks 1 xp in that action's attribute (RAW), log or no log.
-    const xp =
-      mode === 'action' && position === 'desperate' && characterId !== undefined
-        ? await markDesperateXp.mutateAsync({ userId, action })
-        : null;
-    setDesperateNote(
-      xp?.track
-        ? t('components.rollPanel.desperateXpNote', {
-            attribute: attributeName(xp.track),
-            marks: xp.marks,
-          })
-        : null
-    );
+    // A desperate action roll marks 1 xp in that action's attribute (RAW), log or no log. The
+    // roll already happened (and its stress landed) — an XP write failure is reported as such,
+    // never as the roll failing.
+    let xp: Awaited<ReturnType<typeof markDesperateXp.mutateAsync>> = null;
+    let xpFailure: string | null = null;
+    if (mode === 'action' && position === 'desperate' && characterId !== undefined) {
+      try {
+        xp = await markDesperateXp.mutateAsync({ userId, action });
+      } catch (e) {
+        xpFailure = (e as Error).message || t('components.rollPanel.rollFailed');
+      }
+    }
+    setDesperateNote(desperateCopy(xp, xpFailure));
     setLast({ outcome, results, kind, ...(stress !== undefined ? { stress } : {}) });
     setHistory(h =>
       [{ id: ++historySeq.current, label, outcome, results }, ...h].slice(0, LOCAL_HISTORY)
@@ -229,7 +254,7 @@ export function RollPanel({
       // realizes the dice and phrases the feed copy.
       if (mode === 'resistance') {
         const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
-        const { count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0 });
+        const { count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0, bonus });
         const results = realize(count);
         const { roll: created, stress } = await resistanceRoll.mutateAsync({
           userId,
@@ -238,6 +263,7 @@ export function RollPanel({
           dice: count,
           results,
           zeroDice,
+          ...(bonusNote ? { note: bonusNote } : {}),
           traumaLog,
         });
         setLast({ outcome: created.outcome, results: created.results, stress });
@@ -257,6 +283,7 @@ export function RollPanel({
         assist: assistant !== null,
         harmPenalty: isActionRoll ? appliedHarmPenalty : 0,
         fortune,
+        bonus: isActionRoll ? bonus : 0,
       });
       const results = realize(count);
       // Record the moves so the feed shows what was spent / accepted.
@@ -265,6 +292,7 @@ export function RollPanel({
         notes.push(t('components.rollPanel.harmPenaltyNote'));
       if (isActionRoll && push) notes.push(t('components.rollPanel.pushedNote'));
       if (assistant) notes.push(t('components.rollPanel.assistNote', { name: assistant.name }));
+      if (isActionRoll && bonusNote) notes.push(bonusNote);
       if (isActionRoll && bargain)
         notes.push(
           bargainNote.trim()
@@ -291,15 +319,8 @@ export function RollPanel({
         traumaLog,
       });
       setLast({ outcome: created.outcome, results: created.results, kind: mode });
-      const xp = created.desperateXp;
-      setDesperateNote(
-        xp?.track
-          ? t('components.rollPanel.desperateXpNote', {
-              attribute: attributeName(xp.track),
-              marks: xp.marks,
-            })
-          : null
-      );
+      // The roll is saved either way; a desperate-XP side-effect failure is its own note.
+      setDesperateNote(desperateCopy(created.desperateXp, created.desperateXpError));
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
     } finally {
@@ -309,7 +330,7 @@ export function RollPanel({
 
   // Rating-0 actions roll 2 dice and take the lowest — surface that so it doesn't read as a bug.
   const isZeroDiceAction =
-    mode === 'action' && (actions?.find(a => a.name === action)?.rating ?? 1) <= 0;
+    mode === 'action' && (actions?.find(a => a.name === action)?.rating ?? 1) + bonus <= 0;
 
   return (
     <Stack direction='column' gap='sm'>
@@ -496,6 +517,24 @@ export function RollPanel({
             {resistOptions.map(o => (
               <option key={o.name} value={o.name}>
                 {o.name} {t('components.rollPanel.diceSuffix', { count: o.rating })}
+              </option>
+            ))}
+          </Select>
+        )}
+        {(mode === 'action' || mode === 'resistance') && (
+          // Round 4 — the bot's `bonus:` on the web: dice an ability or upgrade adds/removes.
+          <Select
+            aria-label={t('components.rollPanel.bonusLabel')}
+            title={t('components.rollPanel.bonusHint')}
+            selectSize='sm'
+            value={bonus}
+            onChange={e => setBonus(Number(e.target.value))}
+          >
+            {BONUS_DICE.map(n => (
+              <option key={n} value={n}>
+                {n === 0
+                  ? t('components.rollPanel.bonusNone')
+                  : t('components.rollPanel.bonusOption', { signed: signedDice(n) })}
               </option>
             ))}
           </Select>

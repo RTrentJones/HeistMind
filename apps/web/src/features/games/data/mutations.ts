@@ -56,6 +56,19 @@ export function useDeleteGame() {
   });
 }
 
+/**
+ * GM: set the campaign's PLAYER limit (the GM's seat is on top — 00026). Refreshes the hub so the
+ * seat count, the invite card and the members panel agree.
+ */
+export function useSetPlayerLimit(gameId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { players: number }) =>
+      getRepositories().games.setPlayerLimit(gameId, vars.players).then(unwrap),
+    onSuccess: () => qc.invalidateQueries({ queryKey: gameKeys.all }),
+  });
+}
+
 /** GM: remove a player (status 'removed'; their characters go back to them as standalone). */
 export function useRemovePlayer(gameId: string) {
   const qc = useQueryClient();

@@ -1,6 +1,7 @@
 // Type adapters for the Game entity (development/production schema).
 import type { Tables, TablesInsert, TablesUpdate } from '../supabase-types';
 import type { Game, CreateGameData, UpdateGameData, GameState } from '@heist-mind/core';
+import { DEFAULT_PLAYER_LIMIT, seatsForPlayerLimit } from '@heist-mind/core';
 import { parseSupabaseDate, parseSupabaseJson, toJson } from './profile-adapter';
 
 type GameRow = Tables<{ schema: 'development' }, 'games'>;
@@ -15,7 +16,8 @@ export function fromSupabaseGame(row: GameRow): Game {
     name: row.name,
     description: row.description,
     state: (row.state ?? 'draft') as GameState,
-    maxPlayers: row.max_players ?? 6,
+    // Seats (the GM's included); the column default is the GM + 20 players since 00026.
+    maxPlayers: row.max_players ?? seatsForPlayerLimit(DEFAULT_PLAYER_LIMIT),
     currentPlayers: row.current_players ?? 0,
     allowCoGMs: row.allow_co_gms ?? false,
     allowSpectators: row.allow_spectators ?? false,
@@ -36,7 +38,9 @@ export function toSupabaseGameInsert(data: CreateGameData, userId: string): Game
     ruleset_id: data.rulesetId,
     name: data.name,
     description: data.description ?? null,
-    max_players: data.maxPlayers ?? 6,
+    // Omitted unless set, so the DB default (00026: the GM + 20 players) applies — the old
+    // hard-coded 6 seated only 5 players.
+    ...(data.maxPlayers !== undefined ? { max_players: data.maxPlayers } : {}),
     allow_co_gms: data.allowCoGMs ?? false,
     allow_spectators: data.allowSpectators ?? false,
     invite_only: data.inviteOnly ?? true,

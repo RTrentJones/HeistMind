@@ -13,8 +13,7 @@ import {
   effectLabel,
   outcomeLabel,
   positionLabel,
-  entryWho,
-  rollKindLabel,
+  entryParts,
 } from '@/features/rolls/lib/labels';
 
 // Non-dice campaign events — shown with a neutral kind badge instead of a dice outcome.
@@ -112,17 +111,18 @@ export function RollLog({ gameId }: { gameId: string }) {
           ? t('components.rollLog.critResisted')
           : t('components.rollLog.resisted', { count: resistDelta });
     const created = new Date(r.createdAt);
+    const parts = entryParts(r, who, t);
     return (
       <Card key={r.id} variant='outline'>
         <Stack direction='row' justify='between' align='center' className='flex-wrap'>
           <div>
             <Text as='strong' className='block'>
-              {r.label ?? rollKindLabel(r.kind, t)}
+              {parts.title}
             </Text>
             {/* Its own line, joined without a leading separator (pixel review #13). */}
             <Text variant='muted' size='sm' className='block'>
               {[
-                entryWho(r.label, who),
+                parts.who,
                 r.results.length > 0 ? `[${r.results.join(', ')}]` : '',
                 // F7 — a zero-pool roll shows why two dice appear: 2d, take the lowest.
                 r.zeroDice || (r.dice === 0 && r.results.length > 0)
@@ -135,9 +135,9 @@ export function RollLog({ gameId }: { gameId: string }) {
                 .join(' · ')}
             </Text>
             {/* Free-text note — e.g. a pushed roll, a devil's bargain, or a recorded result. */}
-            {r.note ? (
+            {parts.note ? (
               <Text variant='muted' size='sm' className='block italic'>
-                {r.note}
+                {parts.note}
               </Text>
             ) : null}
           </div>

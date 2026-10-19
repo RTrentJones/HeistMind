@@ -2,7 +2,7 @@
 
 import { Suspense, use } from 'react';
 import Link from 'next/link';
-import type { GameState } from '@heist-mind/core';
+import { campaignCapacity, type GameState } from '@heist-mind/core';
 import {
   Badge,
   Button,
@@ -156,7 +156,7 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
 
         {isGm && (
           <CampaignSetup initiallyOpen={!hasPlayers}>
-            <InviteCodeSection gameId={gameId} />
+            <InviteCodeSection gameId={gameId} capacity={campaignCapacity(game)} />
             <MembersPanel game={game} userId={user?.id} />
             <DiscordLinkCard campaignName={game.name} />
           </CampaignSetup>

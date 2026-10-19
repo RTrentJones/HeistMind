@@ -18,6 +18,31 @@ export type DashboardCampaign = GameWithRole;
 export interface DashboardActivity {
   roll: Roll;
   gameName: string;
+  /** Older crew updates folded into this (newest) crew row — round 4 P2-N6. */
+  collapsed?: number;
+}
+
+/**
+ * Fold each run of back-to-back CREW events from the same campaign into its newest row with a
+ * count: marking crew XP is one log row per box ("Crew XP 6/8", "7/8", "8/8"…), which pushed
+ * everything else out of a six-row feed. Input newest-first; character/roll rows never fold.
+ */
+export function collapseCrewRuns(entries: DashboardActivity[]): DashboardActivity[] {
+  const out: DashboardActivity[] = [];
+  for (const entry of entries) {
+    const prev = out[out.length - 1];
+    if (
+      prev &&
+      entry.roll.kind === 'crew' &&
+      prev.roll.kind === 'crew' &&
+      prev.roll.gameId === entry.roll.gameId
+    ) {
+      out[out.length - 1] = { ...prev, collapsed: (prev.collapsed ?? 0) + 1 };
+      continue;
+    }
+    out.push(entry);
+  }
+  return out;
 }
 
 /**
@@ -76,9 +101,11 @@ export function useDashboardData(userId: string | undefined): DashboardData {
       const gameName = activityGames[i]?.game.name ?? '';
       for (const roll of q.data ?? []) merged.push({ roll, gameName });
     });
-    return merged
-      .sort((a, b) => new Date(b.roll.createdAt).getTime() - new Date(a.roll.createdAt).getTime())
-      .slice(0, MAX_ACTIVITY);
+    return collapseCrewRuns(
+      merged.sort(
+        (a, b) => new Date(b.roll.createdAt).getTime() - new Date(a.roll.createdAt).getTime()
+      )
+    ).slice(0, MAX_ACTIVITY);
     // activityQueries identity changes each render; key on the resolved data via a join of states.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityQueries.map(q => q.dataUpdatedAt).join(','), campaigns]);
