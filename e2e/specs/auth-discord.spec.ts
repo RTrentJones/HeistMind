@@ -44,6 +44,20 @@ test.describe('Discord sign-in wiring', () => {
       await page.goto('/');
       await page.getByRole('button', { name: 'Run a campaign' }).first().click();
       await page.waitForURL(/\/auth\/signin\?next=%2Fgames%2Fnew/, { timeout: 15_000 });
+
+      // F102 — with JS genuinely OFF the OAuth (client-side PKCE) can't start: no endless spinner,
+      // a plain explanation and a way back instead, inside a <main> landmark.
+      const noscript = page.getByTestId('signin-noscript');
+      await expect(noscript).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Sign-in needs JavaScript' })
+      ).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Taking you to Discord' })).toBeHidden();
+      await expect(page.getByRole('link', { name: 'Back to HeistMind' })).toHaveAttribute(
+        'href',
+        '/'
+      );
+      await expect(page.getByRole('main')).toHaveCount(1);
     } finally {
       await noJs.close();
     }

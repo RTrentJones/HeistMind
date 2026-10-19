@@ -9,6 +9,7 @@ import { useCreateInviteCode, useRevokeInviteCode } from '@/features/invitations
 import { useComponentTranslation } from '@/lib/i18n/hooks';
 import { ConfirmButton } from '@/shared/components/ConfirmButton';
 import { QueryError, QueryLoading } from '@/shared/components/QueryStates';
+import { seatSummary } from './PlayerLimitControl';
 
 /**
  * GM-only: create, share and revoke a campaign's join codes. Each code is shareable two ways — the
@@ -82,17 +83,12 @@ export function InviteCodeSection({
           {t('inviteSection.description')}
         </Text>
         {capacity && (
-          <Text
-            variant='muted'
-            size='sm'
-            data-testid='invite-seats'
-            className={capacity.full ? 'text-semantic-error' : undefined}
-          >
+          // The error TEXT token (-fg), not the fill: the fill failed dark-mode contrast (F102).
+          <Text variant={capacity.full ? 'error' : 'muted'} size='sm' data-testid='invite-seats'>
             {capacity.full
-              ? t('inviteSection.seatsFull', { limit: capacity.limit })
+              ? t('inviteSection.seatsFull', { summary: seatSummary(t, capacity, false) })
               : t('inviteSection.seatsOpen', {
-                  players: capacity.players,
-                  limit: capacity.limit,
+                  summary: seatSummary(t, capacity, false),
                   open: capacity.open,
                 })}
           </Text>
@@ -180,7 +176,7 @@ export function InviteCodeSection({
           {t('inviteSection.generate')}
         </Button>
         {error && (
-          <Text variant='muted' size='sm' className='text-semantic-error' role='alert'>
+          <Text variant='error' size='sm' role='alert'>
             {error}
           </Text>
         )}

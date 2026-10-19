@@ -149,6 +149,117 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
     ≈36 options on BitD.
 - **status:** fixed (branch `feat/product-r5`)
 
+### F102 — Round-5 pixel UX: phone wizard wider than the phone, dark error text, seat copy, sign-in gaps
+
+- **severity:** S1 for the wizard (every BitD character built on a phone: the identity/vice step
+  panned sideways and its Next sat off-screen) · S2 for dark-mode error contrast and the invite
+  lost through the header sign-in · S3 for the rest · **type:** CX-flaw — from the round-5 pixel
+  audit (`round5-pixel.md` P0-1, P1-1, P2-1…P2-5, P2-7, P2-9) plus the round-5 product review
+  (`round5-review.md` P2-2, P2-3; its vice-step friend/rival overflow is P0-1)
+- **what was wrong:**
+  - **Wizard at 360 (P0-1):** the vice step's Close friend / Rival `<select>`s list "name —
+    description" options, and a native select sizes to its longest option: 418px. The design-system
+    `Select` had no width cap and its parent `Stack` was `align='start'`, so the page went **438px**
+    wide; the fixed Cancel/Back/Next footer is pinned to the widened layout viewport, so Next sat at
+    x 353–418, top 843 on a 360×740 screen — a tap there hit `div.mx-auto`. Present since at least
+    round 4: those rounds' 360 "review" shots were still on this step.
+  - **Why two pixel rounds and the e2e gate missed it (methodology):** the overflow checks compared
+    `scrollWidth` with `window.innerWidth`. Under phone emulation (`isMobile`) the LAYOUT viewport
+    widens to fit overflowing content, so `innerWidth` grew to 438 along with `scrollWidth` and the
+    check passed. `mobile-overflow.spec.ts` also never visited the BitD vice step (it built its
+    character at 1280px because the dev-only Query devtools bubble covers Next at 360).
+  - **Dark error text (P1-1):** six text uses of `text-semantic-error` — the error FILL token, the
+    same in both themes — read 4.07–4.23:1 on the dark surfaces (invite "seats full" line, limit
+    hint, `/games` join box, invite/faction/account errors).
+  - **Seat copy (P2-4):** "All 1 player seats are taken", "1 of 1 players"; the invite card said
+    "1 of 20 player seats taken — 19 open" while the Players card said "1 of 20 players".
+  - **Players card (P2-5):** the limit control sat between the member list and the "Removing a
+    player hands their characters back…" explainer for the Remove buttons.
+  - **Crew (P2-2, P2-3):** the GM's held-ability **Remove** was squeezed to 42px with "Remove" cut
+    off at 360; 13 "via Veteran" rows sat between the crew's own list and the upgrades (~4,900px of
+    picker at 360), under small-caps headings that wrapped to 2–3 lines.
+  - **Ability dice (P2-7):** "Hunt (0d)" with "+2d from an ability" still read as zero dice — nothing
+    showed the pool the roll would throw.
+  - **Dashboard CLS (P2-9):** the campaigns / characters lists loaded as a one-line spinner /
+    "Loading…" that grew into the card grid, pushing everything below ~90–180px at 768 (0.03–0.13).
+  - **`/auth/signin` (P2-1, review P2-3):** no `<main>` (axe `landmark-one-main` + `region`, the only
+    beta axe hits), a card running edge to edge at 360, and with JavaScript off a spinner forever.
+  - **Invite lost (review P2-2):** on `/join/<code>` the header's Sign in / Sign up form sent no
+    `next`, so after OAuth the user landed on the dashboard, not back on the invite.
+- **fix:**
+  - `packages/ui` `Select`: `min-w-0 max-w-full truncate` on the control AND its label wrapper (+ a
+    `wrapperClassName` prop) — no Select can widen its container; a long chosen label truncates in
+    the trigger, the platform picker wraps. `IdentityStep` contact selects are `w-full`. Sweep: every
+    other Select (roll panel, gear, XP, trauma, editor, crew claims/type, clocks, factions, game
+    form, attach) inherits the cap; the captured wizard/sheet/hub routes have no element past 360.
+  - Error copy uses `Text variant='error'` (`text-semantic-error-fg`); no text use of the fill token
+    remains in `apps/` (icons/spinners keep it — non-text, 3:1).
+  - One `seatSummary` ("N of M player(s)", i18next `_one`/`_other` on the limit) shared by the
+    Players and invite cards; "— K open" / "— the campaign is full, so no code…"; the
+    below-players hint is pluralised too. `NestedKeyOf` accepts a plural key's base name.
+  - `MembersPanel`: list → removed → explainer → a divided **Player limit** sub-section (h3; the
+    field is named by `aria-label`); players see the seats line under the list.
+  - `CrewAbilitiesList`: description `min-w-0 flex-1`, Remove `shrink-0`. `CrewAdvancePicker`:
+    the Veteran group is a native `<details>`, collapsed by default (summary with a count + chevron,
+    Enter/Space toggles); group headings `text-sm` sans.
+  - `RollPanel`: a muted **"Pool: Nd"** beside Roll/Resist from the same `rollPool` inputs as the
+    roll; the zero-dice hint follows the pool ("No dice in the pool — roll 2…").
+  - `Dashboard`: campaigns/characters loading reserve one card row (`GridSkeleton`: one card on
+    phones, two from `md`, `h-28`, `role=status aria-busy`).
+  - `/auth/signin` + `/auth/callback`: `Section as='main'`, `px-4` gutter, `max-w-md` card;
+    `/auth/signin` adds a `<noscript>` block ("Sign-in needs JavaScript" + Back to HeistMind) that
+    hides the spinner. `AuthHeader` passes the current path as `next` (not on `/` or `/auth/*`).
+  - **Methodology:** `mobile-overflow.spec.ts` now runs in a real phone context (`isMobile` +
+    `hasTouch`, devtools bubble hidden) and compares against `visualViewport.width`; it walks every
+    Brackwater wizard step AT 360, and a new BitD test reaches the vice step, picks the long
+    contacts, asserts the page fits and that Next is inside the visual viewport, hit-testable, and
+    advances to Review on a real `touchscreen.tap` at its on-screen centre. The pixel tooling's
+    `MEASURE` (`capture-u5.mjs`) uses `visualViewport` too.
+- **measured** (prod build `next start` :3117 against stack2, `capture-u5.mjs`, 27 routes × 360/768/1440
+  × light/dark = 162 shots, vs the round-5 baseline `pixel-round5/metrics-final.json`, same tree base):
+  - Phone overflow: 360 shots wider than 360 **8 → 0** (wizard identity / vice / both "review"
+    shots were 438px). The 360 "review" routes now really reach Review (h1 "Review"; page 2305 →
+    1225px). Probe: Next at x 274–341, top 682, hit-test = Next, `innerWidth` 360 (was x 353–418,
+    top 843, `innerWidth` 438). Horizontal scroll by `visualViewport`: 0/162.
+  - axe on the same shots: **landmark-one-main 8 → 0, region 8 → 0, color-contrast 6 → 1** (the one
+    left is the wizard stepper's 12px "complete" pill in light, 4.27:1 — pre-existing token, see
+    residue).
+  - CLS (max of themes): dashboard GM 768 0.067 → 0.035, 360 0.044 → 0; player 768 0.079 → 0.026,
+    360 0.071 → 0; joiner 768 **0.131 → 0.006**, 1440 0.05 → 0.007; hub-gm-limit-invalid 768
+    0.086 → 0.041; everything else unchanged (≤ 0.042). Probe: dashboard joiner 768 0.043 → 0.007,
+    GM 0.080 → 0.026.
+  - Page length: hub fresh GM (crew picker) 360 **9586 → 7000**, 768 6089 → 4903, 1440 5912 → 4806;
+    hub GM ±4px; full-house GM +34–48px (Player limit sub-heading + divider).
+  - Sub-44px targets: unchanged on every captured route except hub GM 768/1440 −4 and the 360
+    review shots (now the real Review step).
+  - One h1 on every shot; console errors only the expected 400s on the "campaign full" joins.
+- **tests:** unit — `packages/ui` `Select` (capped/shrinkable/truncating, wrapper too),
+  `membership-controls` (one seat phrasing in both cards, "1 of 1 player", order list → removed →
+  explainer → Player limit, hint in `text-semantic-error-fg`), `CrewAdvancePicker` (Veteran
+  `<details>` collapsed by default, opens; Remove `shrink-0`), `RollPanel.local` (pool preview
+  follows the action, ability dice and push; zero-dice hint follows the pool), `Dashboard`
+  (card-row skeletons, busy). e2e — `mobile-overflow` (rewritten: phone emulation, visual viewport,
+  every wizard step, the BitD tap test — **verified it FAILS on the pre-F102 `Select`/`IdentityStep`**:
+  "wizard: Vice has elements past 360px … select → 489px" and "BitD wizard: vice / contacts step …
+  select → 438px, button Next → 419px"; green after), `join-link` (header sign-up carries
+  `next=/join/<code>`; new seat copy), `auth-discord` (no-JS fallback, one `main`), `gm-crew`
+  (Veteran group hidden until the summary is opened with Enter). Targeted e2e, serially on :3116
+  dev against stack2 (19 specs, **61/61 passed**): mobile-overflow, join-link, auth-discord,
+  auth-callback, signin-gates, gm-crew, membership, dashboard, standalone-dice, gm-dice-rolls,
+  player-characters, gm-action-ratings, gm-character-validation, heading-order, ssr-hydration,
+  mobile-sheet, standalone-characters, gm-resistance-downtime, join-via-code. `pnpm validate` green.
+  The Veteran disclosure is size-agnostic (its summary carries the count), so it holds when BitD
+  crews gain their full own lists (~36 Veteran routes).
+- **residue / skipped:** stepper "complete" pill text 4.27:1 in light (token-wide, wants a design
+  call); Discord app id on beta/prod (operator, round-4 P1-7); "Create a join code" under an active
+  code (P2-6 — needs a product call on whether multiple live codes are wanted); dashboard folded
+  crew-row styling and outcome chips (P2-8), section headers wrapping at 360 (P2-10), join-full
+  primary action (P2-11 — which CTA leads is a product call), expected 400/403 console lines
+  (P2-12), standalone hero chip gap (P2-13), the round-4 carry-overs (P2-14), the sign-in empty
+  status ring on first paint; `next` from the header carries the path only (no query string).
+  Round-5 product P1-2 (push / ability dice / assist stay selected after a roll) not in scope here.
+- **status:** fixed (branch `feat/ux-r5`)
+
 ### F101 — Ops: migration deploy skipped on registry rate limits; prod web not ordered after its schema; double-run deploy gate
 
 - **severity:** S1 (a flaky migration job on the first `main` promotion would put prod web code

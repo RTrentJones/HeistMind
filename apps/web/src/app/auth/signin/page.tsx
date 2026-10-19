@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Button,
@@ -72,28 +73,46 @@ function StartSignIn() {
 function SignInShell({ retry, retrying = false }: { retry?: () => void; retrying?: boolean }) {
   const { t } = useAuthTranslation();
   return (
-    <Section variant='hero' padding='none' width='full' className='min-h-screen'>
-      <Stack justify='center' align='center' className='min-h-screen'>
-        <Card>
+    // F102 — a <main> landmark (axe landmark-one-main / region) and a 16px gutter: the card ran
+    // edge to edge at 360.
+    <Section as='main' variant='hero' padding='none' width='full' className='min-h-screen'>
+      <Stack justify='center' align='center' className='min-h-screen px-4'>
+        <Card className='w-full max-w-md'>
           <CardContent>
             <Stack gap='lg' align='center' className='text-center'>
-              <StatusIcon
-                status='loading'
-                size='xl'
-                animation='pulse'
-                icon={<LoadingSpinner size='md' variant='accent' speed='normal' />}
-              />
-              <Stack gap='sm' align='center'>
-                <Heading level='h2' as='h1' variant='primary'>
-                  {t('signin.title')}
-                </Heading>
-                <Text variant='secondary'>{t('signin.waiting')}</Text>
-              </Stack>
-              {retry && (
-                <Button variant='default' onClick={retry} loading={retrying}>
-                  {t('signin.retry')}
-                </Button>
-              )}
+              {/* F102 — without JavaScript the OAuth (client-side PKCE) can't start, so the
+                  spinner would pulse forever: hide it and say so, with a way back. */}
+              <noscript>
+                <style>{'.signin-js-only{display:none!important}'}</style>
+                <Stack gap='sm' align='center' data-testid='signin-noscript'>
+                  <Heading level='h2' as='h1' variant='primary'>
+                    {t('signin.noJsTitle')}
+                  </Heading>
+                  <Text variant='secondary'>{t('signin.noJs')}</Text>
+                  <Link href='/' className='text-sm font-medium text-brand-primary underline'>
+                    {t('signin.noJsHome')}
+                  </Link>
+                </Stack>
+              </noscript>
+              <div className='signin-js-only contents'>
+                <StatusIcon
+                  status='loading'
+                  size='xl'
+                  animation='pulse'
+                  icon={<LoadingSpinner size='md' variant='accent' speed='normal' />}
+                />
+                <Stack gap='sm' align='center'>
+                  <Heading level='h2' as='h1' variant='primary'>
+                    {t('signin.title')}
+                  </Heading>
+                  <Text variant='secondary'>{t('signin.waiting')}</Text>
+                </Stack>
+                {retry && (
+                  <Button variant='default' onClick={retry} loading={retrying}>
+                    {t('signin.retry')}
+                  </Button>
+                )}
+              </div>
             </Stack>
           </CardContent>
         </Card>

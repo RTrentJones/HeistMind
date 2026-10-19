@@ -49,8 +49,8 @@
     "inviteSection": {
       "title": "Invite players",
       "description": "Send players an invite link (it works even if they haven't signed in yet), or the bare join code to type on the Campaigns page. Each code works for up to 20 joins while the campaign has an open player seat; revoke it any time.",
-      "seatsOpen": "{{players}} of {{limit}} player seats taken — {{open}} open. Change the limit under Players.",
-      "seatsFull": "All {{limit}} player seats are taken, so no code will let anyone in until you raise the player limit under Players.",
+      "seatsOpen": "{{summary}} — {{open}} open. Change the limit under Players.",
+      "seatsFull": "{{summary}} — the campaign is full, so no code will let anyone in until you raise the player limit under Players.",
       "generate": "Create a join code",
       "generateFailed": "Couldn't create a join code.",
       "copy": "Copy code",
@@ -352,7 +352,8 @@
       "positionHelp": "Controlled (act on your terms) → Risky (the default) → Desperate (worst position, worst consequences).",
       "effectHelpTitle": "Effect — how much you accomplish",
       "effectHelp": "Limited (a partial result) → Standard → Great (more than usual).",
-      "zeroDiceHint": "No rating in this action — roll 2 dice and take the lowest.",
+      "zeroDiceHint": "No dice in the pool — roll 2 dice and take the lowest.",
+      "poolPreview": "Pool: {{count}}d",
       "push": "Push (+1d, 2 stress)",
       "bargain": "Devil's bargain (+1d)",
       "bargainPlaceholder": "The complication you accept…",
@@ -577,6 +578,8 @@
       "pickerGroupOwnNamed": "From your crew's list ({{type}})",
       "pickerGroupVeteran": "Through Veteran — another crew type's ability",
       "pickerGroupVeteranHelp": "Takes Veteran and this ability together in one pick.",
+      "pickerGroupVeteranCount_one": "{{count}} ability from another crew type",
+      "pickerGroupVeteranCount_other": "{{count}} abilities from other crew types",
       "pickerGroupUpgrades": "Upgrades — mark two boxes",
       "markUpgradeBoxes": "Mark 2 upgrade boxes: {{name}} ({{boxes}}/{{size}})",
       "markOtherUpgrades": "Mark 2 boxes on other upgrades",
@@ -767,13 +770,15 @@
       "leftNote": "left the campaign",
       "leftToast": "You left the campaign",
       "leaveFailed": "Couldn't leave the campaign",
-      "seats": "{{players}} of {{limit}} players",
-      "seatsFull": "{{players}} of {{limit}} players — the campaign is full",
-      "limitLabel": "Player limit",
+      "seats_one": "{{players}} of {{count}} player",
+      "seats_other": "{{players}} of {{count}} players",
+      "seatsFull": "{{summary}} — the campaign is full",
+      "limitHeading": "Player limit",
       "limitSave": "Save limit",
       "limitHelp": "How many players can join (you, the GM, aren't counted) — up to {{max}}.",
       "limitRange": "Choose a whole number from {{min}} to {{max}}.",
-      "limitBelowPlayers": "{{players}} players are already in — remove someone first to go lower.",
+      "limitBelowPlayers_one": "{{count}} player is already in — remove them first to go lower.",
+      "limitBelowPlayers_other": "{{count}} players are already in — remove someone first to go lower.",
       "limitSaved": "Player limit set to {{limit}}",
       "limitFailed": "Couldn't save the player limit."
     },
@@ -846,7 +851,10 @@
     "signin": {
       "title": "Taking you to Discord",
       "waiting": "Starting your Discord sign-in — this usually takes a second.",
-      "retry": "Continue with Discord"
+      "retry": "Continue with Discord",
+      "noJsTitle": "Sign-in needs JavaScript",
+      "noJs": "HeistMind signs you in with Discord in your browser, which needs JavaScript. Turn it on (or try another browser), then sign in again.",
+      "noJsHome": "Back to HeistMind"
     }
   },
   "pages": {

@@ -10,6 +10,11 @@ import { cn } from '../lib/utils';
 
 const selectVariants = cva(
   [
+    // F102 — never wider than its container: a native <select> sizes to its LONGEST option, so a
+    // long contact/ability label blew the BitD wizard out to 438px at 360 and pushed the fixed
+    // footer off-screen. Capped (and allowed to shrink in a flex row), the trigger truncates the
+    // chosen label with an ellipsis; the option list itself is the platform picker, which wraps.
+    'min-w-0 max-w-full truncate',
     'rounded-md border border-border-primary bg-background-secondary text-foreground-primary',
     'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary',
     'focus-visible:ring-offset-1 focus-visible:ring-offset-background-primary',
@@ -44,6 +49,8 @@ export interface SelectProps
   hideLabel?: boolean;
   /** Error message; also flips the control to the error state. */
   error?: string;
+  /** Classes for the label/error wrapper (rendered only with a visible label or an error). */
+  wrapperClassName?: string;
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
@@ -54,6 +61,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       label,
       hideLabel,
       error,
+      wrapperClassName,
       id,
       'aria-label': ariaLabel,
       children,
@@ -88,7 +96,9 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       // Same label box + gap as Input (inline, leading-none, space-y-2) so a Select beside an Input
       // lines up label-to-label and control-to-control (F99 — they sat ~4px apart).
-      <div className='space-y-2'>
+      // min-w-0/max-w-full: the wrapper is often the flex item, so it must not take the select's
+      // intrinsic (longest-option) width either (F102).
+      <div className={cn('min-w-0 max-w-full space-y-2', wrapperClassName)}>
         {showLabel && (
           <label
             htmlFor={selectId}

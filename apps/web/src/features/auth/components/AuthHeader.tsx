@@ -53,6 +53,11 @@ export function AuthHeader() {
   const { signOut } = useAuthActions();
   const { t } = useTranslation();
   const pathname = usePathname();
+  // F102 — the header's sign-in returns the user to the page they were on (an invite link
+  // /join/<code> used to land on the dashboard after OAuth — the invite was lost). Not for the
+  // landing or the auth routes themselves; `SignInForm` runs it through `safeNextPath`.
+  const signInNext =
+    pathname && pathname !== '/' && !pathname.startsWith('/auth') ? pathname : null;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
@@ -216,7 +221,7 @@ export function AuthHeader() {
                   // Prod is behind the always-on coming-soon gate (main only) — no sign-in is shown.
                   // A real form (P2-N2): these paint from SSR, so a click before hydration
                   // submits to /auth/signin instead of hitting a not-yet-attached onClick.
-                  <SignInForm>
+                  <SignInForm next={signInNext}>
                     <Button
                       type='submit'
                       variant='ghost'

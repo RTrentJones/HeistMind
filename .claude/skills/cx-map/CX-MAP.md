@@ -193,8 +193,12 @@ bootstrap).
   band for under a second before Start here replaces it. Activity rows now name **other players'
   characters** too (the GM's feed read "Prowess in … · resisted" with no who): the dashboard loads
   the roster of each campaign whose recent activity mentions a character the viewer doesn't own.
-- _Last verified:_ 2026-10-19 (F103: crew folding only within one kind of event; F100:
-  pre-hydration sign-in forms, crew activity rows + folding;
+- **List skeletons (F102):** while the campaigns / characters lists load, each reserves a card row
+  (one card on phones, two from `md`, `h-28`) as an `aria-busy` status instead of a one-line
+  spinner / "Loading…" that grew into the grid and pushed everything below ~90–180px at 768
+  (dashboard 768 CLS 0.04–0.08 → 0.01–0.03).
+- _Last verified:_ 2026-10-19 (F103: crew folding only within one kind of event; F102: list
+  skeletons; F100: pre-hydration sign-in forms, crew activity rows + folding;
   F99: reserved quick-action space, activity names every character); 2026-10-18 (F98: no
   signed-out flash; F96: "Your dashboard" title, PageShell, Start here first without quick actions,
   load-gated subtitle, no email; previously F94 Start here / CTA intents, F91)
@@ -216,7 +220,8 @@ bootstrap).
   full URLs, `//host`, backslashes, control chars and `/auth/*` fall back to `/` (no open redirect).
 - **Nav:** → `next` (e.g. `/join/<code>`, `/games/new`, the gated page) or `/`; → `/` (cancel) or
   `/?error=auth_failed` on failure.
-- _Last verified:_ 2026-10-17 (F94)
+- **Layout (F102):** inside a `<main>` landmark, card `max-w-md` with a 16px phone gutter.
+- _Last verified:_ 2026-10-19 (F102 landmark + gutter); 2026-10-17 (F94)
 
 ### `/auth/signin` — no-JS sign-in start (F100)
 
@@ -226,7 +231,12 @@ bootstrap).
   starts the same Discord OAuth (`useSignIn`, so `next` rides the callback URL + sessionStorage).
   Shows "Taking you to Discord"; after 5s still here (a failure toast) → a **Continue with
   Discord** retry. Redirected to `/` by the coming-soon gate like every app route.
-- _Last verified:_ 2026-10-19 (F100)
+- **JavaScript off (F102):** the OAuth is client-side PKCE, so it can't start — a `<noscript>` block
+  hides the spinner and says **"Sign-in needs JavaScript"** (turn it on or try another browser) with
+  **Back to HeistMind** (`/`), instead of pulsing forever.
+- **Layout (F102):** a `<main>` landmark (axe `landmark-one-main` / `region`) and a `max-w-md` card
+  with a 16px gutter (it ran edge to edge at 360).
+- _Last verified:_ 2026-10-19 (F102: no-JS fallback, landmark, gutter; F100)
 
 ### `/join/[code]` — Invite link (F94)
 
@@ -238,7 +248,9 @@ bootstrap).
   join code" + home, instead of "You're invited" and a sign-in that could only fail.
 - **Signed out:** _"You're invited to a campaign"_ — what HeistMind is, the join code, the clickwrap
   and **Sign in with Discord to join**, which carries `next=/join/<code>` through OAuth so the person
-  lands back here and joins.
+  lands back here and joins. **The header's Sign in / Sign up buttons do too (F102)** — `AuthHeader`
+  passes the current path as `next` on every page except `/` and `/auth/*` (they used to drop the
+  invite and land on the dashboard).
 - **Signed in:** redeems once on arrival (`redeem_invite_code`; codes are trimmed/upper-cased —
   **case-insensitive**) → toast _"You joined the campaign"_ → the hub. Already a member → the hub,
   no use consumed. **Specific errors** (`data-reason`): not found, **revoked**, **expired**, **used
@@ -250,8 +262,8 @@ bootstrap).
   message, unchanged.
 - **After joining (F98):** lands on `/games/<id>?joined=1` → the hub's **"You're in — welcome to
   <campaign>"** banner (Build your character / Bring an existing character / Dismiss).
-- _Last verified:_ 2026-10-19 (F100: "campaign is full" error + retry); 2026-10-18 (F98:
-  malformed-link card, 400s, joined banner; introduced F94)
+- _Last verified:_ 2026-10-19 (F102: header sign-in keeps `next`; F100: "campaign is full" error +
+  retry); 2026-10-18 (F98: malformed-link card, 400s, joined banner; introduced F94)
 
 ### `/games` — Campaign hub (created + joined)
 
@@ -303,9 +315,11 @@ bootstrap).
     its label centres in the reserved two-label box, so at 360px it no longer sits ~8px above
     "Copy code".
     **F100:** the copy is truthful — "Each code works for up to 20 joins while the campaign has an
-    open player seat" — and a seats line under it says "N of M player seats taken — K open" (or,
-    full, "All M player seats are taken, so no code will let anyone in until you raise the player
-    limit under Players").
+    open player seat" — and a seats line under it says "N of M players — K open. Change the limit
+    under Players." (or, full, "N of M players — the campaign is full, so no code will let anyone in
+    until you raise the player limit under Players", in the error **text** token). **F102:** the
+    same pluralised "N of M player(s)" phrasing as the Players card (shared `seatSummary`; it read
+    "1 of 20 player seats taken" here vs "1 of 20 players" there, and "All 1 player seats").
   - **Players** (`MembersPanel`, everyone): active members with GM/Player badges and "(you)". The GM
     gets a two-click **Remove** per player (`remove_game_player` RPC: status `removed` — can't rejoin
     with a code — their characters go back to them as standalone, log note "was removed from the
@@ -315,8 +329,13 @@ bootstrap).
     My Characters, log note "left the campaign") → `/games`. A detached character keeps a readable
     ruleset (00023 gives its owner a copy of the GM's). Anyone else is refused at the API.
     **Player limit (F100, `PlayerLimitControl`):** everyone sees **"N of M players"** ("— the
-    campaign is full" at the limit); the GM gets a **Player limit** number field (1–30, never below
-    the players already in — the GM's own seat isn't counted) + **Save limit**. A new campaign
+    campaign is full" at the limit; F102: pluralised on the limit — "1 of 1 player"); the GM gets a
+    **Player limit** number field (1–30, never below the players already in — the GM's own seat
+    isn't counted) + **Save limit**. **F102 order:** members → "Removed: …" → the "Removing a player
+    hands their characters back…" explainer → a divided **Player limit** sub-section (h3 heading,
+    seats line, field + Save, help); the limit used to sit between the list and the explainer for
+    its Remove buttons. Players see the seats line right under the list. Hint/errors use the error
+    text token (`text-semantic-error-fg`; the fill token failed dark-mode contrast). A new campaign
     seats **20 players** (00026: DB default 21 seats = GM + 20; every existing campaign on the old
     hidden 6-seat default — 5 players — was moved to 21 once). The 6th joiner used to get "Something
     went wrong joining"; a full campaign now refuses with **"Campaign is full"** (P0001 → HTTP 400)
@@ -352,7 +371,12 @@ bootstrap).
     F99: options are **grouped under headings** — "From your crew's list (Shadows)" first, then
     "Through Veteran — another crew type's ability", then "Upgrades — mark two boxes" — and each is
     a ≥44px tappable row with a brand ring + tint when checked in both themes; plain spans only, so
-    no `<div>`-in-`<p>` hydration error on the GM hub) offers ONLY legal picks (core `takeableCrewAbilities`/`openCrewUpgrades`): a new crew chooses
+    no `<div>`-in-`<p>` hydration error on the GM hub. **F102:** the Veteran routes (13 on BitD)
+    sit in a native `<details>` disclosure, **collapsed by default** — summary "Through Veteran —
+    another crew type's ability / N abilities from other crew types" + chevron, Enter/Space toggles —
+    so the upgrades and "Take advance" are no longer ~4,900px down at 360; group headings are
+    `text-sm` sans, not wrapping small caps. The held-abilities list's GM **Remove** is `shrink-0`
+    beside a shrinking description — it was clipped to 42px at 360) offers ONLY legal picks (core `takeableCrewAbilities`/`openCrewUpgrades`): a new crew chooses
     its ONE **starting ability** from its own crew type's list ("Take starting ability" — the
     track is untouched); afterwards a FULL track is spent ("Take advance") on a new special
     ability from the crew's list — another type's only as **"via Veteran"** (Veteran + the pick in
@@ -403,7 +427,10 @@ bootstrap).
     (F100):** an **Ability dice** select (−3…+3, "No ability dice" default) on action AND resistance
     rolls — the bot's `/roll bonus:` / `/resist bonus:` — adds/removes dice an ability or upgrade
     sets (Ambush +1d, Iron Will +1d, Daredevil −1d); the pool never drops below 0d (2, take the
-    lowest) and the log row carries "Includes +Nd from an ability or upgrade." **Desperate XP
+    lowest) and the log row carries "Includes +Nd from an ability or upgrade." **Pool preview
+    (F102):** beside Roll / Resist a muted **"Pool: Nd"** follows every modifier (ability dice,
+    push / bargain, assist, harm) — "Hunt (0d)" with "+2d from an ability" used to still read zero;
+    the "No dice in the pool — roll 2 dice and take the lowest" hint follows the pool too. **Desperate XP
     reporting (F100):** a full attribute track says "your Prowess XP track is already full (6/6),
     so nothing was marked. Take an advance" (it used to stay silent), and a failed XP write
     reports "The roll is saved, but its desperate-roll XP couldn't be marked (…)" instead of
@@ -457,7 +484,9 @@ bootstrap).
   (the 448px loading box being reused at full width was the hub's main layout shift: CLS 0.18 →
   0.04 at 768); page `Container`s also fade in opacity-only (no slide-up).
 - _Last verified:_ 2026-10-19 (F103: full campaign on the setup summary, one-shot roll moves,
-  assist stress charged, saved-roll stress errors, BitD seven crew abilities per type; F100:
+  assist stress charged, saved-roll stress errors, BitD seven crew abilities per type; F102: one
+  pluralised seat phrasing, Player limit sub-section after the explainer, error-text token,
+  collapsed Veteran disclosure, crew Remove not clipped, pool preview; F100:
   player limit + seats, truthful invite copy, crew log rows,
   web ability dice, desperate-XP reporting, starting-pick latch; F99: grouped crew-advance picker,
   faction form alignment, Revoke alignment, opacity-only entrance, loading width); 2026-10-18 (F98:
@@ -673,8 +702,8 @@ bootstrap).
 
 ### `/characters/[characterId]` — Standalone character sheet
 
-- _Last verified:_ 2026-10-19 (F103: push + ability dice reset after a local roll; F100:
-  local-note copy names XP, ability dice); 2026-10-18 (F96:
+- _Last verified:_ 2026-10-19 (F103: push + ability dice reset after a local roll; F102: "Pool:
+  Nd" preview beside Roll; F100: local-note copy names XP, ability dice); 2026-10-18 (F96:
   display-only dice)
 
 - **File:** `apps/web/src/app/characters/[characterId]/page.tsx` — reuses `CharacterSheet`. With no
@@ -871,6 +900,11 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    Stupor, Weird — SRD text). The background/vice cards use the shared `SelectableCard` (F99 —
    they had regressed to a ring-less grey card with a red "Selected" badge). _Heritage/background
    are optional; a value that isn't one of the listed choices blocks the step (`IDENTITY_UNKNOWN`)._
+   **Close friend / Rival (F12)** ride the vice step as two full-width selects whose options read
+   "name — description"; **F102:** they are `w-full` and the design-system `Select` is
+   `min-w-0 max-w-full truncate` (wrapper too), so a long option truncates in the trigger instead
+   of sizing the control to it — it was 418px, the page 438px wide at 360, and the fixed
+   Cancel/Back/Next footer sat off-screen and untappable.
    **BitD's Vice step is REQUIRED (F100):** skipping it used to show "✓ Vice (complete)" and create
    a vice-less scoundrel; now the step is amber/incomplete, Next and Create are blocked with "Choose
    a vice — "Vice" must be completed." (core: a required per-field identity step needs that field —
@@ -883,7 +917,8 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    `getRepositories().characterManagement.createCharacterWithValidation`; on success the persisted
    draft (name, picks, step) is cleared so the next character starts fresh (F94).
 
-_Last verified:_ 2026-10-19 (F100: BitD vice required, step status consistent with validation;
+_Last verified:_ 2026-10-19 (F102: contact selects capped — the phone page no longer widens past
+360; F100: BitD vice required, step status consistent with validation;
 F99: phone footer reason row, shared SelectableCard, labelled review identity); 2026-10-18 (F97:
 all creation dots required, BitD heritage/background/vice steps
 with details fields); 2026-10-17 (F94: draft cleared after create, "playbook" not "crew role" copy;

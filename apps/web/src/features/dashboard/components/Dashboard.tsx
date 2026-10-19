@@ -1,16 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  Button,
-  Card,
-  Container,
-  Grid,
-  Heading,
-  LoadingSpinner,
-  Stack,
-  Text,
-} from '@heist-mind/ui';
+import { Button, Card, Container, Grid, Heading, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { PageShell } from '@/shared/components/AppShell';
 import { discordAppId } from '@/lib/discord-install';
@@ -264,7 +255,7 @@ export function Dashboard() {
                 )}
               </Stack>
               {campaignsStatus.loading ? (
-                <LoadingSpinner />
+                <GridSkeleton testId='dashboard-campaigns-loading' />
               ) : campaignsStatus.error ? (
                 <QueryError
                   testId='dashboard-campaigns-error'
@@ -297,7 +288,7 @@ export function Dashboard() {
                 </Button>
               </Stack>
               {charactersStatus.loading ? (
-                <QueryLoading />
+                <GridSkeleton testId='dashboard-characters-loading' />
               ) : charactersStatus.error ? (
                 <QueryError
                   testId='dashboard-characters-error'
@@ -347,5 +338,27 @@ export function Dashboard() {
         </Stack>
       </Container>
     </PageShell>
+  );
+}
+
+/**
+ * F102 — loading placeholder for a card grid, sized like its first row (one card on phones, two
+ * from `md`, ~a card tall). A one-line spinner/"Loading…" grew to the grid when the lists landed
+ * and pushed every section below it ~90–180px at 768 (CLS 0.03–0.13). Announced once as busy.
+ */
+function GridSkeleton({ testId }: { testId: string }) {
+  const { t } = useTranslation();
+  return (
+    <div role='status' aria-busy='true' data-testid={testId}>
+      <span className='sr-only'>{t('components.asyncState.loading')}</span>
+      <Grid cols={2} gap='md' aria-hidden='true'>
+        {[0, 1].map(i => (
+          <div
+            key={i}
+            className='h-28 animate-pulse rounded-lg border border-border-primary bg-background-secondary motion-reduce:animate-none max-md:[&:nth-child(2)]:hidden'
+          />
+        ))}
+      </Grid>
+    </div>
   );
 }
