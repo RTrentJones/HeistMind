@@ -87,9 +87,10 @@ function AuthCallback() {
 function CallbackShell({ error = null }: { error?: string | null }) {
   const { t } = useAuthTranslation();
   return (
-    <Section variant='hero' padding='none' width='full' className='min-h-screen'>
-      <Stack justify='center' align='center' className='min-h-screen'>
-        <Card>
+    // F102 — same <main> landmark + 16px phone gutter as /auth/signin.
+    <Section as='main' variant='hero' padding='none' width='full' className='min-h-screen'>
+      <Stack justify='center' align='center' className='min-h-screen px-4'>
+        <Card className='w-full max-w-md'>
           <CardContent>
             {error ? (
               <ErrorDisplay

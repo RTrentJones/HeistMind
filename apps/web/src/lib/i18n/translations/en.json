@@ -842,7 +842,10 @@
     "signin": {
       "title": "Taking you to Discord",
       "waiting": "Starting your Discord sign-in — this usually takes a second.",
-      "retry": "Continue with Discord"
+      "retry": "Continue with Discord",
+      "noJsTitle": "Sign-in needs JavaScript",
+      "noJs": "HeistMind signs you in with Discord in your browser, which needs JavaScript. Turn it on (or try another browser), then sign in again.",
+      "noJsHome": "Back to HeistMind"
     }
   },
   "pages": {

@@ -82,6 +82,21 @@ test.describe('invite link /join/<code>', () => {
       expect(await page.evaluate(() => sessionStorage.getItem('heistmind.auth.next'))).toBe(
         `/join/${campaign.code}`
       );
+
+      // F102 — the HEADER's "Sign Up with Discord" keeps the invite too (it sent no `next`, so
+      // OAuth landed on the dashboard and the invite was lost).
+      authorizeUrl = '';
+      await page.goto(`/join/${campaign.code}`);
+      await expect(
+        page.getByRole('heading', { level: 1, name: /you're invited to a campaign/i })
+      ).toBeVisible({ timeout: 20_000 });
+      await page
+        .getByRole('banner')
+        .getByRole('button', { name: /sign up with discord/i })
+        .click();
+      await page.waitForURL(/\/legal$/, { timeout: 20_000 });
+      const headerRedirect = new URL(new URL(authorizeUrl).searchParams.get('redirect_to') ?? '');
+      expect(headerRedirect.searchParams.get('next')).toBe(`/join/${campaign.code}`);
     } finally {
       await anon.close();
       await gm.dispose();
