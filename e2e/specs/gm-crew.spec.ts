@@ -8,6 +8,10 @@ import { createCampaign, uniqueName } from '../support/rulesets';
 
 test.describe.configure({ timeout: 120_000 });
 
+/** React's invalid-nesting warning (dev) + hydration mismatches (dev wording and prod codes). */
+const NESTING_OR_HYDRATION =
+  /cannot be a descendant of|cannot contain a nested|hydrat|did not match|Minified React error #(418|419|422|423|425)/i;
+
 test.describe('GM: crew sheet', () => {
   test.beforeEach(() => {
     test.skip(
@@ -45,6 +49,26 @@ test.describe('GM: crew sheet', () => {
     const picker = gmPage.getByTestId('crew-advance-picker');
     await expect(picker.getByText("Choose the crew's starting special ability")).toBeVisible();
     await expect(gmPage.getByRole('checkbox', { name: /Deadly/ })).toHaveCount(0);
+
+    // F99 — the hub with the picker on it loads + hydrates with no React nesting / hydration
+    // error (the picker's Badge was a <div> inside a <p>: "cannot be a descendant of <p> … will
+    // cause a hydration error"). Reload so the full page boots with the picker present.
+    const problems: string[] = [];
+    gmPage.on('console', msg => {
+      if (msg.type() === 'error' && NESTING_OR_HYDRATION.test(msg.text()))
+        problems.push(msg.text());
+    });
+    gmPage.on('pageerror', err => {
+      if (NESTING_OR_HYDRATION.test(err.message)) problems.push(err.message);
+    });
+    await gmPage.reload();
+    await expect(picker.getByText("Choose the crew's starting special ability")).toBeVisible({
+      timeout: 15_000,
+    });
+    await gmPage.waitForLoadState('networkidle');
+    expect(problems).toEqual([]);
+    // Own-list abilities lead, under their own heading; Veteran routes follow.
+    await expect(picker.getByTestId('crew-advance-own')).toBeVisible();
     await picker.getByRole('radio', { name: /Deadly/ }).check();
     await picker.getByRole('button', { name: 'Take starting ability' }).click();
     const abilities = gmPage.getByTestId('crew-abilities');

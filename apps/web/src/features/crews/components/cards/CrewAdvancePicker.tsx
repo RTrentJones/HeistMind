@@ -12,7 +12,7 @@ import {
   type CrewAdvanceChoice,
   type CrewRules,
 } from '@heist-mind/core';
-import { Badge, Button, Stack, Text } from '@heist-mind/ui';
+import { Button, Stack, Text } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 
 /** Radio value encoding for a choice (`ability:<id>`, `upgrade:<id>`, `upgrades`). */
@@ -35,6 +35,10 @@ function decode(value: string): CrewAdvanceChoice | null {
  *   type's only through Veteran — taken together in one advance) OR two upgrade boxes (Mastery
  *   unlocks at four; other upgrades are tracked on paper).
  * Renders nothing otherwise (the abilities card says how to earn the next one).
+ *
+ * F99 — presentation only (the legal set is still exactly core's): options are grouped under
+ * headings — the crew's OWN list first (the picks a GM is looking for), then other types' abilities
+ * reachable through Veteran, then the upgrade-box options — and each is a ≥44px tappable row.
  */
 export function CrewAdvancePicker({
   crew,
@@ -57,22 +61,55 @@ export function CrewAdvancePicker({
   const abilities = takeableCrewAbilities(rs, crew);
   const upgrades = ready ? openCrewUpgrades(rs, crew) : [];
   const choice = decode(value);
+  const own = abilities.filter(a => !crewVeteranGatewayFor(rs, crew, a.id));
+  const viaVeteran = abilities.filter(a => crewVeteranGatewayFor(rs, crew, a.id));
+  const crewTypeName = crewRules.types.find(ct => ct.id === crew.crewType)?.name;
 
-  const option = (v: string, label: React.ReactNode, detail?: string) => (
-    <label key={v} className='flex cursor-pointer items-start gap-2.5'>
+  // Each option is a tappable row with an unmistakable checked state in BOTH themes (brand ring +
+  // tint via `has-[:checked]`, a brand-accented radio) instead of a bare 13px native radio that
+  // read as disabled in dark mode. Plain spans throughout: the old Badge rendered a <div> inside
+  // the <p> label text — invalid nesting React reports as a hydration error on the GM hub.
+  const option = (v: string, label: string, detail?: string, suffix?: string) => (
+    <label
+      key={v}
+      className='flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-border-primary bg-background-primary px-3 py-2.5 transition-colors hover:border-brand-primary/60 has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary/10 has-[:checked]:ring-2 has-[:checked]:ring-brand-primary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-primary'
+    >
       <input
         type='radio'
         name={`crew-advance-${crew.id}`}
         value={v}
         checked={value === v}
         onChange={() => setValue(v)}
+        className='mt-0.5 size-5 shrink-0 cursor-pointer accent-brand-primary focus-visible:outline-none'
       />
-      <Text size='sm'>
+      <span className='min-w-0 text-sm'>
         <span className='font-display'>{label}</span>
-        {detail && <span className='text-foreground-muted'> — {detail}</span>}
-      </Text>
+        {suffix && <span className='ml-1.5 text-xs text-foreground-muted'>· {suffix}</span>}
+        {detail && <span className='block text-foreground-muted'>{detail}</span>}
+      </span>
     </label>
   );
+
+  const group = (id: string, heading: string, rows: React.ReactNode[], help?: string) =>
+    rows.length > 0 && (
+      <div
+        role='group'
+        aria-labelledby={`${id}-${crew.id}`}
+        className='flex flex-col gap-2'
+        data-testid={id}
+      >
+        <div>
+          <span
+            id={`${id}-${crew.id}`}
+            className='block font-display text-xs uppercase tracking-wider text-foreground-secondary'
+          >
+            {heading}
+          </span>
+          {help && <span className='block text-xs text-foreground-muted'>{help}</span>}
+        </div>
+        {rows}
+      </div>
+    );
 
   return (
     <fieldset
@@ -84,44 +121,49 @@ export function CrewAdvancePicker({
           ? t('components.crewSheet.pickerStartingTitle')
           : t('components.crewSheet.pickerAdvanceTitle')}
       </legend>
-      <Stack direction='column' gap='xs'>
+      <Stack direction='column' gap='md'>
         <Text variant='muted' size='sm'>
           {starting
             ? t('components.crewSheet.pickerStartingHelp')
             : t('components.crewSheet.pickerAdvanceHelp')}
         </Text>
-        {abilities.map(a => {
-          const gate = crewVeteranGatewayFor(rs, crew, a.id);
-          return option(
-            `ability:${a.id}`,
-            <>
-              {a.name}
-              {gate && (
-                <Badge variant='outline' size='sm' className='ml-2'>
-                  {t('components.crewSheet.viaVeteran')}
-                </Badge>
-              )}
-            </>,
-            a.description
-          );
-        })}
-        {upgrades.map(u =>
-          option(
-            encode({ kind: 'upgrades', upgradeId: u.id }),
-            t('components.crewSheet.markUpgradeBoxes', {
-              name: u.name,
-              boxes: crewUpgradeBoxes(rs, crew, u.id),
-              size: u.upgradeBoxes ?? 0,
-            }),
-            u.description
-          )
+        {group(
+          'crew-advance-own',
+          crewTypeName
+            ? t('components.crewSheet.pickerGroupOwnNamed', { type: crewTypeName })
+            : t('components.crewSheet.pickerGroupOwn'),
+          own.map(a => option(`ability:${a.id}`, a.name, a.description))
         )}
-        {ready &&
-          option(
-            'upgrades',
-            t('components.crewSheet.markOtherUpgrades'),
-            t('components.crewSheet.markOtherUpgradesHelp')
-          )}
+        {group(
+          'crew-advance-veteran',
+          t('components.crewSheet.pickerGroupVeteran'),
+          viaVeteran.map(a =>
+            option(`ability:${a.id}`, a.name, a.description, t('components.crewSheet.viaVeteran'))
+          ),
+          t('components.crewSheet.pickerGroupVeteranHelp')
+        )}
+        {group('crew-advance-upgrades', t('components.crewSheet.pickerGroupUpgrades'), [
+          ...upgrades.map(u =>
+            option(
+              encode({ kind: 'upgrades', upgradeId: u.id }),
+              t('components.crewSheet.markUpgradeBoxes', {
+                name: u.name,
+                boxes: crewUpgradeBoxes(rs, crew, u.id),
+                size: u.upgradeBoxes ?? 0,
+              }),
+              u.description
+            )
+          ),
+          ...(ready
+            ? [
+                option(
+                  'upgrades',
+                  t('components.crewSheet.markOtherUpgrades'),
+                  t('components.crewSheet.markOtherUpgradesHelp')
+                ),
+              ]
+            : []),
+        ])}
         <div>
           <Button
             variant='ember'
