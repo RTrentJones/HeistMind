@@ -180,8 +180,11 @@ export function CrewSheet({
           {t('components.crewSheet.startPrompt')}
         </Text>
         <Stack direction='row' gap='sm' align='end' className='flex-wrap'>
+          {/* Round 6 P2-11 — as tall as the "Create crew" button beside it (min-h-10; both are
+              44px on phones): the select sat ~32px next to a 40px button at 1440. */}
           <Select
             label={t('components.crewSheet.crewType')}
+            className='min-h-10'
             value={crewType}
             onChange={e => setCrewType(e.target.value)}
           >
