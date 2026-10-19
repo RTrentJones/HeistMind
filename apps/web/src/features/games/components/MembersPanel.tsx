@@ -7,19 +7,24 @@ import { useLeaveGame, useRemovePlayer } from '@/features/games/data/mutations';
 import { useComponentTranslation } from '@/lib/i18n/hooks';
 import { errorMessage } from '@/lib/query/result';
 import { ConfirmButton } from '@/shared/components/ConfirmButton';
+import { PlayerLimitControl } from './PlayerLimitControl';
 import { useNotificationStore } from '@/shared/stores/notification-store';
 
 /**
  * Who's in the campaign (F94). Everyone sees the active members; the GM can REMOVE a player
  * (status 'removed' — they can't rejoin with a code, and their characters go back to them as
  * standalone), and a player can LEAVE (same character hand-back). Both are two-click confirms and
- * log a note to the campaign log. The GM sees removed members in a de-emphasised line.
+ * log a note to the campaign log. The GM sees removed members in a de-emphasised line, and sets
+ * the campaign's player limit (round 4 — it used to be a hidden, fixed 5 players).
  */
 export function MembersPanel({
   game,
   userId,
 }: {
-  game: Pick<GameWithDetails, 'id' | 'createdBy' | 'players' | 'creator'>;
+  game: Pick<
+    GameWithDetails,
+    'id' | 'createdBy' | 'players' | 'creator' | 'currentPlayers' | 'maxPlayers'
+  >;
   userId: string | undefined;
 }) {
   const { t } = useComponentTranslation();
@@ -118,6 +123,8 @@ export function MembersPanel({
             );
           })}
         </ul>
+        {/* Seats (round 4): everyone sees N of M players; the GM sets the limit here. */}
+        <PlayerLimitControl game={game} isGm={isGm} />
         {isGm && removed.length > 0 && (
           <Text variant='muted' size='sm' data-testid='removed-members'>
             {t('members.removedList', { names: removed.map(nameOf).join(', ') })}

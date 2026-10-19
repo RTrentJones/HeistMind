@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import type { CampaignCapacity } from '@heist-mind/core';
 import { Button, Card, Heading, Stack, Text } from '@heist-mind/ui';
 import { useAuth } from '@/features/auth/stores/auth-store';
 import { useInvitesByGame } from '@/features/invitations/data/queries';
@@ -20,7 +21,14 @@ export function joinLinkFor(origin: string, code: string): string {
   return `${origin}/join/${encodeURIComponent(code)}`;
 }
 
-export function InviteCodeSection({ gameId }: { gameId: string }) {
+export function InviteCodeSection({
+  gameId,
+  capacity,
+}: {
+  gameId: string;
+  /** Seats taken / open (round 4): a code only lets someone in while a player seat is open. */
+  capacity?: CampaignCapacity;
+}) {
   const { user } = useAuth();
   const { t } = useComponentTranslation();
   const invites = useInvitesByGame(gameId);
@@ -73,6 +81,22 @@ export function InviteCodeSection({ gameId }: { gameId: string }) {
         <Text variant='muted' size='sm'>
           {t('inviteSection.description')}
         </Text>
+        {capacity && (
+          <Text
+            variant='muted'
+            size='sm'
+            data-testid='invite-seats'
+            className={capacity.full ? 'text-semantic-error' : undefined}
+          >
+            {capacity.full
+              ? t('inviteSection.seatsFull', { limit: capacity.limit })
+              : t('inviteSection.seatsOpen', {
+                  players: capacity.players,
+                  limit: capacity.limit,
+                  open: capacity.open,
+                })}
+          </Text>
+        )}
 
         {invites.isPending ? (
           <QueryLoading />

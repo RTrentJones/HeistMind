@@ -2,6 +2,7 @@
 
 // The invitations data-access seam (write side).
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { JOIN_CODE_USES } from '@heist-mind/core';
 import { getRepositories } from '@/lib/auth';
 import { unwrap } from '@/lib/query/result';
 import { gameKeys } from '@/features/games/data/queries';
@@ -13,7 +14,7 @@ export function useCreateInviteCode(gameId: string) {
   return useMutation({
     mutationFn: (vars: { userId: string; maxUses?: number }) =>
       getRepositories()
-        .invitations.create(vars.userId, { gameId, maxUses: vars.maxUses ?? 20 })
+        .invitations.create(vars.userId, { gameId, maxUses: vars.maxUses ?? JOIN_CODE_USES })
         .then(unwrap),
     onSuccess: () => qc.invalidateQueries({ queryKey: inviteKeys.byGame(gameId) }),
   });
@@ -45,10 +46,21 @@ export function useJoinViaCode() {
 }
 
 /** Why a join failed, as a stable key for the UI copy (the 00023 RPC raises a specific message). */
-export type JoinFailure = 'notFound' | 'revoked' | 'expired' | 'usedUp' | 'removed' | 'generic';
+export type JoinFailure =
+  | 'notFound'
+  | 'revoked'
+  | 'expired'
+  | 'usedUp'
+  | 'removed'
+  | 'full'
+  | 'generic';
 
 export function joinFailureReason(err: unknown): JoinFailure {
   const msg = err instanceof Error ? err.message.toLowerCase() : '';
+  // 00026: every seat is taken. The raw CHECK name covers a pre-00026 schema (the 6-seat cap
+  // surfaced as a 23514 "violates check constraint …_games_current_players_check").
+  if (msg.includes('campaign is full') || msg.includes('games_current_players_check'))
+    return 'full';
   if (msg.includes('revoked')) return 'revoked';
   if (msg.includes('no uses left')) return 'usedUp';
   if (msg.includes('expired')) return 'expired';

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth, useAuthActions, useAuthPending } from '@/features/auth/stores/auth-store';
 import { ClickwrapNotice } from '@/features/auth/components/ClickwrapNotice';
 import { COMING_SOON } from '@/lib/coming-soon';
-import { useSignIn } from '@/features/auth/hooks/use-sign-in';
+import { SignInForm } from '@/features/auth/components/SignInForm';
 import { Button, Header, HeaderBrand, HeaderActions, Text, ThemeToggle } from '@heist-mind/ui';
 import { useTranslation } from '@/lib/i18n/hooks';
 import { captureError } from '@heist-mind/telemetry';
@@ -52,7 +52,6 @@ export function AuthHeader() {
   const pending = useAuthPending();
   const { signOut } = useAuthActions();
   const { t } = useTranslation();
-  const { signIn: handleDiscordSignIn } = useSignIn();
   const pathname = usePathname();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -215,11 +214,13 @@ export function AuthHeader() {
                 <ThemeToggle className='max-sm:h-11 max-sm:w-11' />
                 {COMING_SOON ? null : (
                   // Prod is behind the always-on coming-soon gate (main only) — no sign-in is shown.
-                  <>
+                  // A real form (P2-N2): these paint from SSR, so a click before hydration
+                  // submits to /auth/signin instead of hitting a not-yet-attached onClick.
+                  <SignInForm>
                     <Button
+                      type='submit'
                       variant='ghost'
                       size='sm'
-                      onClick={() => void handleDiscordSignIn()}
                       loading={isLoading}
                       className='max-sm:hidden'
                     >
@@ -228,16 +229,16 @@ export function AuthHeader() {
                     {/* Phones get the short label so the header stays one row; the button does the
                     same thing (Discord OAuth) either way. */}
                     <Button
+                      type='submit'
                       variant='default'
                       size='sm'
-                      onClick={() => void handleDiscordSignIn()}
                       loading={isLoading}
                       className='whitespace-nowrap'
                     >
                       <span className='sm:hidden'>{t('auth.header.signIn')}</span>
                       <span className='max-sm:hidden'>{t('auth.header.signUpDiscord')}</span>
                     </Button>
-                  </>
+                  </SignInForm>
                 )}
               </span>
             </>

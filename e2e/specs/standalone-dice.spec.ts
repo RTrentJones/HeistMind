@@ -27,7 +27,9 @@ test.describe('standalone sheet dice (display-only)', () => {
     const sheetUrl = gmPage.url();
 
     await expect(gmPage.getByRole('heading', { name: 'Dice' })).toBeVisible();
-    await expect(gmPage.getByTestId('roll-local-note')).toContainText(/aren't saved anywhere/i);
+    await expect(gmPage.getByTestId('roll-local-note')).toContainText(
+      /aren't logged anywhere.*desperate action roll/i
+    );
 
     // Fortune: classified on the spot, nothing charged.
     await gmPage.getByLabel('Roll type').selectOption('fortune');

@@ -109,5 +109,27 @@ test.describe('GM: crew sheet', () => {
     await expect(
       gmPage.getByText('Crew advance — new special ability: The Network').first()
     ).toBeVisible({ timeout: 10_000 });
+
+    // Round 4 P2-N6: an unnamed crew's log rows are titled by what happened — no "Crew … Crew
+    // Crew", no "GM" (only the GM touches the crew sheet).
+    const xpRow = gmPage
+      .locator('div')
+      .filter({ has: gmPage.getByText('Crew XP 8/8', { exact: true }) })
+      .last();
+    await expect(xpRow).not.toContainText(/\bGM\b/);
+
+    // Round 4 P2-N9: removing every ability does NOT re-open the free starting pick.
+    for (const name of ['No Traces', 'The Network']) {
+      await gmPage.getByRole('button', { name: `Remove crew ability ${name}` }).click();
+      await gmPage.getByRole('button', { name: 'Remove? Click again' }).click();
+      await expect(gmPage.getByRole('button', { name: `Remove crew ability ${name}` })).toHaveCount(
+        0,
+        { timeout: 10_000 }
+      );
+    }
+    await gmPage.reload();
+    await expect(track.getByText('0/8')).toBeVisible({ timeout: 15_000 });
+    await expect(gmPage.getByTestId('crew-advance-picker')).toHaveCount(0);
+    await expect(gmPage.getByRole('button', { name: 'Take starting ability' })).toHaveCount(0);
   });
 });
