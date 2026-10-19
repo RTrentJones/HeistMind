@@ -175,9 +175,15 @@ bootstrap).
   dashboard skeleton (`HomeSwitch`); the auth-hint script picks which paints, so a returning user
   never sees the marketing page / Sign In header (it used to show for ~1.3s). After hydration:
   Dashboard when signed in, the skeleton while a likely session is being checked, else marketing.
-- _Last verified:_ 2026-10-18 (F98: no signed-out flash; F96: "Your dashboard" title, PageShell,
-  Start here first without quick actions, load-gated subtitle, no email; previously F94 Start here /
-  CTA intents, F91)
+- **No late shove (F99):** while the lists load, the quick-action row is rendered **invisible**
+  (inert, `aria-hidden`) at its final size, so the sections below don't jump ~224px when it
+  appears (returning-user CLS at 360 was 0.26 GM / 0.21 player). A first-run user sees a blank
+  band for under a second before Start here replaces it. Activity rows now name **other players'
+  characters** too (the GM's feed read "Prowess in … · resisted" with no who): the dashboard loads
+  the roster of each campaign whose recent activity mentions a character the viewer doesn't own.
+- _Last verified:_ 2026-10-19 (F99: reserved quick-action space, activity names every character;
+  F98: no signed-out flash; F96: "Your dashboard" title, PageShell, Start here first without quick
+  actions, load-gated subtitle, no email; previously F94 Start here / CTA intents, F91)
 
 ### `/auth/callback` — OAuth return
 
@@ -263,7 +269,9 @@ bootstrap).
     left"**, **Copy invite link** (`<origin>/join/<code>` — works for people not signed in yet),
     **Copy code**, and a two-click **Revoke** (status `revoked`; stops working at once). F98: the
     code + uses sit on row 1 and the three buttons in an even group on row 2 (at 360px "Revoke" used
-    to wrap alone); **Revoke** is a crimson-text `danger-ghost` button, not purple like Copy.
+    to wrap alone); **Revoke** is a crimson-text `danger-ghost` button, not purple like Copy. F99:
+    its label centres in the reserved two-label box, so at 360px it no longer sits ~8px above
+    "Copy code".
   - **Players** (`MembersPanel`, everyone): active members with GM/Player badges and "(you)". The GM
     gets a two-click **Remove** per player (`remove_game_player` RPC: status `removed` — can't rejoin
     with a code — their characters go back to them as standalone, log note "was removed from the
@@ -299,8 +307,11 @@ bootstrap).
     **Crew advancement (XP round, F85):** the 8-box track is the same clickable `XpTrack` a
     character sheet uses (GM marks; players see it read-only); marks run through engine
     `markCrewXp` (feed-logged). **Crew abilities are RAW (F97, round 3):** they are never ticked.
-    The GM's **crew-advance picker** (`cards/CrewAdvancePicker.tsx`, a radio group + one button)
-    offers ONLY legal picks (core `takeableCrewAbilities`/`openCrewUpgrades`): a new crew chooses
+    The GM's **crew-advance picker** (`cards/CrewAdvancePicker.tsx`, a radio group + one button;
+    F99: options are **grouped under headings** — "From your crew's list (Shadows)" first, then
+    "Through Veteran — another crew type's ability", then "Upgrades — mark two boxes" — and each is
+    a ≥44px tappable row with a brand ring + tint when checked in both themes; plain spans only, so
+    no `<div>`-in-`<p>` hydration error on the GM hub) offers ONLY legal picks (core `takeableCrewAbilities`/`openCrewUpgrades`): a new crew chooses
     its ONE **starting ability** from its own crew type's list ("Take starting ability" — the
     track is untouched); afterwards a FULL track is spent ("Take advance") on a new special
     ability from the crew's list — another type's only as **"via Veteran"** (Veteran + the pick in
@@ -319,7 +330,9 @@ bootstrap).
   - `FactionsPanel` (`apps/web/src/features/factions/components/FactionsPanel.tsx`) — factions with
     status (−3..+3, labelled per the SRD: War · Hostile · Interfering · Neutral · Helpful · Friendly
     · Allies — F92) and their project clocks. GM-editable.
-    **Add a faction (F96):** the GM always gets a free-text **"Add a faction"** form
+    **Add a faction (F96):** (F99: name, Tier and Status are top-aligned at one 40px control height —
+    the DS `Select` now shares `Input`'s label box + gap, so labels and controls line up across
+    every form that mixes them) the GM always gets a free-text **"Add a faction"** form
     (`NewFactionForm`): faction name (required; a name the campaign already has is refused inline,
     case-insensitive), **Tier** 0–6, **Starting status** on the SRD scale (+3 Allies … −3 War,
     default 0 Neutral), optional **Notes** (shown on the faction card). On rulesets that suggest
@@ -370,8 +383,12 @@ bootstrap).
 - **Discord card (F96):** step 1 only says "with the button below" when the install button renders
   (`NEXT_PUBLIC_DISCORD_APP_ID` set); otherwise it says the install link isn't available on this
   site yet. `/character use` is code-formatted.
-- _Last verified:_ 2026-10-18 (F98: setup disclosure, joined banner, danger affordances, invite row,
-  CLS; F96: GM "Add a faction" form on every ruleset, honest Discord-card step 1, log names a
+- **No load jump (F99):** the hub's loading state uses the same `4xl` container as the loaded hub
+  (the 448px loading box being reused at full width was the hub's main layout shift: CLS 0.18 →
+  0.04 at 768); page `Container`s also fade in opacity-only (no slide-up).
+- _Last verified:_ 2026-10-19 (F99: grouped crew-advance picker, faction form alignment, Revoke
+  alignment, opacity-only entrance); 2026-10-18 (F98: setup disclosure, joined banner, danger
+  affordances, invite row, CLS; F96: GM "Add a faction" form on every ruleset, honest Discord-card step 1, log names a
   character once; previously F94 invite link/revoke, Players remove/leave, Discord card, delete
   campaign; F91)
 - **Role:** GM edits campaign objects; players read them.
@@ -395,7 +412,8 @@ bootstrap).
   Assigned 8 of 7 action dots."). **Every creation action dot must be placed (F97, RAW):** the
   ratings step's Next and the review step's Create stay disabled until the full budget is spent —
   "Can't continue yet — Assign all 7 action dots — 4 left to place." (an optional crew Deadly dot
-  is never owed).
+  is never owed). **F99:** below `md` the reason is its own full-width row above Cancel / Back /
+  Next (it was a truncating flex child that read "Can't co…" at 360); from `md` up it sits inline.
 - **State:** `useCharacterCreationStore`
   (`apps/web/src/features/characters/stores/character-creation-store.ts`) persists draft to
   localStorage (auto-resume); the large `ruleset` object is re-supplied on mount, not persisted.
@@ -605,7 +623,15 @@ bootstrap).
   customised/older copy still doesn't match; the empty state says why and links **Start a campaign
   with it** (`/games/new?ruleset=<id>`) and **join one with a code** (`/games#join`). The Delete
   character card uses the danger treatment (F98).
-- _Last verified:_ 2026-10-18 (F98: attach across content-identical ruleset copies, truthful
+- **Phone order (F99):** on a standalone sheet the attach card stays **directly under the hero** at
+  every width (it was `max-sm:order-3` — the last section at 360, ~4000px below a banner that said
+  "from the card below"); the banner now reads "Standalone character — not in a campaign yet." +
+  a **"Bring it to a campaign ↓"** in-page link to `#sheet-attach`. In-campaign sheets keep
+  move/return low on phones. The desperate-roll XP note sits inside the result's live region,
+  right under the result (announced with it), and a new result scrolls into view above the thumb
+  bar on phones.
+- _Last verified:_ 2026-10-19 (F99: attach card high on phones + banner link, desperate note under
+  the result); 2026-10-18 (F98: attach across content-identical ruleset copies, truthful
   linked empty state, danger delete card)
 
 ### `/legal/*` — Legal documents (public, six routes)
@@ -733,7 +759,9 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
 (`apps/web/src/features/characters/lib/creation-steps.ts`). Each step is dispatched by `WizardStep`.
 
 1. **Playbook** — `steps/PlaybookStep.tsx`. Card grid of playbooks (the selected card gets a brand
-   ring + a green "✓ Selected" badge, F93); selecting one seeds skills,
+   ring + a green "✓ Selected" badge, F93 — since F99 every selectable wizard card (playbook,
+   background, vice, custom choice steps, special abilities) renders through one shared
+   `steps/SelectableCard.tsx`, so the treatment can't drift); selecting one seeds skills,
    starting abilities, and attributes (or derives them in action-rating mode). _Valid when a
    playbook is chosen._
 2. **Attributes** _(point-buy rulesets)_ — `steps/AttributesStep.tsx` — allocate dots per attribute
@@ -760,15 +788,19 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    free-text field; a combined `identity` step is all three free-text inputs. **BitD (F97):**
    Heritage (free text — the book's heritages are setting content) → Background (Academic, Labor,
    Law, Trade, Military, Noble, Underworld) → Vice (Faith, Gambling, Luxury, Obligation, Pleasure,
-   Stupor, Weird — SRD text). _Optional; a value that isn't one of the listed choices blocks the
-   step (`IDENTITY_UNKNOWN`)._
-5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`. _Valid
+   Stupor, Weird — SRD text). The background/vice cards use the shared `SelectableCard` (F99 —
+   they had regressed to a ring-less grey card with a red "Selected" badge). _Optional; a value
+   that isn't one of the listed choices blocks the step (`IDENTITY_UNKNOWN`)._
+5. **Review** — `steps/ReviewStep.tsx`. Read-only summary via `use-character-summary.ts`; identity
+   chips are labelled and carry their details (F99: "Background: Underworld", "Vice: Weird (Old
+   Mags, north docks)" — they were bare "Underworld" / "Weird"). _Valid
    only if name is non-empty, a playbook is chosen, and `validateCharacter(mode:'creation')`
    passes_ — including every creation action dot placed (F97; the footer names the count left). "Create character" submits via
    `getRepositories().characterManagement.createCharacterWithValidation`; on success the persisted
    draft (name, picks, step) is cleared so the next character starts fresh (F94).
 
-_Last verified:_ 2026-10-18 (F97: all creation dots required, BitD heritage/background/vice steps
+_Last verified:_ 2026-10-19 (F99: phone footer reason row, shared SelectableCard, labelled review
+identity); 2026-10-18 (F97: all creation dots required, BitD heritage/background/vice steps
 with details fields); 2026-10-17 (F94: draft cleared after create, "playbook" not "crew role" copy;
 rules-accuracy round F92: Veteran-gated other-playbook abilities,
 pre-placed dot floor; F93 stepper statuses + selected-playbook / derived-attribute badges; previously

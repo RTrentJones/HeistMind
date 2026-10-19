@@ -32,6 +32,97 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F99 — Round-4 pixel UX: unreadable wizard blocker, buried attach card, dashboard/hub CLS, crew picker wall
+
+- **severity:** S2 (the F97 "dots left" blocker was invisible on phones; the portable-sheet → campaign
+  step sat ~4000px down on the device most players use; the GM hub threw a React nesting/hydration
+  error) · **type:** CX-flaw — from the round-4 pixel audit (`round4-pixel.md` P1-1…P1-6, P2-9,
+  P2-11, P2-13, P2-15, P2-16) plus the round-4 product review's hydration finding
+- **what was wrong:**
+  - **Wizard footer** (P1-1): the blocking reason was a `truncate` flex child squeezed between
+    Cancel / Back / Next — 71px wide at 360, so "Can't continue yet — Assign all 7 action dots — 4
+    left to place." read "Can't co…".
+  - **Attach card last on phones** (P1-2): standalone sheets reordered "Bring to a campaign" to
+    `max-sm:order-3` (the last section), while the banner said "from the card below".
+  - **Dashboard CLS** (P1-3): returning users' six quick actions were inserted above the lists once
+    they settled (F96), shoving every section ~224px — CLS 0.26 (GM) / 0.21 (player) at 360.
+  - **Hub CLS** (P1-4): 0.17–0.23 at 768, 0.09–0.11 at 1440. The audit blamed the `Container`
+    slide-up entrance; attribution on a prod build (x/width, not just y) showed the real culprit was
+    the hub's **loading** `Container maxWidth='md'` (448px at x160) being reused by React as the
+    loaded `4xl` container — the box jumped x 160 → 0 (0.135 of ~0.18).
+  - **Crew advance picker** (P1-5 + product review): a 22-row list of bare 13px native radios with
+    the crew's own abilities under 13 "via Veteran" rows; radios read as disabled in dark mode; and
+    the "via Veteran" `Badge` (a motion `<div>`) sat inside the label's `<p>` — React's "In HTML,
+    <div> cannot be a descendant of <p>. This will cause a hydration error." on every GM hub with a
+    BitD crew.
+  - **Identity pickers** (P1-6): background/vice selection regressed F93 — grey card, red/ember
+    "Selected" badge, no ring.
+  - **P2s:** desperate-XP note rendered last, under the phone thumb bar and outside the live region
+    (P2-9); add-faction form labels/controls ~4px apart (`Select` label box/gap ≠ `Input`'s, P2-11);
+    Revoke ~8px above Copy code at 360 — its wider reserved label wrapped and the visible one rode
+    the top line (P2-13); dashboard activity dropped the name for characters the viewer doesn't own
+    (P2-15); unlabeled review identity chips (P2-16).
+- **fix:**
+  - `CharacterCreationWizard`: footer `flex-wrap`; below `md` the reason is `order-first
+basis-full whitespace-normal` (own row above the buttons), inline + truncating from `md`.
+  - `CharacterSheet`: standalone sheets keep the attach card (now `#sheet-attach`) directly under
+    the hero at every width; the banner reads "Standalone character — not in a campaign yet." + a
+    44px "Bring it to a campaign ↓" in-page link. In-campaign move/return stays `max-sm:order-3`.
+  - `Dashboard`: quick actions render while loading as `invisible` + `inert` + `aria-hidden` at
+    final size. `useDashboardData` loads rosters (`characterQueries.byGame`) only for campaigns whose
+    recent activity names a non-owned character → `characterNames`; activity stays loading until
+    they resolve.
+  - Hub page loading state uses `maxWidth='4xl'`; `packages/ui` `Container` entrance is opacity-only
+    (as asked — harmless, but on its own it left hub CLS unchanged).
+  - `CrewAdvancePicker` (presentation only — `crew-abilities.ts` untouched): groups "From your crew's
+    list (Shadows)" → "Through Veteran — another crew type's ability" → "Upgrades — mark two boxes";
+    each option a `min-h-11` row with `has-[:checked]` brand ring + tint and an `accent-brand-primary`
+    20px radio; plain spans (no Badge) so no block-in-`<p>`.
+  - New `steps/SelectableCard.tsx` used by Playbook, Identity (background/vice), Choice and
+    Abilities steps — one selected treatment (brand ring, character surface, green ✓ badge).
+  - `RollPanel`: desperate note inside the `role=status` result region, under the result (nested
+    Alert set to `role=note aria-live=off`); phones scroll a new result into view (`scroll-mb-20`).
+  - `Select` (DS): labelled selects use Input's label box + gap (inline `leading-none` label,
+    `space-y-2`, block control); `NewFactionForm` top-aligned with `h-10` selects.
+  - `ConfirmButton` `reserveWidth`: `place-items-center` on the two-label grid.
+  - `use-character-summary`: "Heritage: …", "Background: Underworld", "Vice: Weird (Old Mags…)".
+- **measured** (prod build `next start` on :3113 against stack2, `capture-r4.mjs` — same tooling,
+  build mode and seed as the round-4 baseline `pixel-round4/metrics-final.json`; max of light/dark):
+  - CLS: dashboard GM 360 **0.255 → 0.044**, 768 0.145 → 0.065; dashboard player 360 **0.208 →
+    0.000**, 768 0.135 → 0.073; hub GM 768 **0.177 → 0.041**, 1440 0.092 → 0.009; hub player 768
+    **0.178 → 0.032**, 1440 0.098 → 0.016; hub fresh GM 768 0.135 → **0.000**; joined banner 768
+    0.151 → 0.016. CLS probe (`r4-probe cls`): hub GM 768 0.176 → 0.041. Wizard / sheets unchanged
+    (≤ 0.008).
+  - Wizard footer at 360: reason box 320×42 (two lines, scrollWidth = width) vs 71px truncated.
+  - Faction form at 1440/768: name/Tier/Status labels and 40px controls at identical y.
+  - Invite row at 360: Revoke label now centred with Copy code (was 8px high).
+  - Crew picker rows ≥ 63px (1440) / 83px (360); 3 headed groups.
+  - Sub-44px count: unchanged on every captured route except +1 at 768/1440 on standalone sheets
+    (the banner link is 44px only below `sm`) and +1 on the hub at 768/1440 from seed drift (a
+    "Remove Wren Joiner" member row that wasn't in the baseline). The crew-picker radios still count
+    (the metric measures the 20px `<input>`; the tappable target is its ≥63px label row).
+  - 84/84 final shots: no horizontal scroll, 0 axe violations, one h1, focus ring OK, no console
+    errors.
+- **tests:** unit — `CharacterCreationWizard.test.tsx` (new: footer reason row classes, identity
+  SelectableCard ring + ✓ badge, labelled review chips), `CharacterSheet` (banner link + attach
+  order, both modes), `CrewAdvancePicker` (group order, own list w/o Veteran rows, ≥44px rows, no
+  block-in-`<p>`), `Dashboard` (invisible inert reserve while loading, names a non-owned character),
+  `use-dashboard-data` (roster fetched only for the referencing game), `RollPanel` (note inside the
+  live region), `ConfirmButton`, `packages/ui` `Container` (no translate — fails on the old slide-up).
+  e2e — `gm-crew.spec.ts` new BitD test: reload the hub with the picker, assert no nesting/hydration
+  console errors (verified it FAILS on the pre-F99 picker), own group above Veteran group, checked
+  ring. Targeted e2e green on :3113 dev (player-characters, gm-character-validation,
+  gm-ability-rules, gm-action-ratings, gm-crew, gm-crew-grant, dashboard, membership,
+  standalone-characters, standalone-dice, attach-across-copies, gm-factions(-bitd), mobile-sheet,
+  mobile-overflow, heading-order, ssr-hydration). Storybook smoke 190/190.
+- **residue:** remaining hub shift (~0.04 at 768) is headings whose box collapses after load
+  (attribution `h2 … h45→0`), not investigated; the crew picker is long on phones (19 rows with
+  rules text ≈ 3.8k px) — a collapsed Veteran group would shorten it; P2-8 (stepper eats the
+  first phone screen), P2-10 (old-content desperate trigger), P2-12 (nested setup cards), P2-14
+  (dashboard section headers at 360), P2-17 (sheet control sizes), P1-7 (Discord app id on beta)
+  not touched.
+- **status:** fixed (branch `feat/ux-r4`)
+
 ### F98 — Round-3 pixel UX: signed-out flash, "Bring to a campaign" dead end, quiet danger, top-heavy hub
 
 _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
@@ -93,6 +184,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
   ~300ms while the profile loads and picks "Welcome"/"Welcome back" before lists load (P2-18,
   P1-8); card-title hierarchy (P2-17) and the `/discord` grid (P2-22) not touched.
 - **status:** fixed (branch `feat/ux-r3`)
+
 ### F97 — Round-3 rules: free crew-ability ticking, unspent creation dots, desperate XP on the wrong track, no vice/background choices
 
 - **severity:** S1 (crew abilities / creation dots broke "every action offered is legal") · S2
@@ -180,6 +272,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
   re-verified here) and Brackwater keeps its own playbook-track desperate trigger (original
   content — neither sets `kind`, so neither auto-marks).
 - **status:** fixed (branch `feat/rules-r3`)
+
 ### F96 — Round-3 launch review: no way to add a faction on BitD; standalone sheets can't roll; copy polish
 
 - **severity:** S1 (a BitD GM could never add a faction) · **type:** CX-flaw + FitD-gap — from the
@@ -234,6 +327,7 @@ _(Numbered F98 to stay clear of parallel round-3 branches that may take F95+.)_
     from `discordAppId()`; unit tests cover both states. (Operator follow-up still open: set
     `NEXT_PUBLIC_DISCORD_APP_ID` on the Vercel beta/prod targets.)
 - **status:** fixed @feat/product-r3 (pending merge)
+
 ### F95 — Discord identity squatting through the signup trigger (launch security round 3)
 
 - **severity:** S1 · **type:** security — **(verified: reproduced on the local stack through the
