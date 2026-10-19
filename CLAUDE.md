@@ -207,9 +207,14 @@ issue you find in `FINDINGS.md`. It's the guide for user validation and for deci
   commit (`vercel.json` `ignoreCommand` →
   `scripts/vercel-migration-gate.mjs`, which fails closed), and greenlight-verify re-asserts it for
   Production. Break-glass: Vercel env `HEISTMIND_MIGRATION_GATE=off`.
-- **Deploy gate:** `greenlight-verify.yml` gates only the `development` Preview (beta) and the
-  `main` Production deployment. It runs once per (env, sha), serialized, and pins
-  `GREENLIGHT_VERSION` (bump it with supabase-ci's, in lockstep with the RTrentJones.dev wrapper).
+- **Deploy gate:** `greenlight-verify.yml` gates only the beta deployment (a non-Production
+  deployment whose sha is `development`'s tip or an ancestor of it) and a Production deployment
+  whose sha is on `main`. Vercel posts the commit SHA as `deployment.ref`, never the branch, so a
+  `resolve` job asks the GitHub compare API (`scripts/verify-target.mjs`, tested in
+  `pnpm test:scripts`; F103). Its `gate (beta|prod)` job runs once per (target, sha), serialized,
+  and pins `GREENLIGHT_VERSION` (bump it with supabase-ci's, in lockstep with the RTrentJones.dev
+  wrapper). Feature-branch previews skip with a notice + job summary; a Production deployment of a
+  sha not on `main` turns the run red.
 - **Owner settings** (outside the repo): set `GITHUB_CHECKS_TOKEN` (Checks: read) in Vercel's
   Production env. Don't make the check a required status on `main`: "(production)" only exists
   after the push, so a required check would reject the promotion fast-forward itself.

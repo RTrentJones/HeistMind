@@ -6,13 +6,26 @@ import {
   MIN_PLAYER_LIMIT,
   campaignCapacity,
   playerLimitRefusal,
+  type CampaignCapacity,
   type Game,
 } from '@heist-mind/core';
-import { Button, Input, Stack, Text } from '@heist-mind/ui';
+import { Button, Heading, Input, Stack, Text } from '@heist-mind/ui';
 import { useSetPlayerLimit } from '@/features/games/data/mutations';
 import { useComponentTranslation } from '@/lib/i18n/hooks';
 import { errorMessage } from '@/lib/query/result';
 import { useNotificationStore } from '@/shared/stores/notification-store';
+
+type ComponentT = ReturnType<typeof useComponentTranslation>['t'];
+
+/**
+ * "N of M players" (pluralised on the limit), with " — the campaign is full" when it is. The ONE
+ * seat phrasing, shared by the Players card and the invite card (F102 — they read "1 of 20 players"
+ * vs "1 of 20 player seats taken", and "1 of 1 players" / "All 1 player seats").
+ */
+export function seatSummary(t: ComponentT, capacity: CampaignCapacity, withFull = true): string {
+  const summary = t('members.seats', { players: capacity.players, count: capacity.limit });
+  return withFull && capacity.full ? t('members.seatsFull', { summary }) : summary;
+}
 
 /**
  * The campaign's seat count, and (GM) the lever to change it (round 4 P1-N1). Everyone sees
@@ -32,9 +45,7 @@ export function PlayerLimitControl({
   const [draft, setDraft] = useState(String(capacity.limit));
   const [error, setError] = useState<string | null>(null);
 
-  const summary = capacity.full
-    ? t('members.seatsFull', { players: capacity.players, limit: capacity.limit })
-    : t('members.seats', { players: capacity.players, limit: capacity.limit });
+  const summary = seatSummary(t, capacity);
 
   if (!isGm) {
     return (
@@ -61,7 +72,7 @@ export function PlayerLimitControl({
           const msg = errorMessage(err);
           setError(
             /below the players/i.test(msg)
-              ? t('members.limitBelowPlayers', { players: capacity.players })
+              ? t('members.limitBelowPlayers', { count: capacity.players })
               : t('members.limitFailed')
           );
         },
@@ -71,13 +82,24 @@ export function PlayerLimitControl({
 
   const hint =
     refusal === 'BELOW_PLAYERS'
-      ? t('members.limitBelowPlayers', { players: capacity.players })
+      ? t('members.limitBelowPlayers', { count: capacity.players })
       : refusal
         ? t('members.limitRange', { min: MIN_PLAYER_LIMIT, max: MAX_PLAYER_LIMIT })
         : null;
 
+  // F102 — its own sub-section under a "Player limit" heading (it used to sit between the member
+  // list and the "Removing a player…" note that explains the Remove buttons). The heading names
+  // the number field (its aria-label), so there's no second, duplicate visible label.
   return (
-    <Stack direction='column' gap='xs'>
+    <Stack
+      direction='column'
+      gap='xs'
+      className='mt-1 border-t border-border-primary pt-3'
+      data-testid='player-limit'
+    >
+      <Heading level='h4' as='h3'>
+        {t('members.limitHeading')}
+      </Heading>
       <Text variant='muted' size='sm' data-testid='player-seats'>
         {summary}
       </Text>
@@ -88,24 +110,22 @@ export function PlayerLimitControl({
           save();
         }}
       >
-        <label className='flex flex-col gap-1 text-sm'>
-          {t('members.limitLabel')}
-          <Input
-            type='number'
-            inputMode='numeric'
-            size='sm'
-            className='w-24'
-            min={Math.max(MIN_PLAYER_LIMIT, capacity.players)}
-            max={MAX_PLAYER_LIMIT}
-            step={1}
-            value={draft}
-            aria-describedby={`${game.id}-limit-help`}
-            onChange={e => {
-              setDraft(e.target.value);
-              setError(null);
-            }}
-          />
-        </label>
+        <Input
+          type='number'
+          aria-label={t('members.limitHeading')}
+          inputMode='numeric'
+          size='sm'
+          className='w-24'
+          min={Math.max(MIN_PLAYER_LIMIT, capacity.players)}
+          max={MAX_PLAYER_LIMIT}
+          step={1}
+          value={draft}
+          aria-describedby={`${game.id}-limit-help`}
+          onChange={e => {
+            setDraft(e.target.value);
+            setError(null);
+          }}
+        />
         <Button
           type='submit'
           variant='outline'
@@ -118,10 +138,9 @@ export function PlayerLimitControl({
       </form>
       <Text
         id={`${game.id}-limit-help`}
-        variant='muted'
+        variant={error || hint ? 'error' : 'muted'}
         size='sm'
         role={error || hint ? 'alert' : undefined}
-        className={error || hint ? 'text-semantic-error' : undefined}
       >
         {error ?? hint ?? t('members.limitHelp', { max: MAX_PLAYER_LIMIT })}
       </Text>

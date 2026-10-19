@@ -123,17 +123,22 @@ export function MembersPanel({
             );
           })}
         </ul>
-        {/* Seats (round 4): everyone sees N of M players; the GM sets the limit here. */}
-        <PlayerLimitControl game={game} isGm={isGm} />
+        {/* Seats (round 4): players see N of M players right under the list. */}
+        {!isGm && <PlayerLimitControl game={game} isGm={false} />}
         {isGm && removed.length > 0 && (
           <Text variant='muted' size='sm' data-testid='removed-members'>
             {t('members.removedList', { names: removed.map(nameOf).join(', ') })}
           </Text>
         )}
         {isGm ? (
-          <Text variant='muted' size='sm'>
-            {t('members.gmHint')}
-          </Text>
+          <>
+            <Text variant='muted' size='sm'>
+              {t('members.gmHint')}
+            </Text>
+            {/* F102 — the limit is its own sub-section AFTER the list + its Remove explainer
+                (it used to split them). */}
+            <PlayerLimitControl game={game} isGm />
+          </>
         ) : (
           isMember && (
             <Stack direction='column' gap='xs' align='start'>

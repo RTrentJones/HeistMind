@@ -121,6 +121,33 @@ describe('PlayerLimitControl (round 4 P1-N1: the hidden 5-player cap)', () => {
     expect(limitMutate).toHaveBeenCalledWith({ players: 8 }, expect.any(Object));
   });
 
+  // F102 — the limit is its own "Player limit" sub-section AFTER the list and the explainer for
+  // the Remove buttons (it used to split them); its hint uses the error TEXT token.
+  it('GM: list → removed → Remove explainer → Player limit, and pluralised one-seat copy', async () => {
+    const one = { ...GAME, currentPlayers: 2, maxPlayers: 2 } as GameWithDetails; // 1 of 1
+    render(<MembersPanel game={one} userId='gm' />);
+    const order = [
+      screen.getByRole('list', { name: 'Campaign members' }),
+      screen.getByTestId('removed-members'),
+      screen.getByText(/Removing a player hands their characters back/),
+      screen.getByRole('heading', { name: 'Player limit' }),
+    ];
+    order.reduce((prev, next) => {
+      expect(prev.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      return next;
+    });
+    expect(screen.getByTestId('player-seats')).toHaveTextContent(
+      /^1 of 1 player — the campaign is full$/
+    );
+    const input = screen.getByRole('spinbutton', { name: 'Player limit' });
+    await userEvent.clear(input);
+    await userEvent.type(input, '0');
+    const hint = screen.getByRole('alert');
+    expect(hint).toHaveTextContent('Choose a whole number from 1 to 30.');
+    expect(hint).toHaveClass('text-semantic-error-fg');
+    expect(hint).not.toHaveClass('text-semantic-error');
+  });
+
   it('a full campaign says so on the hub and in the invite card', () => {
     const full = { ...GAME, currentPlayers: 6, maxPlayers: 6 } as GameWithDetails;
     render(<MembersPanel game={full} userId='gm' />);
@@ -163,9 +190,8 @@ describe('InviteCodeSection seats (round 4: the invite copy must be truthful)', 
     const { unmount } = render(
       <InviteCodeSection gameId='g1' capacity={{ players: 5, limit: 20, open: 15, full: false }} />
     );
-    expect(screen.getByTestId('invite-seats')).toHaveTextContent(
-      '5 of 20 player seats taken — 15 open'
-    );
+    // F102 — the same "N of M players" phrasing as the Players card.
+    expect(screen.getByTestId('invite-seats')).toHaveTextContent('5 of 20 players — 15 open');
     expect(
       screen.getByText(/works for up to 20 joins while the campaign has an open player seat/)
     ).toBeInTheDocument();
@@ -173,6 +199,21 @@ describe('InviteCodeSection seats (round 4: the invite copy must be truthful)', 
     render(
       <InviteCodeSection gameId='g1' capacity={{ players: 5, limit: 5, open: 0, full: true }} />
     );
-    expect(screen.getByTestId('invite-seats')).toHaveTextContent(/All 5 player seats are taken/);
+    expect(screen.getByTestId('invite-seats')).toHaveTextContent(
+      /5 of 5 players — the campaign is full, so no code will let anyone in/
+    );
+    // The fill token failed dark-mode contrast as text; the "full" warning uses the -fg token.
+    expect(screen.getByTestId('invite-seats')).toHaveClass('text-semantic-error-fg');
+  });
+
+  // F102 — pluralised on the limit: "1 of 1 player", never "1 of 1 players" / "All 1 player seats".
+  it('pluralises a one-seat campaign in both cards', () => {
+    useAuthStore.setState({ user: { id: 'gm' } as never });
+    render(
+      <InviteCodeSection gameId='g1' capacity={{ players: 1, limit: 1, open: 0, full: true }} />
+    );
+    expect(screen.getByTestId('invite-seats')).toHaveTextContent(
+      /^1 of 1 player — the campaign is full/
+    );
   });
 });

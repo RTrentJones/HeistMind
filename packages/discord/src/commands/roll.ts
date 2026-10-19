@@ -134,8 +134,16 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
           characterId: character.id,
           kind: 'action',
           label: resolved,
-          // A desperate action roll marks XP in this action's attribute (the engine does it, RAW).
+          // A desperate action roll marks XP in this action's attribute (the engine does it, RAW)
+          // and logs it to the campaign (web parity, round 5 P2-8).
           action: resolved,
+          desperateXpLog: (track, amount) =>
+            copy.desperateXpLog(
+              track === null
+                ? null
+                : (character.ruleset.content.attributes.find(a => a.id === track)?.name ?? track),
+              amount
+            ),
           dice: count,
           results,
           zeroDice,
@@ -159,7 +167,9 @@ export const handleRoll: CommandHandler = (ctx, interaction) => {
           // The roll is logged; only its XP side effect failed — say that, not "something broke".
           desperateNote = copy.desperateXpFailed;
         }
-        if (push) {
+        if (push && logged.data.stressError) {
+          pushNote = copy.stressNotMarked(2); // the roll is logged; its stress write failed
+        } else if (push) {
           pushNote = copy.pushedCharged; // the engine really charged the 2 stress
           // Announce what the engine APPLIED (live row + crew boxes), never a local prediction.
           const applied = logged.data.pushStress;

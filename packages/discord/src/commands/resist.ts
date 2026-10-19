@@ -134,7 +134,9 @@ export const handleResist: CommandHandler = (ctx, interaction) => {
           pool,
           attr.name,
           roll,
-          copy.resistCharged(character.name, logged.data.stress),
+          logged.data.stressError
+            ? copy.stressNotMarked(logged.data.stress)
+            : copy.resistCharged(character.name, logged.data.stress),
           copy.loggedFooter(game.name)
         ),
       ],

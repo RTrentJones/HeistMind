@@ -89,8 +89,15 @@ export const copy = {
     'Not logged — you’re not a member of the linked campaign. Ask the GM for an invite link to join.',
   notLoggedWrongCampaign: 'Not logged — your active character isn’t in the linked campaign.',
   pushedCharged: 'Pushed (+1d) — 2 stress marked on your sheet',
+  // Round 5 P2-5: the roll is already logged — only its stress write failed (never "something
+  // broke", whose retry would log the roll twice).
+  stressNotMarked: (stress: number) =>
+    `The roll is logged, but its ${stress} stress couldn’t be marked. Mark it on your sheet.`,
+  // Negative dice are a penalty, not "from an ability" (web parity, round 5 P2-8).
   abilityDiceNote: (bonus: number) =>
-    `Includes ${bonus > 0 ? '+' : '−'}${Math.abs(bonus)}d from an ability or upgrade.`,
+    bonus > 0
+      ? `Includes +${bonus}d from an ability or upgrade.`
+      : `Includes −${Math.abs(bonus)}d (penalty).`,
   resistCharged: (character: string, stress: number) =>
     stress < 0
       ? `Critical — **1 stress cleared** on ${character}’s sheet.`
@@ -210,6 +217,10 @@ export const copy = {
     `Desperate roll — marked 1 xp in **${attribute}** (${marks}/${size})`,
   desperateXpFull: (attribute: string, size: number) =>
     `Desperate roll — your **${attribute}** xp track is already full (${size}/${size}), so nothing was marked. Take an advance on your sheet.`,
+  desperateXpLog: (attribute: string | null, amount: number) =>
+    attribute
+      ? `Desperate roll — marked ${amount} XP in ${attribute}`
+      : `Desperate roll — marked ${amount} XP`,
   desperateXpFailed:
     'Desperate roll — the roll is logged, but its xp couldn’t be marked. Mark it on your sheet.',
   xpMarked: (name: string, amount: number, total: number) =>

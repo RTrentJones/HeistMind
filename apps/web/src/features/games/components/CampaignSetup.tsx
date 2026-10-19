@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import type { CampaignCapacity } from '@heist-mind/core';
 import { Heading, Text } from '@heist-mind/ui';
 import { usePageTranslation } from '@/lib/i18n/hooks';
 
@@ -10,16 +11,24 @@ import { usePageTranslation } from '@/lib/i18n/hooks';
  * returning mid-campaign scrolled past setup on every visit. It starts OPEN while the GM is still
  * alone in the campaign (setup is the job then) and closed once players are in. The initial
  * state is taken once: a player joining mid-session (a refetch) never snaps it shut under the GM.
+ *
+ * Round 5 P2-4 — a FULL campaign is surfaced on the always-visible summary line and opens the
+ * disclosure: the player at the door is told to ask the GM to raise the limit "under Players",
+ * which sat inside this (closed) panel with nothing outside it saying "full".
  */
 export function CampaignSetup({
   initiallyOpen,
+  capacity,
   children,
 }: {
   initiallyOpen: boolean;
+  /** The campaign's seats — `full` surfaces on the summary and opens the panel. */
+  capacity?: CampaignCapacity;
   children: ReactNode;
 }) {
   const { t } = usePageTranslation();
-  const [open, setOpen] = useState(initiallyOpen);
+  const full = capacity?.full === true;
+  const [open, setOpen] = useState(initiallyOpen || full);
   return (
     <details
       className='group rounded-xl border border-border-primary bg-background-secondary/40'
@@ -35,6 +44,11 @@ export function CampaignSetup({
           <Text as='span' variant='muted' size='sm'>
             {t('game.setupSummary')}
           </Text>
+          {full && capacity && (
+            <Text as='span' size='sm' className='font-medium' data-testid='campaign-full'>
+              {t('game.setupFull', { players: capacity.players, limit: capacity.limit })}
+            </Text>
+          )}
         </span>
         <svg
           aria-hidden='true'

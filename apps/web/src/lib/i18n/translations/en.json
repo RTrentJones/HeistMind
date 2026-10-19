@@ -49,8 +49,8 @@
     "inviteSection": {
       "title": "Invite players",
       "description": "Send players an invite link (it works even if they haven't signed in yet), or the bare join code to type on the Campaigns page. Each code works for up to 20 joins while the campaign has an open player seat; revoke it any time.",
-      "seatsOpen": "{{players}} of {{limit}} player seats taken — {{open}} open. Change the limit under Players.",
-      "seatsFull": "All {{limit}} player seats are taken, so no code will let anyone in until you raise the player limit under Players.",
+      "seatsOpen": "{{summary}} — {{open}} open. Change the limit under Players.",
+      "seatsFull": "{{summary}} — the campaign is full, so no code will let anyone in until you raise the player limit under Players.",
       "generate": "Create a join code",
       "generateFailed": "Couldn't create a join code.",
       "copy": "Copy code",
@@ -352,7 +352,8 @@
       "positionHelp": "Controlled (act on your terms) → Risky (the default) → Desperate (worst position, worst consequences).",
       "effectHelpTitle": "Effect — how much you accomplish",
       "effectHelp": "Limited (a partial result) → Standard → Great (more than usual).",
-      "zeroDiceHint": "No rating in this action — roll 2 dice and take the lowest.",
+      "zeroDiceHint": "No dice in the pool — roll 2 dice and take the lowest.",
+      "poolPreview": "Pool: {{count}}d",
       "push": "Push (+1d, 2 stress)",
       "bargain": "Devil's bargain (+1d)",
       "bargainPlaceholder": "The complication you accept…",
@@ -362,8 +363,12 @@
       "waiveHarm": "Waive harm penalty",
       "assistLabel": "Assist",
       "assistNone": "No assist",
-      "assistOption": "Assist: {{name}} (+1d, they mark 1 stress)",
-      "assistNote": "Assisted by {{name}} (+1d — they mark 1 stress)",
+      "assistOption": "Assist: {{name}} (+1d, they take 1 stress)",
+      "assistNote": "Assisted by {{name}} (+1d, 1 stress)",
+      "assistChargedLogNote": "{{name}} marked 1 stress for an assist.",
+      "assistCharged": "{{name}} marked 1 stress for the assist — it’s on their sheet.",
+      "assistNearLimit": "{{name}} is one stress box from trauma, so the assist’s 1 stress wasn’t marked. They mark it on their own sheet (and take the trauma there).",
+      "assistFailed": "The roll is saved, but {{name}}’s assist stress couldn’t be marked ({{reason}}). They mark 1 stress on their own sheet.",
       "fortuneTypeLabel": "Fortune type",
       "fortuneType": {
         "fortune": "Fortune",
@@ -388,11 +393,17 @@
       "desperateXpNote": "Desperate roll — marked 1 XP in {{attribute}} ({{marks}} on the track).",
       "desperateXpFull": "Desperate roll — your {{attribute}} XP track is already full ({{size}}/{{size}}), so nothing was marked. Take an advance to spend it.",
       "desperateXpFailed": "The roll is saved, but its desperate-roll XP couldn't be marked ({{reason}}). Mark 1 XP on the sheet yourself.",
+      "desperateXpLogNote": "Desperate roll — marked {{count}} XP in {{attribute}}",
+      "desperateXpLogNotePool": "Desperate roll — marked {{count}} XP",
       "bonusLabel": "Ability dice",
       "bonusOption": "{{signed}}d from an ability",
+      "bonusPenaltyOption": "{{signed}}d (penalty)",
       "bonusNone": "No ability dice",
       "bonusHint": "Dice an ability or crew upgrade adds or removes on this roll (Ambush +1d, Iron Will +1d, Daredevil −1d). The pool never drops below 0d.",
-      "abilityDiceNote": "Includes {{signed}}d from an ability or upgrade."
+      "abilityDiceNote": "Includes {{signed}}d from an ability or upgrade.",
+      "abilityDicePenaltyNote": "Includes {{signed}}d (penalty).",
+      "stressNotMarked": "The roll is saved, but its {{count}} stress couldn’t be marked ({{reason}}). Mark it on the sheet yourself.",
+      "stressLogNotWritten": "The stress is marked on the sheet, but its note couldn’t be added to the campaign log."
     },
     "rollLog": {
       "empty": "No rolls yet.",
@@ -568,6 +579,8 @@
       "pickerGroupOwnNamed": "From your crew's list ({{type}})",
       "pickerGroupVeteran": "Through Veteran — another crew type's ability",
       "pickerGroupVeteranHelp": "Takes Veteran and this ability together in one pick.",
+      "pickerGroupVeteranCount_one": "{{count}} ability from another crew type",
+      "pickerGroupVeteranCount_other": "{{count}} abilities from other crew types",
       "pickerGroupUpgrades": "Upgrades — mark two boxes",
       "markUpgradeBoxes": "Mark 2 upgrade boxes: {{name}} ({{boxes}}/{{size}})",
       "markOtherUpgrades": "Mark 2 boxes on other upgrades",
@@ -758,13 +771,15 @@
       "leftNote": "left the campaign",
       "leftToast": "You left the campaign",
       "leaveFailed": "Couldn't leave the campaign",
-      "seats": "{{players}} of {{limit}} players",
-      "seatsFull": "{{players}} of {{limit}} players — the campaign is full",
-      "limitLabel": "Player limit",
+      "seats_one": "{{players}} of {{count}} player",
+      "seats_other": "{{players}} of {{count}} players",
+      "seatsFull": "{{summary}} — the campaign is full",
+      "limitHeading": "Player limit",
       "limitSave": "Save limit",
       "limitHelp": "How many players can join (you, the GM, aren't counted) — up to {{max}}.",
       "limitRange": "Choose a whole number from {{min}} to {{max}}.",
-      "limitBelowPlayers": "{{players}} players are already in — remove someone first to go lower.",
+      "limitBelowPlayers_one": "{{count}} player is already in — remove them first to go lower.",
+      "limitBelowPlayers_other": "{{count}} players are already in — remove someone first to go lower.",
       "limitSaved": "Player limit set to {{limit}}",
       "limitFailed": "Couldn't save the player limit."
     },
@@ -837,7 +852,10 @@
     "signin": {
       "title": "Taking you to Discord",
       "waiting": "Starting your Discord sign-in — this usually takes a second.",
-      "retry": "Continue with Discord"
+      "retry": "Continue with Discord",
+      "noJsTitle": "Sign-in needs JavaScript",
+      "noJs": "HeistMind signs you in with Discord in your browser, which needs JavaScript. Turn it on (or try another browser), then sign in again.",
+      "noJsHome": "Back to HeistMind"
     }
   },
   "pages": {
@@ -1049,6 +1067,7 @@
       "joinedDismiss": "Dismiss",
       "setupTitle": "Campaign setup",
       "setupSummary": "Invite players, see who's in, and put the campaign on Discord.",
+      "setupFull": "Full — {{players}} of {{limit}} players. Raise the player limit under Players to let anyone else in.",
       "peopleTitle": "People"
     },
     "join": {

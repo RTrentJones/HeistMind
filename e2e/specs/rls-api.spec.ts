@@ -318,6 +318,85 @@ test.describe('RLS at the API level (F89)', () => {
     expect(gmLog.error).toBeNull();
   });
 
+  // Round 5 P2-6 (F103) — an ASSIST costs the helper 1 stress (RAW). A plain write to another
+  // player's character is still refused; 00027's charge_assist_stress is the one narrow path:
+  // the caller's own recent action roll, a co-member's character, +1 once per roll.
+  test('an assist charges a co-member +1 stress through 00027 only — once per roll', async () => {
+    const roll = await attacker.db
+      .from('rolls')
+      .insert({
+        game_id: gameId,
+        user_id: attacker.id,
+        kind: 'action',
+        dice: 3,
+        results: [5, 2, 1],
+        outcome: 'partial',
+        note: 'Assisted by the GM (+1d, 1 stress)',
+      })
+      .select('id')
+      .single();
+    expect(roll.error).toBeNull();
+    const rollId = roll.data!.id as string;
+
+    // The direct write stays closed (RLS: not their character).
+    const direct = await attacker.db
+      .from('characters')
+      .update({ character_data: { stress: 5 } })
+      .eq('id', gmCharacterId)
+      .select();
+    expect(direct.data ?? []).toHaveLength(0);
+
+    const charged = await attacker.db.rpc('charge_assist_stress', {
+      p_roll_id: rollId,
+      p_character_id: gmCharacterId,
+      p_note: 'The GM marked 1 stress for an assist.',
+    });
+    expect(charged.error).toBeNull();
+    expect(charged.data).toBe('charged');
+
+    const truth = await admin(env.heistmindSchema)
+      .from('characters')
+      .select('character_data')
+      .eq('id', gmCharacterId)
+      .single();
+    expect((truth.data?.character_data as { stress?: number }).stress).toBe(1);
+    const logged = await admin(env.heistmindSchema)
+      .from('rolls')
+      .select('kind, user_id, note')
+      .eq('character_id', gmCharacterId)
+      .eq('note', 'The GM marked 1 stress for an assist.');
+    expect(logged.data).toEqual([
+      { kind: 'note', user_id: attacker.id, note: 'The GM marked 1 stress for an assist.' },
+    ]);
+
+    // Once per roll; someone else's roll can't be used; anon can't call it at all.
+    const replay = await attacker.db.rpc('charge_assist_stress', {
+      p_roll_id: rollId,
+      p_character_id: gmCharacterId,
+    });
+    expect(replay.error?.message).toMatch(/already charged/);
+    const borrowed = await gm.db.rpc('charge_assist_stress', {
+      p_roll_id: rollId,
+      p_character_id: gmCharacterId,
+    });
+    expect(borrowed.error?.message).toMatch(/Roll not found/);
+    const anon = createClient(env.supabaseUrl!, env.supabaseAnonKey!, {
+      ...opts,
+      db: { schema: env.heistmindSchema },
+    });
+    const anonCall = await anon.rpc('charge_assist_stress', {
+      p_roll_id: rollId,
+      p_character_id: gmCharacterId,
+    });
+    expect(anonCall.error).not.toBeNull();
+    const after = await admin(env.heistmindSchema)
+      .from('characters')
+      .select('character_data')
+      .eq('id', gmCharacterId)
+      .single();
+    expect((after.data?.character_data as { stress?: number }).stress).toBe(1);
+  });
+
   test('a kicked player cannot reactivate, delete the kick, or re-redeem the code', async () => {
     const kick = await gm.db
       .from('game_players')

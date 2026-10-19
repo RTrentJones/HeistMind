@@ -52,6 +52,23 @@ beforeEach(() => {
 afterAll(() => randomSpy.mockRestore());
 
 describe('RollPanel — standalone (display-only) rolls', () => {
+  // F102 — "Hunt (0d)" + "+2d from an ability" still read 0d: the pool beside Roll now follows
+  // every modifier, and the zero-dice hint follows the pool (not the bare rating).
+  it('shows the pool it will roll, updated by ability dice and push', async () => {
+    const user = userEvent.setup();
+    renderLocal();
+    const pool = screen.getByTestId('roll-pool');
+    expect(pool).toHaveTextContent('Pool: 2d'); // Prowl 2
+    await user.selectOptions(screen.getByLabelText('Action'), 'Hunt');
+    expect(pool).toHaveTextContent('Pool: 0d');
+    expect(screen.getByText(/No dice in the pool — roll 2 dice and take the lowest/)).toBeVisible();
+    await user.selectOptions(screen.getByLabelText('Ability dice'), '2');
+    expect(pool).toHaveTextContent('Pool: 2d');
+    expect(screen.queryByText(/No dice in the pool/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: /^Push/ }));
+    expect(pool).toHaveTextContent('Pool: 3d');
+  });
+
   it('classifies an action roll locally and persists nothing', async () => {
     fixDice(6);
     const user = userEvent.setup();
@@ -112,6 +129,23 @@ describe('RollPanel — standalone (display-only) rolls', () => {
       expect.objectContaining({ userId: 'u1', stress: 2 })
     );
     expect(actionRoll.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('push + ability dice reset after a local roll (round 5 P1-2): the next roll costs nothing', async () => {
+    fixDice(4);
+    const user = userEvent.setup();
+    renderLocal();
+    await user.click(screen.getByLabelText(/push \(\+1d, 2 stress\)/i));
+    await user.selectOptions(screen.getByLabelText('Ability dice'), '1');
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toHaveTextContent('[4, 4, 4, 4]');
+    expect(screen.getByLabelText(/push \(\+1d, 2 stress\)/i)).not.toBeChecked();
+    expect(screen.getByLabelText('Ability dice')).toHaveValue('0');
+    applyStress.mutateAsync.mockClear();
+    fixDice(5);
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toHaveTextContent('[5, 5]');
+    expect(applyStress.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('a resistance roll marks 6 − highest on the sheet', async () => {

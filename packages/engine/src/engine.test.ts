@@ -472,20 +472,375 @@ describe('rollAction — assist (F10)', () => {
     expect(update).toHaveBeenCalledWith('c2', 'u1', {
       characterData: expect.objectContaining({ stress: 7 }),
     });
+    expect(out.success && out.data.assist).toEqual({
+      characterId: 'c2',
+      status: 'charged',
+      trauma: false,
+    });
   });
 
-  it("another player's assister is NOT written — the roll stands, they self-mark", async () => {
+  it('an own/GM assist charge is logged with the client copy, like the cross-player one', async () => {
     const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
-    const update = vi.fn();
-    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const helper = {
+      ...CHARACTER,
+      id: 'c2',
+      createdBy: 'u1',
+      gameId: 'g1',
+    } as CharacterWithDetails;
     const r = repos({
       rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(helper)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi
+          .fn()
+          .mockResolvedValue(ok({ id: 'c2', name: 'Bo', gameId: 'g1' } as Character)),
+      },
+    });
+    await rollAction(r, {
+      ...baseInput,
+      assist: { characterId: 'c2', logNote: 'Bo marked 1 stress for an assist.' },
+    });
+    expect(create).toHaveBeenLastCalledWith(
+      'u1',
+      expect.objectContaining({
+        kind: 'note',
+        characterId: 'c2',
+        note: 'Bo marked 1 stress for an assist.',
+      })
+    );
+  });
+
+  it("another player's assister goes through the narrow 00027 charge, never a plain write", async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const update = vi.fn();
+    const chargeAssistStress = vi.fn().mockResolvedValue(ok('charged'));
+    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const r = repos({
+      rolls: { create, chargeAssistStress },
       characters: { findWithDetails: vi.fn().mockResolvedValue(ok(foreign)) },
       characterManagement: { updateCharacterWithValidation: update },
     });
+    const out = await rollAction(r, {
+      ...baseInput,
+      assist: { characterId: 'c9', logNote: 'Bo marked 1 stress for the assist' },
+    });
+    expect(out.success && out.data.assist).toEqual({ characterId: 'c9', status: 'charged' });
+    expect(chargeAssistStress).toHaveBeenCalledWith(
+      'r1',
+      'c9',
+      'Bo marked 1 stress for the assist'
+    );
+    expect(update).not.toHaveBeenCalled(); // RLS boundary: no direct write to their row
+  });
+
+  it('an assister one box from trauma is held back (near_limit) — the roll still stands', async () => {
+    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const r = repos({
+      rolls: {
+        create: vi.fn().mockResolvedValue(ok({ id: 'r1' })),
+        chargeAssistStress: vi.fn().mockResolvedValue(ok('near_limit')),
+      },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(foreign)) },
+    });
     const out = await rollAction(r, { ...baseInput, assist: { characterId: 'c9' } });
-    expect(out.success).toBe(true); // NOT_OWNER degrades to feed-attribution, never a failure
-    expect(update).not.toHaveBeenCalled();
+    expect(out.success && out.data.assist).toEqual({ characterId: 'c9', status: 'near_limit' });
+  });
+
+  it('a failed assist charge is reported with the saved roll, not as the roll failing', async () => {
+    const foreign = { ...CHARACTER, id: 'c9', createdBy: 'u9' } as CharacterWithDetails;
+    const r = repos({
+      rolls: {
+        create: vi.fn().mockResolvedValue(ok({ id: 'r1' })),
+        chargeAssistStress: vi.fn().mockResolvedValue(fail('That roll is too old')),
+      },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(foreign)) },
+    });
+    const out = await rollAction(r, { ...baseInput, assist: { characterId: 'c9' } });
+    expect(out.success).toBe(true);
+    expect(out.success && out.data.assist).toEqual({
+      characterId: 'c9',
+      status: 'failed',
+      error: 'That roll is too old',
+    });
+    // A non-ownership failure of the plain write is reported the same way.
+    const own = { ...CHARACTER, id: 'c2', createdBy: 'u1' } as CharacterWithDetails;
+    const r2 = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r2' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(own)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(fail('Load exceeds 5')),
+      },
+    });
+    const out2 = await rollAction(r2, { ...baseInput, assist: { characterId: 'c2' } });
+    expect(out2.success && out2.data.assist).toMatchObject({
+      status: 'failed',
+      error: 'Load exceeds 5',
+    });
+  });
+});
+
+describe('rollAction — desperate XP lands in the campaign log (round 5 P2-8)', () => {
+  it('logs an xp event on the rolling character with the client copy', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const inGame = {
+      ...CHARACTER,
+      gameId: 'g1',
+      ruleset: { content: getBuiltinById('blades-in-the-dark')?.content ?? DEFAULT_RULESET },
+    } as unknown as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(inGame)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(ok({} as Character)),
+      },
+    });
+    const action = 'Skirmish';
+    const out = await rollAction(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      kind: 'action',
+      label: action,
+      action,
+      position: 'desperate',
+      dice: 1,
+      results: [3],
+      zeroDice: false,
+      desperateXpLog: (track, amount) => `Desperate roll — marked ${amount} XP in ${track}`,
+    });
+    expect(out.success && out.data.desperateXp?.amount).toBe(1);
+    expect(create).toHaveBeenLastCalledWith(
+      'u1',
+      expect.objectContaining({
+        kind: 'xp',
+        characterId: 'c1',
+        label: 'Silks',
+        note: 'Desperate roll — marked 1 XP in prowess',
+      })
+    );
+  });
+
+  it('logs nothing without copy (the bot and older callers stay unchanged)', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1' }));
+    const inGame = {
+      ...CHARACTER,
+      gameId: 'g1',
+      ruleset: { content: getBuiltinById('blades-in-the-dark')?.content ?? DEFAULT_RULESET },
+    } as unknown as CharacterWithDetails;
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(inGame)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(ok({} as Character)),
+      },
+    });
+    const action = 'Skirmish';
+    await rollAction(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      kind: 'action',
+      label: action,
+      action,
+      position: 'desperate',
+      dice: 1,
+      results: [3],
+      zeroDice: false,
+    });
+    expect(create).toHaveBeenCalledTimes(1); // the roll only
+  });
+});
+
+describe('rollAction / rollResistance — a stress write failure never fails a saved roll (P2-5)', () => {
+  it('push: the roll is returned with stressError', async () => {
+    const create = vi.fn().mockResolvedValue(ok({ id: 'r1', outcome: 'success' }));
+    const r = repos({
+      rolls: { create },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(fail('Carrying 7 load')),
+      },
+    });
+    const out = await rollAction(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      kind: 'action',
+      label: 'skirmish',
+      dice: 3,
+      results: [6, 4, 2],
+      zeroDice: false,
+      pushed: true,
+    });
+    expect(out.success).toBe(true);
+    expect(out.success && out.data).toMatchObject({
+      id: 'r1',
+      pushStress: null,
+      stressError: 'Carrying 7 load',
+      assist: null,
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('resistance: the roll is returned with stressError', async () => {
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(fail('Carrying 7 load')),
+      },
+    });
+    const out = await rollResistance(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      dice: 2,
+      results: [4, 2],
+      zeroDice: false,
+    });
+    expect(out.success && out.data).toMatchObject({
+      stress: 2,
+      trauma: false,
+      stressError: 'Carrying 7 load',
+    });
+  });
+
+  // Codex P2 (PR #182): the trauma FEED note failing after the stress + owed trauma were written
+  // is not an unapplied stress — the outcome stays applied and only `logError` reports the gap.
+  const atEight = {
+    ...CHARACTER,
+    gameId: 'g1',
+    characterData: { ...CHARACTER.characterData, stress: 8 },
+  } as CharacterWithDetails;
+  const feedFails = () => {
+    const update = vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character));
+    // The roll row lands; the trauma note insert after it fails.
+    const create = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ id: 'r1' }))
+      .mockResolvedValue(fail('feed insert refused'));
+    return {
+      update,
+      r: repos({
+        rolls: { create },
+        characters: { findWithDetails: vi.fn().mockResolvedValue(ok(atEight)) },
+        characterManagement: { updateCharacterWithValidation: update },
+      }),
+    };
+  };
+  const TRAUMA_COPY = {
+    note: (n: string) => `${n} broke`,
+    retireNote: (n: string) => `${n} retires`,
+  };
+
+  it('push into trauma with a failed feed note: applied (trauma kept), logError, no stressError', async () => {
+    const { r, update } = feedFails();
+    const out = await rollAction(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      kind: 'action',
+      label: 'skirmish',
+      dice: 3,
+      results: [6, 4, 2],
+      zeroDice: false,
+      pushed: true,
+      traumaLog: TRAUMA_COPY,
+    });
+    expect(update).toHaveBeenCalledWith('c1', 'u1', {
+      characterData: expect.objectContaining({ stress: 0, traumaPending: 1 }),
+    });
+    expect(out.success && out.data.stressError).toBeNull();
+    expect(out.success && out.data.pushStress).toMatchObject({
+      trauma: true,
+      logError: 'feed insert refused',
+    });
+  });
+
+  it('resistance into trauma with a failed feed note: trauma flags kept, logError, no stressError', async () => {
+    const { r } = feedFails();
+    const out = await rollResistance(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      dice: 1,
+      results: [3], // 3 stress: 8 → overflow
+      zeroDice: false,
+      traumaLog: TRAUMA_COPY,
+    });
+    expect(out.success && out.data).toMatchObject({
+      stress: 3,
+      trauma: true,
+      stressError: null,
+      logError: 'feed insert refused',
+    });
+  });
+
+  it('resistance whose stress write itself fails: stressError, no trauma claimed', async () => {
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(atEight)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(fail('Carrying 7 load')),
+      },
+    });
+    const out = await rollResistance(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      dice: 1,
+      results: [3],
+      zeroDice: false,
+      traumaLog: TRAUMA_COPY,
+    });
+    expect(out.success && out.data).toMatchObject({
+      trauma: false,
+      stressError: 'Carrying 7 load',
+      logError: null,
+    });
+  });
+
+  it('applyStress: a failed trauma feed note keeps the applied outcome (no double charge)', async () => {
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(fail('feed insert refused')) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(atEight)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(ok({ id: 'c1' } as Character)),
+      },
+    });
+    const out = await applyStress(r, {
+      characterId: 'c1',
+      userId: 'u1',
+      stress: 2,
+      traumaLog: TRAUMA_COPY,
+    });
+    expect(out.success).toBe(true);
+    expect(out.success && out.data).toMatchObject({
+      trauma: true,
+      logError: 'feed insert refused',
+    });
+  });
+
+  it('a clean push reports no stressError', async () => {
+    const r = repos({
+      rolls: { create: vi.fn().mockResolvedValue(ok({ id: 'r1' })) },
+      characters: { findWithDetails: vi.fn().mockResolvedValue(ok(CHARACTER)) },
+      characterManagement: {
+        updateCharacterWithValidation: vi.fn().mockResolvedValue(ok({} as Character)),
+      },
+    });
+    const out = await rollAction(r, {
+      gameId: 'g1',
+      userId: 'u1',
+      characterId: 'c1',
+      kind: 'action',
+      label: 'skirmish',
+      dice: 3,
+      results: [6, 4, 2],
+      zeroDice: false,
+      pushed: true,
+    });
+    expect(out.success && out.data.stressError).toBeNull();
   });
 });
 

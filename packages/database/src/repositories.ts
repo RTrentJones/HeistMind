@@ -209,9 +209,24 @@ export interface CharacterManagementRepository {
 // ===========================
 
 /** Append-only dice-roll log, scoped per game (the play-by-post centerpiece). */
+/** What `chargeAssistStress` did: +1 stress written, or held back at the last box (00027). */
+export type AssistCharge = 'charged' | 'near_limit';
+
 export interface RollRepository {
   create(userId: string, data: CreateRollData): Promise<Result<Roll>>;
   findByGame(gameId: string, limit?: number): Promise<Result<Roll[]>>;
+  /**
+   * Charge an ASSIST's 1 stress to ANOTHER player's character (00027 `charge_assist_stress`, the
+   * one narrow cross-player write): only for the caller's own action roll from the last 15
+   * minutes, once per roll, and only while +1 stays below the ruleset's base stress max —
+   * otherwise `near_limit` (nothing written; the owner marks it, trauma is their call). Logs a
+   * note row (`note`) for the helper's character.
+   */
+  chargeAssistStress(
+    rollId: string,
+    characterId: string,
+    note: string
+  ): Promise<Result<AssistCharge>>;
 }
 
 /** Per-game progress clocks. Members read; the game's GM creates / ticks / removes them. */

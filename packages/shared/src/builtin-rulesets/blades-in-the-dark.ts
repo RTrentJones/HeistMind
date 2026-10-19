@@ -13,6 +13,12 @@
 //   Physicker, Venomous, Ghost Veil, Cloak & Dagger, Ghost Voice, Functioning Vice, Ghost Contract,
 //   Jail Bird, Compel, Occultist, Tempest, The Good Stuff) are faithful ORIGINAL paraphrases of the
 //   mechanic — game mechanics aren't copyrightable; only expression is — with no setting terms.
+// - Crew special abilities follow the same rule. The SRD's crew page prints 18 examples (+ Patron),
+//   in its own wording here; the other book abilities that give every crew type its seven (round
+//   5: Emberdeath, Vipers, Dangerous, Blood Brothers, Door Kickers, Chosen, Bound in Darkness,
+//   Conviction, Glory Incarnate, Sealed in Blood, Zealotry, Silver Tongues, Ghost Market, Hooked,
+//   Everyone Steals, Ghost Echoes, Slippery, Renegades, Like Part of the Family, Ghost Passage,
+//   Leverage, Reavers) are original paraphrases of the mechanic under their book names.
 // - Ability `tier` is deliberately absent: the SRD has no ability tiers. Cross-playbook picks need a
 //   Veteran slot (the playbook "Veteran" ability, `effects.veteran`), whatever the ability.
 //
@@ -74,7 +80,7 @@ const roster = (...ids: string[]): string[] => [...ids, ...VETERAN_IDS];
 export const BLADES_IN_THE_DARK: RulesetContent = {
   metadata: {
     name: 'Blades in the Dark',
-    version: '1.1.0',
+    version: '1.2.0',
     author: 'John Harper / One Seven Design (CC BY 3.0)',
     description:
       'A daring crew of scoundrels seeking their fortunes in a haunted, industrial-fantasy city. ' +
@@ -1204,8 +1210,10 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         description: 'Runners who move contraband past the law.',
       },
     ],
-    // SRD wording (bladesinthedark.com/crew-playbook) where printed; Mastery, Veteran and The Good
-    // Stuff are book mechanics in original words.
+    // SRD wording (bladesinthedark.com/crew-playbook) where printed. The SRD prints only example
+    // crew abilities, so each crew type's remaining book abilities (round 5: seven per type plus
+    // Veteran) and Mastery, Veteran and The Good Stuff are book mechanics in ORIGINAL words — the
+    // same provenance rule as the playbook abilities above, setting-neutral.
     abilities: [
       {
         id: 'crew-deadly',
@@ -1247,6 +1255,23 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
           'roll.',
       },
       {
+        id: 'crew-emberdeath',
+        name: 'Emberdeath',
+        crewType: 'assassins',
+        description:
+          'You know a rite that unmakes a victim as they die. Take 3 stress at the moment of ' +
+          'the kill to burn away the spirit and the body together, leaving nothing to return, ' +
+          'be questioned, or be found.',
+      },
+      {
+        id: 'crew-vipers',
+        name: 'Vipers',
+        crewType: 'assassins',
+        description:
+          'Your crew has a gift for poison. When you acquire or craft a poison, take +1 result ' +
+          'level on the roll. When you use one, you are prepared so it never affects you.',
+      },
+      {
         id: 'crew-fiends',
         name: 'Fiends',
         crewType: 'bravos',
@@ -1270,12 +1295,97 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
           'get two downtime activities, instead of just one.',
       },
       {
+        id: 'crew-dangerous',
+        name: 'Dangerous',
+        crewType: 'bravos',
+        description:
+          'Each PC may add +1 action rating to Hunt, Skirmish, or Wreck (up to a max rating of 3). Each player picks ' +
+          'their own action. Taken during initial character and crew creation, it supersedes the ' +
+          'normal starting limit for action ratings.',
+        effects: {
+          bonusActionDots: 1,
+          bonusActionDotsIn: ['Hunt', 'Skirmish', 'Wreck'],
+          bonusDotsExceedCreationCap: true,
+        },
+      },
+      {
+        id: 'crew-blood-brothers',
+        name: 'Blood Brothers',
+        crewType: 'bravos',
+        description:
+          'When you fight side by side with your cohorts, they get +1d on teamwork rolls (setup ' +
+          'and group actions). Every cohort also gains the Thugs type for free; a gang that is ' +
+          'already Thugs adds another type instead.',
+      },
+      {
+        id: 'crew-door-kickers',
+        name: 'Door Kickers',
+        crewType: 'bravos',
+        description: 'When you execute an assault plan, take +1d to the engagement roll.',
+      },
+      {
         id: 'crew-anointed',
         name: 'Anointed',
         crewType: 'cult',
         description:
           'You gain +1d to resistance rolls against supernatural threats. You get +1d to healing ' +
           'rolls when you have supernatural harm.',
+      },
+      {
+        id: 'crew-chosen',
+        name: 'Chosen',
+        crewType: 'cult',
+        description:
+          'Each PC may add +1 action rating to Attune, Study, or Sway (up to a max rating of 3). Each player picks ' +
+          'their own action. Taken during initial character and crew creation, it supersedes the ' +
+          'normal starting limit for action ratings.',
+        effects: {
+          bonusActionDots: 1,
+          bonusActionDotsIn: ['Attune', 'Study', 'Sway'],
+          bonusDotsExceedCreationCap: true,
+        },
+      },
+      {
+        id: 'crew-bound-in-darkness',
+        name: 'Bound in Darkness',
+        crewType: 'cult',
+        description:
+          'Distance never separates the faithful: you may use teamwork with any member of the ' +
+          'cult, however far apart you are. Take 1 stress to send a whispered message that ' +
+          'every cultist hears.',
+      },
+      {
+        id: 'crew-conviction',
+        name: 'Conviction',
+        crewType: 'cult',
+        description:
+          'Each PC gains a second vice: Worship. When you indulge it and bring a fitting ' +
+          'sacrifice, clearing more stress than you have does not count as overindulging. Until ' +
+          'you next indulge Worship, your deity also assists one action roll of your choice ' +
+          '(+1d).',
+      },
+      {
+        id: 'crew-glory-incarnate',
+        name: 'Glory Incarnate',
+        crewType: 'cult',
+        description:
+          'At times your deity takes physical form in the world. That can be a mighty boon, but ' +
+          'a god does not share mortal priorities or values: its help comes on its own terms, ' +
+          'and the GM plays it that way.',
+      },
+      {
+        id: 'crew-sealed-in-blood',
+        name: 'Sealed in Blood',
+        crewType: 'cult',
+        description: 'Each human sacrifice lowers the stress cost of any ritual you perform by 3.',
+      },
+      {
+        id: 'crew-zealotry',
+        name: 'Zealotry',
+        crewType: 'cult',
+        description:
+          'Your cohorts have given themselves wholly to the cult. They will take on any task, ' +
+          'however dangerous or strange, and get +1d to rolls against enemies of the faith.',
       },
       {
         id: 'crew-accord',
@@ -1304,6 +1414,37 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
           'few, many, or all).',
       },
       {
+        id: 'crew-silver-tongues',
+        name: 'Silver Tongues',
+        crewType: 'hawkers',
+        description:
+          'Each PC may add +1 action rating to Command, Consort, or Sway (up to a max rating of 3). Each player picks ' +
+          'their own action. Taken during initial character and crew creation, it supersedes the ' +
+          'normal starting limit for action ratings.',
+        effects: {
+          bonusActionDots: 1,
+          bonusActionDotsIn: ['Command', 'Consort', 'Sway'],
+          bonusDotsExceedCreationCap: true,
+        },
+      },
+      {
+        id: 'crew-ghost-market',
+        name: 'Ghost Market',
+        crewType: 'hawkers',
+        description:
+          'Through ritual or hard-won contacts, you can sell your product to buyers from beyond ' +
+          'the living world. They pay in strange currency (favors, secrets, arcane goods) ' +
+          'rather than coin, and they pay well for rare or potent wares.',
+      },
+      {
+        id: 'crew-hooked',
+        name: 'Hooked',
+        crewType: 'hawkers',
+        description:
+          'Your gangs use your product. Give a gang the savage, unreliable, or wild flaw and it ' +
+          'gets +1 quality.',
+      },
+      {
         id: 'crew-network',
         name: 'Pack Rats',
         crewType: 'shadows',
@@ -1326,6 +1467,37 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
           'critical success.',
       },
       {
+        id: 'crew-everyone-steals',
+        name: 'Everyone Steals',
+        crewType: 'shadows',
+        description:
+          'Each PC may add +1 action rating to Prowl, Finesse, or Tinker (up to a max rating of 3). Each player picks ' +
+          'their own action. Taken during initial character and crew creation, it supersedes the ' +
+          'normal starting limit for action ratings.',
+        effects: {
+          bonusActionDots: 1,
+          bonusActionDotsIn: ['Prowl', 'Finesse', 'Tinker'],
+          bonusDotsExceedCreationCap: true,
+        },
+      },
+      {
+        id: 'crew-ghost-echoes',
+        name: 'Ghost Echoes',
+        crewType: 'shadows',
+        description:
+          'From strange experience or occult ritual, every crew member can perceive and ' +
+          'interact with the spectral echo of the city: the ghostly streets, buildings, and ' +
+          'objects that linger on the far side of death.',
+      },
+      {
+        id: 'crew-slippery',
+        name: 'Slippery',
+        crewType: 'shadows',
+        description:
+          'When you roll entanglements, roll twice and keep the result you prefer. When you ' +
+          'reduce heat on the crew, take +1d.',
+      },
+      {
         id: 'crew-all-hands',
         name: 'All Hands',
         crewType: 'smugglers',
@@ -1340,6 +1512,52 @@ export const BLADES_IN_THE_DARK: RulesetContent = {
         description:
           'During downtime, take -1 heat. When your heat is 4 or less, you get +1d to deceive ' +
           'people when you pass yourselves off as ordinary citizens.',
+      },
+      {
+        id: 'crew-renegades',
+        name: 'Renegades',
+        crewType: 'smugglers',
+        description:
+          'Each PC may add +1 action rating to Finesse, Prowl, or Skirmish (up to a max rating of 3). Each player picks ' +
+          'their own action. Taken during initial character and crew creation, it supersedes the ' +
+          'normal starting limit for action ratings.',
+        effects: {
+          bonusActionDots: 1,
+          bonusActionDotsIn: ['Finesse', 'Prowl', 'Skirmish'],
+          bonusDotsExceedCreationCap: true,
+        },
+      },
+      {
+        id: 'crew-like-part-of-the-family',
+        name: 'Like Part of the Family',
+        crewType: 'smugglers',
+        description:
+          'One of your vehicles becomes a cohort, built with vehicle edges and flaws. Its ' +
+          'quality equals your Vehicles rating.',
+      },
+      {
+        id: 'crew-ghost-passage',
+        name: 'Ghost Passage',
+        crewType: 'smugglers',
+        description:
+          'From harsh experience or occult ritual, every crew member is immune to possession by ' +
+          'spirits, but may choose to carry one spirit as a passenger in their own body.',
+      },
+      {
+        id: 'crew-leverage',
+        name: 'Leverage',
+        crewType: 'smugglers',
+        description:
+          'Other factions depend on the contraband you move, so your wins are theirs too: ' +
+          'whenever the crew gains rep, it gains 1 more.',
+      },
+      {
+        id: 'crew-reavers',
+        name: 'Reavers',
+        crewType: 'smugglers',
+        description:
+          'When you fight from a vehicle, you get +1 effect for vehicle damage and speed, and ' +
+          'the vehicle counts as armored.',
       },
       {
         // On the Assassins, Bravos, Hawkers and Shadows sheets [book].

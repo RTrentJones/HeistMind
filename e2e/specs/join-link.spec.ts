@@ -82,6 +82,21 @@ test.describe('invite link /join/<code>', () => {
       expect(await page.evaluate(() => sessionStorage.getItem('heistmind.auth.next'))).toBe(
         `/join/${campaign.code}`
       );
+
+      // F102 — the HEADER's "Sign Up with Discord" keeps the invite too (it sent no `next`, so
+      // OAuth landed on the dashboard and the invite was lost).
+      authorizeUrl = '';
+      await page.goto(`/join/${campaign.code}`);
+      await expect(
+        page.getByRole('heading', { level: 1, name: /you're invited to a campaign/i })
+      ).toBeVisible({ timeout: 20_000 });
+      await page
+        .getByRole('banner')
+        .getByRole('button', { name: /sign up with discord/i })
+        .click();
+      await page.waitForURL(/\/legal$/, { timeout: 20_000 });
+      const headerRedirect = new URL(new URL(authorizeUrl).searchParams.get('redirect_to') ?? '');
+      expect(headerRedirect.searchParams.get('next')).toBe(`/join/${campaign.code}`);
     } finally {
       await anon.close();
       await gm.dispose();
@@ -182,13 +197,13 @@ test.describe('invite link /join/<code>', () => {
       const campaign = await campaignWithJoinCode(gm.page, 'Full Table');
       // A new campaign seats 20 players (never fewer than one code's 20 uses).
       await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 20 players');
-      await expect(gm.page.getByTestId('invite-seats')).toContainText('0 of 20 player seats taken');
+      await expect(gm.page.getByTestId('invite-seats')).toContainText('0 of 20 players — 20 open');
 
       // The GM limits the table to one player.
       const limit = gm.page.getByRole('spinbutton', { name: 'Player limit' });
       await limit.fill('1');
       await gm.page.getByRole('button', { name: 'Save limit' }).click();
-      await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 1 players', {
+      await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 1 player', {
         timeout: 15_000,
       });
 
@@ -205,15 +220,20 @@ test.describe('invite link /join/<code>', () => {
       await second.page.getByRole('button', { name: 'Join', exact: true }).click();
       await expect(second.page.getByText(/This campaign is full/)).toBeVisible({ timeout: 20_000 });
 
-      // The GM sees it too, and can't go below the players already in.
+      // The GM sees it too, and can't go below the players already in. Round 5 P2-4: "full" is
+      // on the setup summary (visible while folded) and the panel opens by itself.
       await gm.page.reload();
+      await expect(gm.page.getByTestId('campaign-full')).toContainText('Full — 1 of 1 players', {
+        timeout: 15_000,
+      });
+      await expect(gm.page.getByTestId('campaign-setup')).toHaveAttribute('open', '');
       await openCampaignSetup(gm.page);
       await expect(gm.page.getByTestId('player-seats')).toHaveText(
-        '1 of 1 players — the campaign is full',
+        '1 of 1 player — the campaign is full',
         { timeout: 15_000 }
       );
       await expect(gm.page.getByTestId('invite-seats')).toContainText(
-        /All 1 player seats are taken/
+        /1 of 1 player — the campaign is full, so no code/
       );
       await limit.fill('0');
       await expect(gm.page.getByRole('button', { name: 'Save limit' })).toBeDisabled();

@@ -86,8 +86,10 @@ describe('CrewAdvancePicker', () => {
       />
     );
     const groups = within(screen.getByTestId('crew-advance-picker')).getAllByRole('group');
+    // (<details> is itself an ARIA group, wrapping the Veteran group — F102.)
     expect(groups.map(g => g.getAttribute('data-testid'))).toEqual([
       'crew-advance-own',
+      'crew-advance-veteran-disclosure',
       'crew-advance-veteran',
       'crew-advance-upgrades',
     ]);
@@ -102,6 +104,27 @@ describe('CrewAdvancePicker', () => {
       expect(radio.closest('label')).toHaveClass('min-h-11');
     }
     expect(container.querySelector('p div, p p')).toBeNull();
+  });
+
+  // F102 — 13 Veteran rows sat between the crew's own list and the upgrades (~4,900px tall at
+  // 360): they're a native disclosure, collapsed by default and opened from the keyboard.
+  // (Keyboard toggling is the browser's native <summary> behaviour — covered in gm-crew e2e.)
+  it('collapses the Veteran routes by default; the summary opens them', async () => {
+    render(
+      <CrewAdvancePicker
+        crew={crew(['crew-second-story'], { 'crew-xp': 8 })}
+        crewRules={crewRules}
+        busy={false}
+        onTake={() => {}}
+      />
+    );
+    const disclosure = screen.getByTestId('crew-advance-veteran-disclosure');
+    expect(disclosure.tagName).toBe('DETAILS');
+    expect(disclosure).not.toHaveAttribute('open');
+    const summary = disclosure.querySelector('summary')!;
+    expect(summary).toHaveTextContent(/Through Veteran.*abilities from other crew types/);
+    await userEvent.click(summary);
+    expect(disclosure).toHaveAttribute('open');
   });
 });
 
@@ -136,6 +159,8 @@ describe('CrewAbilitiesList', () => {
       />
     );
     const remove = screen.getByRole('button', { name: 'Remove crew ability Second Story' });
+    // F102 — the description shrinks, never the button (it was clipped to 42px at 360).
+    expect(remove).toHaveClass('shrink-0');
     await userEvent.click(remove);
     await userEvent.click(screen.getByRole('button', { name: /Remove\? Click again/ }));
     expect(onSave).toHaveBeenCalledWith({ crewAbilities: [] });

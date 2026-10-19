@@ -171,6 +171,94 @@ describe('/roll push — the trauma reply reports the APPLIED outcome', () => {
   });
 });
 
+describe('a post-roll stress write failure keeps the logged roll (round 5 P2-5)', () => {
+  const sheetRefuses = (r: ReturnType<typeof repos>) =>
+    vi.mocked(r.characterManagement.updateCharacterWithValidation).mockResolvedValue({
+      success: false,
+      error: { message: 'Carrying 7 load exceeds the normal limit of 5.', code: 'LOAD_OVER' },
+    });
+
+  it('/roll push: logged, and says the 2 stress needs marking (not "something broke")', async () => {
+    const r = repos();
+    sheetRefuses(r);
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [6, 2, 1]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+        ])
+      )
+    );
+    expect(r.rolls.create).toHaveBeenCalledTimes(1);
+    const embed = firstEmbed(calls);
+    expect(embed.footer?.text).toBe('Logged to The Docks Job');
+    expect(embed.description).toContain('its 2 stress couldn’t be marked');
+    expect(embed.description).not.toContain('2 stress marked on your sheet');
+  });
+
+  // Codex P2 (PR #182): the stress + owed trauma were WRITTEN, only the trauma feed note failed —
+  // the bot must report the applied stress and trauma, never "mark it on your sheet".
+  const atEight = () =>
+    repos(
+      {},
+      characterOnDefaultRuleset({ characterData: { stress: 8, skills: { [RATED_ACTION]: 2 } } })
+    );
+  const feedNoteFails = (r: ReturnType<typeof repos>) =>
+    vi
+      .mocked(r.rolls.create)
+      .mockResolvedValueOnce(ok({ id: 'r1' }) as never)
+      .mockResolvedValue(fail('feed insert refused') as never);
+
+  it('/roll push into trauma with a failed feed note: charged + trauma reply, no re-mark', async () => {
+    const r = atEight();
+    feedNoteFails(r);
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [6, 2, 1]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+        ])
+      )
+    );
+    const embed = firstEmbed(calls);
+    expect(embed.description).toContain('2 stress marked on your sheet');
+    expect(embed.description).not.toContain('couldn’t be marked');
+    expect(JSON.stringify(calls)).toMatch(/trauma/i);
+  });
+
+  it('/resist into trauma with a failed feed note: stress marked + trauma reply, no re-mark', async () => {
+    const r = atEight();
+    feedNoteFails(r);
+    const calls = await run(
+      await handleResist(
+        ctx(r, [3]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    const embed = firstEmbed(calls);
+    expect(embed.description).toContain('stress** marked on');
+    expect(embed.description).not.toContain('couldn’t be marked');
+    expect(JSON.stringify(calls)).toMatch(/trauma/i);
+  });
+
+  it('/resist: logged, and says the stress needs marking', async () => {
+    const r = repos();
+    sheetRefuses(r);
+    const calls = await run(
+      await handleResist(
+        ctx(r, [4]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    expect(r.rolls.create).toHaveBeenCalledTimes(1);
+    const embed = firstEmbed(calls);
+    expect(embed.footer?.text).toBe('Logged to The Docks Job');
+    expect(embed.description).toContain('its 2 stress couldn’t be marked');
+  });
+});
+
 describe('/resist — persisted (Phase 2)', () => {
   // ATTRIBUTE's rating is DERIVED from the sheet: the fixture rates one of its actions (RATED_ACTION)
   // so the rating is 1; rating a second of its actions makes it 2.
@@ -261,7 +349,7 @@ describe('/resist — persisted (Phase 2)', () => {
       'p1',
       expect.objectContaining({ kind: 'resistance', dice: 1, results: [5] })
     );
-    expect(firstEmbed(calls).description).toContain('−1d from an ability');
+    expect(firstEmbed(calls).description).toContain('−1d (penalty)');
   });
 
   it('a point-buy ruleset rolls the STORED attribute rating (nothing to derive from)', async () => {

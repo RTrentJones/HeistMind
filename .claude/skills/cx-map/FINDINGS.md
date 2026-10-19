@@ -32,6 +32,251 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
 
 ## Fixed
 
+### F103 — Round-5 product: a deploy gate that never ran, sticky one-shot roll moves, an invisible full campaign, saved rolls called "failed", uncharged assists, thin BitD crew lists
+
+- **severity:** S1 (P1-1: the beta/prod deploy gate — and with it the prod migration backstop —
+  never ran; P1-2: a second unchanged roll pushed again and kept bonus dice) · S3 (the rest) ·
+  **type:** ops + CX-flaw + FitD-gap — from the round-5 launch review (P1-1, P1-2, P2-4, P2-5,
+  P2-6, P2-7, P2-8). Each verified first (repro below).
+- **what was wrong (verified):**
+  1. **Deploy gate skipped (P1-1, F101 regression).** `greenlight-verify.yml`'s job `if:` compared
+     `github.event.deployment.ref` to `development`/`main`, but Vercel posts the **commit SHA** as
+     the deployment `ref` (`gh api …/deployments` → deployment 7164273008: `ref` =
+     `0546e9ec…` = sha, environment `Preview`). Every run was a grey "skipped" — 0546e9e on
+     `development` included — and the Production job, with its "Migrations applied (production)"
+     backstop, had the same filter. The dedupe also keyed on the run title, so a skipped run (whose
+     conclusion is "success") could have vouched for a real one.
+  2. **Sticky one-shot moves (P1-2).** `RollPanel.roll()` never reset Push, Devil's bargain (+
+     note), Assist, Ability dice or the harm waiver: a second unchanged roll pushed again (stress
+     2 → 4), kept the +Nd and charged the helper again, and the log said so.
+  3. **Full campaign invisible to the GM (P2-4).** "Campaign setup" folds once players are in and
+     nothing outside it said "full", while the player at the door was told to ask the GM to raise
+     the limit "under Players" (inside the closed panel).
+  4. **Post-roll stress turned a saved roll into "Roll failed" (P2-5).** `rollAction`'s push and
+     assist stress and `rollResistance`'s stress ran after `rolls.create` and returned FAILURE on a
+     live-validation error — the F100 desperate-XP class, unfixed for stress (web "Roll failed",
+     bot "something broke"; the natural retry duplicates the roll).
+  5. **Assist from another player never charged (P2-6).** RAW the helper takes 1 stress; the engine
+     swallowed `NOT_OWNER` (RLS rightly refuses a write to someone else's sheet), so Bo's stress
+     stayed 0 → 0 and nobody was told.
+  6. **Thin BitD crew lists (P2-7).** The builtin carried only the SRD's 18 example crew abilities
+     (+ Patron): 1–4 own abilities per type (Cult: just Anointed) where the book has seven.
+  7. **Polish (P2-8).** Negative ability dice read "−3d from an ability"; desperate-roll XP never
+     reached the log (the sheet said "marked 1 XP in Prowess", the GM saw nothing); the dashboard
+     folded DIFFERENT crew events together, hiding a starting-ability pick behind "+N earlier".
+- **fix:**
+  1. **`scripts/verify-target.mjs`** (node built-ins, unit-tested in `pnpm test:scripts`): a
+     `resolve` job reads branch facts from the GitHub compare API at event time — **prod** =
+     environment `Production` and `compare/{sha}...main` is `identical`/`ahead` (main's tip or an
+     ancestor: a redeploy of an earlier prod commit is still prod); **beta** = any other environment
+     and the sha is `development`'s tip or an ancestor (the merge was superseded mid-build);
+     anything else is a feature-branch preview and skips **visibly** (a `::notice` annotation + a
+     job summary naming why). A Production deployment of a sha NOT on main is an `::error` and the
+     run goes red. Transient API errors retry, then fail red (never a silent skip). The gate job is
+     named **`gate (beta|prod)`**, keeps the per-target concurrency queue, the pinned
+     `GREENLIGHT_VERSION` and the prod "Migrations applied (production)" backstop (now keyed on
+     the resolved target), and dedupes on an earlier green **`gate (<target>)` check run** on the
+     sha (a skipped run can no longer vouch). The service-role key is injected only for `beta`.
+     CLAUDE.md F101 section + e2e/README updated. Checked against the real API with the `gh` CLI:
+     0546e9e Preview → beta (tip), 1d40c00 → beta (ancestor), fe4469f Production → prod,
+     0546e9e as Production → error (not on main).
+  2. `RollPanel`: `resetOneShots()` after a SUCCESSFUL roll — action rolls clear push, bargain +
+     note, assist, ability dice and the harm waiver; resistance clears its ability dice; the
+     standalone path does the same. A thrown (failed) roll keeps them for the retry;
+     action/position/effect stay.
+  3. `CampaignSetup` takes the campaign capacity: when full, the always-visible summary adds
+     "Full — N of N players. Raise the player limit under Players to let anyone else in." and the
+     disclosure starts open.
+  4. Engine: `ActionRollOutcome.stressError` (push) and `rollResistance(...).stressError` — the
+     saved roll is returned, the failure reported next to it. Web: "The roll is saved, but its N
+     stress couldn't be marked (…). Mark it on the sheet yourself." Bot (`/roll push`, `/resist`):
+     "The roll is logged, but its N stress couldn't be marked. Mark it on your sheet."
+  5. **Migration `00027_assist_stress.sql`** (idempotent single-DO-block, per-env schema): table
+     `assist_charges` (RLS on, no policies, no client grants) + SECURITY DEFINER
+     **`charge_assist_stress(roll, character, note)`** — the caller's own ACTION roll from the
+     last 15 minutes, the caller an active member, the helper another character in the roll's
+     campaign (own characters take the normal write), **once per roll**, exactly **+1** stress and
+     only while it stays below the ruleset's base `stress.max` (ability/crew boxes only raise the
+     overflow point, so this can never force trauma); at the last box it writes nothing and
+     returns `near_limit` (the owner marks it and picks the trauma). It logs a note row for the
+     helper with the roller's copy. Repository `rolls.chargeAssistStress` (untyped RPC — no types
+     regen). Engine `ActionRollOutcome.assist` = `charged | near_limit | failed` (own/GM helpers
+     still use the validated write, now logged the same way). Web: the option reads "Assist: Bo
+     (+1d, they take 1 stress)", the log note "Assisted by Bo (+1d, 1 stress)", and the roller sees
+     "Bo marked 1 stress for the assist — it's on their sheet." / the near-limit / failure copy.
+     (The bot's `assist:` is a boolean with no helper named, so there is nothing to charge there.)
+  6. Shared: the other **22 book crew abilities** (Emberdeath, Vipers; Dangerous, Blood Brothers,
+     Door Kickers; Chosen, Bound in Darkness, Conviction, Glory Incarnate, Sealed in Blood,
+     Zealotry; Silver Tongues, Ghost Market, Hooked; Everyone Steals, Ghost Echoes, Slippery;
+     Renegades, Like Part of the Family, Ghost Passage, Leverage, Reavers) — seven per type plus
+     Veteran. **Provenance:** the SRD does not print these, so (the file's existing rule for
+     playbook abilities) they are original, setting-neutral paraphrases of the mechanic under
+     their book names; SRD-printed abilities keep the SRD's wording; the header + crew comment
+     say so. The five +1-action-rating abilities reuse Deadly's structured effects. Content
+     v1.1.0 → **1.2.0**; existing copies get it via "Refresh my copy". `/crew advance`
+     autocomplete now lists the crew's own abilities first, then upgrade boxes, then "via
+     Veteran" picks — the longer list overflowed Discord's 25 and cut the own list off.
+  7. Negative ability dice: "−3d (penalty)" / "Includes −3d (penalty)." (web + bot); engine
+     `desperateXpLog` copy logs an `xp` row "Desperate roll — marked 1 XP in Prowess" (web + bot);
+     dashboard `crewEventKey` folds only same-kind crew runs.
+- **tests:** `scripts/verify-target.test.mjs` (13: development merge, superseded merge, feature
+  push, prod FF of a sha also on development, redeploy, off-main Production, retries, dedupe,
+  summary/annotations, workflow wiring); engine (cross-player assist → RPC, near_limit, failed
+  charge keeps the roll, own-assist logged, push/resistance `stressError`, desperate XP logged);
+  database (`chargeAssistStress`); discord (`/roll push` + `/resist` stress failure keep the
+  logged roll, penalty wording, autocomplete order + typed reach); web (one-shot reset on
+  campaign action/bargain/resistance + kept on failure + standalone, stress/assist notes,
+  `CampaignSetup` full, `crewEventKey`); shared (seven per crew type, Deadly-shaped effects,
+  ruleset validation, Cult starting pick). **SQL scenarios** on stack2 `development` (00027
+  applied twice): charged 3 → 4 + note logged, replay refused, `assist_charges` unreadable,
+  own character / fortune roll / someone else's roll / 1-hour-old roll refused, stress 8 of 9 →
+  `near_limit` (nothing written), anon has no EXECUTE. **e2e** (own dev server :3118, stack2,
+  serial): gm-dice-rolls (push + ability dice reset, one pushed row in the log, penalty note; a
+  player's roll with the GM's character assisting charges it through 00027 and the log names
+  it), rls-api (00027 at the API level: plain write refused, charged once, replay/borrowed/anon
+  refused), join-link (full campaign on the setup summary, panel open), plus gm-crew,
+  gm-crew-grant, discord, discord-parity, standalone-dice, dashboard, gm-resistance-downtime,
+  gm-harm-stress, gm-campaign-log, player-characters — all green.
+- **residue / not done:**
+  - The resolver can only see branch state at event time: a feature-branch preview whose status
+    arrives (or is re-run) after that branch was merged is gated as beta (same code, serialized,
+    harmless). Needs one real deployment to confirm end to end (the first `development` merge
+    after this lands should show `resolve` → `gate (beta)` green).
+  - Assist consent: the roller charges the helper (bounded: +1, once per logged roll, never the
+    last box, visible in the log). If tables want the helper to confirm first, that's a
+    pending-charge flow — not built.
+  - The UX pass owns the crew picker's Veteran disclosure; the "Through Veteran" group is now
+    ≈36 options on BitD.
+- **follow-up (Codex review on PR #182):**
+  - **A failed trauma feed note no longer reads as unapplied stress.** `applyStress` used to
+    return FAILURE when the trauma note insert failed, after the stress and owed trauma were
+    already written. `rollAction` then reported `stressError` and the web and bot told the player
+    to mark the stress by hand, which double-charges; `rollResistance` also dropped the trauma
+    flags. Now `applyStress` returns the applied outcome with `logError`, and `rollResistance`
+    returns `logError` next to its real `trauma`/`mustRetire`. Only a stress write that really
+    failed produces "mark it yourself". The web shows a mild note ("The stress is marked on the
+    sheet, but its note couldn't be added to the campaign log."); the bot reports the charge and
+    trauma as usual. This also covers the other `applyStress` callers (stress tracker, `/stress
+add`, flashback). Engine, discord and web tests cover push and resistance in both cases.
+  - **Choices made while a roll is in flight survive the reset.** The one-shot values are
+    snapshotted when the roll is submitted, and each is cleared only if it still holds the
+    submitted value (functional state updates). Switching to a resistance roll and picking −3d
+    mid-roll is kept; the spent push is cleared. Chosen over disabling the controls while
+    pending: the form stays usable for lining up the next roll, and a double submit is already
+    impossible. A unit test changes the modifier mid-roll; the gm-dice-rolls e2e keeps its wait.
+- **status:** fixed (branch `feat/product-r5`, follow-up `fix/r5-codex`)
+
+### F102 — Round-5 pixel UX: phone wizard wider than the phone, dark error text, seat copy, sign-in gaps
+
+- **severity:** S1 for the wizard (every BitD character built on a phone: the identity/vice step
+  panned sideways and its Next sat off-screen) · S2 for dark-mode error contrast and the invite
+  lost through the header sign-in · S3 for the rest · **type:** CX-flaw — from the round-5 pixel
+  audit (`round5-pixel.md` P0-1, P1-1, P2-1…P2-5, P2-7, P2-9) plus the round-5 product review
+  (`round5-review.md` P2-2, P2-3; its vice-step friend/rival overflow is P0-1)
+- **what was wrong:**
+  - **Wizard at 360 (P0-1):** the vice step's Close friend / Rival `<select>`s list "name —
+    description" options, and a native select sizes to its longest option: 418px. The design-system
+    `Select` had no width cap and its parent `Stack` was `align='start'`, so the page went **438px**
+    wide; the fixed Cancel/Back/Next footer is pinned to the widened layout viewport, so Next sat at
+    x 353–418, top 843 on a 360×740 screen — a tap there hit `div.mx-auto`. Present since at least
+    round 4: those rounds' 360 "review" shots were still on this step.
+  - **Why two pixel rounds and the e2e gate missed it (methodology):** the overflow checks compared
+    `scrollWidth` with `window.innerWidth`. Under phone emulation (`isMobile`) the LAYOUT viewport
+    widens to fit overflowing content, so `innerWidth` grew to 438 along with `scrollWidth` and the
+    check passed. `mobile-overflow.spec.ts` also never visited the BitD vice step (it built its
+    character at 1280px because the dev-only Query devtools bubble covers Next at 360).
+  - **Dark error text (P1-1):** six text uses of `text-semantic-error` — the error FILL token, the
+    same in both themes — read 4.07–4.23:1 on the dark surfaces (invite "seats full" line, limit
+    hint, `/games` join box, invite/faction/account errors).
+  - **Seat copy (P2-4):** "All 1 player seats are taken", "1 of 1 players"; the invite card said
+    "1 of 20 player seats taken — 19 open" while the Players card said "1 of 20 players".
+  - **Players card (P2-5):** the limit control sat between the member list and the "Removing a
+    player hands their characters back…" explainer for the Remove buttons.
+  - **Crew (P2-2, P2-3):** the GM's held-ability **Remove** was squeezed to 42px with "Remove" cut
+    off at 360; 13 "via Veteran" rows sat between the crew's own list and the upgrades (~4,900px of
+    picker at 360), under small-caps headings that wrapped to 2–3 lines.
+  - **Ability dice (P2-7):** "Hunt (0d)" with "+2d from an ability" still read as zero dice — nothing
+    showed the pool the roll would throw.
+  - **Dashboard CLS (P2-9):** the campaigns / characters lists loaded as a one-line spinner /
+    "Loading…" that grew into the card grid, pushing everything below ~90–180px at 768 (0.03–0.13).
+  - **`/auth/signin` (P2-1, review P2-3):** no `<main>` (axe `landmark-one-main` + `region`, the only
+    beta axe hits), a card running edge to edge at 360, and with JavaScript off a spinner forever.
+  - **Invite lost (review P2-2):** on `/join/<code>` the header's Sign in / Sign up form sent no
+    `next`, so after OAuth the user landed on the dashboard, not back on the invite.
+- **fix:**
+  - `packages/ui` `Select`: `min-w-0 max-w-full truncate` on the control AND its label wrapper (+ a
+    `wrapperClassName` prop) — no Select can widen its container; a long chosen label truncates in
+    the trigger, the platform picker wraps. `IdentityStep` contact selects are `w-full`. Sweep: every
+    other Select (roll panel, gear, XP, trauma, editor, crew claims/type, clocks, factions, game
+    form, attach) inherits the cap; the captured wizard/sheet/hub routes have no element past 360.
+  - Error copy uses `Text variant='error'` (`text-semantic-error-fg`); no text use of the fill token
+    remains in `apps/` (icons/spinners keep it — non-text, 3:1).
+  - One `seatSummary` ("N of M player(s)", i18next `_one`/`_other` on the limit) shared by the
+    Players and invite cards; "— K open" / "— the campaign is full, so no code…"; the
+    below-players hint is pluralised too. `NestedKeyOf` accepts a plural key's base name.
+  - `MembersPanel`: list → removed → explainer → a divided **Player limit** sub-section (h3; the
+    field is named by `aria-label`); players see the seats line under the list.
+  - `CrewAbilitiesList`: description `min-w-0 flex-1`, Remove `shrink-0`. `CrewAdvancePicker`:
+    the Veteran group is a native `<details>`, collapsed by default (summary with a count + chevron,
+    Enter/Space toggles); group headings `text-sm` sans.
+  - `RollPanel`: a muted **"Pool: Nd"** beside Roll/Resist from the same `rollPool` inputs as the
+    roll; the zero-dice hint follows the pool ("No dice in the pool — roll 2…").
+  - `Dashboard`: campaigns/characters loading reserve one card row (`GridSkeleton`: one card on
+    phones, two from `md`, `h-28`, `role=status aria-busy`).
+  - `/auth/signin` + `/auth/callback`: `Section as='main'`, `px-4` gutter, `max-w-md` card;
+    `/auth/signin` adds a `<noscript>` block ("Sign-in needs JavaScript" + Back to HeistMind) that
+    hides the spinner. `AuthHeader` passes the current path as `next` (not on `/` or `/auth/*`).
+  - **Methodology:** `mobile-overflow.spec.ts` now runs in a real phone context (`isMobile` +
+    `hasTouch`, devtools bubble hidden) and compares against `visualViewport.width`; it walks every
+    Brackwater wizard step AT 360, and a new BitD test reaches the vice step, picks the long
+    contacts, asserts the page fits and that Next is inside the visual viewport, hit-testable, and
+    advances to Review on a real `touchscreen.tap` at its on-screen centre. The pixel tooling's
+    `MEASURE` (`capture-u5.mjs`) uses `visualViewport` too.
+- **measured** (prod build `next start` :3117 against stack2, `capture-u5.mjs`, 27 routes × 360/768/1440
+  × light/dark = 162 shots, vs the round-5 baseline `pixel-round5/metrics-final.json`, same tree base):
+  - Phone overflow: 360 shots wider than 360 **8 → 0** (wizard identity / vice / both "review"
+    shots were 438px). The 360 "review" routes now really reach Review (h1 "Review"; page 2305 →
+    1225px). Probe: Next at x 274–341, top 682, hit-test = Next, `innerWidth` 360 (was x 353–418,
+    top 843, `innerWidth` 438). Horizontal scroll by `visualViewport`: 0/162.
+  - axe on the same shots: **landmark-one-main 8 → 0, region 8 → 0, color-contrast 6 → 1** (the one
+    left is the wizard stepper's 12px "complete" pill in light, 4.27:1 — pre-existing token, see
+    residue).
+  - CLS (max of themes): dashboard GM 768 0.067 → 0.035, 360 0.044 → 0; player 768 0.079 → 0.026,
+    360 0.071 → 0; joiner 768 **0.131 → 0.006**, 1440 0.05 → 0.007; hub-gm-limit-invalid 768
+    0.086 → 0.041; everything else unchanged (≤ 0.042). Probe: dashboard joiner 768 0.043 → 0.007,
+    GM 0.080 → 0.026.
+  - Page length: hub fresh GM (crew picker) 360 **9586 → 7000**, 768 6089 → 4903, 1440 5912 → 4806;
+    hub GM ±4px; full-house GM +34–48px (Player limit sub-heading + divider).
+  - Sub-44px targets: unchanged on every captured route except hub GM 768/1440 −4 and the 360
+    review shots (now the real Review step).
+  - One h1 on every shot; console errors only the expected 400s on the "campaign full" joins.
+- **tests:** unit — `packages/ui` `Select` (capped/shrinkable/truncating, wrapper too),
+  `membership-controls` (one seat phrasing in both cards, "1 of 1 player", order list → removed →
+  explainer → Player limit, hint in `text-semantic-error-fg`), `CrewAdvancePicker` (Veteran
+  `<details>` collapsed by default, opens; Remove `shrink-0`), `RollPanel.local` (pool preview
+  follows the action, ability dice and push; zero-dice hint follows the pool), `Dashboard`
+  (card-row skeletons, busy). e2e — `mobile-overflow` (rewritten: phone emulation, visual viewport,
+  every wizard step, the BitD tap test — **verified it FAILS on the pre-F102 `Select`/`IdentityStep`**:
+  "wizard: Vice has elements past 360px … select → 489px" and "BitD wizard: vice / contacts step …
+  select → 438px, button Next → 419px"; green after), `join-link` (header sign-up carries
+  `next=/join/<code>`; new seat copy), `auth-discord` (no-JS fallback, one `main`), `gm-crew`
+  (Veteran group hidden until the summary is opened with Enter). Targeted e2e, serially on :3116
+  dev against stack2 (19 specs, **61/61 passed**): mobile-overflow, join-link, auth-discord,
+  auth-callback, signin-gates, gm-crew, membership, dashboard, standalone-dice, gm-dice-rolls,
+  player-characters, gm-action-ratings, gm-character-validation, heading-order, ssr-hydration,
+  mobile-sheet, standalone-characters, gm-resistance-downtime, join-via-code. `pnpm validate` green.
+  The Veteran disclosure is size-agnostic (its summary carries the count), so it holds when BitD
+  crews gain their full own lists (~36 Veteran routes).
+- **residue / skipped:** stepper "complete" pill text 4.27:1 in light (token-wide, wants a design
+  call); Discord app id on beta/prod (operator, round-4 P1-7); "Create a join code" under an active
+  code (P2-6 — needs a product call on whether multiple live codes are wanted); dashboard folded
+  crew-row styling and outcome chips (P2-8), section headers wrapping at 360 (P2-10), join-full
+  primary action (P2-11 — which CTA leads is a product call), expected 400/403 console lines
+  (P2-12), standalone hero chip gap (P2-13), the round-4 carry-overs (P2-14), the sign-in empty
+  status ring on first paint; `next` from the header carries the path only (no query string).
+  Round-5 product P1-2 (push / ability dice / assist stay selected after a roll) not in scope here.
+- **status:** fixed (branch `feat/ux-r5`)
+
 ### F101 — Ops: migration deploy skipped on registry rate limits; prod web not ordered after its schema; double-run deploy gate
 
 - **severity:** S1 (a flaky migration job on the first `main` promotion would put prod web code

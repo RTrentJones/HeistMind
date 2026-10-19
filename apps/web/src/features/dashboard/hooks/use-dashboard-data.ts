@@ -23,9 +23,19 @@ export interface DashboardActivity {
 }
 
 /**
- * Fold each run of back-to-back CREW events from the same campaign into its newest row with a
- * count: marking crew XP is one log row per box ("Crew XP 6/8", "7/8", "8/8"…), which pushed
- * everything else out of a six-row feed. Input newest-first; character/roll rows never fold.
+ * The "same kind of crew event" key: the note before any `:` with its numbers masked — "Crew XP
+ * 6/8" and "Crew XP 7/8" share one; "Starting crew ability: Pack Rats" has its own.
+ */
+export function crewEventKey(note: string | null | undefined): string {
+  return ((note ?? '').split(':')[0] ?? '').replace(/\d+/g, '#').trim();
+}
+
+/**
+ * Fold each run of back-to-back CREW events of the SAME kind (crewEventKey) from the same campaign
+ * into its newest row with a count: marking crew XP is one log row per box ("Crew XP 6/8", "7/8",
+ * "8/8"…), which pushed everything else out of a six-row feed. Different crew events never fold
+ * together (round 5 P2-8: the starting-ability pick hid behind "+N earlier" when XP marks
+ * followed it). Input newest-first; character/roll rows never fold.
  */
 export function collapseCrewRuns(entries: DashboardActivity[]): DashboardActivity[] {
   const out: DashboardActivity[] = [];
@@ -35,7 +45,8 @@ export function collapseCrewRuns(entries: DashboardActivity[]): DashboardActivit
       prev &&
       entry.roll.kind === 'crew' &&
       prev.roll.kind === 'crew' &&
-      prev.roll.gameId === entry.roll.gameId
+      prev.roll.gameId === entry.roll.gameId &&
+      crewEventKey(prev.roll.note) === crewEventKey(entry.roll.note)
     ) {
       out[out.length - 1] = { ...prev, collapsed: (prev.collapsed ?? 0) + 1 };
       continue;

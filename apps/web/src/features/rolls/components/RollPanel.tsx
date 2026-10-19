@@ -133,8 +133,13 @@ export function RollPanel({
   // Round 4 — ability / upgrade dice (the bot's `bonus:`), signed −3…+3, action + resistance.
   const [bonus, setBonus] = useState(0);
   const signedDice = (n: number) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+  // Negative ability dice are almost always a penalty (Daredevil −1d…), not "from an ability".
   const bonusNote =
-    bonus !== 0 ? t('components.rollPanel.abilityDiceNote', { signed: signedDice(bonus) }) : null;
+    bonus > 0
+      ? t('components.rollPanel.abilityDiceNote', { signed: signedDice(bonus) })
+      : bonus < 0
+        ? t('components.rollPanel.abilityDicePenaltyNote', { signed: signedDice(bonus) })
+        : null;
   const appliedHarmPenalty = waiveHarm ? 0 : harmPenalty;
   const [rolling, setRolling] = useState(false);
   const [last, setLast] = useState<{
@@ -151,6 +156,48 @@ export function RollPanel({
   const historySeq = useRef(0);
   // RAW feedback: what the desperate roll just marked (the attribute XP track).
   const [desperateNote, setDesperateNote] = useState<string | null>(null);
+  // F103 — what happened to the stress a SAVED roll charged: a failed push/resistance write, and
+  // the assist's 1 stress on the helper. Shown with the result, never as "Roll failed".
+  const [stressNotes, setStressNotes] = useState<string[]>([]);
+
+  /**
+   * P1-2 — push, a devil's bargain, an assist, ability dice and a harm waiver are ONE-SHOT moves:
+   * they apply to the roll they were chosen for. Cleared only after that roll SUCCEEDS (a failed
+   * roll keeps them so the player can simply retry); action/position/effect stay — players do
+   * re-roll the same action.
+   *
+   * The values are SNAPSHOTTED when the roll is submitted and each is cleared only if it still
+   * holds the submitted value (functional updates read the live state): a choice the player made
+   * while the roll was in flight — switching to a resistance roll and picking −3d — belongs to
+   * the NEXT roll and survives. (Chosen over disabling the controls while pending: the form stays
+   * usable for play-by-post players lining up their next roll, and nothing can be submitted twice
+   * anyway — the Roll button is `loading`.)
+   */
+  type OneShots = {
+    push: boolean;
+    bargain: boolean;
+    bargainNote: string;
+    assistId: string;
+    bonus: number;
+    waiveHarm: boolean;
+  };
+  const snapshotOneShots = (): OneShots => ({
+    push,
+    bargain,
+    bargainNote,
+    assistId,
+    bonus,
+    waiveHarm,
+  });
+  const resetOneShots = (rolled: RollMode, sent: OneShots) => {
+    setBonus(cur => (cur === sent.bonus ? 0 : cur));
+    if (rolled !== 'action') return;
+    setPush(cur => (cur === sent.push ? false : cur));
+    setBargain(cur => (cur === sent.bargain ? false : cur));
+    setBargainNote(cur => (cur === sent.bargainNote ? '' : cur));
+    setAssistId(cur => (cur === sent.assistId ? '' : cur));
+    setWaiveHarm(cur => (cur === sent.waiveHarm ? false : cur));
+  };
   // F99 — on a phone the result can land below the fold / under the fixed thumb bar: bring it
   // into view (nearest edge, honouring the region's scroll margin) whenever a new roll lands.
   const resultRef = useRef<HTMLDivElement>(null);
@@ -179,6 +226,20 @@ export function RollPanel({
     return failure ? t('components.rollPanel.desperateXpFailed', { reason: failure }) : null;
   };
 
+  /** What happened to the helper's 1 stress (F103) — the roller tells the table. */
+  const assistCopy = (
+    name: string,
+    a: { status: 'charged' | 'near_limit' | 'failed'; error?: string }
+  ): string =>
+    a.status === 'charged'
+      ? t('components.rollPanel.assistCharged', { name })
+      : a.status === 'near_limit'
+        ? t('components.rollPanel.assistNearLimit', { name })
+        : t('components.rollPanel.assistFailed', {
+            name,
+            reason: a.error ?? t('components.rollPanel.rollFailed'),
+          });
+
   // Feed copy for a stress cost that marks the last box (RAW → trauma; the engine logs it).
   const traumaLog = {
     note: (name: string) => t('components.characterSheet.traumaLogNote', { name }),
@@ -195,7 +256,7 @@ export function RollPanel({
   };
 
   // F96 — standalone sheet: realize, classify and show; apply only the stress the rules charge.
-  const rollLocally = async (userId: string) => {
+  const rollLocally = async (userId: string, sent: OneShots) => {
     let label: string;
     let count: number;
     let zeroDice: boolean;
@@ -242,10 +303,12 @@ export function RollPanel({
       }
     }
     setDesperateNote(desperateCopy(xp, xpFailure));
+    setStressNotes([]);
     setLast({ outcome, results, kind, ...(stress !== undefined ? { stress } : {}) });
     setHistory(h =>
       [{ id: ++historySeq.current, label, outcome, results }, ...h].slice(0, LOCAL_HISTORY)
     );
+    resetOneShots(mode, sent);
   };
 
   const roll = async () => {
@@ -253,10 +316,11 @@ export function RollPanel({
     if (!userId) return;
     setRolling(true);
     setError(null);
+    const sent = snapshotOneShots();
 
     try {
       if (local) {
-        await rollLocally(userId);
+        await rollLocally(userId, sent);
         return;
       }
       // The sequenced parts (persist + stress consequences) are ENGINE use-cases; the panel
@@ -265,7 +329,12 @@ export function RollPanel({
         const opt = resistOptions.find(o => o.name === resist) ?? resistOptions[0];
         const { count, zeroDice } = rollPool({ mode, rating: opt?.rating ?? 0, bonus });
         const results = realize(count);
-        const { roll: created, stress } = await resistanceRoll.mutateAsync({
+        const {
+          roll: created,
+          stress,
+          stressError,
+          logError,
+        } = await resistanceRoll.mutateAsync({
           userId,
           ...(characterId !== undefined ? { characterId } : {}),
           ...(opt?.name !== undefined ? { label: opt.name } : {}),
@@ -276,6 +345,15 @@ export function RollPanel({
           traumaLog,
         });
         setLast({ outcome: created.outcome, results: created.results, stress });
+        setDesperateNote(null);
+        setStressNotes(
+          stressError
+            ? [t('components.rollPanel.stressNotMarked', { count: stress, reason: stressError })]
+            : logError
+              ? [t('components.rollPanel.stressLogNotWritten')]
+              : []
+        );
+        resetOneShots('resistance', sent);
         return;
       }
 
@@ -313,8 +391,20 @@ export function RollPanel({
         ...(characterId !== undefined ? { characterId } : {}),
         kind: isActionRoll ? 'action' : 'fortune',
         label: isActionRoll ? action : t(FORTUNE_TYPE_KEY[fortuneType]),
-        // RAW: a desperate action roll marks XP in this action's attribute (engine-applied).
-        ...(isActionRoll ? { action } : {}),
+        // RAW: a desperate action roll marks XP in this action's attribute (engine-applied) —
+        // and logs it, so the GM sees it in the campaign log too (round 5 P2-8).
+        ...(isActionRoll
+          ? {
+              action,
+              desperateXpLog: (track: string | null, amount: number) =>
+                track
+                  ? t('components.rollPanel.desperateXpLogNote', {
+                      count: amount,
+                      attribute: attributeName(track),
+                    })
+                  : t('components.rollPanel.desperateXpLogNotePool', { count: amount }),
+            }
+          : {}),
         dice: count,
         results,
         zeroDice,
@@ -324,12 +414,30 @@ export function RollPanel({
         pushed: isActionRoll && push,
         // Assist (F10): the engine charges the helper's 1 stress when the roller may write them;
         // otherwise the note above tells the helper to self-mark.
-        ...(assistant ? { assist: { characterId: assistant.id } } : {}),
+        ...(assistant
+          ? {
+              assist: {
+                characterId: assistant.id,
+                logNote: t('components.rollPanel.assistChargedLogNote', { name: assistant.name }),
+              },
+            }
+          : {}),
         traumaLog,
       });
       setLast({ outcome: created.outcome, results: created.results, kind: mode });
       // The roll is saved either way; a desperate-XP side-effect failure is its own note.
       setDesperateNote(desperateCopy(created.desperateXp, created.desperateXpError));
+      setStressNotes(
+        [
+          created.stressError
+            ? t('components.rollPanel.stressNotMarked', { count: 2, reason: created.stressError })
+            : created.pushStress?.logError
+              ? t('components.rollPanel.stressLogNotWritten')
+              : null,
+          assistant && created.assist ? assistCopy(assistant.name, created.assist) : null,
+        ].filter((n): n is string => n !== null)
+      );
+      resetOneShots(mode, sent);
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
     } finally {
@@ -337,9 +445,30 @@ export function RollPanel({
     }
   };
 
-  // Rating-0 actions roll 2 dice and take the lowest — surface that so it doesn't read as a bug.
-  const isZeroDiceAction =
-    mode === 'action' && (actions?.find(a => a.name === action)?.rating ?? 1) + bonus <= 0;
+  // F102 — the pool the Roll button will throw, shown beside it, so every modifier (ability dice,
+  // push / bargain, assist, harm) visibly changes the count ("Hunt (0d)" + "+2d" used to read 0d).
+  // Same `rollPool` inputs as `roll` / `rollLocally` (standalone sheets have no assist).
+  const isActionMode = mode === 'action';
+  const pool =
+    mode === 'resistance'
+      ? rollPool({
+          mode,
+          rating: (resistOptions.find(o => o.name === resist) ?? resistOptions[0])?.rating ?? 0,
+          bonus,
+        })
+      : rollPool({
+          mode,
+          rating: isActionMode ? (actions?.find(a => a.name === action)?.rating ?? 0) : fortune,
+          push,
+          bargain,
+          assist: !local && isActionMode && !!teammates?.some(tm => tm.id === assistId),
+          harmPenalty: isActionMode ? appliedHarmPenalty : 0,
+          fortune,
+          bonus: isActionMode ? bonus : 0,
+        });
+  const poolDice = pool.zeroDice ? 0 : pool.count;
+  // A 0-dice pool rolls 2 and takes the lowest — surface that so it doesn't read as a bug.
+  const isZeroDiceAction = mode !== 'fortune' && pool.zeroDice;
 
   return (
     <Stack direction='column' gap='sm'>
@@ -543,16 +672,23 @@ export function RollPanel({
               <option key={n} value={n}>
                 {n === 0
                   ? t('components.rollPanel.bonusNone')
-                  : t('components.rollPanel.bonusOption', { signed: signedDice(n) })}
+                  : n < 0
+                    ? t('components.rollPanel.bonusPenaltyOption', { signed: signedDice(n) })
+                    : t('components.rollPanel.bonusOption', { signed: signedDice(n) })}
               </option>
             ))}
           </Select>
         )}
-        <Button variant='ember' onClick={roll} loading={rolling}>
-          {mode === 'resistance'
-            ? t('components.rollPanel.resistButton')
-            : t('components.rollPanel.rollButton')}
-        </Button>
+        <span className='inline-flex items-center gap-2'>
+          <Button variant='ember' onClick={roll} loading={rolling}>
+            {mode === 'resistance'
+              ? t('components.rollPanel.resistButton')
+              : t('components.rollPanel.rollButton')}
+          </Button>
+          <Text as='span' size='sm' variant='muted' data-testid='roll-pool'>
+            {t('components.rollPanel.poolPreview', { count: poolDice })}
+          </Text>
+        </span>
       </Stack>
       {isZeroDiceAction && (
         <Text size='sm' variant='muted'>
@@ -620,6 +756,19 @@ export function RollPanel({
             {desperateNote}
           </Alert>
         )}
+        {last &&
+          stressNotes.map(note => (
+            <Alert
+              key={note}
+              variant='info'
+              size='sm'
+              role='note'
+              aria-live='off'
+              data-testid='roll-stress-note'
+            >
+              {note}
+            </Alert>
+          ))}
       </div>
       {local && (
         <Text size='sm' variant='muted' data-testid='roll-local-note'>
