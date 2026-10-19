@@ -49,26 +49,6 @@ test.describe('GM: crew sheet', () => {
     const picker = gmPage.getByTestId('crew-advance-picker');
     await expect(picker.getByText("Choose the crew's starting special ability")).toBeVisible();
     await expect(gmPage.getByRole('checkbox', { name: /Deadly/ })).toHaveCount(0);
-
-    // F99 — the hub with the picker on it loads + hydrates with no React nesting / hydration
-    // error (the picker's Badge was a <div> inside a <p>: "cannot be a descendant of <p> … will
-    // cause a hydration error"). Reload so the full page boots with the picker present.
-    const problems: string[] = [];
-    gmPage.on('console', msg => {
-      if (msg.type() === 'error' && NESTING_OR_HYDRATION.test(msg.text()))
-        problems.push(msg.text());
-    });
-    gmPage.on('pageerror', err => {
-      if (NESTING_OR_HYDRATION.test(err.message)) problems.push(err.message);
-    });
-    await gmPage.reload();
-    await expect(picker.getByText("Choose the crew's starting special ability")).toBeVisible({
-      timeout: 15_000,
-    });
-    await gmPage.waitForLoadState('networkidle');
-    expect(problems).toEqual([]);
-    // Own-list abilities lead, under their own heading; Veteran routes follow.
-    await expect(picker.getByTestId('crew-advance-own')).toBeVisible();
     await picker.getByRole('radio', { name: /Deadly/ }).check();
     await picker.getByRole('button', { name: 'Take starting ability' }).click();
     const abilities = gmPage.getByTestId('crew-abilities');
@@ -133,5 +113,63 @@ test.describe('GM: crew sheet', () => {
     await expect(
       gmPage.getByText('Crew advance — new special ability: The Network').first()
     ).toBeVisible({ timeout: 10_000 });
+  });
+
+  // F99 — on the real BitD built-in (per-type crew lists, so Veteran routes exist) the picker
+  // leads with the crew's OWN list, groups the Veteran routes after it, and the hub boots with the
+  // picker on screen without React's invalid-nesting / hydration error (its "via Veteran" Badge
+  // was a <div> inside the label's <p>).
+  test('BitD: the advance picker groups own list first and the hub hydrates cleanly', async ({
+    gmPage,
+  }) => {
+    await gmPage.goto('/rulesets');
+    await gmPage
+      .getByRole('button', {
+        name: /Add Blades in the Dark to my rulesets|Refresh my Blades in the Dark copy/i,
+      })
+      .first()
+      .click();
+    await expect(gmPage.getByRole('heading', { name: 'Blades in the Dark' }).last()).toBeVisible({
+      timeout: 30_000,
+    });
+    await gmPage.goto('/games/new');
+    const rulesetSelect = gmPage.getByLabel('Ruleset', { exact: true });
+    const option = rulesetSelect.locator('option', { hasText: /^Blades in the Dark \(v/ }).first();
+    await rulesetSelect.selectOption({ label: (await option.textContent()) ?? '' });
+    await gmPage.getByLabel('Campaign name').fill(uniqueName('The Veteran Job'));
+    await gmPage.getByRole('button', { name: 'Create campaign' }).click();
+    await expect(gmPage).toHaveURL(/\/games\/[0-9a-f-]+$/, { timeout: 15_000 });
+    await gmPage.getByLabel('Crew type').selectOption('shadows');
+    await gmPage.getByRole('button', { name: 'Create crew' }).click();
+    const picker = gmPage.getByTestId('crew-advance-picker');
+    await expect(picker).toBeVisible({ timeout: 10_000 });
+
+    const problems: string[] = [];
+    gmPage.on('console', msg => {
+      if (msg.type() === 'error' && NESTING_OR_HYDRATION.test(msg.text()))
+        problems.push(msg.text());
+    });
+    gmPage.on('pageerror', err => {
+      if (NESTING_OR_HYDRATION.test(err.message)) problems.push(err.message);
+    });
+    await gmPage.reload();
+    await expect(picker).toBeVisible({ timeout: 15_000 });
+    await gmPage.waitForLoadState('networkidle');
+    expect(problems).toEqual([]);
+
+    const own = picker.getByRole('group', { name: "From your crew's list (Shadows)" });
+    await expect(own.getByRole('radio', { name: /^Second Story/ })).toBeVisible();
+    const veteran = picker.getByRole('group', { name: /Through Veteran/ });
+    await expect(veteran.getByRole('radio', { name: /^Deadly/ })).toBeVisible();
+    // Own list renders above the Veteran routes.
+    const ownBox = await own.boundingBox();
+    const vetBox = await veteran.boundingBox();
+    expect(ownBox && vetBox && ownBox.y < vetBox.y).toBe(true);
+    // A checked row reads as checked (ring on the row, not just the 13px native dot).
+    await own.getByRole('radio', { name: /^Patron/ }).check();
+    await expect(own.locator('label', { hasText: 'Patron' })).toHaveCSS(
+      'box-shadow',
+      /rgb|oklch|color/
+    );
   });
 });
