@@ -22,10 +22,14 @@ export const AVAILABLE_LANGUAGES = Object.keys(translations) as Array<keyof type
 
 // Generate TypeScript types from English translations
 export type TranslationKeys = typeof en;
+/** i18next plural suffixes: `seats_one` / `seats_other` are looked up as `seats` + `{ count }`. */
+type PluralSuffix = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 export type NestedKeyOf<ObjectType extends object> = {
   [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends object
     ? `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
-    : `${Key}`;
+    : Key extends `${infer Base}_${PluralSuffix}`
+      ? `${Key}` | Base
+      : `${Key}`;
 }[keyof ObjectType & (string | number)];
 
 export type TranslationKey = NestedKeyOf<TranslationKeys>;

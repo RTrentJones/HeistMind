@@ -182,13 +182,13 @@ test.describe('invite link /join/<code>', () => {
       const campaign = await campaignWithJoinCode(gm.page, 'Full Table');
       // A new campaign seats 20 players (never fewer than one code's 20 uses).
       await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 20 players');
-      await expect(gm.page.getByTestId('invite-seats')).toContainText('0 of 20 player seats taken');
+      await expect(gm.page.getByTestId('invite-seats')).toContainText('0 of 20 players — 20 open');
 
       // The GM limits the table to one player.
       const limit = gm.page.getByRole('spinbutton', { name: 'Player limit' });
       await limit.fill('1');
       await gm.page.getByRole('button', { name: 'Save limit' }).click();
-      await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 1 players', {
+      await expect(gm.page.getByTestId('player-seats')).toHaveText('0 of 1 player', {
         timeout: 15_000,
       });
 
@@ -209,11 +209,11 @@ test.describe('invite link /join/<code>', () => {
       await gm.page.reload();
       await openCampaignSetup(gm.page);
       await expect(gm.page.getByTestId('player-seats')).toHaveText(
-        '1 of 1 players — the campaign is full',
+        '1 of 1 player — the campaign is full',
         { timeout: 15_000 }
       );
       await expect(gm.page.getByTestId('invite-seats')).toContainText(
-        /All 1 player seats are taken/
+        /1 of 1 player — the campaign is full, so no code/
       );
       await limit.fill('0');
       await expect(gm.page.getByRole('button', { name: 'Save limit' })).toBeDisabled();

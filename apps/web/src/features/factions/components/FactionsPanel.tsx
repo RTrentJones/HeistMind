@@ -331,7 +331,7 @@ function FactionCard({
             {/* F47 — status −3 is WAR, a table-changing state (extra heat, no downtime safety);
                 call it out beyond the generic red badge. */}
             {faction.status <= -3 && (
-              <Text size='sm' className='text-semantic-error'>
+              <Text size='sm' variant='error'>
                 {t('components.factionsPanel.atWarHint')}
               </Text>
             )}

@@ -76,7 +76,7 @@ export function AccountSettings() {
               autoComplete='off'
             />
             {error ? (
-              <Text variant='muted' size='sm' className='text-semantic-error'>
+              <Text variant='error' size='sm'>
                 {error}
               </Text>
             ) : null}

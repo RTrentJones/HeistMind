@@ -72,7 +72,7 @@ export function JoinByCodeCard() {
           </Stack>
         </form>
         {joinError && (
-          <Text variant='muted' size='sm' className='text-semantic-error' role='alert'>
+          <Text variant='error' size='sm' role='alert'>
             {joinError}
           </Text>
         )}
