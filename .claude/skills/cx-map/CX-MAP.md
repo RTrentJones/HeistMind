@@ -197,7 +197,8 @@ bootstrap).
   (one card on phones, two from `md`, `h-28`) as an `aria-busy` status instead of a one-line
   spinner / "Loading…" that grew into the grid and pushed everything below ~90–180px at 768
   (dashboard 768 CLS 0.04–0.08 → 0.01–0.03).
-- _Last verified:_ 2026-10-19 (F103: crew folding only within one kind of event; F102: list
+- _Last verified:_ 2026-10-19 (F105: a characterless activity row says "GM" only for the GM's
+  own rows, else "Player"); 2026-10-19 (F103: crew folding only within one kind of event; F102: list
   skeletons; F100: pre-hydration sign-in forms, crew activity rows + folding;
   F99: reserved quick-action space, activity names every character); 2026-10-18 (F98: no
   signed-out flash; F96: "Your dashboard" title, PageShell, Start here first without quick actions,
@@ -448,11 +449,26 @@ bootstrap).
     player's character through 00027 `charge_assist_stress` (+1, once per roll, logged "Bo marked
     1 stress for an assist."); the roller sees "Bo marked 1 stress for the assist — it's on their
     sheet." When Bo is one box from trauma nothing is written and the roller is told Bo marks it
-    on their own sheet (the trauma is the owner's call). **`AddResultForm`**: record a
+    on their own sheet (the trauma is the owner's call). **Round 6 (F105):** the helper is
+    recorded ON the roll (`rolls.assist_character_id`, 00028) and the cross-player charge only
+    ever charges that helper, for the roller's own character's action roll; its log line is
+    built by the server from the two names — "Bo marked 1 stress assisting Ana." / "Bo owes 1
+    stress for assisting Ana — one box from trauma, so it's theirs to mark on their own sheet."
+    (a failed write logs the same "owes" line from the client, on the helper when the roller may
+    write it, else on the roller's character). The roll's own note now reads "Assisted by Bo
+    (+1d)" (it used to claim "1 stress" even when nothing was charged). An own-alt / GM assist
+    that marks the helper's last box tells the roller "…their last box, so they take a trauma.
+    Pick the condition on their sheet." and logs the assist BEFORE the trauma. Notes that ask
+    someone to act (stress not marked, near limit, failed, trauma) use the **warning** style;
+    plain reports stay info. A resistance roll whose stress write failed shows a neutral "N
+    stress — not marked" badge (or "critical — stress not cleared"), never the red "applied" one.
+    **`AddResultForm`**: record a
     result that was **settled elsewhere — in person or on Discord** (writes a `note` event,
     auto-tagged with the active score), so the between-session log is complete wherever play happened.
     The `RollLog` is the reverse-chron, DB-backed **campaign log** (the async-play centerpiece; every
-    player sees it on load): shows **who** (character name; "Fortune"/"GM") and **when** (relative time
+    player sees it on load): shows **who** (character name; "Fortune"; for a characterless row
+    "GM" ONLY when the campaign's GM wrote it, otherwise the player's display name / "Player" —
+    F105: a player's bare rolls used to read "GM · [6]") and **when** (relative time
     - timestamp tooltip), annotates resistance ("resisted — N stress"; zero-dice resists ride the
       persisted `zero_dice` flag since audit P2, so the displayed cost matches the sheet), and
       renders non-dice events (downtime / loadout / score / **crew** / **faction** / **clock** /
@@ -485,7 +501,9 @@ bootstrap).
 - **No load jump (F99):** the hub's loading state uses the same `4xl` container as the loaded hub
   (the 448px loading box being reused at full width was the hub's main layout shift: CLS 0.18 →
   0.04 at 768); page `Container`s also fade in opacity-only (no slide-up).
-- _Last verified:_ 2026-10-19 (F103: full campaign on the setup summary, one-shot roll moves,
+- _Last verified:_ 2026-10-19 (F105: assist bound to the roll + server-built charge line,
+  truthful assist row/notes + warning style, neutral failed-resistance badge, "GM" only for the
+  GM's rows; F103: full campaign on the setup summary, one-shot roll moves,
   assist stress charged, saved-roll stress errors, BitD seven crew abilities per type; F102: one
   pluralised seat phrasing, Player limit sub-section after the explainer, error-text token,
   collapsed Veteran disclosure, crew Remove not clipped, pool preview; F100:
@@ -613,7 +631,11 @@ bootstrap).
   The newest roll result is announced via an `aria-live` region; the rename row is a real form.
 - **Trauma count (F96):** the Condition card always shows **"Trauma n / max"** (e.g. "Trauma 2 /
   4", "None." at zero) — the count is the mechanic (the last box retires the character).
-- _Last verified:_ 2026-10-19 (F103: the Dice card's one-shot moves reset after a roll, assist
+- **Friend ≠ rival (F105):** the sheet editor's Close friend / Rival selects each leave out the
+  other slot's pick; a sheet already saved with one contact as both keeps working (live
+  validation only warns) until the owner changes it.
+- _Last verified:_ 2026-10-19 (F105: assist/stress notes truthful + warning style, friend ≠ rival
+  in the editor, see the hub's `RollPanel`); 2026-10-19 (F103: the Dice card's one-shot moves reset after a roll, assist
   stress charged to the helper, stress-write failures reported with the saved roll — see the hub's
   `RollPanel`); 2026-10-18 (F97 round-3 rules: vice-gated Indulge vice, identity selects +
   details, session-trigger track select, auto desperate XP, prerequisite names; F96: trauma
@@ -741,7 +763,10 @@ bootstrap).
   move/return low on phones. The desperate-roll XP note sits inside the result's live region,
   right under the result (announced with it), and a new result scrolls into view above the thumb
   bar on phones.
-- _Last verified:_ 2026-10-19 (F99: attach card high on phones + banner link, desperate note under
+- **Detach confirm (F105):** "Return to My Characters" arms a crimson "Confirm — remove from
+  campaign"; the arm now resets after a successful detach and whenever the character's campaign
+  changes, so a re-attached sheet never opens one tap from removing it.
+- _Last verified:_ 2026-10-19 (F105: detach confirm disarms on a campaign change); 2026-10-19 (F99: attach card high on phones + banner link, desperate note under
   the result); 2026-10-18 (F98: attach across content-identical ruleset copies, truthful
   linked empty state, danger delete card)
 
@@ -906,7 +931,10 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    "name — description"; **F102:** they are `w-full` and the design-system `Select` is
    `min-w-0 max-w-full truncate` (wrapper too), so a long option truncates in the trigger instead
    of sizing the control to it — it was 418px, the page 438px wide at 360, and the fixed
-   Cancel/Back/Next footer sat off-screen and untappable.
+   Cancel/Back/Next footer sat off-screen and untappable. **F105:** RAW they are two different
+   people — each select leaves out the other's pick (BitD playbooks list two contacts, so picking
+   one leaves the other for the rival), and core creation validation refuses the same contact as
+   both (`CONTACT_FRIEND_IS_RIVAL`).
    **BitD's Vice step is REQUIRED (F100):** skipping it used to show "✓ Vice (complete)" and create
    a vice-less scoundrel; now the step is amber/incomplete, Next and Create are blocked with "Choose
    a vice — "Vice" must be completed." (core: a required per-field identity step needs that field —
@@ -919,7 +947,7 @@ Ruleset-driven: steps come from `ruleset.content.characterCreation.steps` (sorte
    `getRepositories().characterManagement.createCharacterWithValidation`; on success the persisted
    draft (name, picks, step) is cleared so the next character starts fresh (F94).
 
-_Last verified:_ 2026-10-19 (F102: contact selects capped — the phone page no longer widens past
+_Last verified:_ 2026-10-19 (F105: close friend ≠ rival); 2026-10-19 (F102: contact selects capped — the phone page no longer widens past
 360; F100: BitD vice required, step status consistent with validation;
 F99: phone footer reason row, shared SelectableCard, labelled review identity); 2026-10-18 (F97:
 all creation dots required, BitD heritage/background/vice steps
