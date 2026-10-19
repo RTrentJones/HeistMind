@@ -1014,6 +1014,16 @@ export function validateCharacter(
     else warnings.push(warn(field, message));
   }
 
+  // RAW (BitD playbooks): "Choose a close friend and a rival" — two DIFFERENT people from the
+  // playbook's list (round 6 P2-1). A new character must pick two; a played sheet already saved
+  // with the same contact for both only warns, so its everyday writes (stress, XP) still land.
+  const sameContact = friendIsRival(data);
+  if (sameContact) {
+    const message = `${sameContact} can't be both your close friend and your rival.`;
+    if (mode === 'creation') errors.push(err('contacts', 'CONTACT_FRIEND_IS_RIVAL', message));
+    else warnings.push(warn('contacts', message));
+  }
+
   if (mode === 'creation') {
     if (actionMode) {
       // Action-dot budget: the playbook's seeded dots + the ruleset's creation `points` + any crew
@@ -1136,6 +1146,17 @@ export function validateCharacter(
   }
 
   return { isValid: errors.length === 0, errors, warnings };
+}
+
+/**
+ * The contact picked as BOTH close friend and rival (case-insensitive name match), else null —
+ * the shared rule behind the validator and the pickers that exclude the other pick (round 6 P2-1).
+ */
+export function friendIsRival(data: Pick<CharacterData, 'contacts'>): string | null {
+  const named = (rel: string) =>
+    data.contacts?.find(c => c.relationship === rel)?.name?.trim() ?? '';
+  const friend = named('friend');
+  return friend && friend.toLowerCase() === named('rival').toLowerCase() ? friend : null;
 }
 
 function evaluateRestriction(

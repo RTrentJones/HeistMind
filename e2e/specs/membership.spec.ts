@@ -150,11 +150,24 @@ test.describe('membership controls', () => {
 
       // Returned again and THEN leaving: the already-standalone character still opens (its
       // owner gets their own copy of the ruleset once they can no longer read the GM's).
-      // The membership card re-renders once its campaign lookup resolves (F98) — let it settle
-      // first, or the click can arm the confirm on a node that is being replaced.
+      // The membership card re-renders once its campaign lookups resolve (F98) — and
+      // `attach-resolving` can already be gone while the attachable-campaigns lookup still holds
+      // the PRE-attach set (this campaign listed as a "move" target). Wait for the post-attach
+      // render (the only campaign is the current one → no move picker), and for the un-armed
+      // button (round 6 P2-7: the arm resets when the campaign changes), before clicking.
       await expect(player.page.getByTestId('attach-resolving')).toHaveCount(0, { timeout: 15_000 });
-      await player.page.getByRole('button', { name: 'Return to My Characters' }).click();
-      await player.page.getByRole('button', { name: 'Confirm — remove from campaign' }).click();
+      await expect(player.page.getByLabel('Campaign', { exact: true })).toHaveCount(0, {
+        timeout: 15_000,
+      });
+      await expect(
+        player.page.getByRole('button', { name: 'Confirm — remove from campaign' })
+      ).toHaveCount(0);
+      const returnButton = player.page.getByRole('button', { name: 'Return to My Characters' });
+      await expect(returnButton).toBeEnabled({ timeout: 15_000 });
+      await returnButton.click();
+      const confirm = player.page.getByRole('button', { name: 'Confirm — remove from campaign' });
+      await expect(confirm).toBeVisible({ timeout: 15_000 });
+      await confirm.click();
       await player.page.waitForURL(/\/characters\/[0-9a-f-]+$/, { timeout: 15_000 });
       await player.page.goto(campaign.hubUrl);
       await player.page.getByRole('button', { name: 'Leave campaign' }).click();

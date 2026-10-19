@@ -108,4 +108,25 @@ describe('GearCard', () => {
     await userEvent.type(coins, '7');
     expect(onPatch).toHaveBeenCalled();
   });
+
+  // Round 6 P2-1 — the close friend can't also be the rival.
+  it('edit mode: the rival picker leaves out the close friend; picking it moves, never doubles', async () => {
+    const onPatch = vi.fn();
+    const playbookContacts = [
+      { name: 'Marlane', description: 'a pugilist' },
+      { name: 'Chael', description: 'a vicious thug' },
+    ];
+    render(<GearCard data={DATA} edit={{ playbookContacts, onPatch }} />);
+    const rival = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Rival' });
+    expect(Array.from(rival.options).map(o => o.value)).toEqual(['', 'Chael']);
+    const friend = screen.getByRole<HTMLSelectElement>('combobox', { name: /close friend/i });
+    expect(Array.from(friend.options).map(o => o.value)).toEqual(['', 'Marlane', 'Chael']);
+    await userEvent.selectOptions(rival, 'Chael');
+    expect(onPatch).toHaveBeenLastCalledWith({
+      contacts: [
+        { name: 'Marlane', description: '', relationship: 'friend' },
+        { name: 'Chael', description: 'a vicious thug', relationship: 'rival' },
+      ],
+    });
+  });
 });

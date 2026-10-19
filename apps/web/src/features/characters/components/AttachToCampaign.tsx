@@ -51,6 +51,13 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
     );
   }, [allGames.data, attachable.data, character.originalRulesetId, character.gameId, copiedFrom]);
 
+  // Round 6 P2-7 — the destructive "Confirm — remove from campaign" arm belongs to ONE campaign
+  // membership: disarm it whenever the character's campaign changes (a detach, a re-attach, a move)
+  // so a reused instance never comes back already one tap from removing the character.
+  useEffect(() => {
+    setConfirmingDetach(false);
+  }, [character.gameId]);
+
   // Default the picker to the first eligible target (keep the selection if it's still valid).
   useEffect(() => {
     setGameId(prev => (games.some(g => g.id === prev) ? prev : (games[0]?.id ?? '')));
@@ -71,6 +78,7 @@ export function AttachToCampaign({ character }: { character: CharacterWithDetail
     setError(null);
     try {
       await detachMutation.mutateAsync(character.id);
+      setConfirmingDetach(false);
       router.push(`/characters/${character.id}`);
     } catch (err) {
       setError(errorMessage(err) || t('components.attachToCampaign.failedDetach'));

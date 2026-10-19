@@ -93,6 +93,8 @@ function ContactsPicker() {
   if (contacts.length === 0) return null;
 
   const current = (rel: string) => picked.find(c => c.relationship === rel)?.name ?? '';
+  // Round 6 P2-1 — one person can't be both: each select leaves out the OTHER slot's pick.
+  const otherPick = (rel: 'friend' | 'rival') => current(rel === 'friend' ? 'rival' : 'friend');
   const row = (rel: 'friend' | 'rival', label: string) => (
     // F102 — full width of the (max-w-lg) column: the options carry "name — description", and a
     // native select otherwise sizes to the longest one (418px — the page went 438px wide at 360
@@ -106,12 +108,14 @@ function ContactsPicker() {
       onChange={e => setContact(rel, contacts.find(c => c.name === e.target.value) ?? null)}
     >
       <option value=''>{t('components.steps.identity.contactNone')}</option>
-      {contacts.map(c => (
-        <option key={c.name} value={c.name}>
-          {c.name}
-          {c.description ? ` — ${c.description}` : ''}
-        </option>
-      ))}
+      {contacts
+        .filter(c => c.name !== otherPick(rel))
+        .map(c => (
+          <option key={c.name} value={c.name}>
+            {c.name}
+            {c.description ? ` — ${c.description}` : ''}
+          </option>
+        ))}
     </Select>
   );
 

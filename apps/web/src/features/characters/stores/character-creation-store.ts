@@ -298,7 +298,13 @@ export const useCharacterCreationStore = create<CharacterCreationState>()(
 
         setContact: (relationship, contact) =>
           set(state => {
-            const others = state.draft.contacts.filter(c => c.relationship !== relationship);
+            // Round 6 P2-1 — a close friend and a rival are two different people: picking the
+            // contact already held in the OTHER slot moves it here (the other slot clears).
+            const others = state.draft.contacts.filter(
+              c =>
+                c.relationship !== relationship &&
+                !(contact && c.name.trim().toLowerCase() === contact.name.trim().toLowerCase())
+            );
             return {
               draft: {
                 ...state.draft,

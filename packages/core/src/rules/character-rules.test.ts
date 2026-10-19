@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { RulesetContent, CharacterData } from '../domain';
 import {
+  friendIsRival,
   grandfatherHeldAbilities,
   isAbilityAdvanceable,
   veteranGatewayFor,
@@ -1507,6 +1508,36 @@ describe('identity options (vice / background)', () => {
     expect(
       codes(validateCharacter(idRs(), character({ background: 'Anything' }), { mode: 'creation' }))
     ).not.toContain('IDENTITY_UNKNOWN');
+  });
+
+  // Round 6 P2-1 — BitD: "choose a close friend and a rival", two different people.
+  it('the same contact as close friend AND rival fails creation; a played sheet only warns', () => {
+    const contact = (name: string, relationship: string) => ({
+      name,
+      description: '',
+      relationship,
+    });
+    const both = character({
+      contacts: [contact('Marlane', 'friend'), contact(' marlane ', 'rival')],
+    });
+    expect(friendIsRival(both)).toBe('Marlane');
+    expect(codes(validateCharacter(idRs(), both, { mode: 'creation' }))).toContain(
+      'CONTACT_FRIEND_IS_RIVAL'
+    );
+    const live = validateCharacter(idRs(), both, { mode: 'live' });
+    expect(codes(live)).not.toContain('CONTACT_FRIEND_IS_RIVAL');
+    expect(live.warnings.map(w => w.field)).toContain('contacts');
+
+    const distinct = character({
+      contacts: [contact('Marlane', 'friend'), contact('Chael', 'rival')],
+    });
+    expect(friendIsRival(distinct)).toBeNull();
+    expect(codes(validateCharacter(idRs(), distinct, { mode: 'creation' }))).not.toContain(
+      'CONTACT_FRIEND_IS_RIVAL'
+    );
+    // Only one (or neither) picked is fine.
+    expect(friendIsRival(character({ contacts: [contact('Marlane', 'friend')] }))).toBeNull();
+    expect(friendIsRival(character({ contacts: [] }))).toBeNull();
   });
 
   it('hasVice: indulging needs a vice set', () => {
