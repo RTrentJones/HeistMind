@@ -46,8 +46,12 @@ export function CharacterCard({
   const { t } = useTranslation();
   return (
     <Card variant='character' data-testid='character-card'>
+      {/* Round 6 P2-10 — the identity block takes the row (min 12rem, its name wraps INSIDE it)
+          and the actions never shrink: whether they sit beside it or drop below now depends on
+          the actions' width, not the name's length — so cards in one list share one layout
+          ("Mara Thistle" kept View inline while "Asher Vane · …" dropped it, at 360). */}
       <Stack direction='row' justify='between' align='center' className='flex-wrap'>
-        <div>
+        <div className='min-w-0 flex-1 basis-48'>
           <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
             <Heading level='h3' as={headingLevel}>
               {character.name}
@@ -68,7 +72,7 @@ export function CharacterCard({
           )}
         </div>
         {actions && (
-          <Stack direction='row' gap='sm' align='center' className='flex-wrap'>
+          <Stack direction='row' gap='sm' align='center' className='shrink-0 flex-wrap'>
             {actions}
           </Stack>
         )}

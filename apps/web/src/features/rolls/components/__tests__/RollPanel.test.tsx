@@ -161,6 +161,19 @@ const ROLLED = {
   assist: null,
 };
 
+describe('RollPanel — the assist option and its cost (round 6 P2-2)', () => {
+  it('the option is short; the helper’s 1 stress shows on the pool line once chosen', async () => {
+    renderWithTeam();
+    const assist = screen.getByRole('combobox', { name: 'Assist' });
+    expect(screen.getByRole('option', { name: 'Assist: Bo Silt (+1d)' })).toBeInTheDocument();
+    expect(screen.getByTestId('roll-pool')).toHaveTextContent(/^Pool: 2d$/);
+    await userEvent.selectOptions(assist, 'c9');
+    expect(screen.getByTestId('roll-pool')).toHaveTextContent('Pool: 3d · Bo Silt takes 1 stress');
+    await userEvent.selectOptions(assist, '');
+    expect(screen.getByTestId('roll-pool')).toHaveTextContent(/^Pool: 2d$/);
+  });
+});
+
 describe('RollPanel — one-shot moves reset after a roll (round 5 P1-2)', () => {
   it('a campaign action roll clears push, bargain, assist and ability dice; a second roll does not push', async () => {
     actionRoll.mutateAsync.mockReset().mockResolvedValue(ROLLED);

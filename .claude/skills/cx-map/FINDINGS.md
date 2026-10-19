@@ -124,6 +124,106 @@ scan`: no findings in 00027/00028.
   charge path since the RPC needs `auth.uid()`). The UX items (sign-in no-JS, seat plural, assist
   option truncation, wizard footer, player-limit input, crew picker) are F104.
 
+### F104 — Round-6 pixel UX: a JS-off sign-in that painted nothing, assist cost cut on phones, a duplicated Veteran, a 10k px picker
+
+- **severity:** S2 for the JS-off blank page (F102 listed it as fixed) · S3 for the rest · **type:**
+  CX-flaw, plus one FitD-gap (bare Veteran) — from the round-6 pixel audit (`round6-pixel.md`
+  P1-1, P2-1…P2-7, P2-9…P2-11)
+- **what was wrong:**
+  - **JS-off sign-in (P1-1):** F102's "Sign-in needs JavaScript" message sat inside the shared
+    animated `Card`, whose framer-motion entrance server-renders as inline
+    `style="opacity:0;transform:translateY(20px)"` and only fades in once JS runs. With JS off the
+    page was the hero gradient only, at every width, local and beta. The 404 card (and any SSR'd
+    `Card` / `Container` / `Heading` / `Section` entrance) had the same problem. The F102 e2e passed
+    because Playwright's `toBeVisible()` counts `opacity: 0` as visible.
+  - **Full summary (P2-1):** "Full — 1 of 1 players" above cards reading "1 of 1 player".
+  - **Assist (P2-2):** the capped select showed "Assist: Silas Crane (+1d, they…" at 360 — the
+    cost was the part cut.
+  - **Contacts (P2-3):** the capped Close friend / Rival selects cut "name — description" mid-word.
+  - **Wizard footer (P2-4):** on the last step at 360 "Create character" wrapped alone, under Cancel
+    and left-aligned.
+  - **Player limit (P2-5):** a 32px field beside the 44px "Save limit" on phones.
+  - **Crew picker (P2-6, P2-7):** the legend was still in the wrapping small-caps face; opened, the
+    Veteran group was one list of 32 described rows (10,281px at 360); and the starting pick
+    offered **Veteran twice** — a bare "Veteran" row on the crew's own list AND the "Through
+    Veteran" routes. The duplicate came from core `takeableCrewAbilities`, not the UI: it offered
+    the Veteran gateway itself as a pick, though RAW taking Veteran IS taking the other ability (a
+    bare pick spends an advance on an empty slot). The bot's `/crew advance` suggestions had it too.
+  - **Stepper chip hover (P2-9):** a completed chip's hover fill put light-mode text at 4.27:1.
+  - **Dashboard (P2-10):** at 360 one character card kept View inline and the next dropped it (the
+    wrap depended on the name's length); section headers squeezed onto two lines beside "View all".
+  - **Crew type (P2-11):** the select sat ~32px tall beside the 40px "Create crew".
+- **fix:**
+  - Root layout `<head>`: `<noscript><style>` with `lib/noscript-reveal.ts` —
+    `[style*="opacity:0;"],[style$="opacity:0"]{opacity:1!important;transform:none!important}`. It
+    applies only with scripting off, matches framer-motion's exact SSR serialisation (never
+    `opacity:0.5`), and lands every entrance at its end state. Every SSR'd animated component is
+    covered, not just the sign-in card.
+  - `CampaignSetup`: `game.setupFull` takes `{{summary}}` from the shared `seatSummary()`.
+  - `RollPanel`: option "Assist: <name> (+1d)"; once chosen the pool line reads "Pool: Nd · <name>
+    takes 1 stress" (`poolPreviewAssist`).
+  - `IdentityStep`: name-only contact options; the chosen contact's description renders under the
+    select as its `aria-describedby`.
+  - Wizard footer: Back + Next/Create in one `ml-auto shrink-0` group (`data-testid=wizard-nav`).
+  - `packages/ui` `Input` `sm`: `h-8 max-sm:h-11`, like Button/Select `sm` (also the harm,
+    flashback and bargain fields).
+  - `CrewAdvancePicker`: legend `text-sm font-semibold`; Veteran routes grouped by source crew type,
+    each its own collapsed `<details>` ("Assassins · 6 abilities"). Core `takeableCrewAbilities`
+    drops a Veteran-granting ability whenever it is the gateway for an offered pick (kept when it
+    opens nothing). `planCrewAdvance` (the repository gate) still accepts an explicit bare Veteran.
+  - Stepper: complete/incomplete chips keep their /20 fill on hover and darken the border instead.
+  - `CharacterCard`: identity block `min-w-0 flex-1 basis-48`, actions `shrink-0`; dashboard headers
+    `flex-wrap`.
+  - `CrewSheet`: crew-type select `min-h-10`.
+- **measured** (prod build `next start` :3121 from the worktree against stack2, `capture-u6.mjs` =
+  `capture-r6.mjs` + a type-opened Veteran route, 13 routes × 360/768/1440 × light/dark = 78 shots,
+  vs `pixel-round6/metrics-final.json`; element probe `u6-el.mjs`):
+  - JS-off sign-in: blank gradient → the "Sign-in needs JavaScript" card painted, at every width and
+    both themes (`pixel-u6/auth-signin-nojs-*`); 404 painted with JS off (e2e). Still two h1s in
+    the DOM in that state (the hidden JS-only "Taking you to Discord" is `display:none`).
+  - Veteran opened: page 15,815 → **7,750px** at 360, 8,165 → 5,188 at 768, 7,939 → 5,102 at 1440;
+    the opened disclosure is 448px at 360 (352 at 1440) and one opened type 2,154px (918). Collapsed
+    crew hubs −75…−123px (no bare Veteran row); 0 bare Veteran radios.
+  - Assist at 360: the chosen "Assist: Silas Crane (+1d)" needs 161px of 181 (was 283 of 226,
+    truncated); pool line "Pool: 0d · Silas Crane takes 1 stress".
+  - Player limit at 360: field 44px = Save 44px (was 32 vs 44); 1440 32 = 32.
+  - Crew type vs Create crew: 40 = 40 at 1440, 44 = 44 at 360 (was ~32 vs ~38).
+  - Dashboard at 360: both cards 161px with View on its own row (was one inline, one below); 1440
+    both inline. Page +119px at 360 (headers' button below the heading).
+  - Wizard last step at 360: Back + Create bottom-right together (`wizard-fresh-7-review-360-*`).
+  - axe: the stepper-chip `color-contrast` hit on `wizard-fresh-6-vice-360-light` is gone; 0
+    violations on all 78 shots. No overflow past the visual viewport; one h1 everywhere except the
+    known JS-off sign-in pair; CLS ≤ 0.027.
+  - `sheet-assist-armed` grew 650–1,450px: the seeded campaign log has more rows (seed artifact).
+- **tests:** unit — `noscript-reveal` (selector matches the SSR styles, not `opacity:0.5`),
+  `CampaignSetup` ("Full — 1 of 1 player."), `RollPanel` (short option; cost on the pool line,
+  cleared with the assist), `IdentityStep` (name-only options, description hint +
+  `aria-describedby`), `CharacterCreationWizard` (nav group; done chip hover keeps its fill),
+  `Input` (`max-sm:h-11`), `CrewAdvancePicker` (sans legend; no bare Veteran; per-type collapsed
+  groups; pick through a type), `CharacterCard` (layout classes), core `crew-abilities`
+  (Veteran offered only as a route, kept when it opens nothing, gate still accepts it), shared BitD
+  (Cult + Shadows starting picks), discord `/crew advance` autocomplete (no bare Veteran). e2e —
+  `auth-discord` new "with JavaScript off, SSR-animated cards are actually painted" checks
+  EFFECTIVE opacity (own × ancestors, `e2e/support/a11y.ts` `effectiveOpacity`): **FAILED on the
+  pre-fix code** ("Expected: 1, Received: 0" on the sign-in h1, while `toBeVisible()` passed) and
+  passes after; `join-link`, `gm-dice-rolls` and `gm-crew` updated for the new copy / groups.
+  Targeted e2e serially on :3120 dev against stack2 (17 specs). Green: auth-discord, join-link,
+  gm-crew (after a locator fix for the nested summaries), gm-crew-grant, mobile-overflow,
+  gm-loadout, dashboard, player-characters, standalone-characters, ssr-hydration, heading-order,
+  mobile-sheet, discord, signin-gates (its Discord-nav test timed out on a cold dev compile once,
+  green warm), join-via-code. Not green, not from this change: `gm-dice-rolls` assist — stack2
+  carries an unmerged 00028 `charge_assist_stress` ("That roll had no assist" unless the roll
+  records `assist_character_id`), which this branch's 00027-era client doesn't write; the new
+  pool-line assertion before it passed. `membership` "Return to My Characters…" times out with
+  the confirm armed (same 4.0m timeout in earlier rounds' logs). `pnpm validate` green.
+- **residue / skipped:** P2-8 (two log rows per assist): they are genuinely two events on two
+  characters — the roll on the roller and a `note` row on the helper written by the 00027 RPC. That
+  row has no link to its roll, so one row needs a roll reference on the note (SQL/RPC), or a
+  text/time match. Left for a product call. The crew legend still takes two lines at 360 (now sans
+  text-sm). The JS-off theme is always dark (no theme class without the init script).
+  P2-12/P2-13 (expected console errors, earlier carry-overs) and P1-2 (Discord app id, operator).
+- **status:** fixed (branch `feat/ux-r6`)
+
 ### F103 — Round-5 product: a deploy gate that never ran, sticky one-shot roll moves, an invisible full campaign, saved rolls called "failed", uncharged assists, thin BitD crew lists
 
 - **severity:** S1 (P1-1: the beta/prod deploy gate — and with it the prod migration backstop —
@@ -323,7 +423,10 @@ add`, flashback). Engine, discord and web tests cover push and resistance in bot
     phones, two from `md`, `h-28`, `role=status aria-busy`).
   - `/auth/signin` + `/auth/callback`: `Section as='main'`, `px-4` gutter, `max-w-md` card;
     `/auth/signin` adds a `<noscript>` block ("Sign-in needs JavaScript" + Back to HeistMind) that
-    hides the spinner. `AuthHeader` passes the current path as `next` (not on `/` or `/auth/*`).
+    hides the spinner. **Correction (F104):** that message was in the DOM but never painted — it
+    sits in the animated `Card`, which SSRs at inline `opacity:0` and only fades in with JS, so
+    the JS-off page stayed blank. The e2e passed because Playwright's `toBeVisible()` counts
+    `opacity: 0` as visible. Fixed in F104. `AuthHeader` passes the current path as `next` (not on `/` or `/auth/*`).
   - **Methodology:** `mobile-overflow.spec.ts` now runs in a real phone context (`isMobile` +
     `hasTouch`, devtools bubble hidden) and compares against `visualViewport.width`; it walks every
     Brackwater wizard step AT 360, and a new BitD test reaches the vice step, picks the long

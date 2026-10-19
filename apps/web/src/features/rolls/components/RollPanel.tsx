@@ -509,6 +509,10 @@ export function RollPanel({
           bonus: isActionMode ? bonus : 0,
         });
   const poolDice = pool.zeroDice ? 0 : pool.count;
+  // Round 6 P2-2 — the assist's cost rides the pool line ("Pool: 3d · Silas takes 1 stress"): in
+  // the option it was the part a phone's select truncated away ("(+1d, they…").
+  const assistName =
+    !local && isActionMode ? (teammates?.find(tm => tm.id === assistId)?.name ?? null) : null;
   // A 0-dice pool rolls 2 and takes the lowest — surface that so it doesn't read as a bug.
   const isZeroDiceAction = mode !== 'fortune' && pool.zeroDice;
 
@@ -728,7 +732,9 @@ export function RollPanel({
               : t('components.rollPanel.rollButton')}
           </Button>
           <Text as='span' size='sm' variant='muted' data-testid='roll-pool'>
-            {t('components.rollPanel.poolPreview', { count: poolDice })}
+            {assistName
+              ? t('components.rollPanel.poolPreviewAssist', { count: poolDice, name: assistName })
+              : t('components.rollPanel.poolPreview', { count: poolDice })}
           </Text>
         </span>
       </Stack>

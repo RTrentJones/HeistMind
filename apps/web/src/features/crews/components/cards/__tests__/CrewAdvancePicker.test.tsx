@@ -26,7 +26,11 @@ describe('CrewAdvancePicker', () => {
     render(
       <CrewAdvancePicker crew={crew([])} crewRules={crewRules} busy={false} onTake={onTake} />
     );
-    expect(screen.getByText("Choose the crew's starting special ability")).toBeInTheDocument();
+    const legend = screen.getByText("Choose the crew's starting special ability");
+    // Round 6 P2-6 — plain sans like the group headings, not the wrapping small-caps face.
+    expect(legend.tagName).toBe('LEGEND');
+    expect(legend).toHaveClass('text-sm', 'font-semibold');
+    expect(legend).not.toHaveClass('font-display');
     expect(screen.getByRole('radio', { name: /Pack Rats/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /^Patron/ })).toBeInTheDocument();
     // Another type's ability is offered only as a Veteran route; Mastery never as an ability.
@@ -86,11 +90,17 @@ describe('CrewAdvancePicker', () => {
       />
     );
     const groups = within(screen.getByTestId('crew-advance-picker')).getAllByRole('group');
-    // (<details> is itself an ARIA group, wrapping the Veteran group — F102.)
+    // (<details> is itself an ARIA group, wrapping the Veteran group — F102 — and, inside it,
+    // one per source crew type — round 6 P2-7.)
     expect(groups.map(g => g.getAttribute('data-testid'))).toEqual([
       'crew-advance-own',
       'crew-advance-veteran-disclosure',
       'crew-advance-veteran',
+      'crew-advance-veteran-type-assassins',
+      'crew-advance-veteran-type-bravos',
+      'crew-advance-veteran-type-cult',
+      'crew-advance-veteran-type-hawkers',
+      'crew-advance-veteran-type-smugglers',
       'crew-advance-upgrades',
     ]);
     const own = screen.getByRole('group', { name: "From your crew's list (Shadows)" });
@@ -125,6 +135,46 @@ describe('CrewAdvancePicker', () => {
     expect(summary).toHaveTextContent(/Through Veteran.*abilities from other crew types/);
     await userEvent.click(summary);
     expect(disclosure).toHaveAttribute('open');
+  });
+});
+
+// Round 6 P2-7 — opened, the Veteran routes were one 32-row list (10,281px at 360), and "Veteran"
+// was ALSO a bare row on the crew's own list (the same choice twice).
+describe('CrewAdvancePicker — Veteran routes (round 6 P2-7)', () => {
+  it('offers Veteran only as routes, never as a bare row on the own list', () => {
+    render(
+      <CrewAdvancePicker crew={crew([])} crewRules={crewRules} busy={false} onTake={() => {}} />
+    );
+    const own = screen.getByRole('group', { name: "From your crew's list (Shadows)" });
+    expect(within(own).queryByRole('radio', { name: /^Veteran/ })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('radio', { name: /^Veteran/ })).toHaveLength(0);
+  });
+
+  it('groups the routes by source crew type, each its own collapsed disclosure', async () => {
+    const onTake = vi.fn();
+    render(
+      <CrewAdvancePicker crew={crew([])} crewRules={crewRules} busy={false} onTake={onTake} />
+    );
+    const assassins = screen.getByTestId('crew-advance-veteran-type-assassins');
+    expect(assassins.tagName).toBe('DETAILS');
+    expect(assassins).not.toHaveAttribute('open');
+    const summary = assassins.querySelector('summary')!;
+    expect(summary).toHaveTextContent(/^Assassins\s*· \d+ abilities$/);
+    // Every route sits in exactly one type group, and no Shadows (own) ability is among them.
+    const vet = screen.getByTestId('crew-advance-veteran');
+    const typed = vet.querySelectorAll('details input[type="radio"]');
+    expect(typed.length).toBe(vet.querySelectorAll('input[type="radio"]').length);
+    expect(within(assassins).getByRole('radio', { name: /^Deadly/, hidden: true })).toBeTruthy();
+    expect(screen.queryByTestId('crew-advance-veteran-type-shadows')).toBeNull();
+    // Open the outer disclosure, then the type, then pick.
+    await userEvent.click(
+      screen.getByTestId('crew-advance-veteran-disclosure').querySelector('summary')!
+    );
+    await userEvent.click(summary);
+    expect(assassins).toHaveAttribute('open');
+    await userEvent.click(within(assassins).getByRole('radio', { name: /^Deadly/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Take starting ability' }));
+    expect(onTake).toHaveBeenCalledWith({ kind: 'ability', abilityId: 'crew-deadly' });
   });
 });
 

@@ -241,8 +241,15 @@ export function Dashboard() {
 
           {!firstRun && (
             <>
-              {/* Your campaigns */}
-              <Stack direction='row' justify='between' align='center'>
+              {/* Your campaigns. Round 6 P2-10 — section headers wrap: the heading keeps its one
+                  line and "View all" / "My characters" drop below it, instead of squeezing the
+                  heading onto two lines beside the button at 360. */}
+              <Stack
+                direction='row'
+                justify='between'
+                align='center'
+                className='flex-wrap gap-x-3 gap-y-1'
+              >
                 <Heading level='h2' variant='primary'>
                   {t('pages.dashboard.yourCampaigns')}
                 </Heading>
@@ -277,7 +284,12 @@ export function Dashboard() {
               )}
 
               {/* Your characters */}
-              <Stack direction='row' justify='between' align='center'>
+              <Stack
+                direction='row'
+                justify='between'
+                align='center'
+                className='flex-wrap gap-x-3 gap-y-1'
+              >
                 <Heading level='h2' variant='primary'>
                   {t('pages.dashboard.yourCharacters')}
                 </Heading>

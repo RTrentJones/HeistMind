@@ -326,7 +326,8 @@ describe('/crew advance autocomplete', () => {
     const starting = await crewAutocomplete(ctx(withCrew([], {})), auto(''));
     const values = starting.map(c => c.value);
     expect(values).toContain('ability:crew-network');
-    expect(values).toContain('ability:crew-veteran');
+    // Round 6 P2-7 — Veteran comes only as routes ("Deadly (via Veteran)"), never bare too.
+    expect(values).not.toContain('ability:crew-veteran');
     expect(values).not.toContain('ability:crew-mastery');
     expect(values).not.toContain('upgrades');
     // F103: seven per crew type → more than Discord's 25; the own list comes first, then
@@ -338,7 +339,6 @@ describe('/crew advance autocomplete', () => {
         'ability:crew-everyone-steals',
         'ability:crew-slippery',
         'ability:crew-patron',
-        'ability:crew-veteran',
       ])
     );
     expect(starting.find(c => c.value === 'ability:crew-deadly')?.name).toBe(

@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from './providers';
 import { themeInitScript } from '@/lib/theme-script';
 import { authHintInitScript } from '@/lib/auth-hint';
+import { NOSCRIPT_REVEAL_CSS } from '@/lib/noscript-reveal';
 import { AppShell } from '@/shared/components/AppShell';
 import { INDEXABLE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from '@/lib/site';
 
@@ -76,6 +77,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
         {/* F98: <html data-auth="in"> for a likely-signed-in browser, before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: authHintInitScript() }} />
+        {/* Round 6 P1-1: with JS off, framer-motion entrances (SSR'd at opacity 0) never run —
+            land them at their end state so Cards/headings aren't invisible. */}
+        <noscript>
+          <style>{NOSCRIPT_REVEAL_CSS}</style>
+        </noscript>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${playfairDisplay.variable} antialiased`}

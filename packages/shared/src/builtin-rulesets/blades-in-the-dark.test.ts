@@ -5,6 +5,7 @@ import {
   advanceTier,
   checkCrewProgression,
   crewAbilityTypes,
+  crewVeteranGatewayFor,
   desperateRollTrigger,
   desperateRollXp,
   identityOptions,
@@ -262,7 +263,7 @@ describe('BitD builtin — every crew type carries its seven special abilities (
     expect(r.ok).toBe(true);
   });
 
-  it('a Cult starting pick now offers its own seven + Veteran (not just Anointed)', () => {
+  it('a Cult starting pick now offers its own seven (not just Anointed), Veteran as routes', () => {
     const fresh: CrewAbilityState = { crewType: 'cult', crewAbilities: [], resources: {} };
     const offered = takeableCrewAbilities(BITD, fresh)
       .filter(a => isCrewAbilityUnlocked(BITD, fresh, a.id))
@@ -276,9 +277,11 @@ describe('BitD builtin — every crew type carries its seven special abilities (
         'crew-glory-incarnate',
         'crew-sealed-in-blood',
         'crew-zealotry',
-        'crew-veteran',
       ])
     );
+    // Round 6 P2-7 — Veteran is offered as the route to another type's ability, not bare too.
+    expect(offered).not.toContain('crew-veteran');
+    expect(crewVeteranGatewayFor(BITD, fresh, 'crew-emberdeath')).toBe('crew-veteran');
     expect(offered).not.toContain('crew-patron'); // not on the Cult sheet
     expect(offered).not.toContain('crew-emberdeath'); // another type's: only via Veteran
   });
@@ -361,7 +364,8 @@ describe('BitD crew abilities follow RAW (round-3 #1)', () => {
 
   it('a Shadows crew is offered its own list + Veteran routes — never every crew type freely', () => {
     const fresh = shadows({ crewAbilities: [], resources: {} });
-    // Starting pick: Shadows' own abilities, Patron, and Veteran (which opens ONE other-type pick).
+    // Starting pick: Shadows' own abilities and Patron; Veteran only as the route that opens ONE
+    // other-type pick (round 6 P2-7 — it was also offered bare: the same choice twice).
     const own = takeableCrewAbilities(BITD, fresh)
       .filter(a => isCrewAbilityUnlocked(BITD, fresh, a.id))
       .map(a => a.id);
@@ -371,9 +375,10 @@ describe('BitD crew abilities follow RAW (round-3 #1)', () => {
         'crew-second-story',
         'crew-synchronized',
         'crew-patron',
-        'crew-veteran',
       ])
     );
+    expect(own).not.toContain('crew-veteran');
+    expect(takeableCrewAbilities(BITD, fresh).map(a => a.id)).not.toContain('crew-veteran');
     expect(own).not.toContain('crew-deadly');
     expect(own).not.toContain('crew-mastery');
     expect(isCrewAbilityUnlocked(BITD, fresh, 'crew-fiends')).toBe(false);

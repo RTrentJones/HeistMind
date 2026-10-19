@@ -95,29 +95,41 @@ function ContactsPicker() {
   const current = (rel: string) => picked.find(c => c.relationship === rel)?.name ?? '';
   // Round 6 P2-1 — one person can't be both: each select leaves out the OTHER slot's pick.
   const otherPick = (rel: 'friend' | 'rival') => current(rel === 'friend' ? 'rival' : 'friend');
-  const row = (rel: 'friend' | 'rival', label: string) => (
-    // F102 — full width of the (max-w-lg) column: the options carry "name — description", and a
-    // native select otherwise sizes to the longest one (418px — the page went 438px wide at 360
-    // and the fixed Cancel/Back/Next footer slid off-screen). The trigger truncates; the picker wraps.
-    <Select
-      label={label}
-      selectSize='sm'
-      className='w-full'
-      wrapperClassName='w-full'
-      value={current(rel)}
-      onChange={e => setContact(rel, contacts.find(c => c.name === e.target.value) ?? null)}
-    >
-      <option value=''>{t('components.steps.identity.contactNone')}</option>
-      {contacts
-        .filter(c => c.name !== otherPick(rel))
-        .map(c => (
-          <option key={c.name} value={c.name}>
-            {c.name}
-            {c.description ? ` — ${c.description}` : ''}
-          </option>
-        ))}
-    </Select>
-  );
+  const row = (rel: 'friend' | 'rival', label: string) => {
+    const chosen = contacts.find(c => c.name === current(rel));
+    const hintId = `contact-${rel}-hint`;
+    // F102 — full width of the (max-w-lg) column: a native select otherwise sizes to its longest
+    // option (the page went 438px wide at 360 and the fixed footer slid off-screen).
+    // Round 6 P2-3 — the options carry the NAME only and the chosen contact's description sits
+    // under the select: "name — description" in the capped trigger was cut mid-word at 360.
+    return (
+      <div key={rel} className='flex w-full flex-col gap-1'>
+        <Select
+          label={label}
+          selectSize='sm'
+          className='w-full'
+          wrapperClassName='w-full'
+          value={current(rel)}
+          aria-describedby={chosen?.description ? hintId : undefined}
+          onChange={e => setContact(rel, contacts.find(c => c.name === e.target.value) ?? null)}
+        >
+          <option value=''>{t('components.steps.identity.contactNone')}</option>
+          {contacts
+            .filter(c => c.name !== otherPick(rel))
+            .map(c => (
+              <option key={c.name} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+        </Select>
+        {chosen?.description && (
+          <Text id={hintId} variant='muted' size='sm' data-testid={`contact-${rel}-description`}>
+            {chosen.description}
+          </Text>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Stack direction='column' gap='sm' align='start' className='w-full max-w-lg'>
