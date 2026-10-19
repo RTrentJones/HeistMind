@@ -21,6 +21,7 @@ import {
   validateCharacter,
   type CharacterData,
 } from '@heist-mind/core';
+import { validateRulesetContent } from '../ruleset-validation';
 import { BLADES_IN_THE_DARK as BITD } from './blades-in-the-dark';
 
 const ability = (id: string) => BITD.specialAbilities.find(a => a.id === id);
@@ -159,6 +160,127 @@ describe('BitD builtin — crew abilities', () => {
       halfCost: crewHalvesTierCost(BITD, ['crew-patron']),
     });
     expect(out).toMatchObject({ ok: true, tier: 2, cost: 8 });
+  });
+});
+
+describe('BitD builtin — every crew type carries its seven special abilities (round 5 P2-7)', () => {
+  const own = (type: string) =>
+    (BITD.crew?.abilities ?? [])
+      .filter(a => !a.retired && crewAbilityTypes(a).includes(type))
+      .map(a => a.name)
+      .sort();
+
+  it.each([
+    [
+      'assassins',
+      ['Deadly', 'Death Veil', 'Emberdeath', 'No Traces', 'Patron', 'Predators', 'Vipers'],
+    ],
+    [
+      'bravos',
+      [
+        'Blood Brothers',
+        'Dangerous',
+        'Door Kickers',
+        'Fiends',
+        'Forged in the Fire',
+        'Patron',
+        'War Dogs',
+      ],
+    ],
+    [
+      'cult',
+      [
+        'Anointed',
+        'Bound in Darkness',
+        'Chosen',
+        'Conviction',
+        'Glory Incarnate',
+        'Sealed in Blood',
+        'Zealotry',
+      ],
+    ],
+    [
+      'hawkers',
+      [
+        'Accord',
+        'Ghost Market',
+        'High Society',
+        'Hooked',
+        'Patron',
+        'Silver Tongues',
+        'The Good Stuff',
+      ],
+    ],
+    [
+      'shadows',
+      [
+        'Everyone Steals',
+        'Ghost Echoes',
+        'Pack Rats',
+        'Patron',
+        'Second Story',
+        'Slippery',
+        'Synchronized',
+      ],
+    ],
+    [
+      'smugglers',
+      [
+        'All Hands',
+        'Ghost Passage',
+        'Just Passing Through',
+        'Leverage',
+        'Like Part of the Family',
+        'Reavers',
+        'Renegades',
+      ],
+    ],
+  ])('%s: seven own abilities (+ the shared Veteran)', (type, names) => {
+    expect(own(type)).toEqual([...names].sort());
+  });
+
+  it('ids are unique and every entry has effect text; the +1-dot abilities mirror Deadly', () => {
+    const all = BITD.crew?.abilities ?? [];
+    expect(new Set(all.map(a => a.id)).size).toBe(all.length);
+    for (const a of all) expect(a.description?.length ?? 0, a.id).toBeGreaterThan(20);
+    const dots = (id: string) => all.find(a => a.id === id)?.effects;
+    expect(dots('crew-dangerous')?.bonusActionDotsIn).toEqual(['Hunt', 'Skirmish', 'Wreck']);
+    expect(dots('crew-chosen')?.bonusActionDotsIn).toEqual(['Attune', 'Study', 'Sway']);
+    expect(dots('crew-silver-tongues')?.bonusActionDotsIn).toEqual(['Command', 'Consort', 'Sway']);
+    expect(dots('crew-everyone-steals')?.bonusActionDotsIn).toEqual(['Prowl', 'Finesse', 'Tinker']);
+    expect(dots('crew-renegades')?.bonusActionDotsIn).toEqual(['Finesse', 'Prowl', 'Skirmish']);
+    // Every restricted action is a real BitD action.
+    const actions = new Set(BITD.attributes.flatMap(a => a.skills));
+    for (const a of all)
+      for (const act of a.effects?.bonusActionDotsIn ?? [])
+        expect(actions.has(act), act).toBe(true);
+  });
+
+  it('the content still passes ruleset validation', () => {
+    const r = validateRulesetContent(BITD);
+    expect(r.ok ? [] : r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it('a Cult starting pick now offers its own seven + Veteran (not just Anointed)', () => {
+    const fresh: CrewAbilityState = { crewType: 'cult', crewAbilities: [], resources: {} };
+    const offered = takeableCrewAbilities(BITD, fresh)
+      .filter(a => isCrewAbilityUnlocked(BITD, fresh, a.id))
+      .map(a => a.id);
+    expect(offered).toEqual(
+      expect.arrayContaining([
+        'crew-anointed',
+        'crew-chosen',
+        'crew-bound-in-darkness',
+        'crew-conviction',
+        'crew-glory-incarnate',
+        'crew-sealed-in-blood',
+        'crew-zealotry',
+        'crew-veteran',
+      ])
+    );
+    expect(offered).not.toContain('crew-patron'); // not on the Cult sheet
+    expect(offered).not.toContain('crew-emberdeath'); // another type's: only via Veteran
   });
 });
 
