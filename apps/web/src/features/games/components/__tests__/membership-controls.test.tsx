@@ -132,11 +132,10 @@ describe('PlayerLimitControl (round 4 P1-N1: the hidden 5-player cap)', () => {
       screen.getByText(/Removing a player hands their characters back/),
       screen.getByRole('heading', { name: 'Player limit' }),
     ];
-    for (let i = 1; i < order.length; i++) {
-      expect(
-        order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy();
-    }
+    order.reduce((prev, next) => {
+      expect(prev.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      return next;
+    });
     expect(screen.getByTestId('player-seats')).toHaveTextContent(
       /^1 of 1 player — the campaign is full$/
     );
