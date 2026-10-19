@@ -114,6 +114,23 @@ describe('RollPanel — standalone (display-only) rolls', () => {
     expect(actionRoll.mutateAsync).not.toHaveBeenCalled();
   });
 
+  it('push + ability dice reset after a local roll (round 5 P1-2): the next roll costs nothing', async () => {
+    fixDice(4);
+    const user = userEvent.setup();
+    renderLocal();
+    await user.click(screen.getByLabelText(/push \(\+1d, 2 stress\)/i));
+    await user.selectOptions(screen.getByLabelText('Ability dice'), '1');
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toHaveTextContent('[4, 4, 4, 4]');
+    expect(screen.getByLabelText(/push \(\+1d, 2 stress\)/i)).not.toBeChecked();
+    expect(screen.getByLabelText('Ability dice')).toHaveValue('0');
+    applyStress.mutateAsync.mockClear();
+    fixDice(5);
+    await user.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(await screen.findByTestId('roll-result')).toHaveTextContent('[5, 5]');
+    expect(applyStress.mutateAsync).not.toHaveBeenCalled();
+  });
+
   it('a resistance roll marks 6 − highest on the sheet', async () => {
     fixDice(4);
     const user = userEvent.setup();

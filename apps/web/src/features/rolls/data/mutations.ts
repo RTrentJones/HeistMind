@@ -56,7 +56,7 @@ export function useResistanceRoll(gameId: string) {
   return useMutation({
     mutationFn: async (
       input: Omit<ResistanceRollInput, 'gameId'>
-    ): Promise<{ roll: Roll; stress: number }> =>
+    ): Promise<{ roll: Roll; stress: number; stressError: string | null }> =>
       unwrap(await rollResistance(getRepositories(), { ...input, gameId })),
     onSuccess: async (_out, input) => {
       await qc.invalidateQueries({ queryKey: rollKeys.gamePrefix(gameId) });

@@ -39,6 +39,7 @@ export { markDesperateRollXp, rollAction, rollResistance } from './rolls';
 export type {
   ActionRollInput,
   ActionRollOutcome,
+  AssistStressOutcome,
   DesperateXpMark,
   ResistanceRollInput,
 } from './rolls';

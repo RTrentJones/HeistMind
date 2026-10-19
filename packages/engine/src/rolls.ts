@@ -31,14 +31,17 @@ export interface ActionRollInput {
   /** Pushing yourself costs 2 stress, applied win or lose (needs a characterId). */
   pushed?: boolean;
   /**
-   * Teamwork — ASSIST (BitD: a teammate takes 1 stress to add +1d; F10). The CLIENT adds the die
-   * to the pool it realizes; the engine charges the assister's stress with the roll when the
-   * ROLLER may write that character (their own alt, or the GM). Ownership is a hard security
-   * boundary — when the assister belongs to another player, the charge is refused with
-   * NOT_OWNER and the roll still lands: the feed note names the assist, and the assister marks
-   * their own 1 stress from their sheet (the async self-service the table already uses).
+   * Teamwork — ASSIST (BitD RAW: the helper takes 1 stress to give +1d; F10). The CLIENT adds the
+   * die to the pool it realizes; the engine charges the helper's stress with the roll. When the
+   * ROLLER may write that character (their own alt, or the GM) it goes through the normal
+   * validated write (overflow → trauma included). Ownership is a hard security boundary, so when
+   * the helper belongs to ANOTHER player the engine uses the one narrow cross-player write
+   * (`rolls.chargeAssistStress`, 00027): +1 stress, once per roll, held back (`near_limit`) when
+   * it would mark the helper's last box — trauma is the owner's moment. `logNote` is the feed
+   * copy for that charge ("Bo marked 1 stress for the assist"). Either way the roll lands, and
+   * `assist` on the outcome says what happened so the client can tell the table (F103).
    */
-  assist?: { characterId: string };
+  assist?: { characterId: string; logNote?: string };
   /** Feed copy when a push/assist cost marks someone's last stress box (→ trauma). */
   traumaLog?: TraumaLogCopy;
   /**
@@ -47,6 +50,13 @@ export interface ActionRollInput {
    * action's attribute track (BitD RAW) — pass it whenever the roll is an action roll.
    */
   action?: string;
+  /**
+   * Feed copy for the desperate-roll XP the engine marks (round 5 P2-8: the sheet said "marked
+   * 1 XP in Prowess" but the log didn't, so the GM never saw it). Given the track id (null on a
+   * flat-pool ruleset) and the amount; logged as an `xp` event on the rolling character. Omit to
+   * log nothing.
+   */
+  desperateXpLog?: (track: string | null, amount: number) => string;
 }
 
 /** The desperate-roll XP the engine marked with a roll. */
@@ -67,10 +77,31 @@ export interface DesperateXpMark {
 const PUSH_STRESS_COST = 2;
 const ASSIST_STRESS_COST = 1;
 
+/** What the engine did about an assist's 1 stress (F103). */
+export interface AssistStressOutcome {
+  characterId: string;
+  /**
+   * `charged` — the helper's +1 stress is on their sheet (`trauma` when it marked the last box —
+   * own/GM writes only); `near_limit` — another player's helper is one box from trauma, so
+   * nothing was written and they mark it themselves; `failed` — the write failed (`error`).
+   */
+  status: 'charged' | 'near_limit' | 'failed';
+  trauma?: boolean;
+  error?: string;
+}
+
 /** A persisted action roll plus what its push cost actually did to the roller's stress. */
 export type ActionRollOutcome = Roll & {
   /** The applied push-stress change (null when not pushed / nothing written) — never a prediction. */
   pushStress: StressOutcome | null;
+  /**
+   * The roll LANDED, but writing its push stress failed (e.g. the sheet fails a live validation).
+   * Like `desperateXpError`, reported next to the saved roll — never as the roll failing, whose
+   * natural retry would duplicate it (round 5 P2-5). Null when nothing went wrong.
+   */
+  stressError: string | null;
+  /** The assist's stress, when the roll had an assist (null otherwise). */
+  assist: AssistStressOutcome | null;
   /** The desperate-roll XP marked with this roll (null when none applied). */
   desperateXp: DesperateXpMark | null;
   /**
@@ -90,7 +121,10 @@ export type ActionRollOutcome = Roll & {
  */
 async function markDesperateXp(
   repos: DatabaseRepositories,
-  input: Pick<ActionRollInput, 'kind' | 'position' | 'characterId' | 'action' | 'userId'>
+  input: Pick<
+    ActionRollInput,
+    'kind' | 'position' | 'characterId' | 'action' | 'userId' | 'desperateXpLog'
+  >
 ): Promise<Result<DesperateXpMark | null>> {
   if (input.kind !== 'action' || input.position !== 'desperate')
     return { success: true, data: null };
@@ -118,6 +152,7 @@ async function markDesperateXp(
       'Desperate action roll'
     );
     if (!added.success) return added as Result<never>;
+    await logDesperateXp(repos, char, input, null, earned.amount);
     return {
       success: true,
       data: { track: null, amount: earned.amount, marks: added.data.experiencePoints },
@@ -130,10 +165,35 @@ async function markDesperateXp(
     { characterData: { ...char.characterData, xp } }
   );
   if (!updated.success) return updated as Result<never>;
+  await logDesperateXp(repos, char, input, earned.track, earned.amount);
   return {
     success: true,
     data: { track: earned.track, amount: earned.amount, marks: xp.attributes[earned.track] ?? 0 },
   };
+}
+
+/**
+ * Log the desperate-roll XP to the campaign feed (when the client supplied copy and the character
+ * is in a campaign). Best effort: the XP is already marked, so a log failure is not reported as
+ * the XP failing.
+ */
+async function logDesperateXp(
+  repos: DatabaseRepositories,
+  char: { id: string; name: string; gameId: string | null },
+  input: Pick<ActionRollInput, 'userId' | 'desperateXpLog'>,
+  track: string | null,
+  amount: number
+): Promise<void> {
+  if (!input.desperateXpLog || char.gameId === null) return;
+  await repos.rolls.create(input.userId, {
+    gameId: char.gameId,
+    characterId: char.id,
+    kind: 'xp',
+    label: char.name,
+    dice: 0,
+    results: [],
+    note: input.desperateXpLog(track, amount),
+  });
 }
 
 export interface DesperateRollXpInput {
@@ -172,7 +232,10 @@ export async function rollAction(
     ...(input.note !== undefined ? { note: input.note } : {}),
   });
   if (!created.success) return created as Result<never>;
+  // Everything below is a SIDE EFFECT of a roll that is already in the log: a failed write is
+  // reported next to the saved roll, never as the roll failing (round 4 P2-N4, round 5 P2-5).
   let pushStress: StressOutcome | null = null;
+  let stressError: string | null = null;
   if (input.pushed === true && input.characterId !== undefined) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
@@ -180,35 +243,55 @@ export async function rollAction(
       stress: PUSH_STRESS_COST,
       ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
-    if (!stressed.success) return stressed as Result<never>;
-    pushStress = stressed.data;
+    if (stressed.success) pushStress = stressed.data;
+    else stressError = stressed.error.message || 'Stress not marked';
   }
-  if (input.assist !== undefined) {
-    const assisted = await applyStress(repos, {
-      characterId: input.assist.characterId,
-      userId: input.userId,
-      stress: ASSIST_STRESS_COST,
-      ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
-    });
-    // NOT_OWNER = the assister is another player's character — the roll stands; they self-mark
-    // (see the assist doc above). Anything else is a real failure.
-    if (!assisted.success && assisted.error.code !== 'NOT_OWNER') {
-      return assisted as Result<never>;
-    }
-  }
-  // Desperate-roll XP lands AFTER the stress costs, so it is marked on the freshest row. It is a
-  // SIDE EFFECT of a roll that is already persisted: a failed XP write is reported next to the
-  // roll (desperateXpError), never as the roll failing — the log already shows it.
+  const assist =
+    input.assist === undefined ? null : await chargeAssist(repos, input, created.data.id);
+  // Desperate-roll XP lands AFTER the stress costs, so it is marked on the freshest row.
   const desperate = await markDesperateXp(repos, input);
   return {
     success: true,
     data: {
       ...created.data,
       pushStress,
+      stressError,
+      assist,
       desperateXp: desperate.success ? desperate.data : null,
       desperateXpError: desperate.success ? null : desperate.error.message || 'XP not marked',
     },
   };
+}
+
+/** The assist's 1 stress: the validated write when the roller may write the helper, else 00027. */
+async function chargeAssist(
+  repos: DatabaseRepositories,
+  input: ActionRollInput,
+  rollId: string
+): Promise<AssistStressOutcome> {
+  const characterId = input.assist?.characterId ?? '';
+  const assisted = await applyStress(repos, {
+    characterId,
+    userId: input.userId,
+    stress: ASSIST_STRESS_COST,
+    ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
+  });
+  if (assisted.success) {
+    return { characterId, status: 'charged', trauma: assisted.data?.trauma ?? false };
+  }
+  if (assisted.error.code !== 'NOT_OWNER') {
+    return { characterId, status: 'failed', error: assisted.error.message || 'Stress not marked' };
+  }
+  // Another player's helper → the narrow cross-player charge (RLS would refuse a plain write).
+  const charged = await repos.rolls.chargeAssistStress(
+    rollId,
+    characterId,
+    input.assist?.logNote ?? ''
+  );
+  if (!charged.success) {
+    return { characterId, status: 'failed', error: charged.error.message || 'Stress not marked' };
+  }
+  return { characterId, status: charged.data };
 }
 
 export interface ResistanceRollInput {
@@ -234,7 +317,16 @@ export interface ResistanceRollInput {
 export async function rollResistance(
   repos: DatabaseRepositories,
   input: ResistanceRollInput
-): Promise<Result<{ roll: Roll; stress: number; trauma: boolean; mustRetire: boolean }>> {
+): Promise<
+  Result<{
+    roll: Roll;
+    stress: number;
+    trauma: boolean;
+    mustRetire: boolean;
+    /** The roll landed but its stress write failed (round 5 P2-5); null when it was applied. */
+    stressError: string | null;
+  }>
+> {
   const stress = resistanceStress(input.results, { zeroDice: input.zeroDice });
   const created = await repos.rolls.create(input.userId, {
     gameId: input.gameId,
@@ -249,6 +341,7 @@ export async function rollResistance(
   if (!created.success) return created as Result<never>;
   let trauma = false;
   let mustRetire = false;
+  let stressError: string | null = null;
   if (input.characterId !== undefined && stress !== 0) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
@@ -256,9 +349,14 @@ export async function rollResistance(
       stress,
       ...(input.traumaLog ? { traumaLog: input.traumaLog } : {}),
     });
-    if (!stressed.success) return stressed as Result<never>;
-    trauma = stressed.data?.trauma ?? false;
-    mustRetire = stressed.data?.mustRetire ?? false;
+    // The roll is already in the log: a failed stress write is reported next to it, not as the
+    // roll failing (a retry would log a duplicate resistance roll).
+    if (stressed.success) {
+      trauma = stressed.data?.trauma ?? false;
+      mustRetire = stressed.data?.mustRetire ?? false;
+    } else {
+      stressError = stressed.error.message || 'Stress not marked';
+    }
   }
-  return { success: true, data: { roll: created.data, stress, trauma, mustRetire } };
+  return { success: true, data: { roll: created.data, stress, trauma, mustRetire, stressError } };
 }

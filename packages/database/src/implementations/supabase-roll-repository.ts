@@ -2,7 +2,7 @@
 // the dice faces (rollOutcome) here, so a client going through the repository can't persist a fake
 // result. For web writes this runs in the browser (F100 — not a server-side check).
 import type { Roll, CreateRollData, Result } from '@heist-mind/core';
-import type { RollRepository } from '../repositories';
+import type { AssistCharge, RollRepository } from '../repositories';
 import { rollOutcome } from '@heist-mind/core';
 import { fromSupabaseRoll, toSupabaseRollInsert } from '../adapters/roll-adapter';
 import { failFromError } from './result-helpers';
@@ -32,6 +32,23 @@ export class SupabaseRollRepository extends SupabaseRepositoryBase implements Ro
         .single();
       if (error) return failFromError(error);
       return { success: true, data: fromSupabaseRoll(row) };
+    });
+  }
+
+  async chargeAssistStress(
+    rollId: string,
+    characterId: string,
+    note: string
+  ): Promise<Result<AssistCharge>> {
+    return this.run(async () => {
+      const { data, error } = await this.rpcUntyped('charge_assist_stress', {
+        p_roll_id: rollId,
+        p_character_id: characterId,
+        p_note: note,
+      });
+      if (error) return failFromError(error);
+      if (data === 'charged' || data === 'near_limit') return { success: true, data };
+      return { success: false, error: { message: 'Unexpected assist charge result' } };
     });
   }
 

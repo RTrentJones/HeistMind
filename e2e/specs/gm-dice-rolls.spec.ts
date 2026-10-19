@@ -58,9 +58,21 @@ test.describe('GM: dice rolls + roll log', () => {
 
     // Round 4 — ability dice (the bot's `bonus:`): +2d from an ability on an action roll, and
     // −3d on a resistance (the 0d floor is unit-tested in roll-pool.test). Both persist a note.
-    await gmPage.getByRole('combobox', { name: 'Ability dice' }).selectOption('2');
+    // Round 5 P1-2 — push + ability dice are ONE-SHOT: after the roll lands both reset, so an
+    // unchanged second roll neither pushes again (another 2 stress) nor keeps the +2d.
+    const abilityDice = gmPage.getByRole('combobox', { name: 'Ability dice' });
+    const push = gmPage.getByRole('checkbox', { name: 'Push (+1d, 2 stress)' });
+    await abilityDice.selectOption('2');
+    await push.check();
+    const faces = gmPage.getByTestId('roll-result').getByText(/^\[/);
+    const before = await faces.textContent();
     await gmPage.getByRole('button', { name: 'Roll', exact: true }).click();
-    await expect(gmPage.getByTestId('roll-result')).toBeVisible();
+    await expect(push).not.toBeChecked({ timeout: 10_000 });
+    await expect(abilityDice).toHaveValue('0');
+    // The result region shows the new roll's faces (5 dice: rating + push + 2).
+    await expect(faces).not.toHaveText(before ?? '', { timeout: 10_000 });
+    await gmPage.getByRole('button', { name: 'Roll', exact: true }).click();
+    await expect(push).not.toBeChecked();
     await gmPage.getByRole('combobox', { name: 'Roll type' }).selectOption('resistance');
     await gmPage.getByRole('combobox', { name: 'Ability dice' }).selectOption('-3');
     await gmPage.getByRole('button', { name: 'Resist', exact: true }).click();
@@ -75,7 +87,9 @@ test.describe('GM: dice rolls + roll log', () => {
     await expect(gmPage.getByText('Includes +2d from an ability or upgrade.')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(gmPage.getByText('Includes −3d from an ability or upgrade.')).toBeVisible();
+    await expect(gmPage.getByText('Includes −3d (penalty).')).toBeVisible();
+    // Exactly ONE pushed roll in the log: the second, unchanged roll didn't push again.
+    await expect(gmPage.getByText(/Pushed \(\+1d, 2 stress\)/)).toHaveCount(1);
   });
 
   // F43 — moderate harm surfaces its RAW −1d on the sheet's ACTION roll panel, waivable. Lives
