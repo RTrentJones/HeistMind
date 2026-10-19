@@ -97,8 +97,25 @@ describe('crew ability lists (own type, shared, multi-type)', () => {
       'deadly', // via Veteran (taken together in one advance)
       'predators',
       'patron',
-      'veteran',
     ]);
+  });
+
+  // Round 6 P2-7 — Veteran was offered twice: as a bare own-list pick AND as the route to every
+  // other type's ability. RAW it IS taking that ability, so only the routes are offered.
+  it('offers a Veteran-granting ability only as the route it opens, never also bare', () => {
+    const offered = takeableCrewAbilities(rs, crew()).map(a => a.id);
+    expect(offered).not.toContain('veteran');
+    expect(crewVeteranGatewayFor(rs, crew(), 'deadly')).toBe('veteran');
+    // The gate still accepts an explicit bare Veteran (legal, just not offered).
+    expect(
+      planCrewAdvance(rs, crew({ resources: { 'crew-xp': 8 } }), {
+        kind: 'ability',
+        abilityId: 'veteran',
+      })
+    ).toMatchObject({ ok: true, added: ['veteran'] });
+    // A Veteran that opens nothing (every other-type ability held) isn't a duplicate: it stays.
+    const noRoutes = crew({ crewAbilities: ['second-story', 'deadly', 'predators'] });
+    expect(takeableCrewAbilities(rs, noRoutes).map(a => a.id)).toContain('veteran');
   });
 });
 
