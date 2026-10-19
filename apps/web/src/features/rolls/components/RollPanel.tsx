@@ -165,15 +165,38 @@ export function RollPanel({
    * they apply to the roll they were chosen for. Cleared only after that roll SUCCEEDS (a failed
    * roll keeps them so the player can simply retry); action/position/effect stay — players do
    * re-roll the same action.
+   *
+   * The values are SNAPSHOTTED when the roll is submitted and each is cleared only if it still
+   * holds the submitted value (functional updates read the live state): a choice the player made
+   * while the roll was in flight — switching to a resistance roll and picking −3d — belongs to
+   * the NEXT roll and survives. (Chosen over disabling the controls while pending: the form stays
+   * usable for play-by-post players lining up their next roll, and nothing can be submitted twice
+   * anyway — the Roll button is `loading`.)
    */
-  const resetOneShots = (rolled: RollMode) => {
-    setBonus(0);
+  type OneShots = {
+    push: boolean;
+    bargain: boolean;
+    bargainNote: string;
+    assistId: string;
+    bonus: number;
+    waiveHarm: boolean;
+  };
+  const snapshotOneShots = (): OneShots => ({
+    push,
+    bargain,
+    bargainNote,
+    assistId,
+    bonus,
+    waiveHarm,
+  });
+  const resetOneShots = (rolled: RollMode, sent: OneShots) => {
+    setBonus(cur => (cur === sent.bonus ? 0 : cur));
     if (rolled !== 'action') return;
-    setPush(false);
-    setBargain(false);
-    setBargainNote('');
-    setAssistId('');
-    setWaiveHarm(false);
+    setPush(cur => (cur === sent.push ? false : cur));
+    setBargain(cur => (cur === sent.bargain ? false : cur));
+    setBargainNote(cur => (cur === sent.bargainNote ? '' : cur));
+    setAssistId(cur => (cur === sent.assistId ? '' : cur));
+    setWaiveHarm(cur => (cur === sent.waiveHarm ? false : cur));
   };
   // F99 — on a phone the result can land below the fold / under the fixed thumb bar: bring it
   // into view (nearest edge, honouring the region's scroll margin) whenever a new roll lands.
@@ -233,7 +256,7 @@ export function RollPanel({
   };
 
   // F96 — standalone sheet: realize, classify and show; apply only the stress the rules charge.
-  const rollLocally = async (userId: string) => {
+  const rollLocally = async (userId: string, sent: OneShots) => {
     let label: string;
     let count: number;
     let zeroDice: boolean;
@@ -285,7 +308,7 @@ export function RollPanel({
     setHistory(h =>
       [{ id: ++historySeq.current, label, outcome, results }, ...h].slice(0, LOCAL_HISTORY)
     );
-    resetOneShots(mode);
+    resetOneShots(mode, sent);
   };
 
   const roll = async () => {
@@ -293,10 +316,11 @@ export function RollPanel({
     if (!userId) return;
     setRolling(true);
     setError(null);
+    const sent = snapshotOneShots();
 
     try {
       if (local) {
-        await rollLocally(userId);
+        await rollLocally(userId, sent);
         return;
       }
       // The sequenced parts (persist + stress consequences) are ENGINE use-cases; the panel
@@ -309,6 +333,7 @@ export function RollPanel({
           roll: created,
           stress,
           stressError,
+          logError,
         } = await resistanceRoll.mutateAsync({
           userId,
           ...(characterId !== undefined ? { characterId } : {}),
@@ -324,9 +349,11 @@ export function RollPanel({
         setStressNotes(
           stressError
             ? [t('components.rollPanel.stressNotMarked', { count: stress, reason: stressError })]
-            : []
+            : logError
+              ? [t('components.rollPanel.stressLogNotWritten')]
+              : []
         );
-        resetOneShots('resistance');
+        resetOneShots('resistance', sent);
         return;
       }
 
@@ -404,11 +431,13 @@ export function RollPanel({
         [
           created.stressError
             ? t('components.rollPanel.stressNotMarked', { count: 2, reason: created.stressError })
-            : null,
+            : created.pushStress?.logError
+              ? t('components.rollPanel.stressLogNotWritten')
+              : null,
           assistant && created.assist ? assistCopy(assistant.name, created.assist) : null,
         ].filter((n): n is string => n !== null)
       );
-      resetOneShots(mode);
+      resetOneShots(mode, sent);
     } catch (e) {
       setError((e as Error).message ?? t('components.rollPanel.rollFailed'));
     } finally {

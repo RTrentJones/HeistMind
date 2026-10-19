@@ -147,11 +147,24 @@ found (F1–F9, F20–F22, F30/F31, F35/F36, F53/F54, F56 confirmed still-resolv
     pending-charge flow — not built.
   - The UX pass owns the crew picker's Veteran disclosure; the "Through Veteran" group is now
     ≈36 options on BitD.
-  - The one-shot reset runs when the roll lands, so an option changed while a roll is still in
-    flight (e.g. switching to a resistance roll and picking −3d) is cleared by it. The e2e now
-    waits for the roll to land; disabling the roll form while a roll is pending would close it
-    for players too (not done).
-- **status:** fixed (branch `feat/product-r5`)
+- **follow-up (Codex review on PR #182):**
+  - **A failed trauma feed note no longer reads as unapplied stress.** `applyStress` used to
+    return FAILURE when the trauma note insert failed, after the stress and owed trauma were
+    already written. `rollAction` then reported `stressError` and the web and bot told the player
+    to mark the stress by hand, which double-charges; `rollResistance` also dropped the trauma
+    flags. Now `applyStress` returns the applied outcome with `logError`, and `rollResistance`
+    returns `logError` next to its real `trauma`/`mustRetire`. Only a stress write that really
+    failed produces "mark it yourself". The web shows a mild note ("The stress is marked on the
+    sheet, but its note couldn't be added to the campaign log."); the bot reports the charge and
+    trauma as usual. This also covers the other `applyStress` callers (stress tracker, `/stress
+add`, flashback). Engine, discord and web tests cover push and resistance in both cases.
+  - **Choices made while a roll is in flight survive the reset.** The one-shot values are
+    snapshotted when the roll is submitted, and each is cleared only if it still holds the
+    submitted value (functional state updates). Switching to a resistance roll and picking −3d
+    mid-roll is kept; the spent push is cleared. Chosen over disabling the controls while
+    pending: the form stays usable for lining up the next roll, and a double submit is already
+    impossible. A unit test changes the modifier mid-roll; the gm-dice-rolls e2e keeps its wait.
+- **status:** fixed (branch `feat/product-r5`, follow-up `fix/r5-codex`)
 
 ### F102 — Round-5 pixel UX: phone wizard wider than the phone, dark error text, seat copy, sign-in gaps
 

@@ -338,6 +338,11 @@ export async function rollResistance(
     mustRetire: boolean;
     /** The roll landed but its stress write failed (round 5 P2-5); null when it was applied. */
     stressError: string | null;
+    /**
+     * The stress WAS applied (trauma flags above are real) but its trauma feed note failed —
+     * the log line is missing, nothing needs re-marking. Null otherwise.
+     */
+    logError: string | null;
   }>
 > {
   const stress = resistanceStress(input.results, { zeroDice: input.zeroDice });
@@ -355,6 +360,7 @@ export async function rollResistance(
   let trauma = false;
   let mustRetire = false;
   let stressError: string | null = null;
+  let logError: string | null = null;
   if (input.characterId !== undefined && stress !== 0) {
     const stressed = await applyStress(repos, {
       characterId: input.characterId,
@@ -367,9 +373,13 @@ export async function rollResistance(
     if (stressed.success) {
       trauma = stressed.data?.trauma ?? false;
       mustRetire = stressed.data?.mustRetire ?? false;
+      logError = stressed.data?.logError ?? null;
     } else {
       stressError = stressed.error.message || 'Stress not marked';
     }
   }
-  return { success: true, data: { roll: created.data, stress, trauma, mustRetire, stressError } };
+  return {
+    success: true,
+    data: { roll: created.data, stress, trauma, mustRetire, stressError, logError },
+  };
 }

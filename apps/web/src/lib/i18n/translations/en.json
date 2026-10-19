@@ -402,7 +402,8 @@
       "bonusHint": "Dice an ability or crew upgrade adds or removes on this roll (Ambush +1d, Iron Will +1d, Daredevil −1d). The pool never drops below 0d.",
       "abilityDiceNote": "Includes {{signed}}d from an ability or upgrade.",
       "abilityDicePenaltyNote": "Includes {{signed}}d (penalty).",
-      "stressNotMarked": "The roll is saved, but its {{count}} stress couldn’t be marked ({{reason}}). Mark it on the sheet yourself."
+      "stressNotMarked": "The roll is saved, but its {{count}} stress couldn’t be marked ({{reason}}). Mark it on the sheet yourself.",
+      "stressLogNotWritten": "The stress is marked on the sheet, but its note couldn’t be added to the campaign log."
     },
     "rollLog": {
       "empty": "No rolls yet.",

@@ -1,6 +1,6 @@
 // Round-3 #3 — the roll panel sends the ACTION with an action roll (so the engine can mark a
 // desperate roll's XP in that action's attribute, RAW) and reports what was marked.
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@heist-mind/ui';
@@ -230,6 +230,34 @@ describe('RollPanel — one-shot moves reset after a roll (round 5 P1-2)', () =>
   });
 });
 
+describe('RollPanel — a choice made while a roll is in flight survives its reset (Codex P2)', () => {
+  it('switching to resistance and picking −3d mid-roll is kept; the spent push is cleared', async () => {
+    let land: (v: unknown) => void = () => {};
+    actionRoll.mutateAsync.mockReset().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          land = resolve;
+        })
+    );
+    renderPanel();
+    await userEvent.click(screen.getByRole('checkbox', { name: /push \(\+1d, 2 stress\)/i }));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ability dice' }), '2');
+    await userEvent.click(screen.getByRole('button', { name: 'Roll' }));
+    // While the roll is pending, the player lines up the next one.
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Roll type' }),
+      'resistance'
+    );
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ability dice' }), '-3');
+    await act(async () => land(ROLLED));
+    expect(await screen.findByTestId('roll-result')).toHaveTextContent('[4, 2]');
+    expect(screen.getByRole('combobox', { name: 'Ability dice' })).toHaveValue('-3');
+    expect(screen.getByRole('combobox', { name: 'Roll type' })).toHaveValue('resistance');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Roll type' }), 'action');
+    expect(screen.getByRole('checkbox', { name: /push \(\+1d, 2 stress\)/i })).not.toBeChecked();
+  });
+});
+
 describe('RollPanel — stress side effects of a SAVED roll (round 5 P2-5 / P2-6)', () => {
   it('a failed push-stress write keeps the roll and says to mark it (no "Roll failed")', async () => {
     actionRoll.mutateAsync.mockReset().mockResolvedValue({
@@ -244,6 +272,34 @@ describe('RollPanel — stress side effects of a SAVED roll (round 5 P2-5 / P2-6
     );
     expect(screen.getByTestId('roll-result')).toHaveTextContent('[4, 2]');
     expect(screen.queryByText('Roll failed.')).not.toBeInTheDocument();
+  });
+
+  it('stress applied but its feed note failed: a mild note, never "mark it yourself"', async () => {
+    actionRoll.mutateAsync.mockReset().mockResolvedValue({
+      ...ROLLED,
+      pushStress: { trauma: true, mustRetire: false, logError: 'feed insert refused' },
+    });
+    renderPanel();
+    await userEvent.click(screen.getByRole('checkbox', { name: /push \(\+1d, 2 stress\)/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Roll' }));
+    const note = await screen.findByTestId('roll-stress-note');
+    expect(note).toHaveTextContent(/stress is marked on the sheet, but its note couldn’t be added/);
+    expect(note).not.toHaveTextContent(/Mark it on the sheet yourself/);
+
+    resistanceRoll.mutateAsync.mockResolvedValueOnce({
+      roll: { outcome: 'bad', results: [3] },
+      stress: 3,
+      stressError: null,
+      logError: 'feed insert refused',
+    });
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Roll type' }),
+      'resistance'
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Resist' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('roll-stress-note')).toHaveTextContent(/note couldn’t be added/)
+    );
   });
 
   it('a failed resistance-stress write keeps the roll and says to mark it', async () => {

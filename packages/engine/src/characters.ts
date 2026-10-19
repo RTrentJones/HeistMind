@@ -49,6 +49,13 @@ export interface StressOutcome {
   trauma: boolean;
   /** The character is at the trauma limit (retire, or take the fall). */
   mustRetire: boolean;
+  /**
+   * The stress (and any owed trauma) WAS written, but its campaign-feed note failed to insert.
+   * The sheet is right; only the log line is missing — callers must not ask the player to mark
+   * the stress again (that would double-charge). Absent when the feed write succeeded / wasn't
+   * needed.
+   */
+  logError?: string;
 }
 
 /**
@@ -89,6 +96,10 @@ export async function applyStress(
     }
   );
   if (!updated.success) return updated as Result<never>;
+  // From here the stress + owed trauma are ON the sheet. A failed feed note is reported as
+  // `logError` next to the applied outcome — never as the stress failing (callers would tell the
+  // player to mark it again: a double charge).
+  let logError: string | undefined;
   if (change.trauma && input.traumaLog && char.gameId !== null) {
     const notes = [input.traumaLog.note(char.name)];
     if (change.mustRetire) notes.push(input.traumaLog.retireNote(char.name));
@@ -102,12 +113,20 @@ export async function applyStress(
         results: [],
         note,
       });
-      if (!logged.success) return logged as Result<never>;
+      if (!logged.success) {
+        logError = logged.error.message || 'Feed note not written';
+        break;
+      }
     }
   }
   return {
     success: true,
-    data: { character: updated.data, trauma: change.trauma, mustRetire: change.mustRetire },
+    data: {
+      character: updated.data,
+      trauma: change.trauma,
+      mustRetire: change.mustRetire,
+      ...(logError !== undefined ? { logError } : {}),
+    },
   };
 }
 

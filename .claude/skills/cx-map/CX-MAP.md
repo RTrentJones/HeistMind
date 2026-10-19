@@ -437,11 +437,13 @@ bootstrap).
     calling the already-logged roll "Roll failed" (engine `desperateXpError`; same on `/roll`).
     **One-shot moves (F103):** after a roll SUCCEEDS, Push, Devil's bargain (+ its note), Assist,
     Ability dice and the harm waiver reset (action/position/effect stay); a failed roll keeps them
-    for the retry. Same on the standalone sheet. Negative ability dice read "−Nd (penalty)" (log:
+    for the retry. Same on the standalone sheet. Only the values that were submitted are cleared:
+    a choice made while the roll is in flight (e.g. −3d for the next resistance roll) is kept. Negative ability dice read "−Nd (penalty)" (log:
     "Includes −Nd (penalty)."). A desperate roll's XP is now also logged ("Desperate roll — marked
     1 XP in Prowess", an `xp` row on the character). **Stress side effects (F103):** a failed
     push/resistance stress write keeps the saved roll and says "The roll is saved, but its N stress
-    couldn't be marked (…). Mark it on the sheet yourself." **Assist (F103):** the option reads
+    couldn't be marked (…). Mark it on the sheet yourself."; when the stress WAS marked but its
+    trauma log note failed, it says only that the note couldn't be added (no re-mark). **Assist (F103):** the option reads
     "Assist: Bo (+1d, they take 1 stress)" and the helper's stress is really charged — another
     player's character through 00027 `charge_assist_stress` (+1, once per roll, logged "Bo marked
     1 stress for an assist."); the roller sees "Bo marked 1 stress for the assist — it's on their

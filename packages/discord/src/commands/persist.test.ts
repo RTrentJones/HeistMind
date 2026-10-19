@@ -197,6 +197,52 @@ describe('a post-roll stress write failure keeps the logged roll (round 5 P2-5)'
     expect(embed.description).not.toContain('2 stress marked on your sheet');
   });
 
+  // Codex P2 (PR #182): the stress + owed trauma were WRITTEN, only the trauma feed note failed —
+  // the bot must report the applied stress and trauma, never "mark it on your sheet".
+  const atEight = () =>
+    repos(
+      {},
+      characterOnDefaultRuleset({ characterData: { stress: 8, skills: { [RATED_ACTION]: 2 } } })
+    );
+  const feedNoteFails = (r: ReturnType<typeof repos>) =>
+    vi
+      .mocked(r.rolls.create)
+      .mockResolvedValueOnce(ok({ id: 'r1' }) as never)
+      .mockResolvedValue(fail('feed insert refused') as never);
+
+  it('/roll push into trauma with a failed feed note: charged + trauma reply, no re-mark', async () => {
+    const r = atEight();
+    feedNoteFails(r);
+    const calls = await run(
+      await handleRoll(
+        ctx(r, [6, 2, 1]),
+        guildCmd('roll', [
+          { name: 'action', type: 3, value: RATED_ACTION },
+          { name: 'push', type: 5, value: true },
+        ])
+      )
+    );
+    const embed = firstEmbed(calls);
+    expect(embed.description).toContain('2 stress marked on your sheet');
+    expect(embed.description).not.toContain('couldn’t be marked');
+    expect(JSON.stringify(calls)).toMatch(/trauma/i);
+  });
+
+  it('/resist into trauma with a failed feed note: stress marked + trauma reply, no re-mark', async () => {
+    const r = atEight();
+    feedNoteFails(r);
+    const calls = await run(
+      await handleResist(
+        ctx(r, [3]),
+        guildCmd('resist', [{ name: 'attribute', type: 3, value: ATTRIBUTE }])
+      )
+    );
+    const embed = firstEmbed(calls);
+    expect(embed.description).toContain('stress** marked on');
+    expect(embed.description).not.toContain('couldn’t be marked');
+    expect(JSON.stringify(calls)).toMatch(/trauma/i);
+  });
+
   it('/resist: logged, and says the stress needs marking', async () => {
     const r = repos();
     sheetRefuses(r);
