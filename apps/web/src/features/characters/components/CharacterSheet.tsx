@@ -343,6 +343,7 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
   // sheet instead of controls that render and then fail server-side.
   const canEdit =
     user?.id != null && (user.id === character.createdBy || user.id === character.game?.createdBy);
+  const isOwner = user?.id != null && character.createdBy === user.id;
   // A campaign sheet always shows the shared log; a standalone one shows dice only to its editor.
   const showDice = character.gameId != null || canEdit;
 
@@ -358,8 +359,19 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
       <TraumaPrompt character={character} canEdit={canEdit} />
       {/* F60 — a standalone sheet says so, instead of just silently missing the campaign sections. */}
       {!character.gameId && (
-        <Alert variant='info' size='sm'>
+        <Alert variant='info' size='sm' data-testid='standalone-banner'>
           {t('components.characterSheet.standaloneBanner')}
+          {isOwner && (
+            <>
+              {' '}
+              <a
+                href='#sheet-attach'
+                className='font-medium underline underline-offset-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center'
+              >
+                {t('components.characterSheet.standaloneBannerLink')}
+              </a>
+            </>
+          )}
         </Alert>
       )}
       <Card variant='character'>
@@ -491,8 +503,14 @@ export function CharacterSheet({ characterId }: { characterId: string }) {
           campaign controls) down. Desktop keeps the DOM order. */}
       {/* Owner campaign controls (Phase 5/5b): bring a standalone character to a campaign, or move /
           return an in-campaign one. The component picks its mode from whether the character is linked. */}
-      {character.createdBy === user?.id && (
-        <div className='max-sm:order-3'>
+      {/* F99 — a STANDALONE sheet keeps this card right under the hero on phones too (no reorder):
+          "bring it to a campaign" is that sheet's next step, and the banner links here. It was
+          `order-3` (last, ~4000px down at 360). In-campaign move/return stays low on phones. */}
+      {isOwner && (
+        <div
+          id='sheet-attach'
+          className={character.gameId ? 'scroll-mt-4 max-sm:order-3' : 'scroll-mt-4'}
+        >
           <AttachToCampaign character={character} />
         </div>
       )}

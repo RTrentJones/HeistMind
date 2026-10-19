@@ -1,7 +1,7 @@
 // Round-3 #1 — the crew sheet offers ONLY legal crew picks, on the real BitD builtin content
 // (fixture provenance, F69): a Shadows crew sees its own list (+ Veteran routes), never every crew
 // type's abilities, never Mastery as an ability; a full track adds the upgrade-box options.
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Crew } from '@heist-mind/core';
@@ -71,6 +71,37 @@ describe('CrewAdvancePicker', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Take advance' }));
     expect(onTake).toHaveBeenCalledWith({ kind: 'upgrades', upgradeId: 'crew-mastery' });
     expect(screen.getByRole('radio', { name: /other upgrades/ })).toBeInTheDocument();
+  });
+
+  // F99 — presentation only: own list first under its own heading, then the Veteran routes, then
+  // upgrades; every option is a ≥44px row; and no block element nests inside a <p> (the old Badge
+  // <div> in the label <p> was a React hydration error on the GM hub).
+  it('groups own abilities first, then Veteran routes, then upgrades, as tappable rows', () => {
+    const { container } = render(
+      <CrewAdvancePicker
+        crew={crew(['crew-second-story'], { 'crew-xp': 8 })}
+        crewRules={crewRules}
+        busy={false}
+        onTake={() => {}}
+      />
+    );
+    const groups = within(screen.getByTestId('crew-advance-picker')).getAllByRole('group');
+    expect(groups.map(g => g.getAttribute('data-testid'))).toEqual([
+      'crew-advance-own',
+      'crew-advance-veteran',
+      'crew-advance-upgrades',
+    ]);
+    const own = screen.getByRole('group', { name: "From your crew's list (Shadows)" });
+    expect(within(own).getByRole('radio', { name: /^Patron/ })).toBeInTheDocument();
+    expect(within(own).queryByRole('radio', { name: /via Veteran/ })).not.toBeInTheDocument();
+    const veteran = screen.getByRole('group', { name: /Through Veteran/ });
+    expect(within(veteran).getByRole('radio', { name: /Deadly/ })).toBeInTheDocument();
+    const upgrades = screen.getByRole('group', { name: /Upgrades/ });
+    expect(within(upgrades).getAllByRole('radio')).toHaveLength(2);
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio.closest('label')).toHaveClass('min-h-11');
+    }
+    expect(container.querySelector('p div, p p')).toBeNull();
   });
 });
 

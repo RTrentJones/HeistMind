@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useCharacterCreationStore } from '../stores/character-creation-store';
+import { useTranslation } from '@/lib/i18n/hooks';
 
 export interface CharacterSummary {
   charName: string;
@@ -9,7 +10,10 @@ export interface CharacterSummary {
   attrBadges: string[];
   /** selected special-ability names */
   abilityBadges: string[];
-  /** heritage / background / vice values that are set */
+  /**
+   * Labelled heritage / background / vice values that are set — "Background: Underworld (Labor:
+   * hunter)" — so the review never shows bare, unexplained chips (round-4 P2-16).
+   */
   identityBadges: string[];
 }
 
@@ -18,6 +22,7 @@ export interface CharacterSummary {
  * Review step and the Phase-2 live summary panel so they never drift.
  */
 export function useCharacterSummary(): CharacterSummary {
+  const { t } = useTranslation();
   const { name, draft, ruleset } = useCharacterCreationStore(
     useShallow(s => ({ name: s.name, draft: s.draft, ruleset: s.ruleset }))
   );
@@ -36,9 +41,25 @@ export function useCharacterSummary(): CharacterSummary {
       abilityBadges: abilityDefs
         .filter(a => draft.specialAbilities.includes(a.id))
         .map(a => a.name),
-      identityBadges: [draft.heritage, draft.background, draft.vice].filter(
-        (v): v is string => !!v
-      ),
+      identityBadges: (
+        [
+          ['heritageLabel', draft.heritage, undefined],
+          ['backgroundLabel', draft.background, draft.backgroundDetail],
+          ['viceLabel', draft.vice, draft.viceDetail],
+        ] as const
+      )
+        .filter(([, value]) => !!value?.trim())
+        .map(([labelKey, value, detail]) => {
+          const label = t(`components.steps.identity.${labelKey}`);
+          const shown = value?.trim() ?? '';
+          return detail?.trim()
+            ? t('components.steps.review.identityItemDetail', {
+                label,
+                value: shown,
+                detail: detail.trim(),
+              })
+            : t('components.steps.review.identityItem', { label, value: shown });
+        }),
     };
-  }, [name, draft, ruleset]);
+  }, [name, draft, ruleset, t]);
 }

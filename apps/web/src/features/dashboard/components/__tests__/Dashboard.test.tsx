@@ -31,6 +31,7 @@ vi.mock('@/features/characters/components/CharacterCard', () => ({ CharacterCard
 const empty = (over: Record<string, unknown> = {}) => ({
   campaigns: [],
   characters: [],
+  characterNames: {},
   activity: [],
   campaignsStatus: status(),
   charactersStatus: status(),
@@ -58,11 +59,17 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('dashboard-subtitle')).toHaveTextContent(/pick any step below/i);
   });
 
-  it('holds the subtitle and quick actions until the lists have loaded', () => {
+  it('holds the subtitle until the lists load, reserving the quick actions INVISIBLY (no CLS)', () => {
     data = empty({ campaignsStatus: status({ loading: true }) });
     render(<Dashboard />);
     expect(screen.getByTestId('dashboard-subtitle')).toHaveTextContent('');
-    expect(screen.queryByTestId('dashboard-quick-actions')).toBeNull();
+    // F99 — the quick actions hold their space while loading (inserting them late shoved every
+    // section ~224px down at 360), but are invisible, inert and hidden from assistive tech.
+    const quick = screen.getByTestId('dashboard-quick-actions');
+    expect(quick).toHaveClass('invisible');
+    expect(quick).toHaveAttribute('aria-hidden', 'true');
+    expect(quick).toHaveAttribute('inert');
+    expect(screen.queryByRole('link', { name: /create campaign/i })).toBeNull();
     expect(screen.queryByTestId('dashboard-start-here')).toBeNull();
   });
 
@@ -71,9 +78,37 @@ describe('Dashboard', () => {
       campaigns: [{ game: { id: 'g1', name: 'Job' }, role: 'gm' }],
     });
     render(<Dashboard />);
-    expect(screen.getByTestId('dashboard-quick-actions')).toBeInTheDocument();
+    const quick = screen.getByTestId('dashboard-quick-actions');
+    expect(quick).not.toHaveClass('invisible');
+    expect(quick).not.toHaveAttribute('aria-hidden');
+    expect(quick).not.toHaveAttribute('inert');
     expect(screen.queryByTestId('dashboard-start-here')).toBeNull();
     expect(screen.getByTestId('dashboard-subtitle')).toHaveTextContent(/pick up where/i);
+  });
+
+  // Round-4 P2-15 — a GM's feed names the PLAYER's character (resolved from the campaign roster),
+  // not just the viewer's own characters.
+  it('activity names characters the viewer does not own', () => {
+    data = empty({
+      campaigns: [{ game: { id: 'g1', name: 'The Ledger' }, role: 'gm' }],
+      characterNames: { c9: 'Asher Vane' },
+      activity: [
+        {
+          gameName: 'The Ledger',
+          roll: {
+            id: 'r1',
+            gameId: 'g1',
+            characterId: 'c9',
+            kind: 'resistance',
+            label: 'Prowess',
+            results: [3],
+            createdAt: new Date().toISOString(),
+          },
+        },
+      ],
+    });
+    render(<Dashboard />);
+    expect(screen.getByTestId('dashboard-activity-list')).toHaveTextContent('Asher Vane');
   });
 
   it('the Start here Discord step points at a button only when one renders', () => {

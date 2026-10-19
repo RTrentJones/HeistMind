@@ -2,12 +2,10 @@
 
 import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { Alert, Badge, Card, Grid, Text } from '@heist-mind/ui';
+import { Alert, Badge, Grid, Text } from '@heist-mind/ui';
 import { useCharacterCreationStore } from '../../stores/character-creation-store';
 import { useTranslation } from '@/lib/i18n/hooks';
-
-// Decorative glyph (aria-hidden) beside the translated "Selected" label.
-const CHECK_MARK = '\u2713 ';
+import { SelectableCard, SelectableCardDescription } from './SelectableCard';
 
 /** Playbook picker — Card grid driven by `ruleset.content.playbooks`. */
 export function PlaybookStep() {
@@ -53,43 +51,13 @@ export function PlaybookStep() {
         {playbooks.map(pb => {
           const isSelected = selected === pb.id;
           return (
-            <Card
+            <SelectableCard
               key={pb.id}
-              variant={isSelected ? 'character' : 'outline'}
-              role='button'
-              tabIndex={0}
-              aria-pressed={isSelected}
-              onClick={() => pick(pb.id)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  pick(pb.id);
-                }
-              }}
-              className={
-                isSelected
-                  ? 'cursor-pointer ring-2 ring-brand-primary ring-offset-2 ring-offset-background-primary transition-transform duration-150 hover:-translate-y-[3px]'
-                  : 'cursor-pointer transition-transform duration-150 hover:-translate-y-[3px]'
-              }
+              selected={isSelected}
+              onSelect={() => pick(pb.id)}
+              title={pb.name}
             >
-              <div className='flex items-start justify-between gap-2.5' style={{ minHeight: 24 }}>
-                <span className='font-display' style={{ fontSize: 20, lineHeight: 1.1 }}>
-                  {pb.name}
-                </span>
-                {/* F93 — a positive badge (red read as an error) + a brand ring on the card. */}
-                {isSelected && (
-                  <Badge variant='success' size='sm'>
-                    <span aria-hidden='true'>{CHECK_MARK}</span>
-                    {t('components.steps.common.selected')}
-                  </Badge>
-                )}
-              </div>
-              <div
-                className='text-foreground-secondary'
-                style={{ fontSize: 13, marginTop: 10, lineHeight: 1.5 }}
-              >
-                {pb.description}
-              </div>
+              <SelectableCardDescription>{pb.description}</SelectableCardDescription>
               {/* Signature kit — the playbook's seeded action dots and its starting ability, so the
                 choice is informed (a BitD sheet shows both up front). */}
               {(() => {
@@ -111,7 +79,7 @@ export function PlaybookStep() {
                   })}
                 </div>
               )}
-            </Card>
+            </SelectableCard>
           );
         })}
       </Grid>

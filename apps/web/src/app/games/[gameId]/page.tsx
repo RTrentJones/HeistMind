@@ -60,8 +60,11 @@ export default function GameDetailPage({ params }: { params: Promise<{ gameId: s
     return <SignInGate prompt={t('game.viewAuthPrompt')} />;
   }
   if (gameQuery.isLoading) {
+    // F99 — the SAME width as the loaded hub's Container: React reuses this node when the data
+    // lands, and a 448px→full-width box (x 160→0) was the hub's biggest layout shift (0.135 of
+    // ~0.18 at 768) — not the entrance animation the round-4 audit suspected.
     return (
-      <Container maxWidth='md' padding='lg'>
+      <Container maxWidth='4xl' padding='lg'>
         <LoadingSpinner />
       </Container>
     );
